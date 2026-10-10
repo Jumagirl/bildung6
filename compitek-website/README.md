@@ -34,7 +34,7 @@ Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepa
 
 - **Texte:** direkt in der jeweiligen HTML-Datei ändern.
 - **Öffnungszeiten:** stehen in `index.html` (Abschnitt „Kontakt“) und in `kontakt.html`. Jeweils den sichtbaren Text *und* das Attribut `data-hours` anpassen (leer = geschlossen). Daraus berechnet die Seite automatisch „Jetzt geöffnet“ oder „Geschlossen – öffnet …“. Zusätzlich die Angaben im Block `application/ld+json` oben in `index.html` anpassen (die liest Google).
-- **Formular-Empfänger:** ganz oben in `kontakt.php` (`EMPFAENGER`). `ABSENDER` muss eine Adresse der eigenen Domain sein, sonst landen die Mails leicht im Spam.
+- **Formular-Empfänger:** ganz oben in `kontakt.php` (`EMPFAENGER`). Die E-Mail-Adresse wird bewusst nirgends öffentlich verlinkt, Anfragen laufen über das Formular. Nur im Impressum muss sie stehen (gesetzliche Pflicht), dort kodiert in `impressum.html`. `ABSENDER` muss eine Adresse der eigenen Domain sein, sonst landen die Mails leicht im Spam.
 - **Formular-Auswahl** (Häkchen): Wer Punkte ändert, muss sie in `kontakt.html` *und* in den Listen oben in `kontakt.php` anpassen (gleicher `value`).
 - **Preise:** in `index.html` (Abschnitte „Windows 11“ und „Preise“) und in `windows-11.html` (Angebotskarte).
 - **Hinweis-Leiste** (z. B. „Urlaub bis …“): in `index.html` beim Element `<div class="notice" … hidden>` das Wort `hidden` entfernen und den Text anpassen.

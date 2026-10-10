@@ -941,6 +941,7 @@ a.quick-card:hover .quick-number { color: var(--green-text); }
 }
 .card .status { margin-bottom: 14px; }
 .small { font-size: .95rem; color: var(--muted); }
+.nowrap { white-space: nowrap; }
 .card .small { margin: 14px 0 0; }
 
 .contact-list { margin: 0; padding: 0; list-style: none; }

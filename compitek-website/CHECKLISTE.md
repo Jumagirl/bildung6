@@ -4,7 +4,7 @@ Diese Punkte konnten nicht automatisch geprüft werden. Bitte mit Karl durchgehe
 
 ## Muss vor dem Livegang erledigt sein
 
-- [ ] **E-Mail-Adresse:** Ist `info@compitek.de` richtig? Sie steht im Impressum und ist Empfänger des Formulars. Die alte Seite nennt im Impressum keine E-Mail-Adresse, Branchenbücher teils andere (z. B. `info@pc-service-weyhe.de`).
+- [ ] **E-Mail-Adresse:** Ist `info@compitek.de` richtig? Sie wird nicht mehr öffentlich angezeigt. Sie ist nur noch Empfänger des Formulars (`kontakt.php`) und steht im Impressum, weil sie dort gesetzlich Pflicht ist (§ 5 DDG). Dort ist sie ohne Link und gegen Spam-Sammler kodiert.
 - [ ] **Formular testen:** Nach dem Hochladen einmal selbst eine Anfrage schicken. Kommt keine Mail an, beim Webhoster nachfragen, ob PHP-`mail()` aktiv ist und ob die Absenderadresse `webformular@compitek.de` erlaubt ist (einstellbar oben in `kontakt.php`).
 - [ ] **Öffnungszeiten:** Montag, Dienstag und Donnerstag 9–12 und 15–18 Uhr, sonst geschlossen. Stimmt das noch?
 - [ ] **Preise:** 36 € (Werkstatt, erste 30 Min.), 72 € (vor Ort, erste 60 Min.), 18 € je weitere angefangene 15 Min., Fahrtkosten 30 € bis 20 km, Windows-11-Upgrade 72 €. Alles aktuell?
