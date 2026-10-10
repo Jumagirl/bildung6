@@ -6,292 +6,555 @@
 <title>Rivals Coach</title>
 <style>
 :root {
-  --bg: #f4f5fb;
+  color-scheme: light;
+  --bg: #f3f4f8;
   --surface: #ffffff;
-  --surface-2: #eef0f8;
-  --text: #1c1f2e;
-  --muted: #5d6275;
-  --border: #d8dbe8;
-  --accent: #4051b5;
+  --surface-2: #f2f3f8;
+  --surface-3: #e7e9f2;
+  --text: #12141c;
+  --text-2: #4b5063;
+  --muted: #767b8f;
+  --border: rgba(18, 20, 28, 0.10);
+  --grid: #e6e7ee;
+  --accent: #5b4cf0;
+  --accent-strong: #4a3bd8;
   --accent-text: #ffffff;
-  --win: #1f8a4c;
-  --loss: #c0392b;
-  --warn: #b7791f;
-  --vanguard: #2f6fd6;
-  --duelist: #c0392b;
-  --strategist: #1f8a4c;
+  --accent-soft: rgba(91, 76, 240, 0.10);
+  --gold: #f5b82e;
+  --vanguard: #2a78d6;
+  --duelist: #eb6834;
+  --strategist: #1baf7a;
+  --good: #0ca30c;
+  --good-text: #006300;
+  --bad: #d03b3b;
+  --warn: #c98500;
+  --shadow: 0 1px 2px rgba(16, 18, 30, 0.05), 0 6px 20px rgba(16, 18, 30, 0.06);
+  --hero-grad: linear-gradient(135deg, #5b4cf0 0%, #8b5cf6 55%, #c026d3 100%);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #12141c;
-    --surface: #1b1e2a;
-    --surface-2: #252938;
-    --text: #e8eaf3;
-    --muted: #9aa0b8;
-    --border: #333849;
-    --accent: #7b8cf0;
-    --accent-text: #10121a;
-    --win: #4cc685;
-    --loss: #ef6b5b;
-    --warn: #e0a84a;
-    --vanguard: #6c9cf0;
-    --duelist: #ef6b5b;
-    --strategist: #4cc685;
+    color-scheme: dark;
+    --bg: #0b0d14;
+    --surface: #151925;
+    --surface-2: #1c2130;
+    --surface-3: #262c3f;
+    --text: #eceef6;
+    --text-2: #b7bccd;
+    --muted: #8a90a6;
+    --border: rgba(255, 255, 255, 0.08);
+    --grid: #252a39;
+    --accent: #8b7dff;
+    --accent-strong: #a397ff;
+    --accent-text: #0b0d14;
+    --accent-soft: rgba(139, 125, 255, 0.14);
+    --vanguard: #3987e5;
+    --duelist: #d95926;
+    --strategist: #199e70;
+    --good: #0ca30c;
+    --good-text: #3fc35a;
+    --bad: #e05252;
+    --warn: #fab219;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    --hero-grad: linear-gradient(135deg, #3b2fb8 0%, #6d3fd6 55%, #9d1fb0 100%);
   }
 }
 :root[data-theme="dark"] {
-  --bg: #12141c;
-  --surface: #1b1e2a;
-  --surface-2: #252938;
-  --text: #e8eaf3;
-  --muted: #9aa0b8;
-  --border: #333849;
-  --accent: #7b8cf0;
-  --accent-text: #10121a;
-  --win: #4cc685;
-  --loss: #ef6b5b;
-  --warn: #e0a84a;
-  --vanguard: #6c9cf0;
-  --duelist: #ef6b5b;
-  --strategist: #4cc685;
+  color-scheme: dark;
+  --bg: #0b0d14;
+  --surface: #151925;
+  --surface-2: #1c2130;
+  --surface-3: #262c3f;
+  --text: #eceef6;
+  --text-2: #b7bccd;
+  --muted: #8a90a6;
+  --border: rgba(255, 255, 255, 0.08);
+  --grid: #252a39;
+  --accent: #8b7dff;
+  --accent-strong: #a397ff;
+  --accent-text: #0b0d14;
+  --accent-soft: rgba(139, 125, 255, 0.14);
+  --vanguard: #3987e5;
+  --duelist: #d95926;
+  --strategist: #199e70;
+  --good: #0ca30c;
+  --good-text: #3fc35a;
+  --bad: #e05252;
+  --warn: #fab219;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --hero-grad: linear-gradient(135deg, #3b2fb8 0%, #6d3fd6 55%, #9d1fb0 100%);
 }
+
 * { box-sizing: border-box; }
+html, body { margin: 0; }
 body {
-  margin: 0;
   background: var(--bg);
   color: var(--text);
   font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   accent-color: var(--accent);
+  -webkit-font-smoothing: antialiased;
 }
-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---------- Layout ---------- */
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 18px 14px; gap: 18px;
 }
-header h1 { font-size: 1.2rem; margin: 0; flex: 1; }
-header a { color: var(--accent); text-decoration: none; font-size: .9rem; }
-nav.tabs {
-  display: flex; gap: 4px; overflow-x: auto;
-  padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
-}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+.brand-mark { width: 38px; height: 38px; flex: none; }
+.brand b { display: block; font-size: 1.05rem; letter-spacing: .01em; }
+.brand span { display: block; font-size: .75rem; color: var(--muted); }
+nav.tabs { display: flex; flex-direction: column; gap: 2px; }
 nav.tabs button {
-  border: 0; background: transparent; color: var(--muted);
-  padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; white-space: nowrap;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 0; background: transparent; color: var(--text-2);
+  padding: 9px 12px; border-radius: 10px; cursor: pointer; font: inherit; text-align: left;
+  transition: background .15s, color .15s;
 }
-nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
-main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+nav.tabs button:hover { background: var(--surface-2); color: var(--text); }
+nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+nav.tabs button[aria-selected="true"] svg.i { stroke: var(--accent); }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.side-foot a, .side-foot button {
+  display: flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font: inherit; font-size: .85rem;
+  background: none; border: 0; padding: 6px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+}
+.side-foot a:hover, .side-foot button:hover { color: var(--text); background: var(--surface-2); }
+
+.content { min-width: 0; }
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  max-width: 1180px; margin: 0 auto; padding: 28px 28px 8px;
+}
+.page-head h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.01em; }
+.page-head p { margin: 2px 0 0; color: var(--muted); }
+main { max-width: 1180px; margin: 0 auto; padding: 12px 28px 48px; }
 section[hidden] { display: none; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    position: sticky; top: 0; z-index: 20; height: auto; flex-direction: column; gap: 10px;
+    padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .brand-mark { width: 30px; height: 30px; }
+  .brand span { display: none; }
+  nav.tabs { flex-direction: row; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button { width: auto; white-space: nowrap; padding: 7px 11px; }
+  .side-foot { display: none; }
+  .page-head { padding: 18px 16px 4px; }
+  .page-head h1 { font-size: 1.3rem; }
+  main { padding: 10px 16px 40px; }
+  .mobile-tools { display: flex !important; }
+}
+.mobile-tools { display: none; position: absolute; right: 14px; top: 12px; gap: 4px; }
+.mobile-tools button { background: none; border: 0; color: var(--muted); padding: 6px; border-radius: 8px; cursor: pointer; }
+
+/* ---------- Bausteine ---------- */
 .card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); min-width: 0;
 }
-.card h2 { margin: 0 0 12px; font-size: 1.05rem; }
-.card h3 { margin: 12px 0 6px; font-size: .95rem; }
-.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.card-head > * { min-width: 0; max-width: 100%; }
+.card h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.card h2 svg.i { color: var(--accent); }
+.card h3 { margin: 16px 0 8px; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.card .lead { margin: -6px 0 14px; color: var(--muted); font-size: .88rem; }
+.card .lead.mt { margin-top: 12px; }
+.hero-banner {
+  background: var(--hero-grad); color: #fff; border: 0; position: relative; overflow: hidden;
+}
+.hero-banner::after {
+  content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%);
+}
+.hero-banner h2, .hero-banner p { color: #fff; position: relative; }
+.hero-banner p { opacity: .9; margin: 6px 0 0; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .grid-6 { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
-input, select, textarea {
-  font: inherit; color: var(--text); background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: 8px; padding: 8px; width: 100%;
-}
-input[type=checkbox] { width: auto; }
-textarea { min-height: 70px; resize: vertical; }
-button.btn {
-  font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text);
-  padding: 8px 14px; border-radius: 8px; cursor: pointer;
-}
-button.btn.ghost { background: transparent; color: var(--accent); }
-button.btn.small { padding: 4px 8px; font-size: .8rem; }
-button.btn.danger { border-color: var(--loss); background: transparent; color: var(--loss); }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+.grid-2 > .card { margin-bottom: 0; }
+.stack { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .between { justify-content: space-between; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+.mt { margin-top: 12px; }
+
+label { display: flex; flex-direction: column; gap: 5px; font-size: .8rem; font-weight: 500; color: var(--text-2); }
+input, select, textarea {
+  font: inherit; font-size: .92rem; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+input[type=checkbox] { width: auto; }
+input[type=range] { padding: 0; }
+textarea { min-height: 76px; resize: vertical; }
+.inline-label { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; min-width: 0; max-width: 100%; }
+.inline-label select { width: auto; max-width: 100%; min-width: 0; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; font: inherit; font-weight: 600; font-size: .9rem;
+  border: 1px solid transparent; background: var(--accent); color: var(--accent-text);
+  padding: 9px 16px; border-radius: 10px; cursor: pointer; transition: transform .1s, background .15s, box-shadow .15s;
+  text-decoration: none;
+}
+.btn:hover { background: var(--accent-strong); box-shadow: 0 4px 14px var(--accent-soft); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--accent-strong); border-color: var(--border); }
+.btn.ghost:hover { background: var(--accent-soft); box-shadow: none; }
+.btn.small { padding: 5px 10px; font-size: .8rem; border-radius: 8px; }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--border); }
+.btn.danger:hover { background: rgba(208, 59, 59, .1); box-shadow: none; }
+.btn.icon { padding: 6px; }
+.btn svg.i { width: 16px; height: 16px; }
+
+/* Segmentierte Auswahl (Ergebnis, Gefühl) */
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: 1px; }
+.seg label {
+  flex-direction: row; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 9px; cursor: pointer;
+  font-size: .9rem; color: var(--text-2); font-weight: 600; user-select: none;
+}
+.seg input:checked + label { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); }
+.seg.result input[value="W"]:checked + label .dot { background: var(--good); }
+.seg.result input[value="L"]:checked + label .dot { background: var(--bad); }
+.seg .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-3); }
+.seg.mood label { font-size: 1.25rem; padding: 4px 10px; }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: .8rem; font-weight: 500; color: var(--text-2); }
+.kda { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  border-radius: 999px; padding: 4px 10px; font-size: .8rem; cursor: pointer; user-select: none;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+  border-radius: 999px; padding: 5px 12px; font-size: .8rem; cursor: pointer; user-select: none; transition: all .15s;
 }
+.chip:hover { border-color: var(--accent); color: var(--text); }
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .tag {
-  display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: .75rem;
-  background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); margin: 2px 2px 0 0;
+  display: inline-flex; align-items: center; border-radius: 6px; padding: 1px 8px; font-size: .72rem; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); margin: 2px 4px 0 0;
 }
-.stat { background: var(--surface-2); border-radius: 10px; padding: 12px; }
-.stat .v { font-size: 1.6rem; font-weight: 700; }
-.stat .l { color: var(--muted); font-size: .8rem; }
-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { color: var(--muted); font-weight: 600; }
-.table-wrap { overflow-x: auto; }
-.win { color: var(--win); font-weight: 600; }
-.loss { color: var(--loss); font-weight: 600; }
-.muted { color: var(--muted); }
-.small { font-size: .8rem; }
-.role-Vanguard { color: var(--vanguard); }
-.role-Duelist { color: var(--duelist); }
-.role-Strategist { color: var(--strategist); }
-.hero-card { border-left: 4px solid var(--border); }
-.hero-card.Vanguard { border-left-color: var(--vanguard); }
-.hero-card.Duelist { border-left-color: var(--duelist); }
-.hero-card.Strategist { border-left-color: var(--strategist); }
-.hero-card ul { margin: 4px 0 0; padding-left: 18px; }
-.bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
-.bar > span { display: block; height: 100%; background: var(--accent); }
-.check { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--border); }
-.check input { width: auto; margin-top: 4px; }
-.check.done span { text-decoration: line-through; color: var(--muted); }
-.feedback { padding: 8px 12px; border-radius: 8px; background: var(--surface-2); margin: 6px 0; }
-.feedback.good { border-left: 4px solid var(--win); }
-.feedback.bad { border-left: 4px solid var(--loss); }
-.feedback.info { border-left: 4px solid var(--warn); }
-.pick { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 600;
+  background: var(--accent-soft); color: var(--accent-strong);
+}
+
+/* Helden-Avatar: Initialen mit Rollenring */
+.av {
+  --c: var(--muted);
+  display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%;
+  font-size: .7rem; font-weight: 800; letter-spacing: .02em; color: var(--text);
+  background: color-mix(in srgb, var(--c) 18%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+.av.lg { width: 44px; height: 44px; font-size: .9rem; }
+.av.sm { width: 22px; height: 22px; font-size: .58rem; box-shadow: inset 0 0 0 1.5px var(--c); }
+.av.Vanguard { --c: var(--vanguard); }
+.av.Duelist { --c: var(--duelist); }
+.av.Strategist { --c: var(--strategist); }
+.hero { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.hero b { font-weight: 600; white-space: nowrap; }
+.role {
+  --c: var(--muted);
+  display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; color: var(--text-2); font-weight: 500;
+}
+.role::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.role.Vanguard { --c: var(--vanguard); }
+.role.Duelist { --c: var(--duelist); }
+.role.Strategist { --c: var(--strategist); }
+
+/* Ergebnis und Winrate */
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.pill.win { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); }
+.pill.loss { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.wr { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wr .arrow { font-size: .65rem; }
+.wr.good .arrow { color: var(--good); }
+.wr.bad .arrow { color: var(--bad); }
+.delta { font-size: .78rem; font-weight: 600; }
+.delta.up { color: var(--good-text); }
+.delta.down { color: var(--bad); }
+
+/* KPI-Kacheln */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); margin-bottom: 16px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); min-width: 0; }
+.kpi .l { color: var(--muted); font-size: .78rem; font-weight: 500; }
+.kpi .v { font-size: 1.75rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi .s { margin-top: 2px; font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; min-height: 1.2em; }
+.kpi svg.spark { width: 100%; height: 28px; margin-top: 6px; display: block; }
+
+/* Tabellen */
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+th { color: var(--muted); font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr:last-child td { border-bottom: 0; }
+.table-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Balkenlisten */
+.bars { display: flex; flex-direction: column; gap: 12px; }
+.bar-row .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .86rem; margin-bottom: 5px; }
+.bar-row .top .v { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.track > span { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
+.track.Vanguard > span { background: var(--vanguard); }
+.track.Duelist > span { background: var(--duelist); }
+.track.Strategist > span { background: var(--strategist); }
+.minibar { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: var(--surface-2); vertical-align: middle; margin-left: 8px; overflow: hidden; }
+.minibar > span { display: block; height: 100%; background: var(--accent); border-radius: 0 3px 3px 0; }
+
+/* Hinweise */
+.notes { display: flex; flex-direction: column; gap: 8px; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .9rem; }
+.note .ni { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; margin-top: 1px; }
+.note.good .ni { background: var(--good); }
+.note.bad .ni { background: var(--bad); }
+.note.info .ni { background: var(--accent); }
+
+/* Diagramme */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; }
+.tooltip {
+  position: absolute; pointer-events: none; background: var(--text); color: var(--bg); font-size: .78rem;
+  padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px));
+  opacity: 0; transition: opacity .1s; z-index: 5;
+}
+.tooltip.show { opacity: 1; }
+.empty { text-align: center; color: var(--muted); padding: 22px 10px; font-size: .9rem; }
+.empty svg.i { width: 30px; height: 30px; display: block; margin: 0 auto 6px; opacity: .6; }
+
+/* Counter-Vorschläge */
+.pick { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--grid); }
 .pick:last-child { border-bottom: 0; }
-.pick .why { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); }
-.quiz-q { font-size: 1.1rem; font-weight: 600; margin: 4px 0 12px; }
-.quiz-opts { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.pick .why { grid-column: 2 / -1; font-size: .8rem; color: var(--muted); }
+.pick .why .con { color: var(--bad); }
+.pick .score { width: 90px; }
+
+/* Quiz */
+.quiz-q { font-size: 1.15rem; font-weight: 600; margin: 4px 0 14px; display: flex; align-items: center; gap: 12px; }
+.quiz-opts { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
 .quiz-opts button {
-  font: inherit; text-align: left; padding: 12px; border-radius: 10px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  font: inherit; text-align: left; padding: 12px; border-radius: 14px; cursor: pointer; display: flex; gap: 10px; align-items: center;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text); transition: transform .1s, border-color .15s;
 }
-.quiz-opts button.right { border-color: var(--win); box-shadow: inset 4px 0 0 var(--win); }
-.quiz-opts button.wrong { border-color: var(--loss); box-shadow: inset 4px 0 0 var(--loss); }
+.quiz-opts button:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+.quiz-opts button.right { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+.quiz-opts button.wrong { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
 .quiz-opts button:disabled { cursor: default; }
-details summary { cursor: pointer; color: var(--accent); font-size: .85rem; margin-top: 6px; }
-svg text { fill: var(--muted); font-size: 11px; }
+.ring { width: 54px; height: 54px; flex: none; }
+
+/* Helden-Karten */
+.hero-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); margin-bottom: 16px; }
+.hero-cards .card { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.hero-card-head { display: flex; align-items: center; gap: 12px; }
+.hero-card-head h2 { font-size: 1.05rem; }
+.hero-card ul { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--text-2); }
+.hero-card ul li { margin: 2px 0; }
+.stat-line { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; color: var(--muted); }
+.stat-line b { color: var(--text); font-weight: 600; }
+.vs-line { font-size: .84rem; }
+.vs-line .lbl { font-weight: 700; margin-right: 4px; }
+.vs-line .lbl.good { color: var(--good-text); }
+.vs-line .lbl.bad { color: var(--bad); }
+details summary { cursor: pointer; color: var(--accent-strong); font-size: .84rem; font-weight: 600; margin-top: 4px; }
+
+/* Training */
+.check { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--grid); }
+.check:last-child { border-bottom: 0; }
+.check input { width: 18px; height: 18px; }
+.check.done .txt { text-decoration: line-through; color: var(--muted); }
+.check .txt { flex: 1; font-size: .92rem; }
+.timer { font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* Code-Blöcke für den Sync */
+.steps { counter-reset: step; display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; font-size: .9rem; }
+.steps li::before {
+  content: counter(step); width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong);
+  display: grid; place-items: center; font-weight: 700; font-size: .8rem;
+}
+.code { display: flex; align-items: center; gap: 8px; margin-top: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 6px 6px 12px; }
+.code code { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; overflow-x: auto; white-space: nowrap; }
 pre.prompt {
-  white-space: pre-wrap; background: var(--surface-2); padding: 12px; border-radius: 8px;
-  font-size: .85rem; max-height: 320px; overflow: auto;
+  white-space: pre-wrap; background: var(--surface-2); padding: 14px; border-radius: 12px; border: 1px solid var(--border);
+  font: .84rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; max-height: 360px; overflow: auto; margin: 12px 0 0;
 }
+.sync-status { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+.sync-status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.sync-status.ok .dot { background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent); }
+
 .toast {
-  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-  background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px;
-  opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw;
+  position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 10px);
+  background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 12px; font-size: .9rem; font-weight: 500;
+  opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; max-width: min(90vw, 560px); z-index: 50; box-shadow: var(--shadow);
 }
-.toast.show { opacity: 1; }
-@media (max-width: 480px) {
-  .grid-2 { grid-template-columns: 1fr; }
-}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.edit-banner { display: none; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; margin-bottom: 16px; }
+.edit-banner.show { display: flex; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>🎮 Rivals Coach <span class="muted" style="font-weight:400;font-size:.85rem">– besser werden in Marvel Rivals</span></h1>
-  <a href="../">← Zurück zur Lernseite</a>
-  <button class="btn ghost small" id="themeBtn" type="button">Hell/Dunkel</button>
-</header>
-<nav class="tabs" role="tablist">
-  <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
-  <button role="tab" data-tab="log">Match loggen</button>
-  <button role="tab" data-tab="analysis">Auswertung</button>
-  <button role="tab" data-tab="team">Team &amp; Counter</button>
-  <button role="tab" data-tab="quiz">Counter-Training</button>
-  <button role="tab" data-tab="heroes">Helden-Guide</button>
-  <button role="tab" data-tab="training">Training</button>
-  <button role="tab" data-tab="goals">Lernziele</button>
-  <button role="tab" data-tab="ai">KI-Coach</button>
-  <button role="tab" data-tab="data">Daten</button>
-</nav>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+      <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b4cf0"/><stop offset=".6" stop-color="#8b5cf6"/><stop offset="1" stop-color="#c026d3"/></linearGradient></defs>
+      <path d="M20 2 36 11v18L20 38 4 29V11z" fill="url(#bg)"/>
+      <path d="M22.5 8 13 22h6l-2.5 10L27 17h-6z" fill="#f5b82e"/>
+    </svg>
+    <div><b>Rivals Coach</b><span>Marvel Rivals Trainer</span></div>
+    <div class="mobile-tools"><button type="button" class="theme-toggle" aria-label="Hell/Dunkel umschalten" data-icon="theme"></button></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Bereiche">
+    <button role="tab" data-tab="dashboard" data-icon="dashboard" aria-selected="true">Dashboard</button>
+    <button role="tab" data-tab="log" data-icon="log">Match loggen</button>
+    <button role="tab" data-tab="analysis" data-icon="analysis">Auswertung</button>
+    <button role="tab" data-tab="team" data-icon="team">Team &amp; Counter</button>
+    <button role="tab" data-tab="quiz" data-icon="quiz">Counter-Training</button>
+    <button role="tab" data-tab="heroes" data-icon="heroes">Helden-Guide</button>
+    <button role="tab" data-tab="training" data-icon="training">Training</button>
+    <button role="tab" data-tab="goals" data-icon="goals">Lernziele</button>
+    <button role="tab" data-tab="ai" data-icon="ai">KI-Coach</button>
+    <button role="tab" data-tab="data" data-icon="data">Daten &amp; Sync</button>
+  </nav>
+  <div class="side-foot">
+    <button type="button" class="theme-toggle" data-icon="theme">Hell / Dunkel</button>
+    <a href="../" data-icon="back">Zur Lernseite</a>
+  </div>
+</aside>
 
+<div class="content">
+<div class="page-head">
+  <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p></div>
+  <button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button>
+</div>
 <main>
 <!-- DASHBOARD -->
 <section id="tab-dashboard">
-  <div class="card">
-    <h2>Überblick</h2>
-    <div class="grid" id="kpis"></div>
-  </div>
+  <div class="kpis" id="kpis"></div>
   <div class="card" id="todayCard"></div>
   <div class="grid-2">
     <div class="card">
-      <h2>Winrate-Verlauf (letzte 30 Matches, gleitend über 5)</h2>
-      <div id="trend"></div>
+      <div class="card-head"><h2 data-icon="analysis">Winrate-Verlauf</h2><span class="muted small">letzte 30 Matches · gleitend über 5</span></div>
+      <div class="chart" id="trend"></div>
     </div>
     <div class="card">
-      <h2>Nach Rolle</h2>
+      <div class="card-head"><h2 data-icon="team">Winrate nach Rolle</h2></div>
       <div id="byRole"></div>
     </div>
   </div>
-  <div class="grid-2">
+  <div class="grid-2 mt">
     <div class="card">
-      <h2>Deine Helden</h2>
+      <div class="card-head"><h2 data-icon="heroes">Deine Helden</h2></div>
       <div class="table-wrap" id="byHero"></div>
     </div>
     <div class="card">
-      <h2>Häufigste Fehler</h2>
+      <div class="card-head"><h2 data-icon="target">Häufigste Fehler</h2><span class="muted small">letzte 20 Matches</span></div>
       <div id="topMistakes"></div>
     </div>
   </div>
-  <div class="card">
-    <h2>Coach-Hinweise</h2>
+  <div class="card mt">
+    <div class="card-head"><h2 data-icon="ai">Coach-Hinweise</h2></div>
     <div id="insights"></div>
   </div>
 </section>
 
 <!-- LOG -->
 <section id="tab-log" hidden>
+  <div class="edit-banner" id="editBanner"><span id="editText">Match bearbeiten</span><button class="btn ghost small" type="button" id="editCancel">Abbrechen</button></div>
   <form id="matchForm">
   <div class="card">
-    <h2>Neues Match</h2>
+    <div class="card-head"><h2 data-icon="log">Match</h2></div>
     <div class="grid">
       <label>Mein Held <select name="hero" id="heroSelect" required></select></label>
       <label>Modus
         <select name="mode">
-          <option>Competitive</option><option>Quick Match</option><option>Custom / Training</option>
+          <option>Competitive</option><option>Quick Match</option><option>Arcade / Event</option><option>Custom / Training</option>
         </select>
       </label>
+      <label>Map <input name="map" list="mapList" placeholder="Map wählen oder tippen"></label>
       <label>Spieltyp
         <select name="type">
           <option>Domination</option><option>Convoy</option><option>Convergence</option><option>Doom Match</option><option>Conquest</option><option>Anderer</option>
         </select>
       </label>
-      <label>Map <input name="map" list="mapList" placeholder="optional"></label>
-      <label>Ergebnis
-        <select name="result"><option value="W">Sieg</option><option value="L">Niederlage</option></select>
-      </label>
-      <label>Kills (K) <input type="number" name="k" min="0" value="0"></label>
-      <label>Deaths (D) <input type="number" name="d" min="0" value="0"></label>
-      <label>Assists (A) <input type="number" name="a" min="0" value="0"></label>
-      <label>Schaden <input type="number" name="dmg" min="0" step="100" placeholder="optional"></label>
-      <label>Heilung <input type="number" name="heal" min="0" step="100" placeholder="optional"></label>
-      <label>Geblockt <input type="number" name="block" min="0" step="100" placeholder="optional"></label>
-      <label>Gefühl (1 = Frust, 5 = super) <input type="range" name="mood" min="1" max="5" value="3"></label>
     </div>
     <datalist id="mapList"></datalist>
+    <div class="grid mt">
+      <div class="field">Ergebnis
+        <div class="seg result">
+          <input type="radio" name="result" value="W" id="resW" checked><label for="resW"><span class="dot"></span>Sieg</label>
+          <input type="radio" name="result" value="L" id="resL"><label for="resL"><span class="dot"></span>Niederlage</label>
+        </div>
+      </div>
+      <div class="field">K / D / A
+        <div class="kda">
+          <input type="number" name="k" min="0" value="0" aria-label="Kills">
+          <input type="number" name="d" min="0" value="0" aria-label="Deaths">
+          <input type="number" name="a" min="0" value="0" aria-label="Assists">
+        </div>
+      </div>
+      <div class="field">Wie hat es sich angefühlt?
+        <div class="seg mood">
+          <input type="radio" name="mood" value="1" id="m1"><label for="m1" title="Frust">😣</label>
+          <input type="radio" name="mood" value="2" id="m2"><label for="m2" title="Eher schlecht">😕</label>
+          <input type="radio" name="mood" value="3" id="m3" checked><label for="m3" title="Okay">😐</label>
+          <input type="radio" name="mood" value="4" id="m4"><label for="m4" title="Gut">🙂</label>
+          <input type="radio" name="mood" value="5" id="m5"><label for="m5" title="Super">🤩</label>
+        </div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <label>Schaden <input type="number" name="dmg" min="0" step="any" placeholder="optional"></label>
+      <label>Heilung <input type="number" name="heal" min="0" step="any" placeholder="optional"></label>
+      <label>Geblockt <input type="number" name="block" min="0" step="any" placeholder="optional"></label>
+    </div>
   </div>
 
   <div class="card">
-    <div class="row between">
-      <h2 style="margin:0">Teams</h2>
+    <div class="card-head">
+      <h2 data-icon="team">Teams</h2>
       <button class="btn ghost small" type="button" id="takeTeams">Aus „Team &amp; Counter“ übernehmen</button>
     </div>
-    <p class="muted small">Optional, aber sehr wertvoll: Daraus berechnet die App, gegen welche Helden du oft verlierst und was bei dir als Counter funktioniert.</p>
-    <h3 class="role-Duelist">Gegnerteam</h3>
+    <p class="lead">Optional, aber wertvoll: Daraus berechnet die App, gegen welche Helden du oft verlierst und welche Counter bei dir funktionieren.</p>
+    <h3>Gegnerteam</h3>
     <div class="grid-6" id="enemySlots"></div>
-    <h3 class="role-Strategist">Meine Mitspieler</h3>
+    <h3>Meine Mitspieler</h3>
     <div class="grid-6" id="allySlots"></div>
-    <div class="grid" style="margin-top:12px">
+    <div class="grid mt">
       <label>Wer hat dir am meisten Probleme gemacht? <select name="nemesis" id="nemesisSelect"></select></label>
-      <label>Habe ich während des Matches gewechselt? <select name="swapped"><option value="">Nein</option><option value="1">Ja</option></select></label>
+      <label>Während des Matches gewechselt? <select name="swapped"><option value="">Nein</option><option value="1">Ja</option></select></label>
     </div>
   </div>
 
   <div class="card">
-    <h2>Reflexion</h2>
-    <h3>Was lief schief? (Mehrfachauswahl)</h3>
+    <div class="card-head"><h2 data-icon="goals">Reflexion</h2></div>
+    <h3>Was lief schief?</h3>
     <div class="chips" id="mistakeChips"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
-    <div class="grid-2" style="margin-top:12px">
+    <div class="grid-2 mt">
       <label>Notizen / VOD-Zeitstempel <textarea name="notes" placeholder="z.B. 04:12 – ohne Heiler in den Fight gerannt"></textarea></label>
       <label>Eine Sache, die ich nächstes Match besser mache <textarea name="next" placeholder="z.B. Ult für den nächsten Teamfight aufheben"></textarea></label>
     </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" type="submit">Match speichern</button>
+    <div class="row mt">
+      <button class="btn" type="submit" id="saveBtn" data-icon="check">Match speichern</button>
     </div>
   </div>
   </form>
   <div class="card">
-    <h2>Match-Verlauf</h2>
+    <div class="card-head"><h2 data-icon="list">Match-Verlauf</h2><span class="muted small" id="matchCount"></span></div>
     <div class="table-wrap" id="matchTable"></div>
   </div>
 </section>
@@ -300,62 +563,41 @@ pre.prompt {
 <section id="tab-analysis" hidden>
   <div class="card">
     <div class="row">
-      <label style="flex-direction:row;align-items:center;gap:6px">Zeitraum
-        <select id="fPeriod" style="width:auto">
-          <option value="7">Letzte 7 Tage</option><option value="30">Letzte 30 Tage</option><option value="0" selected>Alles</option>
-        </select>
+      <label class="inline-label">Zeitraum
+        <select id="fPeriod"><option value="7">Letzte 7 Tage</option><option value="30">Letzte 30 Tage</option><option value="0" selected>Alles</option></select>
       </label>
-      <label style="flex-direction:row;align-items:center;gap:6px">Modus
-        <select id="fMode" style="width:auto">
-          <option value="">Alle</option><option>Competitive</option><option>Quick Match</option><option>Custom / Training</option>
-        </select>
+      <label class="inline-label">Modus
+        <select id="fMode"><option value="">Alle</option><option>Competitive</option><option>Quick Match</option><option>Arcade / Event</option><option>Custom / Training</option></select>
       </label>
-      <label style="flex-direction:row;align-items:center;gap:6px">Rolle
-        <select id="fRole" style="width:auto">
-          <option value="">Alle</option><option>Vanguard</option><option>Duelist</option><option>Strategist</option>
-        </select>
+      <label class="inline-label">Rolle
+        <select id="fRole"><option value="">Alle</option><option>Vanguard</option><option>Duelist</option><option>Strategist</option></select>
       </label>
     </div>
-    <div class="grid" id="aKpis" style="margin-top:12px"></div>
+  </div>
+  <div class="kpis" id="aKpis"></div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="sync">Abgleich mit Rivals Data</h2><span class="muted small" id="metaInfo"></span></div>
+    <div class="table-wrap" id="aMeta"></div>
   </div>
   <div class="card">
-    <h2>Gegen diese Gegner-Helden</h2>
-    <p class="muted small">Winrate in Matches, in denen dieser Held im Gegnerteam war. Rot = Problem-Matchup. Der Counter-Tipp kommt aus deinen eigenen Siegen oder, wenn noch zu wenig Daten da sind, aus den Counter-Faustregeln.</p>
+    <div class="card-head"><h2 data-icon="target">Gegen diese Gegner-Helden</h2></div>
+    <p class="lead">Deine Winrate in Matches, in denen dieser Held im Gegnerteam war. Der Counter-Tipp kommt aus deinen eigenen Siegen oder – bei zu wenig Daten – aus den Counter-Faustregeln.</p>
     <div class="table-wrap" id="aEnemies"></div>
   </div>
   <div class="grid-2">
-    <div class="card">
-      <h2>Mit diesen Mitspielern</h2>
-      <div class="table-wrap" id="aAllies"></div>
-    </div>
-    <div class="card">
-      <h2>Gegnerische Team-Stile</h2>
-      <p class="muted small">Wie oft du gegen welche Spielweise gewinnst (ab 2 Helden dieses Typs im Gegnerteam).</p>
-      <div class="table-wrap" id="aStyles"></div>
-    </div>
+    <div class="card"><div class="card-head"><h2 data-icon="team">Mit diesen Mitspielern</h2></div><div class="table-wrap" id="aAllies"></div></div>
+    <div class="card"><div class="card-head"><h2 data-icon="quiz">Gegnerische Team-Stile</h2></div><p class="lead">ab 2 Helden dieses Typs im Gegnerteam</p><div class="table-wrap" id="aStyles"></div></div>
   </div>
-  <div class="grid-2">
-    <div class="card">
-      <h2>Maps</h2>
-      <div class="table-wrap" id="aMaps"></div>
-    </div>
-    <div class="card">
-      <h2>Spieltyp &amp; Modus</h2>
-      <div class="table-wrap" id="aTypes"></div>
-    </div>
+  <div class="grid-2 mt">
+    <div class="card"><div class="card-head"><h2 data-icon="map">Maps</h2></div><div class="table-wrap" id="aMaps"></div></div>
+    <div class="card"><div class="card-head"><h2 data-icon="list">Spieltyp &amp; Modus</h2></div><div class="table-wrap" id="aTypes"></div></div>
   </div>
-  <div class="grid-2">
-    <div class="card">
-      <h2>Wann spielst du am besten?</h2>
-      <div id="aWhen"></div>
-    </div>
-    <div class="card">
-      <h2>Siege vs. Niederlagen</h2>
-      <div class="table-wrap" id="aWL"></div>
-    </div>
+  <div class="grid-2 mt">
+    <div class="card"><div class="card-head"><h2 data-icon="clock">Wann spielst du am besten?</h2></div><div id="aWhen"></div></div>
+    <div class="card"><div class="card-head"><h2 data-icon="analysis">Siege vs. Niederlagen</h2></div><div class="table-wrap" id="aWL"></div></div>
   </div>
-  <div class="card">
-    <h2>Was die Daten sagen</h2>
+  <div class="card mt">
+    <div class="card-head"><h2 data-icon="ai">Was die Daten sagen</h2></div>
     <div id="aInsights"></div>
   </div>
 </section>
@@ -363,49 +605,37 @@ pre.prompt {
 <!-- TEAM & COUNTER -->
 <section id="tab-team" hidden>
   <div class="card">
-    <div class="row between">
-      <h2 style="margin:0">Gegnerteam</h2>
-      <button class="btn ghost small" type="button" id="enemyClear">Leeren</button>
-    </div>
-    <p class="muted small">Trag während der Heldenauswahl ein, was die Gegner spielen – du bekommst sofort Counter-Vorschläge.</p>
+    <div class="card-head"><h2 data-icon="target">Gegnerteam</h2><button class="btn ghost small" type="button" id="enemyClear">Leeren</button></div>
+    <p class="lead">Trag während der Heldenauswahl ein, was die Gegner spielen – du bekommst sofort Counter-Vorschläge.</p>
     <div class="grid-6" id="teamEnemySlots"></div>
-    <div id="enemyAnalysis" style="margin-top:8px"></div>
+    <div id="enemyAnalysis" class="mt"></div>
   </div>
   <div class="card">
-    <h2>Counter-Vorschläge für dich</h2>
-    <div class="row">
-      <label style="flex-direction:row;align-items:center;gap:6px">Rolle
-        <select id="pickRole" style="width:auto">
-          <option value="">Alle</option><option>Vanguard</option><option>Duelist</option><option>Strategist</option>
-        </select>
-      </label>
-      <label style="flex-direction:row;align-items:center;gap:6px;color:var(--text)"><input type="checkbox" id="pickPool"> Nur Helden, die ich schon gespielt habe</label>
+    <div class="card-head">
+      <h2 data-icon="quiz">Counter-Vorschläge für dich</h2>
+      <div class="row">
+        <label class="inline-label">Rolle <select id="pickRole"><option value="">Alle</option><option>Vanguard</option><option>Duelist</option><option>Strategist</option></select></label>
+        <label class="inline-label"><input type="checkbox" id="pickPool"> Nur gespielte Helden</label>
+      </div>
     </div>
-    <div id="picks" style="margin-top:8px"></div>
+    <div id="picks"></div>
   </div>
   <div class="card">
-    <div class="row between">
-      <h2 style="margin:0">Mein Team</h2>
-      <button class="btn ghost small" type="button" id="teamClear">Leeren</button>
-    </div>
-    <div class="grid-6" id="teamSlots" style="margin-top:12px"></div>
-    <div id="teamFeedback" style="margin-top:8px"></div>
+    <div class="card-head"><h2 data-icon="team">Mein Team</h2><button class="btn ghost small" type="button" id="teamClear">Leeren</button></div>
+    <div class="grid-6" id="teamSlots"></div>
+    <div id="teamFeedback" class="mt"></div>
   </div>
 </section>
 
 <!-- QUIZ -->
 <section id="tab-quiz" hidden>
   <div class="card">
-    <div class="row between">
-      <h2 style="margin:0">Counter-Training</h2>
-      <span class="muted small" id="quizScore"></span>
-    </div>
-    <p class="muted small">Lerne Counter mit Quizfragen. Helden, gegen die du oft spielst oder die du falsch beantwortet hast, kommen häufiger dran.</p>
+    <div class="card-head"><h2 data-icon="quiz">Quiz</h2><span class="badge" id="quizScore"></span></div>
     <div id="quizBox"></div>
   </div>
   <div class="card">
-    <h2>Counter-Faustregeln</h2>
-    <p class="muted small">Die Counter-Vorschläge beruhen auf diesen Regeln und den Spielstil-Tags der Helden. Balance-Patches ändern Details – Tags kannst du im Helden-Guide anpassen.</p>
+    <div class="card-head"><h2 data-icon="heroes">Counter-Faustregeln</h2></div>
+    <p class="lead">Die Counter-Vorschläge beruhen auf diesen Regeln und den Spielstil-Tags der Helden. Balance-Patches ändern Details – Tags kannst du im Helden-Guide anpassen.</p>
     <div class="table-wrap" id="ruleList"></div>
   </div>
 </section>
@@ -413,22 +643,23 @@ pre.prompt {
 <!-- HEROES -->
 <section id="tab-heroes" hidden>
   <div class="card">
-    <h2>Helden-Guide</h2>
-    <p class="muted">Rollen-Tipps, Spielstil, Counter und deine persönlichen Matchup-Werte. Stand: Season 10 (Oktober 2026) mit allen 54 Helden – Deadpool ist als Vanguard, Duelist und Strategist einzeln aufgeführt. Balancing und neue Helden ändern sich jede Season – du kannst eigene Helden, Tags und Notizen ergänzen.</p>
-    <div class="row">
-      <input id="heroSearch" placeholder="Helden suchen…" style="max-width:260px">
-      <div class="chips" id="roleFilter"></div>
+    <div class="row between">
+      <div class="row">
+        <input id="heroSearch" placeholder="Helden suchen…" style="max-width:240px">
+        <div class="chips" id="roleFilter"></div>
+      </div>
+      <span class="muted small">Stand: Season 10 (Oktober 2026) · 54 Helden</span>
     </div>
   </div>
   <div class="card" id="roleTips"></div>
-  <div class="grid-2" id="heroCards"></div>
+  <div class="hero-cards" id="heroCards"></div>
   <div class="card">
-    <h2>Eigenen Helden hinzufügen</h2>
+    <div class="card-head"><h2 data-icon="log">Eigenen Helden hinzufügen</h2></div>
     <form id="heroForm" class="grid">
       <label>Name <input name="name" required></label>
       <label>Rolle <select name="role"><option>Vanguard</option><option>Duelist</option><option>Strategist</option></select></label>
       <label>Tipps (eine Zeile pro Tipp) <textarea name="tips"></textarea></label>
-      <div><span class="muted small">Spielstil-Tags</span><div class="chips" id="newHeroTags"></div></div>
+      <div class="field">Spielstil-Tags<div class="chips" id="newHeroTags"></div></div>
       <div class="row"><button class="btn" type="submit">Hinzufügen</button></div>
     </form>
   </div>
@@ -438,42 +669,42 @@ pre.prompt {
 <section id="tab-training" hidden>
   <div class="grid-2">
     <div class="card">
-      <h2>Tägliche Routine</h2>
-      <p class="muted" id="streakInfo"></p>
+      <div class="card-head"><h2 data-icon="training">Tägliche Routine</h2><span class="badge" id="streakInfo"></span></div>
       <div id="routine"></div>
-      <div class="row" style="margin-top:8px">
+      <div class="row mt">
         <input id="routineNew" placeholder="Eigene Übung hinzufügen…" style="flex:1;width:auto">
-        <button class="btn small" type="button" id="routineAdd">+</button>
+        <button class="btn small" type="button" id="routineAdd">Hinzufügen</button>
       </div>
     </div>
     <div class="card">
-      <h2>Fokus der Woche</h2>
-      <p class="muted">Auf Basis deiner häufigsten Fehler und Problem-Gegner vorgeschlagene Übungen:</p>
+      <div class="card-head"><h2 data-icon="target">Fokus der Woche</h2></div>
+      <p class="lead">Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern</p>
       <div id="drills"></div>
     </div>
   </div>
-  <div class="card">
-    <h2>Aufwärm-Timer</h2>
-    <div class="row">
-      <select id="timerMin" style="max-width:140px">
-        <option value="5">5 Minuten</option><option value="10" selected>10 Minuten</option><option value="15">15 Minuten</option>
-      </select>
+  <div class="card mt">
+    <div class="card-head"><h2 data-icon="clock">Aufwärm-Timer</h2></div>
+    <div class="row" style="gap:16px">
+      <span class="timer" id="timerOut">10:00</span>
+      <select id="timerMin" style="width:auto"><option value="5">5 Minuten</option><option value="10" selected>10 Minuten</option><option value="15">15 Minuten</option></select>
       <button class="btn" type="button" id="timerBtn">Start</button>
-      <span id="timerOut" style="font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums">10:00</span>
     </div>
   </div>
 </section>
 
 <!-- GOALS -->
 <section id="tab-goals" hidden>
+  <div class="card hero-banner">
+    <h2>Planen · Durchführen · Reflektieren</h2>
+    <p>Wie beim selbständigen Lernen: Setze dir ein konkretes Ziel, übe gezielt und schau danach, was funktioniert hat. Formuliere SMART, z.B. „Diese Woche als Luna Snow max. 6 Tode pro Match“ oder „Gegen Hela 5 Matches mit einem Diver spielen“.</p>
+  </div>
   <div class="card">
-    <h2>Lernziele nach dem 3-Phasen-Modell</h2>
-    <p class="muted">Wie beim selbständigen Lernen: <b>Planen</b> (konkretes Ziel), <b>Durchführen</b> (üben und spielen), <b>Reflektieren</b> (was hat funktioniert?). Formuliere Ziele SMART, z.B. „Diese Woche als Luna Snow pro Match max. 6 Tode“ oder „Gegen Hela 5 Matches mit einem Diver spielen“.</p>
+    <div class="card-head"><h2 data-icon="goals">Neues Ziel</h2></div>
     <form id="goalForm" class="grid">
       <label>Ziel <input name="title" required placeholder="Was willst du erreichen?"></label>
       <label>Messbar durch <input name="metric" placeholder="z.B. Ø Deaths ≤ 6"></label>
       <label>Bis wann <input type="date" name="due"></label>
-      <div class="row"><button class="btn" type="submit">Ziel anlegen</button></div>
+      <div class="row" style="align-items:flex-end"><button class="btn" type="submit">Ziel anlegen</button></div>
     </form>
   </div>
   <div id="goalList"></div>
@@ -482,20 +713,22 @@ pre.prompt {
 <!-- AI -->
 <section id="tab-ai" hidden>
   <div class="card">
-    <h2>KI-Coach-Prompt</h2>
-    <p class="muted">Die App fasst deine Statistik zusammen. Kopiere den Prompt in einen KI-Chatbot (z.B. ChatGPT), um persönliches Feedback zu bekommen. Prüfe die Antworten kritisch – KI kann sich bei Spieldetails irren, und neue Patches kennt sie oft nicht.</p>
-    <div class="row">
-      <label style="flex-direction:row;align-items:center;gap:6px">Fokus
-        <select id="aiFocus" style="width:auto">
-          <option value="allgemein">Allgemeine Analyse</option>
-          <option value="held">Mein meistgespielter Held</option>
-          <option value="counter">Meine Problem-Gegner und Counter</option>
-          <option value="fehler">Meine häufigsten Fehler</option>
-          <option value="plan">Trainingsplan für 7 Tage</option>
-        </select>
-      </label>
-      <button class="btn" type="button" id="aiCopy">Prompt kopieren</button>
+    <div class="card-head">
+      <h2 data-icon="ai">Prompt für deinen KI-Coach</h2>
+      <div class="row">
+        <label class="inline-label">Fokus
+          <select id="aiFocus">
+            <option value="allgemein">Allgemeine Analyse</option>
+            <option value="held">Mein meistgespielter Held</option>
+            <option value="counter">Meine Problem-Gegner und Counter</option>
+            <option value="fehler">Meine häufigsten Fehler</option>
+            <option value="plan">Trainingsplan für 7 Tage</option>
+          </select>
+        </label>
+        <button class="btn" type="button" id="aiCopy" data-icon="copy">Kopieren</button>
+      </div>
     </div>
+    <p class="lead">Die App fasst deine Statistik zusammen. Füge den Prompt in einen KI-Chatbot (z.B. ChatGPT) ein. Prüfe die Antworten kritisch – KI kennt neue Patches oft nicht und kann sich bei Spieldetails irren.</p>
     <pre class="prompt" id="aiPrompt"></pre>
   </div>
 </section>
@@ -503,20 +736,36 @@ pre.prompt {
 <!-- DATA -->
 <section id="tab-data" hidden>
   <div class="card">
-    <h2>Daten sichern</h2>
-    <p class="muted">Alle Daten werden nur lokal in deinem Browser gespeichert. Exportiere sie regelmässig als Backup oder um sie auf ein anderes Gerät zu übertragen.</p>
+    <div class="card-head"><h2 data-icon="sync">Mit Rivals Data synchronisieren</h2></div>
+    <div class="sync-status" id="syncStatus"></div>
+    <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript deine öffentlichen Matches und die globalen Helden-Statistiken und speichert sie als Datei, die du hier einliest.</p>
+    <ol class="steps">
+      <li><div>Einmalig die Bibliothek installieren (Python 3.10 oder neuer):
+        <div class="code"><code>python -m pip install rivals-api</code><button class="btn ghost small" type="button" data-copy="python -m pip install rivals-api">Kopieren</button></div></div></li>
+      <li><div>Das Skript <a href="../rivals_sync.py" download>rivals_sync.py</a> herunterladen und in einen Ordner legen.</div></li>
+      <li><div>Deinen Spielernamen (oder deine UID) eintragen und den Befehl im selben Ordner ausführen:
+        <div class="row mt"><input id="syncPlayer" placeholder="Spielername oder UID" style="max-width:260px"></div>
+        <div class="code"><code id="syncCmd"></code><button class="btn ghost small" type="button" id="syncCmdCopy">Kopieren</button></div>
+        <span class="muted small">Deine Match-History muss im Spiel öffentlich sein. Mit <code>--limit 100</code> holst du mehr Matches.</span></div></li>
+      <li><div>Die erzeugte Datei <code>rivals-sync.json</code> hier importieren. Neue Matches werden ergänzt, bestehende aktualisiert – deine Notizen und Reflexionen bleiben erhalten.
+        <div class="row mt"><label class="btn" style="cursor:pointer;flex-direction:row" data-icon="upload">Rivals-Data-Datei importieren<input type="file" id="syncFile" accept="application/json,.json" hidden></label></div></div></li>
+    </ol>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="data">Backup</h2></div>
+    <p class="lead">Alle Daten liegen nur lokal in deinem Browser. Exportiere sie regelmässig als Backup oder um sie auf ein anderes Gerät zu übertragen.</p>
     <div class="row">
-      <button class="btn" type="button" id="exportBtn">Als JSON exportieren</button>
-      <label class="btn ghost" style="flex-direction:row;cursor:pointer;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 14px">JSON importieren
-        <input type="file" id="importFile" accept="application/json" hidden>
-      </label>
-      <button class="btn" type="button" id="csvBtn">Matches als CSV</button>
-      <button class="btn danger" type="button" id="resetBtn">Alles löschen</button>
+      <button class="btn" type="button" id="exportBtn" data-icon="download">Als JSON exportieren</button>
+      <label class="btn ghost" style="cursor:pointer;flex-direction:row" data-icon="upload">Backup importieren<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+      <button class="btn ghost" type="button" id="csvBtn" data-icon="list">Matches als CSV</button>
+      <button class="btn danger" type="button" id="resetBtn" data-icon="trash">Alles löschen</button>
     </div>
   </div>
 </section>
 </main>
-<div class="toast" id="toast"></div>
+</div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
@@ -700,21 +949,68 @@ const DEFAULT_ROUTINE = [
   "Session-Reflexion im Tab Lernziele"
 ];
 
+
+// ---------- Icons ----------
+const ICONS = {
+  dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  log: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  analysis: '<path d="M3 3v18h18"/><path d="M8 16v-4M13 16V8M18 16v-7"/>',
+  team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14a5 5 0 0 1 5 5.5"/>',
+  quiz: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  target: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+  heroes: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/>',
+  training: '<path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/>',
+  goals: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  ai: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
+  data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/>',
+  theme: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  map: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+  download: '<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>'
+};
+function icon(name) { return ICONS[name] ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : ""; }
+document.querySelectorAll("[data-icon]").forEach(el => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
+
+const TITLES = {
+  dashboard: ["Dashboard", "Dein Fortschritt auf einen Blick"],
+  log: ["Match loggen", "Ergebnis, Teams und Reflexion festhalten"],
+  analysis: ["Auswertung", "Muster in deinen Matches erkennen"],
+  team: ["Team & Counter", "Counter-Picks für die Heldenauswahl"],
+  quiz: ["Counter-Training", "Counter verstehen statt auswendig lernen"],
+  heroes: ["Helden-Guide", "Alle Helden, ihre Counter und deine Matchups"],
+  training: ["Training", "Routine, gezielte Übungen und Aufwärmen"],
+  goals: ["Lernziele", "Ziele setzen nach dem 3-Phasen-Modell"],
+  ai: ["KI-Coach", "Deine Daten als Prompt für einen Chatbot"],
+  data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"]
+};
+
 // ---------- Speicher ----------
 const STORE_KEY = "rivals-coach-v1";
+function matchTime(m) { return m.ts || Date.parse(`${m.date}T12:00:00`) || 0; }
 function loadState() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { s = null; }
   const st = Object.assign({
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
-    quiz: { asked: 0, correct: 0, wrong: {} }
+    quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "" }
   }, s || {});
+  st.settings = Object.assign({ playerName: "" }, st.settings);
   // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
   st.customHeroes = st.customHeroes.filter(h => !builtIn.has(h.name.toLowerCase()));
   // Ältere Matches ohne Teams nachrüsten
-  st.matches.forEach(m => { m.enemies = m.enemies || []; m.allies = m.allies || []; m.map = m.map || ""; });
+  st.matches.forEach(m => { m.enemies = m.enemies || []; m.allies = m.allies || []; m.map = m.map || ""; m.mistakes = m.mistakes || []; m.goods = m.goods || []; });
+  st.matches.sort((a, b) => matchTime(a) - matchTime(b));
   return st;
 }
 let state = loadState();
@@ -729,6 +1025,7 @@ function heroTags(name) {
   const h = heroByName(name);
   return h ? (h.tags || []) : [];
 }
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 // ---------- Counter-Logik ----------
 // Regeln, nach denen `attacker` gut gegen `target` ist
@@ -737,19 +1034,48 @@ function counterReasons(attacker, target) {
   return COUNTER_RULES.filter(r => t.includes(r.target) && r.by.some(b => a.includes(b)));
 }
 function countersOf(target) { return allHeroes().map(h => h.name).filter(n => n !== target && counterReasons(n, target).length); }
-function threatsTo(hero) { return countersOf(hero); }
 function strongAgainst(hero) { return allHeroes().map(h => h.name).filter(n => n !== hero && counterReasons(hero, n).length); }
+
+// ---------- Rivals-Data-Abgleich ----------
+function metaMap() { return new Map(((state.sync && state.sync.meta && state.sync.meta.heroes) || []).map(h => [h.hero, h])); }
+function rdMap() { return new Map(((state.sync && state.sync.playerHeroes) || []).map(h => [h.hero, h])); }
 
 // ---------- Hilfsfunktionen ----------
 const $ = sel => document.querySelector(sel);
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-function pct(n) { return isFinite(n) ? Math.round(n * 100) + "%" : "–"; }
-function wrCell(s) { return `<span class="${s.n >= 2 ? (s.wr >= 0.55 ? "win" : s.wr < 0.45 ? "loss" : "") : ""}">${pct(s.wr)}</span>`; }
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600); }
+function pct(n) { return isFinite(n) ? Math.round(n * 100) + " %" : "–"; }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2800); }
 function today() { return new Date().toISOString().slice(0, 10); }
+function fmtDate(d) { const x = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d || "") ? `${d}T12:00:00` : d); return isNaN(x) ? "" : x.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }); }
 function kda(m) { return (m.k + m.a) / Math.max(1, m.d); }
 function plural(n, one, many) { return `${n} ${n === 1 ? one : many}`; }
-function heroLink(h) { return `<span class="role-${heroRole(h)}">${esc(h)}</span>`; }
+function fmtNum(v) { return isFinite(v) ? Math.round(v).toLocaleString("de-CH") : "–"; }
+function initials(name) {
+  const words = String(name).replace(/\(.*\)/, "").split(/[\s&-]+/).filter(w => w && w.toLowerCase() !== "the");
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || "?").slice(0, 2)).toUpperCase();
+}
+function av(name, size) {
+  const role = heroRole(name);
+  return `<span class="av ${role} ${size || ""}" title="${esc(name)} · ${esc(role)}" aria-hidden="true">${esc(initials(name))}</span>`;
+}
+function heroChip(name) { return `<span class="hero">${av(name, "sm")}<b>${esc(name)}</b></span>`; }
+function roleChip(role, label) { return `<span class="role ${role}">${esc(label || role)}</span>`; }
+function wrBadge(s) {
+  const cls = s.n >= 2 ? (s.wr >= 0.55 ? "good" : s.wr < 0.45 ? "bad" : "") : "";
+  const arrow = cls === "good" ? "▲" : cls === "bad" ? "▼" : "";
+  return `<span class="wr ${cls}">${arrow ? `<span class="arrow" aria-hidden="true">${arrow}</span>` : ""}${pct(s.wr)}</span>`;
+}
+function resultPill(r) { return r === "W" ? `<span class="pill win">✓ Sieg</span>` : `<span class="pill loss">✕ Niederlage</span>`; }
+function deltaHtml(points, suffix) {
+  if (!isFinite(points) || Math.abs(points) < 0.5) return `<span class="delta">±0${suffix || ""}</span>`;
+  return `<span class="delta ${points > 0 ? "up" : "down"}">${points > 0 ? "▲ +" : "▼ "}${Math.round(points)}${suffix || ""}</span>`;
+}
+function notes(items) {
+  if (!items.length) return "";
+  const sym = { good: "✓", bad: "!", info: "i" };
+  return `<div class="notes">${items.map(([t, html]) => `<div class="note ${t}"><span class="ni" aria-hidden="true">${sym[t]}</span><div>${html}</div></div>`).join("")}</div>`;
+}
+function empty(text, ic) { return `<div class="empty">${icon(ic || "list")}${text}</div>`; }
 function group(list, keyFn) {
   const out = {};
   list.forEach(x => { const k = keyFn(x); (out[k] = out[k] || []).push(x); });
@@ -773,12 +1099,19 @@ function mistakeCounts(list) {
   list.forEach(m => (m.mistakes || []).forEach(x => { c[x] = (c[x] || 0) + 1; }));
   return Object.entries(c).sort((a, b) => b[1] - a[1]);
 }
-function table(headers, rows, empty) {
-  if (!rows.length) return `<p class="muted">${empty || "Noch keine Daten."}</p>`;
-  return `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+function table(headers, rows, emptyText) {
+  if (!rows.length) return empty(emptyText || "Noch keine Daten.");
+  const cls = h => (h.startsWith("#") ? ' class="num"' : "");
+  return `<table><thead><tr>${headers.map(h => `<th${cls(h)}>${h.replace(/^#/, "")}</th>`).join("")}</tr></thead><tbody>${
+    rows.map(r => `<tr>${r.map((c, i) => `<td${cls(headers[i] || "")}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
-function fmtNum(v) { return isFinite(v) ? Math.round(v).toLocaleString("de-CH") : "–"; }
-function fb(items) { return items.map(i => `<div class="feedback ${i[0]}">${i[1]}</div>`).join(""); }
+function bars(items, opts) {
+  // items: [label-html, value 0..1, right-text, roleClass?]
+  if (!items.length) return empty((opts && opts.empty) || "Noch keine Daten.");
+  return `<div class="bars">${items.map(([label, v, right, cls]) => `<div class="bar-row">
+    <div class="top"><span>${label}</span><span class="v">${right}</span></div>
+    <div class="track ${cls || ""}"><span style="width:${Math.max(0, Math.min(1, v || 0)) * 100}%"></span></div></div>`).join("")}</div>`;
+}
 function heroSelectHtml(attrs, selected, placeholder) {
   return `<select ${attrs}><option value="">${placeholder || "–"}</option>${ROLES.map(r =>
     `<optgroup label="${ROLE_DE[r]}">${allHeroes().filter(h => h.role === r).sort((a, b) => a.name.localeCompare(b.name))
@@ -796,40 +1129,100 @@ function personalCounters(enemy) {
 }
 function counterTip(enemy) {
   const pc = personalCounters(enemy);
-  if (pc.length) return `Bei dir klappt: ${pc.slice(0, 2).map(([h, s]) => `${heroLink(h)} (${pct(s.wr)}, ${s.n}×)`).join(", ")}`;
+  if (pc.length) return `Bei dir klappt: ${pc.slice(0, 2).map(([h, s]) => `${esc(h)} (${pct(s.wr)}, ${s.n}×)`).join(", ")}`;
   const played = new Set(state.matches.map(m => m.hero));
   const c = countersOf(enemy);
   const mine = c.filter(h => played.has(h));
   const list = (mine.length ? mine : c).slice(0, 3);
-  return list.length ? `Faustregel: ${list.map(heroLink).join(", ")}` : `<span class="muted">Kein Counter-Tag hinterlegt</span>`;
+  return list.length ? `Faustregel: ${list.map(esc).join(", ")}` : "Kein Counter-Tag hinterlegt";
+}
+function counterTipCell(enemy) {
+  const pc = personalCounters(enemy);
+  if (pc.length) return `<span class="muted small">Bei dir:</span> ${pc.slice(0, 2).map(([h, s]) => `${heroChip(h)} <span class="muted small">${pct(s.wr)}</span>`).join(" ")}`;
+  const played = new Set(state.matches.map(m => m.hero));
+  const c = countersOf(enemy);
+  const mine = c.filter(h => played.has(h));
+  const list = (mine.length ? mine : c).slice(0, 3);
+  return list.length ? `<span class="row" style="gap:4px">${list.map(h => av(h, "sm")).join("")}<span class="muted small">${list.map(esc).join(", ")}</span></span>` : `<span class="muted small">–</span>`;
+}
+
+// ---------- Diagramme ----------
+function lineChart(el, values, meta) {
+  // values: Werte 0..1; meta[i]: {label, cls}
+  const W = Math.max(280, el.clientWidth || 500), H = 190, L = 40, R = 12, T = 12, B = 24;
+  const x = i => L + (values.length === 1 ? 0 : i * (W - L - R) / (values.length - 1));
+  const y = v => T + (1 - v) * (H - T - B);
+  const line = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(values.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
+  const grid = [0, 0.5, 1].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v * 100} %</text>`).join("");
+  const last = values.length - 1;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Winrate-Verlauf, aktuell ${pct(values[last])}">
+    ${grid}
+    <path d="${area}" fill="var(--accent)" opacity=".10"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(last)}" cy="${y(values[last])}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+    <text x="${Math.min(x(last), W - R)}" y="${y(values[last]) - 10}" text-anchor="end" style="fill:var(--text);font-weight:600">${pct(values[last])}</text>
+    <g class="hover" style="display:none"><line y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-width="1"/><circle r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>
+    <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" class="hit"/>
+  </svg><div class="tooltip"></div>`;
+  const hover = el.querySelector(".hover"), tip = el.querySelector(".tooltip"), hit = el.querySelector(".hit");
+  const move = ev => {
+    const box = el.querySelector("svg").getBoundingClientRect();
+    const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left;
+    const i = Math.max(0, Math.min(last, Math.round((px * W / box.width - L) / ((W - L - R) / Math.max(1, last)))));
+    hover.style.display = "";
+    hover.querySelector("line").setAttribute("x1", x(i)); hover.querySelector("line").setAttribute("x2", x(i));
+    hover.querySelector("circle").setAttribute("cx", x(i)); hover.querySelector("circle").setAttribute("cy", y(values[i]));
+    tip.innerHTML = `<b>${pct(values[i])}</b> · ${meta[i].label}`;
+    tip.style.left = `${x(i) / W * box.width}px`; tip.style.top = `${y(values[i]) / H * box.height}px`;
+    tip.classList.add("show");
+  };
+  hit.addEventListener("mousemove", move); hit.addEventListener("touchstart", move, { passive: true });
+  hit.addEventListener("mouseleave", () => { hover.style.display = "none"; tip.classList.remove("show"); });
+}
+function rolling(list, size) {
+  return list.map((m, i) => { const w = list.slice(Math.max(0, i - size + 1), i + 1); return w.filter(x => x.result === "W").length / w.length; });
+}
+function sparkline(values) {
+  if (values.length < 2) return "";
+  const W = 120, H = 28;
+  const pts = values.map((v, i) => `${(i * W / (values.length - 1)).toFixed(1)},${(H - 3 - v * (H - 6)).toFixed(1)}`);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+function ring(ratio, label) {
+  const r = 22, c = 2 * Math.PI * r;
+  return `<svg class="ring" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="6"/>
+    <circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(ratio || 0) * c} ${c}" transform="rotate(-90 27 27)"/>
+    <text x="27" y="31" text-anchor="middle" style="fill:var(--text);font-size:12px;font-weight:700">${label}</text></svg>`;
 }
 
 // ---------- Tabs ----------
-document.querySelectorAll("nav.tabs button").forEach(btn => {
-  btn.addEventListener("click", () => showTab(btn.dataset.tab));
-});
+document.querySelectorAll("nav.tabs button").forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
+function currentTab() { return document.querySelector("main > section:not([hidden])").id.replace("tab-", ""); }
 function showTab(name) {
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
   document.querySelectorAll("main > section").forEach(s => { s.hidden = s.id !== "tab-" + name; });
+  $("#pageTitle").textContent = TITLES[name][0];
+  $("#pageSub").textContent = TITLES[name][1];
+  $("#quickLog").style.display = name === "log" ? "none" : "";
   try { localStorage.setItem(STORE_KEY + "-tab", name); } catch (e) {}
   render();
 }
+$("#quickLog").addEventListener("click", () => { showTab("log"); window.scrollTo({ top: 0 }); });
 
 // ---------- Theme ----------
-$("#themeBtn").addEventListener("click", () => {
-  const cur = document.documentElement.dataset.theme
-    || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+document.querySelectorAll(".theme-toggle").forEach(b => b.addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem(STORE_KEY + "-theme", next); } catch (e) {}
-});
+}));
 try { const t = localStorage.getItem(STORE_KEY + "-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 
 // ---------- Dashboard ----------
 function renderDashboard() {
   const ms = state.matches;
-  const s = summary(ms);
-  const last10 = summary(ms.slice(-10));
+  const s = summary(ms), last10 = summary(ms.slice(-10));
   let streak = 0, streakType = "";
   for (let i = ms.length - 1; i >= 0; i--) {
     if (!streakType) streakType = ms[i].result;
@@ -837,79 +1230,66 @@ function renderDashboard() {
     streak++;
   }
   const worst = enemyStats(ms).filter(x => x[1].n >= 3).sort((a, b) => a[1].wr - b[1].wr)[0];
-  $("#kpis").innerHTML = [
-    ["Matches", s.n],
-    ["Winrate gesamt", pct(s.wr)],
-    ["Winrate letzte 10", pct(last10.wr)],
-    ["Ø KDA", isFinite(s.kda) ? s.kda.toFixed(2) : "–"],
-    ["Ø Tode", s.n ? s.d.toFixed(1) : "–"],
-    ["Serie", streak ? `${streak} ${streakType === "W" ? "Siege" : "Niederl."}` : "–"],
-    ["Angstgegner", worst && worst[1].wr < 0.5 ? worst[0] : "–"]
-  ].map(([l, v]) => `<div class="stat"><div class="v" style="${String(v).length > 10 ? "font-size:1.1rem" : ""}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
+  const todayN = ms.filter(m => m.date === today()).length;
+  const W = summary(ms.filter(m => m.result === "W")), Lo = summary(ms.filter(m => m.result === "L"));
+  const tiles = [
+    ["Matches", s.n, todayN ? `${todayN} heute` : "heute noch keins"],
+    ["Winrate", pct(s.wr), ms.length >= 10 ? `${deltaHtml((last10.wr - s.wr) * 100, " %")} letzte 10` : "", sparkline(rolling(ms.slice(-30), 5))],
+    ["Ø KDA", isFinite(s.kda) ? s.kda.toFixed(2) : "–", s.n ? `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}` : ""],
+    ["Ø Tode", s.n ? s.d.toFixed(1) : "–", W.n && Lo.n ? `Siege ${W.d.toFixed(1)} · Niederl. ${Lo.d.toFixed(1)}` : ""],
+    ["Serie", streak ? `${streak} ${streakType === "W" ? (streak === 1 ? "Sieg" : "Siege") : "Niederl."}` : "–", streak ? (streakType === "W" ? "weiter so" : "Pause hilft") : ""],
+    ["Angstgegner", worst && worst[1].wr < 0.5 ? `<span class="hero">${av(worst[0])}<span style="font-size:1rem">${esc(worst[0])}</span></span>` : "–",
+      worst && worst[1].wr < 0.5 ? `${pct(worst[1].wr)} in ${worst[1].n} Matches` : "ab 3 Matches mit Gegnerinfos"]
+  ];
+  $("#kpis").innerHTML = tiles.map(([l, v, sub, extra]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${typeof v === "number" ? v : v}</div><div class="s">${sub || ""}</div>${extra || ""}</div>`).join("");
 
-  // Heutige Session
+  // Heutige Session / Begrüssung
   const tm = ms.filter(m => m.date === today());
-  if (!tm.length) {
-    $("#todayCard").innerHTML = `<h2>Heutige Session</h2><p class="muted">Heute noch keine Matches. Tipp: Lege vorher im Tab <b>Lernziele</b> fest, worauf du heute achtest.</p>`;
+  const goal = state.goals.filter(g => !g.done).slice(-1)[0];
+  const card = $("#todayCard");
+  card.className = "card hero-banner";
+  if (!ms.length) {
+    card.innerHTML = `<h2>Willkommen beim Rivals Coach!</h2><p>Logge dein erstes Match oder hol dir deine Matches automatisch von Rivals Data. Ab 5 Matches erkennt der Coach erste Muster.</p>
+      <div class="row mt" style="position:relative"><button class="btn" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Erstes Match loggen</button>
+      <button class="btn ghost" type="button" data-go="data" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Rivals Data synchronisieren</button></div>`;
+  } else if (!tm.length) {
+    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>`;
   } else {
-    const ts = summary(tm), tmc = mistakeCounts(tm)[0];
-    const lastNext = tm.filter(m => m.next).slice(-1)[0];
-    $("#todayCard").innerHTML = `<h2>Heutige Session</h2>
-      <div class="row" style="gap:16px">
-        <span><b>${ts.n}</b> ${ts.n === 1 ? "Match" : "Matches"}</span><span class="win">${plural(ts.w, "Sieg", "Siege")}</span><span class="loss">${plural(ts.n - ts.w, "Niederlage", "Niederlagen")}</span>
-        <span>Ø KDA <b>${ts.kda.toFixed(2)}</b></span>
-      </div>
-      <div class="row" style="margin-top:6px">${tm.map(m => `<span class="tag" style="border-color:var(--${m.result === "W" ? "win" : "loss"})">${esc(m.hero)}</span>`).join("")}</div>
-      ${tmc ? `<p class="small" style="margin:8px 0 0">Häufigster Fehler heute: <b>${esc(tmc[0])}</b> (${tmc[1]}×)</p>` : ""}
-      ${lastNext ? `<p class="small" style="margin:4px 0 0">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
-      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<div class="feedback bad">2 Niederlagen in Folge – eine kurze Pause hilft oft mehr als das nächste Match.</div>` : ""}`;
+    const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
+    card.innerHTML = `<h2>Heutige Session</h2>
+      <p><b>${plural(ts.n, "Match", "Matches")}</b> · ${plural(ts.w, "Sieg", "Siege")} · ${plural(ts.n - ts.w, "Niederlage", "Niederlagen")} · Ø KDA ${ts.kda.toFixed(2)}</p>
+      <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;font-weight:800;font-size:.8rem;background:${m.result === "W" ? "rgba(255,255,255,.95);color:#1b6b1b" : "rgba(0,0,0,.28);color:#fff"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
+      ${tmc ? `<p class="small">Häufigster Fehler heute: <b>${esc(tmc[0])}</b> (${tmc[1]}×)</p>` : ""}
+      ${lastNext ? `<p class="small">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
+      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}`;
   }
+  card.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
 
   // Trend
   const recent = ms.slice(-30);
-  if (recent.length < 2) {
-    $("#trend").innerHTML = `<p class="muted">Logge mindestens 2 Matches, um einen Verlauf zu sehen.</p>`;
-  } else {
-    const pts = recent.map((m, i) => {
-      const win = recent.slice(Math.max(0, i - 4), i + 1);
-      return win.filter(x => x.result === "W").length / win.length;
-    });
-    const W = 500, H = 160, P = 24;
-    const x = i => P + i * (W - 2 * P) / (pts.length - 1);
-    const y = v => H - P - v * (H - 2 * P);
-    const path = pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const dots = recent.map((m, i) => `<circle cx="${x(i)}" cy="${y(pts[i])}" r="3" fill="var(--${m.result === "W" ? "win" : "loss"})"><title>${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}</title></circle>`).join("");
-    $("#trend").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Winrate-Verlauf">
-      <line x1="${P}" x2="${W - P}" y1="${y(.5)}" y2="${y(.5)}" stroke="var(--border)" stroke-dasharray="4 4"/>
-      <text x="2" y="${y(1) + 4}">100%</text><text x="2" y="${y(.5) + 4}">50%</text><text x="2" y="${y(0) + 4}">0%</text>
-      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>${dots}</svg>`;
-  }
+  if (recent.length < 2) $("#trend").innerHTML = empty("Logge mindestens 2 Matches, um einen Verlauf zu sehen.", "analysis");
+  else lineChart($("#trend"), rolling(recent, 5), recent.map(m => ({ label: `${esc(m.hero)} · ${m.result === "W" ? "Sieg" : "Niederlage"} · ${fmtDate(m.date)}` })));
 
   // Rolle
   const byRole = group(ms, m => heroRole(m.hero));
-  $("#byRole").innerHTML = ROLES.map(r => {
+  $("#byRole").innerHTML = ms.length ? bars(ROLES.map(r => {
     const rs = summary(byRole[r] || []);
-    return `<div style="margin-bottom:10px"><div class="row between">
-      <b class="role-${r}">${ROLE_DE[r]}</b><span class="muted">${plural(rs.n, "Match", "Matches")} · ${pct(rs.wr)}</span></div>
-      <div class="bar"><span style="width:${rs.n ? rs.wr * 100 : 0}%"></span></div></div>`;
-  }).join("");
+    return [roleChip(r, ROLE_DE[r]), rs.n ? rs.wr : 0, rs.n ? `${pct(rs.wr)} · ${plural(rs.n, "Match", "Matches")}` : "noch keine", r];
+  })) : empty("Noch keine Matches.", "team");
 
   // Helden
-  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
-  $("#byHero").innerHTML = table(["Held", "Matches", "Winrate", "Ø K/D/A"],
-    byHero.map(([h, s]) => [heroLink(h), s.n, wrCell(s), `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}`]),
+  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
+  $("#byHero").innerHTML = table(["Held", "#Matches", "Winrate", "#Ø K/D/A"],
+    byHero.map(([h, s]) => [heroChip(h), s.n, `${wrBadge(s)}<span class="minibar"><span style="width:${s.wr * 100}%"></span></span>`, `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}`]),
     "Noch keine Matches geloggt.");
 
   // Fehler
   const mc = mistakeCounts(ms.slice(-20));
   const max = mc.length ? mc[0][1] : 1;
-  $("#topMistakes").innerHTML = mc.length ? mc.slice(0, 6).map(([m, c]) => `<div style="margin-bottom:8px">
-      <div class="row between"><span>${esc(m)}</span><span class="muted">${c}×</span></div>
-      <div class="bar"><span style="width:${c / max * 100}%;background:var(--loss)"></span></div></div>`).join("")
-    + `<p class="muted small">Basis: letzte 20 Matches</p>`
-    : `<p class="muted">Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster.</p>`;
+  $("#topMistakes").innerHTML = bars(mc.slice(0, 6).map(([m, c]) => [esc(m), c / max, `${c}×`]),
+    { empty: "Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster." });
 
-  $("#insights").innerHTML = fb(insights());
+  $("#insights").innerHTML = notes(insights()) || empty("Noch keine Hinweise.", "ai");
 }
 
 function insights() {
@@ -919,8 +1299,8 @@ function insights() {
     return out;
   }
   const s = summary(ms), l10 = summary(ms.slice(-10));
-  if (l10.wr > s.wr + 0.1) out.push(["good", `Du bist im Aufwind: Die letzten 10 Matches liegen ${pct(l10.wr - s.wr)} über deinem Schnitt. Weiter so!`]);
-  if (l10.wr < s.wr - 0.1) out.push(["bad", `Deine letzten 10 Matches liegen unter deinem Schnitt. Vielleicht eine Pause oder ein neues Lernziel?`]);
+  if (l10.wr > s.wr + 0.1) out.push(["good", `Du bist im Aufwind: Die letzten 10 Matches liegen ${Math.round((l10.wr - s.wr) * 100)} Prozentpunkte über deinem Schnitt.`]);
+  if (l10.wr < s.wr - 0.1) out.push(["bad", "Deine letzten 10 Matches liegen unter deinem Schnitt. Vielleicht eine Pause oder ein neues Lernziel?"]);
   const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(x => x[1].n >= 3);
   if (byHero.length) {
     const best = byHero.slice().sort((a, b) => b[1].wr - a[1].wr)[0];
@@ -932,22 +1312,31 @@ function insights() {
   if (es.length && es[0][1].wr < 0.45) out.push(["bad", `Gegen <b>${esc(es[0][0])}</b> gewinnst du nur ${pct(es[0][1].wr)} (${es[0][1].n} Matches). ${counterTip(es[0][0])}.`]);
   const nem = Object.entries(group(ms.filter(m => m.nemesis), m => m.nemesis)).sort((a, b) => b[1].length - a[1].length)[0];
   if (nem && nem[1].length >= 2) out.push(["info", `<b>${esc(nem[0])}</b> hat dir schon ${nem[1].length}× die meisten Probleme gemacht. Im Helden-Guide steht, wer ${esc(nem[0])} kontert.`]);
+  const meta = metaMap();
+  if (meta.size) {
+    const vsMeta = byHero.filter(([h, x]) => x.n >= 5 && meta.get(h) && isFinite(meta.get(h).winrate)).map(([h, x]) => [h, x.wr * 100 - meta.get(h).winrate]);
+    const top = vsMeta.slice().sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] >= 5) out.push(["good", `Mit <b>${esc(top[0])}</b> liegst du ${Math.round(top[1])} Prozentpunkte über dem globalen Schnitt laut Rivals Data.`]);
+  }
   const heroCount = new Set(ms.slice(-20).map(m => m.hero)).size;
   if (heroCount > 8) out.push(["info", `Du hast in den letzten 20 Matches ${heroCount} verschiedene Helden gespielt. Ein kleiner Hero-Pool (2–3 pro Rolle) bringt schneller Fortschritt.`]);
   const deathsW = summary(ms.filter(m => m.result === "W")).d, deathsL = summary(ms.filter(m => m.result === "L")).d;
   if (deathsL - deathsW > 1.5) out.push(["info", `In Niederlagen stirbst du im Schnitt ${(deathsL - deathsW).toFixed(1)}× öfter als in Siegen. Weniger sterben ist dein grösster Hebel.`]);
   const tilt = ms.slice(-20).filter(m => (m.mistakes || []).includes("Tilt / Frust")).length;
   if (tilt >= 3) out.push(["bad", `Tilt taucht ${tilt}× in den letzten 20 Matches auf. Setze dir ein Limit, z.B. Pause nach 2 Niederlagen in Folge.`]);
-  const lowMood = ms.slice(-10).filter(m => m.mood <= 2).length;
+  const lowMood = ms.slice(-10).filter(m => m.mood && m.mood <= 2).length;
   if (lowMood >= 5) out.push(["info", "Viele deiner letzten Matches hast du als frustrierend bewertet. Spass ist wichtig – spiele zwischendurch einfach mal locker."]);
   const top = mistakeCounts(ms.slice(-20))[0];
   if (top) out.push(["info", `Dein häufigster Fehler ist „${esc(top[0])}“. Übung dazu: ${esc(DRILLS[top[0]] || "Achte im nächsten Match bewusst darauf.")}`]);
+  const unreflected = ms.filter(m => m.source === "rivalsdata" && !(m.mistakes || []).length && !m.notes).length;
+  if (unreflected >= 3) out.push(["info", `${unreflected} importierte Matches haben noch keine Reflexion. Ergänze im Match-Verlauf (Stift-Symbol), was gut und schlecht lief – das macht die Auswertung viel genauer.`]);
   const withEnemies = ms.filter(m => m.enemies.length).length;
-  if (withEnemies < ms.length / 2) out.push(["info", `Nur ${withEnemies} von ${ms.length} Matches haben Gegnerinfos. Trag das Gegnerteam ein, damit die Counter-Auswertung funktioniert.`]);
+  if (withEnemies < ms.length / 2) out.push(["info", `Nur ${withEnemies} von ${ms.length} Matches haben Gegnerinfos. Trag das Gegnerteam ein (oder synchronisiere mit Rivals Data), damit die Counter-Auswertung funktioniert.`]);
   return out;
 }
 
 // ---------- Match loggen ----------
+let editingId = null;
 function chipGroup(el, list, withTitles) {
   el.innerHTML = list.map(x => `<span class="chip" data-v="${esc(x)}" role="checkbox" aria-checked="false" tabindex="0" ${withTitles ? `title="${esc(TAGS[x])}"` : ""}>${esc(x)}</span>`).join("");
   el.querySelectorAll(".chip").forEach(c => {
@@ -955,6 +1344,9 @@ function chipGroup(el, list, withTitles) {
     c.addEventListener("click", toggle);
     c.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); } });
   });
+}
+function setChips(el, values) {
+  el.querySelectorAll(".chip").forEach(c => { const on = values.includes(c.dataset.v); c.classList.toggle("on", on); c.setAttribute("aria-checked", on); });
 }
 function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)].map(s => s.value); }
 function renderLog() {
@@ -969,18 +1361,26 @@ function renderLog() {
   $("#mapList").innerHTML = maps.map(m => `<option value="${esc(m)}">`).join("");
 
   const rows = state.matches.slice().reverse();
-  $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Modus / Map</th><th>Ergebnis</th><th>K/D/A</th><th>Gegner</th><th>Fehler</th><th>Notiz</th><th></th></tr></thead><tbody>
-    ${rows.map(m => `<tr><td>${esc(m.date)}</td><td>${heroLink(m.hero)}</td><td>${esc(m.mode)}<br><span class="muted">${esc(m.map || m.type)}</span></td>
-      <td class="${m.result === "W" ? "win" : "loss"}">${m.result === "W" ? "Sieg" : "Niederlage"}</td>
-      <td>${m.k}/${m.d}/${m.a}</td>
-      <td class="small">${m.enemies.map(e => e === m.nemesis ? `<b title="Hat die meisten Probleme gemacht">${esc(e)}</b>` : esc(e)).join(", ") || "<span class='muted'>–</span>"}</td>
-      <td class="small">${esc((m.mistakes || []).join(", "))}</td><td class="small">${esc(m.notes)}</td>
-      <td><button class="btn danger small" data-del="${m.id}" type="button" aria-label="Löschen">✕</button></td></tr>`).join("")}
-    </tbody></table>` : `<p class="muted">Noch keine Matches.</p>`;
+  $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
+  $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Ergebnis</th><th class="num">K/D/A</th><th>Map / Modus</th><th>Gegner</th><th>Reflexion</th><th></th></tr></thead><tbody>
+    ${rows.map(m => `<tr>
+      <td class="small">${fmtDate(m.date)}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
+      <td>${heroChip(m.hero)}</td>
+      <td>${resultPill(m.result)}</td>
+      <td class="num">${m.k}/${m.d}/${m.a}</td>
+      <td class="small">${esc(m.map || m.type)}<br><span class="muted">${esc(m.mode)}</span></td>
+      <td><span class="row" style="gap:3px;flex-wrap:nowrap">${m.enemies.map(e => `<span${e === m.nemesis ? ' style="outline:2px solid var(--bad);border-radius:50%"' : ""}>${av(e, "sm")}</span>`).join("") || '<span class="muted small">–</span>'}</span></td>
+      <td class="small">${(m.mistakes || []).length ? esc(m.mistakes.slice(0, 2).join(", ")) + (m.mistakes.length > 2 ? " …" : "") : (m.notes ? esc(m.notes.slice(0, 40)) : '<span class="muted">offen</span>')}</td>
+      <td style="white-space:nowrap"><button class="btn ghost small icon" data-edit="${m.id}" type="button" aria-label="Bearbeiten" title="Bearbeiten / Reflexion ergänzen">${icon("edit")}</button>
+        <button class="btn danger small icon" data-del="${m.id}" type="button" aria-label="Löschen" title="Löschen">${icon("trash")}</button></td></tr>`).join("")}
+    </tbody></table>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
   $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     if (!confirm("Match löschen?")) return;
-    state.matches = state.matches.filter(m => m.id !== b.dataset.del); save(); render();
+    state.matches = state.matches.filter(m => m.id !== b.dataset.del);
+    if (editingId === b.dataset.del) cancelEdit();
+    save(); render();
   }));
+  $("#matchTable").querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => startEdit(b.dataset.edit)));
 }
 function updateNemesis() {
   const cur = $("#nemesisSelect").value;
@@ -988,6 +1388,42 @@ function updateNemesis() {
   const opts = en.length ? [...new Set(en)] : allHeroes().map(h => h.name).sort();
   $("#nemesisSelect").innerHTML = `<option value="">– niemand Bestimmtes –</option>` + opts.map(h => `<option ${h === cur ? "selected" : ""}>${esc(h)}</option>`).join("");
 }
+function clearForm() {
+  const f = $("#matchForm");
+  const keep = { hero: f.hero.value, mode: f.mode.value, type: f.type.value };
+  f.reset();
+  f.hero.value = keep.hero; f.mode.value = keep.mode; f.type.value = keep.type;
+  document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
+  setChips($("#mistakeChips"), []); setChips($("#goodChips"), []);
+  updateNemesis();
+}
+function startEdit(id) {
+  const m = state.matches.find(x => x.id === id);
+  if (!m) return;
+  editingId = id;
+  showTab("log");
+  const f = $("#matchForm");
+  f.hero.value = m.hero; f.mode.value = m.mode; f.type.value = m.type; f.map.value = m.map || "";
+  f.result.value = m.result; f.k.value = m.k; f.d.value = m.d; f.a.value = m.a;
+  f.mood.value = String(m.mood || 3);
+  f.dmg.value = m.dmg ?? ""; f.heal.value = m.heal ?? ""; f.block.value = m.block ?? "";
+  f.swapped.value = m.swapped ? "1" : ""; f.notes.value = m.notes || ""; f.next.value = m.next || "";
+  document.querySelectorAll("#enemySlots select").forEach((s, i) => { s.value = m.enemies[i] || ""; });
+  document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
+  updateNemesis(); f.nemesis.value = m.nemesis || "";
+  setChips($("#mistakeChips"), m.mistakes || []); setChips($("#goodChips"), m.goods || []);
+  $("#editText").textContent = `Match vom ${fmtDate(m.date)} bearbeiten (${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"})`;
+  $("#editBanner").classList.add("show");
+  $("#saveBtn").lastChild.textContent = "Änderungen speichern";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function cancelEdit() {
+  editingId = null;
+  $("#editBanner").classList.remove("show");
+  $("#saveBtn").lastChild.textContent = "Match speichern";
+  clearForm();
+}
+$("#editCancel").addEventListener("click", cancelEdit);
 $("#matchForm").map.addEventListener("change", e => {
   const type = MAPS[e.target.value.trim()];
   if (type) $("#matchForm").type.value = type;
@@ -1005,10 +1441,8 @@ $("#matchForm").addEventListener("submit", e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const num = k => { const v = f.get(k); return v === "" || v === null ? null : Number(v); };
-  const m = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date: today(), ts: Date.now(), hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), map: f.get("map").trim(),
-    result: f.get("result"),
+  const fields = {
+    hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), map: f.get("map").trim(), result: f.get("result"),
     k: num("k") || 0, d: num("d") || 0, a: num("a") || 0, dmg: num("dmg"), heal: num("heal"), block: num("block"),
     mood: num("mood"), notes: f.get("notes").trim(), next: f.get("next").trim(),
     enemies: slotValues("enemySlots").filter(Boolean), allies: slotValues("allySlots").filter(Boolean),
@@ -1016,12 +1450,15 @@ $("#matchForm").addEventListener("submit", e => {
     mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
     goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v)
   };
-  if (!m.hero) { toast("Bitte deinen Helden wählen"); return; }
+  if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
+  if (editingId) {
+    Object.assign(state.matches.find(m => m.id === editingId), fields);
+    save(); cancelEdit(); render(); toast("Match aktualisiert");
+    return;
+  }
+  const m = Object.assign({ id: newId(), date: today(), ts: Date.now() }, fields);
   state.matches.push(m); save();
-  e.target.reset();
-  e.target.hero.value = m.hero; e.target.mode.value = m.mode; e.target.type.value = m.type;
-  document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
-  document.querySelectorAll("#matchForm .chip.on").forEach(c => { c.classList.remove("on"); c.setAttribute("aria-checked", "false"); });
+  clearForm(); $("#matchForm").hero.value = m.hero;
   render();
   // Direktes Feedback zum gerade geloggten Match
   let msg = m.next ? `Gespeichert! Nächstes Match: ${m.next}` : "Match gespeichert!";
@@ -1040,43 +1477,68 @@ function filtered() {
 }
 ["#fPeriod", "#fMode", "#fRole"].forEach(id => $(id).addEventListener("change", renderAnalysis));
 function barList(obj) {
-  return Object.entries(obj).filter(([, l]) => l.length).map(([k, l]) => {
-    const x = summary(l);
-    return `<div style="margin-bottom:8px"><div class="row between"><span>${esc(k)}</span><span class="muted">${plural(x.n, "Match", "Matches")} · ${wrCell(x)}</span></div>
-      <div class="bar"><span style="width:${x.wr * 100}%"></span></div></div>`;
-  }).join("");
+  return bars(Object.entries(obj).filter(([, l]) => l.length).map(([k, l]) => { const x = summary(l); return [esc(k), x.wr, `${pct(x.wr)} · ${plural(x.n, "Match", "Matches")}`]; }));
+}
+function renderMetaCard(ms) {
+  if (!state.sync) {
+    $("#metaInfo").textContent = "";
+    $("#aMeta").innerHTML = `<div class="empty">${icon("sync")}Vergleiche deine Winrates mit deinem Rivals-Data-Profil und dem globalen Schnitt aller Spieler.<div class="mt"><button class="btn small" type="button" id="goSync">Sync einrichten</button></div></div>`;
+    $("#goSync").addEventListener("click", () => showTab("data"));
+    return [];
+  }
+  const meta = metaMap(), rd = rdMap();
+  const m = state.sync.meta;
+  $("#metaInfo").textContent = `Sync vom ${fmtDate(state.sync.at)}${m ? ` · Tierlist: ${m.rank || "?"}${m.updated ? `, Stand ${fmtDate(m.updated) || m.updated}` : ""}` : ""}`;
+  const app = group(ms, x => x.hero);
+  const heroes = [...new Set(Object.keys(app).concat([...rd.keys()]))]
+    .map(h => ({ h, a: summary(app[h] || []), r: rd.get(h), g: meta.get(h) }))
+    .filter(x => x.a.n || (x.r && x.r.games >= 3))
+    .sort((x, y) => (y.a.n + (y.r ? y.r.games : 0)) - (x.a.n + (x.r ? x.r.games : 0))).slice(0, 15);
+  const rows = heroes.map(({ h, a, r, g }) => {
+    const mine = r && r.games >= 5 && isFinite(r.winrate) ? r.winrate : (a.n >= 5 ? a.wr * 100 : NaN);
+    const diff = g && isFinite(g.winrate) && isFinite(mine) ? mine - g.winrate : NaN;
+    return [heroChip(h),
+      a.n ? `${wrBadge(a)} <span class="muted small">${a.n}×</span>` : '<span class="muted">–</span>',
+      r ? `${isFinite(r.winrate) ? Math.round(r.winrate) + " %" : "–"} <span class="muted small">${r.games}×</span>` : '<span class="muted">–</span>',
+      g && isFinite(g.winrate) ? `${g.winrate.toFixed(1)} %` : '<span class="muted">–</span>',
+      isFinite(diff) ? deltaHtml(diff, " %-Pkt.") : '<span class="muted">–</span>',
+      g && isFinite(g.pickrate) ? `${g.pickrate.toFixed(1)} %` : '<span class="muted">–</span>'];
+  });
+  $("#aMeta").innerHTML = table(["Held", "Du (App)", "Du (Rivals Data)", "#Global", "Du vs. Global", "#Pickrate"], rows, "Keine passenden Helden gefunden.")
+    + `<p class="muted small mt">„Du (Rivals Data)“ umfasst alle Seasons deines öffentlichen Profils. „Global“ ist die Winrate aller Spieler laut Rivals-Data-Tierlist für den gewählten Rang.</p>`;
+  const out = [];
+  const comp = heroes.map(x => { const mine = x.r && x.r.games >= 5 && isFinite(x.r.winrate) ? x.r.winrate : (x.a.n >= 5 ? x.a.wr * 100 : NaN); return [x.h, x.g && isFinite(x.g.winrate) && isFinite(mine) ? mine - x.g.winrate : NaN]; }).filter(x => isFinite(x[1]));
+  const best = comp.slice().sort((a, b) => b[1] - a[1])[0], worst = comp.slice().sort((a, b) => a[1] - b[1])[0];
+  if (best && best[1] >= 4) out.push(["good", `<b>${esc(best[0])}</b> spielst du ${Math.round(best[1])} Prozentpunkte besser als der globale Schnitt – ein starker Pick für Competitive.`]);
+  if (worst && worst[1] <= -6) out.push(["bad", `Mit <b>${esc(worst[0])}</b> liegst du ${Math.round(-worst[1])} Prozentpunkte unter dem globalen Schnitt. Der Held ist nicht schwach – hier steckt Übungspotenzial.`]);
+  return out;
 }
 function renderAnalysis() {
   const ms = filtered(), s = summary(ms);
   $("#aKpis").innerHTML = [
     ["Matches", s.n], ["Winrate", pct(s.wr)], ["Ø KDA", isFinite(s.kda) ? s.kda.toFixed(2) : "–"],
     ["Ø Schaden", fmtNum(s.dmg)], ["Ø Heilung", fmtNum(s.heal)], ["Mit Gegnerinfos", ms.filter(m => m.enemies.length).length]
-  ].map(([l, v]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
+  ].map(([l, v]) => `<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div></div>`).join("");
 
-  // Gegner
+  const metaNotes = renderMetaCard(ms);
+
   const es = enemyStats(ms).sort((a, b) => b[1].n - a[1].n || a[1].wr - b[1].wr);
-  $("#aEnemies").innerHTML = table(["Gegner-Held", "Matches", "Deine Winrate", "Probleme gemacht", "Counter-Tipp"],
-    es.map(([h, x, nem]) => [heroLink(h), x.n, wrCell(x), nem ? `${nem}×` : "–", counterTip(h)]),
+  $("#aEnemies").innerHTML = table(["Gegner-Held", "#Matches", "Deine Winrate", "#Probleme", "Counter-Tipp"],
+    es.map(([h, x, nem]) => [heroChip(h), x.n, wrBadge(x), nem ? `${nem}×` : "–", counterTipCell(h)]),
     "Trag beim Loggen das Gegnerteam ein, um hier deine Matchups zu sehen.");
 
-  // Mitspieler
   const as = Object.entries(groupMulti(ms, m => m.allies)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
-  $("#aAllies").innerHTML = table(["Mitspieler-Held", "Matches", "Winrate"], as.map(([h, x]) => [heroLink(h), x.n, wrCell(x)]),
-    "Trag beim Loggen deine Mitspieler ein.");
+  $("#aAllies").innerHTML = table(["Mitspieler-Held", "#Matches", "Winrate"], as.map(([h, x]) => [heroChip(h), x.n, wrBadge(x)]), "Trag beim Loggen deine Mitspieler ein.");
 
-  // Gegnerische Stile
   const styleRows = Object.keys(TAGS).map(t => [t, summary(ms.filter(m => m.enemies.filter(e => heroTags(e).includes(t)).length >= 2))])
     .filter(([, x]) => x.n).sort((a, b) => b[1].n - a[1].n);
-  $("#aStyles").innerHTML = table(["Stil", "Matches", "Winrate"], styleRows.map(([t, x]) => [`<span title="${esc(TAGS[t])}">${esc(t)}</span>`, x.n, wrCell(x)]),
-    "Noch keine Gegnerteams erfasst.");
+  $("#aStyles").innerHTML = table(["Stil", "#Matches", "Winrate"], styleRows.map(([t, x]) => [`<span class="tag" title="${esc(TAGS[t])}">${esc(t)}</span>`, x.n, wrBadge(x)]), "Noch keine Gegnerteams erfasst.");
 
-  // Maps & Typen
   const mapRows = Object.entries(group(ms.filter(m => m.map), m => m.map)).map(([k, l]) => [k, summary(l)]).sort((a, b) => b[1].n - a[1].n);
-  $("#aMaps").innerHTML = table(["Map", "Matches", "Winrate"], mapRows.map(([k, x]) => [esc(k), x.n, wrCell(x)]), "Trag beim Loggen die Map ein.");
+  $("#aMaps").innerHTML = table(["Map", "#Matches", "Winrate"], mapRows.map(([k, x]) => [esc(k), x.n, wrBadge(x)]), "Trag beim Loggen die Map ein.");
   const typeRows = Object.entries(group(ms, m => m.type)).concat(Object.entries(group(ms, m => m.mode))).map(([k, l]) => [k, summary(l)]);
-  $("#aTypes").innerHTML = table(["Typ / Modus", "Matches", "Winrate"], typeRows.map(([k, x]) => [esc(k), x.n, wrCell(x)]));
+  $("#aTypes").innerHTML = table(["Typ / Modus", "#Matches", "Winrate"], typeRows.map(([k, x]) => [esc(k), x.n, wrBadge(x)]));
 
-  // Wann
   const pos = { "Match 1–3 des Tages": [], "Match 4–6": [], "Match 7+": [] };
   Object.values(group(ms, m => m.date)).forEach(l => l.forEach((m, i) => pos[i < 3 ? "Match 1–3 des Tages" : i < 6 ? "Match 4–6" : "Match 7+"].push(m)));
   const tod = { "Morgen (6–12 Uhr)": [], "Nachmittag (12–18 Uhr)": [], "Abend (18–23 Uhr)": [], "Nacht (23–6 Uhr)": [] };
@@ -1084,22 +1546,21 @@ function renderAnalysis() {
     const h = new Date(m.ts).getHours();
     tod[h >= 6 && h < 12 ? "Morgen (6–12 Uhr)" : h >= 12 && h < 18 ? "Nachmittag (12–18 Uhr)" : h >= 18 && h < 23 ? "Abend (18–23 Uhr)" : "Nacht (23–6 Uhr)"].push(m);
   });
+  const moodLabels = ["😣 Frust", "😕 Eher schlecht", "😐 Okay", "🙂 Gut", "🤩 Super"];
   const mood = {};
-  [1, 2, 3, 4, 5].forEach(v => { mood[`Gefühl ${v}`] = ms.filter(m => m.mood === v); });
+  [1, 2, 3, 4, 5].forEach(v => { mood[moodLabels[v - 1]] = ms.filter(m => m.mood === v); });
   $("#aWhen").innerHTML = ms.length
-    ? `<h3>Wie viele Matches am Stück</h3>${barList(pos)}<h3>Tageszeit</h3>${barList(tod) || "<p class='muted small'>Nur für neu geloggte Matches verfügbar.</p>"}<h3>Stimmung</h3>${barList(mood)}`
-    : `<p class="muted">Noch keine Daten.</p>`;
+    ? `<h3>Matches am Stück</h3>${barList(pos)}<h3>Tageszeit</h3>${barList(tod)}<h3>Stimmung</h3>${barList(mood)}`
+    : empty("Noch keine Daten.", "clock");
 
-  // Siege vs Niederlagen
   const W = summary(ms.filter(m => m.result === "W")), L = summary(ms.filter(m => m.result === "L"));
   const f1 = v => isFinite(v) ? v.toFixed(1) : "–";
-  $("#aWL").innerHTML = ms.length ? table(["Ø pro Match", "<span class='win'>Siege</span>", "<span class='loss'>Niederlagen</span>"], [
+  $("#aWL").innerHTML = ms.length ? table(["Ø pro Match", "#Siege", "#Niederlagen"], [
     ["Kills", f1(W.k), f1(L.k)], ["Tode", f1(W.d), f1(L.d)], ["Assists", f1(W.a), f1(L.a)], ["KDA", f1(W.kda), f1(L.kda)],
     ["Schaden", fmtNum(W.dmg), fmtNum(L.dmg)], ["Heilung", fmtNum(W.heal), fmtNum(L.heal)], ["Geblockt", fmtNum(W.block), fmtNum(L.block)]
-  ]) : `<p class="muted">Noch keine Daten.</p>`;
+  ]) : empty("Noch keine Daten.", "analysis");
 
-  // Erkenntnisse
-  const out = [];
+  const out = metaNotes.slice();
   if (ms.length >= 6) {
     const p1 = summary(pos["Match 1–3 des Tages"]), p3 = summary(pos["Match 4–6"].concat(pos["Match 7+"]));
     if (p3.n >= 3 && p1.wr - p3.wr > 0.15) out.push(["bad", `Ab dem 4. Match am Tag sinkt deine Winrate von ${pct(p1.wr)} auf ${pct(p3.wr)}. Kürzere Sessions könnten dir helfen.`]);
@@ -1117,7 +1578,7 @@ function renderAnalysis() {
     if (swapped.length >= 3) out.push(["info", `Wenn du während des Matches wechselst, gewinnst du ${pct(summary(swapped).wr)} (sonst ${pct(summary(ms.filter(m => !m.swapped)).wr)}).`]);
   }
   if (!out.length) out.push(["info", "Sammle mehr Matches (mit Map und Gegnerteam), dann erscheinen hier Auswertungen."]);
-  $("#aInsights").innerHTML = fb(out);
+  $("#aInsights").innerHTML = notes(out);
 }
 
 // ---------- Team & Counter ----------
@@ -1127,7 +1588,6 @@ function renderTeam() {
   $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.enemyTeam[+s.dataset.eslot] = s.value; save(); renderTeam(); }));
   $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.team[+s.dataset.slot] = s.value; save(); renderTeam(); }));
 
-  // Gegner-Analyse
   const enemies = state.enemyTeam.filter(Boolean);
   const ea = [];
   if (enemies.length) {
@@ -1138,21 +1598,21 @@ function renderTeam() {
     });
     [...new Set(enemies)].forEach(e => {
       const st = summary(state.matches.filter(m => m.enemies.includes(e)));
-      if (st.n >= 3 && st.wr < 0.45) ea.push(["bad", `Gegen ${heroLink(e)} gewinnst du bisher nur ${pct(st.wr)} (${st.n} Matches). ${counterTip(e)}.`]);
-      if (state.counterNotes[e]) ea.push(["good", `Deine Notiz zu ${heroLink(e)}: ${esc(state.counterNotes[e])}`]);
+      if (st.n >= 3 && st.wr < 0.45) ea.push(["bad", `Gegen <b>${esc(e)}</b> gewinnst du bisher nur ${pct(st.wr)} (${st.n} Matches). ${counterTip(e)}.`]);
+      if (state.counterNotes[e]) ea.push(["good", `Deine Notiz zu <b>${esc(e)}</b>: ${esc(state.counterNotes[e])}`]);
     });
   }
-  $("#enemyAnalysis").innerHTML = fb(ea);
+  $("#enemyAnalysis").innerHTML = notes(ea);
 
-  // Counter-Vorschläge
   const roleF = $("#pickRole").value, poolOnly = $("#pickPool").checked;
   const played = new Set(state.matches.map(m => m.hero));
   const mates = state.team.slice(1).filter(Boolean);
   const cnt = { Vanguard: 0, Duelist: 0, Strategist: 0 };
   mates.forEach(h => { const r = heroRole(h); if (cnt[r] !== undefined) cnt[r]++; });
   const minRole = Math.min(cnt.Vanguard, cnt.Duelist, cnt.Strategist);
+  const meta = metaMap();
   if (!enemies.length) {
-    $("#picks").innerHTML = `<p class="muted">Trag oben mindestens einen Gegner ein.</p>`;
+    $("#picks").innerHTML = empty("Trag oben mindestens einen Gegner ein.", "target");
   } else {
     const cands = allHeroes().filter(h => (!roleF || h.role === roleF) && (!poolOnly || played.has(h.name)) && !mates.includes(h.name));
     const scored = cands.map(h => {
@@ -1170,21 +1630,23 @@ function renderTeam() {
       if (mates.length && mates.length < 5 && cnt[h.role] < 2 && cnt[h.role] === minRole) { score += 0.4; pro.push(`dein Team braucht noch einen ${h.role}`); }
       const own = summary(state.matches.filter(m => m.hero === h.name));
       if (own.n >= 3) score += own.wr - 0.5;
+      const g = meta.get(h.name);
+      if (g && isFinite(g.winrate)) { score += (g.winrate - 50) / 10; if (Math.abs(g.winrate - 50) >= 1.5) (g.winrate >= 50 ? pro : con).push(`Meta: ${g.winrate.toFixed(1)} % WR`); }
       return { h, score, pro, con, own };
     }).sort((a, b) => b.score - a.score).slice(0, 8);
     const maxS = Math.max(1, ...scored.map(x => x.score));
     $("#picks").innerHTML = scored.length ? scored.map(x => `<div class="pick">
-        <div><b class="role-${x.h.role}">${esc(x.h.name)}</b> <span class="muted small">${x.h.role}${x.own.n ? ` · du: ${pct(x.own.wr)} in ${plural(x.own.n, "Match", "Matches")}` : ""}</span></div>
-        <div style="width:90px" title="Score ${x.score.toFixed(1)}"><div class="bar"><span style="width:${Math.max(0, x.score) / maxS * 100}%;background:var(--win)"></span></div></div>
-        <div class="why">${x.pro.length ? "✔ " + x.pro.join(" · ") : ""}${x.con.length ? `${x.pro.length ? "<br>" : ""}<span class="loss">✖ ${x.con.join(" · ")}</span>` : ""}</div>
-      </div>`).join("") : `<p class="muted">Keine passenden Helden – Filter anpassen.</p>`;
+        ${av(x.h.name, "lg")}
+        <div><b>${esc(x.h.name)}</b> ${roleChip(x.h.role)} ${x.own.n ? `<span class="muted small">· du: ${pct(x.own.wr)} in ${plural(x.own.n, "Match", "Matches")}</span>` : ""}</div>
+        <div class="score" title="Score ${x.score.toFixed(1)}"><div class="track"><span style="width:${Math.max(0, x.score) / maxS * 100}%"></span></div></div>
+        <div class="why">${x.pro.length ? "✓ " + x.pro.join(" · ") : ""}${x.con.length ? `${x.pro.length ? "<br>" : ""}<span class="con">✕ ${x.con.join(" · ")}</span>` : ""}</div>
+      </div>`).join("") : empty("Keine passenden Helden – Filter anpassen.", "target");
   }
 
-  // Eigenes Team
   const picked = state.team.filter(Boolean);
   const all = { Vanguard: 0, Duelist: 0, Strategist: 0 };
   picked.forEach(h => { const r = heroRole(h); if (all[r] !== undefined) all[r]++; });
-  if (!picked.length) { $("#teamFeedback").innerHTML = `<p class="muted">Wähle Helden aus, um die Rollenverteilung zu prüfen.</p>`; return; }
+  if (!picked.length) { $("#teamFeedback").innerHTML = empty("Wähle Helden aus, um die Rollenverteilung zu prüfen.", "team"); return; }
   const out = [["info", `Verteilung: ${all.Vanguard} Vanguard · ${all.Duelist} Duelist · ${all.Strategist} Strategist`]];
   const base = picked.map(h => h.replace(/ \(.*\)$/, ""));
   const dup = base.filter((h, i) => base.indexOf(h) !== i);
@@ -1203,7 +1665,7 @@ function renderTeam() {
     const threatened = picked.filter(h => enemies.some(e => counterReasons(e, h).length));
     if (threatened.length >= 3) out.push(["bad", `${threatened.length} eurer Helden werden vom Gegnerteam gekontert (${esc(threatened.join(", "))}). Ein Wechsel kann sich lohnen.`]);
   }
-  $("#teamFeedback").innerHTML = fb(out);
+  $("#teamFeedback").innerHTML = notes(out);
 }
 $("#teamClear").addEventListener("click", () => { state.team = ["", "", "", "", "", ""]; save(); renderTeam(); });
 $("#enemyClear").addEventListener("click", () => { state.enemyTeam = ["", "", "", "", "", ""]; save(); renderTeam(); });
@@ -1240,12 +1702,12 @@ function newQuestion() {
 }
 function renderQuiz() {
   const qz = state.quiz;
-  $("#quizScore").textContent = qz.asked ? `${qz.correct}/${qz.asked} richtig (${pct(qz.correct / qz.asked)})` : "";
+  $("#quizScore").textContent = qz.asked ? `${qz.correct}/${qz.asked} richtig` : "Los geht's";
   if (!quiz) quiz = newQuestion();
-  if (!quiz) { $("#quizBox").innerHTML = `<p class="muted">Keine Fragen möglich – prüfe die Tags im Helden-Guide.</p>`; return; }
-  $("#quizBox").innerHTML = `<div class="quiz-q">${quiz.q}</div>
-    <div class="quiz-opts">${quiz.opts.map(o => `<button type="button" data-o="${esc(o)}"><b class="role-${heroRole(o)}">${esc(o)}</b><br><span class="small muted">${esc(heroTags(o).join(", ") || "–")}</span></button>`).join("")}</div>
-    <div id="quizExplain" style="margin-top:12px"></div>`;
+  if (!quiz) { $("#quizBox").innerHTML = empty("Keine Fragen möglich – prüfe die Tags im Helden-Guide.", "quiz"); return; }
+  $("#quizBox").innerHTML = `<div class="quiz-q">${ring(qz.asked ? qz.correct / qz.asked : 0, qz.asked ? Math.round(qz.correct / qz.asked * 100) + "%" : "–")}${av(quiz.subject, "lg")}<span>${quiz.q}</span></div>
+    <div class="quiz-opts">${quiz.opts.map(o => `<button type="button" data-o="${esc(o)}">${av(o, "lg")}<span><b>${esc(o)}</b><br><span class="small muted">${esc(heroTags(o).join(" · ") || "–")}</span></span></button>`).join("")}</div>
+    <div id="quizExplain" class="mt"></div>`;
   $("#quizBox").querySelectorAll("[data-o]").forEach(b => b.addEventListener("click", () => answerQuiz(b.dataset.o)));
   if (quiz.answered) showQuizResult();
 }
@@ -1276,30 +1738,29 @@ function showQuizResult() {
   const vs = quiz.kind === "A"
     ? summary(state.matches.filter(m => m.enemies.includes(tgt)))
     : summary(state.matches.filter(m => m.hero === tgt && m.enemies.includes(att)));
-  $("#quizExplain").innerHTML = `<div class="feedback ${ok ? "good" : "bad"}">
-      <b>${ok ? "Richtig!" : `Leider falsch – richtig ist ${esc(att)}.`}</b><br>
+  $("#quizExplain").innerHTML = notes([[ok ? "good" : "bad", `<b>${ok ? "Richtig!" : `Leider falsch – richtig ist ${esc(att)}.`}</b><br>
       ${reasons.map(r => `${esc(att)} (${esc(r.by.filter(b => heroTags(att).includes(b)).join(", "))}) gegen ${esc(tgt)} (${esc(r.target)}): ${esc(r.why)}`).join("<br>")}
       <br><span class="small muted">${quiz.kind === "A" ? "Weitere Counter" : "Weitere Gefahren"} für ${esc(tgt)}: ${esc(others.join(", ") || "–")}</span>
-      ${vs.n ? `<br><span class="small">Deine Daten: ${pct(vs.wr)} Winrate in ${plural(vs.n, "Match", "Matches")} ${quiz.kind === "A" ? `gegen ${esc(tgt)}` : `als ${esc(tgt)} gegen ${esc(att)}`}.</span>` : ""}
-    </div>
-    <button class="btn" type="button" id="quizNext">Nächste Frage →</button>`;
+      ${vs.n ? `<br><span class="small">Deine Daten: ${pct(vs.wr)} Winrate in ${plural(vs.n, "Match", "Matches")} ${quiz.kind === "A" ? `gegen ${esc(tgt)}` : `als ${esc(tgt)} gegen ${esc(att)}`}.</span>` : ""}`]])
+    + `<div class="row mt"><button class="btn" type="button" id="quizNext">Nächste Frage →</button></div>`;
   $("#quizNext").addEventListener("click", () => { quiz = null; renderQuiz(); });
 }
 function renderRules() {
   $("#ruleList").innerHTML = table(["Gegner ist …", "Gekontert durch …", "Warum"], COUNTER_RULES.map(r => [
-    `<b>${esc(r.target)}</b><br><span class="small muted">${esc(TAGS[r.target])}</span>`, esc(r.by.join(" / ")), esc(r.why)]));
+    `<span class="tag">${esc(r.target)}</span><br><span class="small muted">${esc(TAGS[r.target])}</span>`, r.by.map(b => `<span class="tag">${esc(b)}</span>`).join(""), esc(r.why)]));
 }
 
 // ---------- Helden ----------
 let roleFilter = "";
 function renderHeroes() {
-  $("#roleFilter").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${roleFilter === r ? "on" : ""}" data-r="${r}">${r ? ROLE_DE[r] : "Alle"}</span>`).join("");
+  $("#roleFilter").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${roleFilter === r ? "on" : ""}" data-r="${r}">${r || "Alle"}</span>`).join("");
   $("#roleFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { roleFilter = c.dataset.r; renderHeroes(); }));
   const q = $("#heroSearch").value.trim().toLowerCase();
-  $("#roleTips").innerHTML = roleFilter
-    ? `<h2 class="role-${roleFilter}">Grundregeln: ${ROLE_DE[roleFilter]}</h2><ul>${ROLE_TIPS[roleFilter].map(t => `<li>${esc(t)}</li>`).join("")}</ul>`
-    : `<h2>Grundregeln pro Rolle</h2><div class="grid-2">${ROLES.map(r => `<div><h3 class="role-${r}">${ROLE_DE[r]}</h3><ul>${ROLE_TIPS[r].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>`;
+  $("#roleTips").innerHTML = `<div class="card-head"><h2>${icon("heroes")}Grundregeln ${roleFilter ? "· " + esc(ROLE_DE[roleFilter]) : "pro Rolle"}</h2></div>` + (roleFilter
+    ? `<ul>${ROLE_TIPS[roleFilter].map(t => `<li>${esc(t)}</li>`).join("")}</ul>`
+    : `<div class="grid-2">${ROLES.map(r => `<div>${roleChip(r)}<ul class="small">${ROLE_TIPS[r].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>`);
   const stats = group(state.matches, m => m.hero);
+  const meta = metaMap(), rd = rdMap();
   const list = allHeroes().filter(h => (!roleFilter || h.role === roleFilter) && h.name.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name));
   $("#heroCards").innerHTML = list.map(h => {
@@ -1308,26 +1769,30 @@ function renderHeroes() {
     const custom = state.customHeroes.includes(h);
     const tags = heroTags(h.name);
     const pc = personalCounters(h.name);
-    return `<div class="card hero-card ${h.role}">
-      <div class="row between"><h2 style="margin:0">${esc(h.name)}</h2><span class="role-${h.role}">${h.role}</span></div>
+    const g = meta.get(h.name), r = rd.get(h.name);
+    return `<div class="card hero-card">
+      <div class="hero-card-head">${av(h.name, "lg")}<div><h2>${esc(h.name)}</h2>${roleChip(h.role)}</div></div>
       <div>${tags.map(t => `<span class="tag" title="${esc(TAGS[t] || "")}">${esc(t)}</span>`).join("") || `<span class="muted small">Keine Tags</span>`}</div>
-      <p class="muted small" style="margin:6px 0">
-        ${s.n ? `Gespielt: ${s.n}× · ${pct(s.wr)} Winrate · Ø KDA ${s.kda.toFixed(2)}` : "Noch nicht gespielt"}
-        ${vs.n ? `<br>Als Gegner: ${vs.n}× · deine Winrate ${pct(vs.wr)}` : ""}
-      </p>
+      <div class="stat-line">
+        ${s.n ? `<span>Gespielt <b>${s.n}×</b> · <b>${pct(s.wr)}</b> WR · KDA <b>${s.kda.toFixed(2)}</b></span>` : "<span>Noch nicht gespielt</span>"}
+        ${vs.n ? `<span>Als Gegner <b>${vs.n}×</b> · deine WR <b>${pct(vs.wr)}</b></span>` : ""}
+        ${r ? `<span>Rivals Data: <b>${isFinite(r.winrate) ? Math.round(r.winrate) + " %" : "–"}</b> in ${r.games} Matches</span>` : ""}
+        ${g && isFinite(g.winrate) ? `<span>Global: <b>${g.winrate.toFixed(1)} %</b> WR${isFinite(g.pickrate) ? ` · ${g.pickrate.toFixed(1)} % Pick` : ""}</span>` : ""}
+      </div>
       <ul>${h.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
-      <p class="small" style="margin:8px 0 0"><b class="win">Stark gegen:</b> ${esc(strongAgainst(h.name).join(", ") || "–")}</p>
-      <p class="small" style="margin:4px 0 0"><b class="loss">Gekontert von:</b> ${esc(countersOf(h.name).join(", ") || "–")}</p>
-      ${pc.length ? `<p class="small" style="margin:4px 0 0"><b>Bei dir klappt dagegen:</b> ${pc.slice(0, 3).map(([n, x]) => `${esc(n)} (${pct(x.wr)})`).join(", ")}</p>` : ""}
-      <label style="margin-top:8px">Meine Notizen (wenn ich ${esc(h.name)} spiele) <textarea data-note="${esc(h.name)}" placeholder="Combos, Erkenntnisse…">${esc(state.heroNotes[h.name] || "")}</textarea></label>
-      <label style="margin-top:8px">So spiele ich gegen ${esc(h.name)} <textarea data-cnote="${esc(h.name)}" placeholder="z.B. Nicht auf offener Fläche stehen, Diver auf ihn schicken…">${esc(state.counterNotes[h.name] || "")}</textarea></label>
-      <details><summary>Tags anpassen</summary><div class="chips" style="margin-top:6px">${Object.keys(TAGS).map(t =>
-        `<span class="chip ${tags.includes(t) ? "on" : ""}" data-taghero="${esc(h.name)}" data-tag="${t}" title="${esc(TAGS[t])}">${t}</span>`).join("")}</div>
-        ${state.heroTagOverrides[h.name] ? `<button class="btn ghost small" type="button" data-tagreset="${esc(h.name)}" style="margin-top:6px">Standard-Tags wiederherstellen</button>` : ""}
+      <div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div>
+      <div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>
+      ${pc.length ? `<div class="vs-line"><span class="lbl">Bei dir klappt dagegen</span>${pc.slice(0, 3).map(([n, x]) => `${esc(n)} (${pct(x.wr)})`).join(", ")}</div>` : ""}
+      <details><summary>Notizen &amp; Tags</summary>
+        <label class="mt">Meine Notizen (wenn ich ${esc(h.name)} spiele) <textarea data-note="${esc(h.name)}" placeholder="Combos, Erkenntnisse…">${esc(state.heroNotes[h.name] || "")}</textarea></label>
+        <label class="mt">So spiele ich gegen ${esc(h.name)} <textarea data-cnote="${esc(h.name)}" placeholder="z.B. Nicht auf offener Fläche stehen…">${esc(state.counterNotes[h.name] || "")}</textarea></label>
+        <div class="field mt">Spielstil-Tags<div class="chips">${Object.keys(TAGS).map(t =>
+          `<span class="chip ${tags.includes(t) ? "on" : ""}" data-taghero="${esc(h.name)}" data-tag="${t}" title="${esc(TAGS[t])}">${t}</span>`).join("")}</div></div>
+        ${state.heroTagOverrides[h.name] ? `<button class="btn ghost small mt" type="button" data-tagreset="${esc(h.name)}">Standard-Tags wiederherstellen</button>` : ""}
+        ${custom ? `<button class="btn danger small mt" type="button" data-rmhero="${esc(h.name)}">Held entfernen</button>` : ""}
       </details>
-      ${custom ? `<button class="btn danger small" type="button" data-rmhero="${esc(h.name)}" style="margin-top:6px">Entfernen</button>` : ""}
     </div>`;
-  }).join("") || `<p class="muted">Kein Held gefunden.</p>`;
+  }).join("") || `<div class="card">${empty("Kein Held gefunden.", "heroes")}</div>`;
   $("#heroCards").querySelectorAll("[data-note]").forEach(t => t.addEventListener("change", () => {
     state.heroNotes[t.dataset.note] = t.value; save(); toast("Notiz gespeichert");
   }));
@@ -1339,10 +1804,10 @@ function renderHeroes() {
     const cur = new Set(heroTags(n));
     cur.has(t) ? cur.delete(t) : cur.add(t);
     state.heroTagOverrides[n] = [...cur]; save(); quiz = null;
-    const open = c.closest("details");
     renderHeroes();
-    // Geöffnetes Tag-Menü nach dem Neuzeichnen offen lassen
-    if (open) { const d = [...document.querySelectorAll("#heroCards [data-taghero]")].find(x => x.dataset.taghero === n); if (d) d.closest("details").open = true; }
+    // Geöffnetes Menü nach dem Neuzeichnen offen lassen
+    const d = [...document.querySelectorAll("#heroCards [data-taghero]")].find(x => x.dataset.taghero === n);
+    if (d) d.closest("details").open = true;
   }));
   $("#heroCards").querySelectorAll("[data-tagreset]").forEach(b => b.addEventListener("click", () => {
     delete state.heroTagOverrides[b.dataset.tagreset]; save(); quiz = null; renderHeroes();
@@ -1359,8 +1824,7 @@ $("#heroForm").addEventListener("submit", e => {
   if (allHeroes().some(h => h.name.toLowerCase() === name.toLowerCase())) { toast("Held existiert bereits"); return; }
   const tags = [...document.querySelectorAll("#newHeroTags .chip.on")].map(c => c.dataset.v);
   state.customHeroes.push({ name, role: f.get("role"), tags, tips: f.get("tips").split("\n").map(s => s.trim()).filter(Boolean) });
-  save(); e.target.reset();
-  document.querySelectorAll("#newHeroTags .chip.on").forEach(c => { c.classList.remove("on"); c.setAttribute("aria-checked", "false"); });
+  save(); e.target.reset(); setChips($("#newHeroTags"), []);
   render(); toast(`${name} hinzugefügt`);
 });
 
@@ -1380,8 +1844,8 @@ function renderTraining() {
   const done = state.routineDone[today()] || [];
   $("#routine").innerHTML = state.routine.map((r, i) => `<div class="check ${done.includes(r) ? "done" : ""}">
       <input type="checkbox" id="rt${i}" ${done.includes(r) ? "checked" : ""}>
-      <span style="flex:1"><label for="rt${i}" style="color:inherit;font-size:inherit;display:inline">${esc(r)}</label></span>
-      <button class="btn danger small" type="button" data-rmr="${i}" aria-label="Entfernen">✕</button></div>`).join("");
+      <label for="rt${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${esc(r)}</label>
+      <button class="btn danger small icon" type="button" data-rmr="${i}" aria-label="Entfernen">${icon("x")}</button></div>`).join("");
   $("#routine").querySelectorAll("input[type=checkbox]").forEach((c, i) => c.addEventListener("change", () => {
     const item = state.routine[i];
     const d = new Set(state.routineDone[today()] || []);
@@ -1392,14 +1856,13 @@ function renderTraining() {
     state.routine.splice(+b.dataset.rmr, 1); save(); renderTraining();
   }));
   const s = streakDays();
-  $("#streakInfo").textContent = `Heute erledigt: ${done.filter(d => state.routine.includes(d)).length}/${state.routine.length} · Serie: ${s} Tag${s === 1 ? "" : "e"} 🔥`;
-  const drills = mistakeCounts(state.matches.slice(-20)).slice(0, 3)
-    .map(([m, c]) => `<div class="feedback info"><b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}</div>`);
+  $("#streakInfo").textContent = `${done.filter(d => state.routine.includes(d)).length}/${state.routine.length} heute · 🔥 ${s} Tag${s === 1 ? "" : "e"}`;
+  const drills = mistakeCounts(state.matches.slice(-20)).slice(0, 3).map(([m, c]) => ["info", `<b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}`]);
   const badEnemy = enemyStats(state.matches.slice(-40)).filter(x => x[1].n >= 3).sort((a, b) => a[1].wr - b[1].wr)[0];
   if (badEnemy && badEnemy[1].wr < 0.5) {
-    drills.push(`<div class="feedback bad"><b>Matchup: ${esc(badEnemy[0])}</b> (${pct(badEnemy[1].wr)} Winrate)<br>Lies im Helden-Guide, wer ${esc(badEnemy[0])} kontert, und spiele diese Woche 3 Quick Matches mit einem dieser Helden. ${counterTip(badEnemy[0])}.</div>`);
+    drills.push(["bad", `<b>Matchup: ${esc(badEnemy[0])}</b> (${pct(badEnemy[1].wr)} Winrate)<br>Lies im Helden-Guide, wer ${esc(badEnemy[0])} kontert, und spiele diese Woche 3 Quick Matches mit einem dieser Helden. ${counterTip(badEnemy[0])}.`]);
   }
-  $("#drills").innerHTML = drills.length ? drills.join("") : `<p class="muted">Sobald du Fehler und Gegner in Matches erfasst, erscheinen hier passende Übungen.</p>`;
+  $("#drills").innerHTML = notes(drills) || empty("Sobald du Fehler und Gegner in Matches erfasst, erscheinen hier passende Übungen.", "target");
 }
 $("#routineAdd").addEventListener("click", () => {
   const v = $("#routineNew").value.trim();
@@ -1423,19 +1886,19 @@ $("#timerBtn").addEventListener("click", () => {
 // ---------- Lernziele ----------
 function renderGoals() {
   $("#goalList").innerHTML = state.goals.length ? state.goals.slice().reverse().map(g => `<div class="card">
-      <div class="row between">
-        <h2 style="margin:0">${g.done ? "✅ " : "🎯 "}${esc(g.title)}</h2>
-        <span class="muted">${g.due ? "bis " + esc(g.due) : ""}</span></div>
-      ${g.metric ? `<p class="muted" style="margin:4px 0">Messbar durch: ${esc(g.metric)}</p>` : ""}
+      <div class="card-head">
+        <h2>${g.done ? "✅" : "🎯"} ${esc(g.title)}</h2>
+        <span class="muted small">${g.due ? "bis " + fmtDate(g.due) : ""}</span></div>
+      ${g.metric ? `<p class="lead">Messbar durch: ${esc(g.metric)}</p>` : ""}
       <div class="grid-2">
         <label>Durchführen – was übe ich konkret? <textarea data-g="${g.id}" data-f="plan">${esc(g.plan || "")}</textarea></label>
         <label>Reflektieren – was hat funktioniert, was nicht? <textarea data-g="${g.id}" data-f="reflection">${esc(g.reflection || "")}</textarea></label>
       </div>
-      <div class="row" style="margin-top:8px">
+      <div class="row mt">
         <button class="btn small ${g.done ? "ghost" : ""}" type="button" data-done="${g.id}">${g.done ? "Wieder öffnen" : "Als erreicht markieren"}</button>
         <button class="btn danger small" type="button" data-rmg="${g.id}">Löschen</button>
       </div></div>`).join("")
-    : `<div class="card"><p class="muted">Noch keine Ziele. Starte mit einem kleinen, konkreten Ziel für diese Woche.</p></div>`;
+    : `<div class="card">${empty("Noch keine Ziele. Starte mit einem kleinen, konkreten Ziel für diese Woche.", "goals")}</div>`;
   $("#goalList").querySelectorAll("textarea[data-g]").forEach(t => t.addEventListener("change", () => {
     const g = state.goals.find(x => x.id === t.dataset.g); g[t.dataset.f] = t.value; save(); toast("Gespeichert");
   }));
@@ -1451,7 +1914,7 @@ function renderGoals() {
 $("#goalForm").addEventListener("submit", e => {
   e.preventDefault();
   const f = new FormData(e.target);
-  state.goals.push({ id: Date.now().toString(36), title: f.get("title").trim(), metric: f.get("metric").trim(), due: f.get("due"), done: false });
+  state.goals.push({ id: newId(), title: f.get("title").trim(), metric: f.get("metric").trim(), due: f.get("due"), done: false });
   save(); e.target.reset(); renderGoals();
 });
 
@@ -1470,13 +1933,21 @@ function buildPrompt() {
     "## Meine Helden",
     ...heroes.slice(0, 8).map(([h, x]) => `- ${h} (${heroRole(h)}): ${x.n} Matches, ${pct(x.wr)} WR, Ø KDA ${x.kda.toFixed(2)}`)
   ];
+  const meta = metaMap(), rd = rdMap();
+  if (meta.size || rd.size) {
+    const rows = [...new Set(heroes.slice(0, 6).map(x => x[0]).concat([...rd.values()].sort((a, b) => b.games - a.games).slice(0, 4).map(x => x.hero)))];
+    lines.push("", "## Abgleich mit Rivals Data", ...rows.map(h => {
+      const r = rd.get(h), g = meta.get(h);
+      return `- ${h}: ${r ? `ich ${isFinite(r.winrate) ? Math.round(r.winrate) + " %" : "?"} in ${r.games} Matches (Profil)` : "keine Profildaten"}${g && isFinite(g.winrate) ? `, global ${g.winrate.toFixed(1)} % WR` : ""}`;
+    }));
+  }
   const es = enemyStats(ms).filter(x => x[1].n >= 2).sort((a, b) => a[1].wr - b[1].wr);
   if (es.length) lines.push("", "## Gegner-Helden, gegen die es schlecht läuft",
     ...es.slice(0, 6).map(([h, x, nem]) => `- ${h}: ${pct(x.wr)} WR in ${x.n} Matches${nem ? `, hat mir ${nem}× die meisten Probleme gemacht` : ""}`));
   const mc = mistakeCounts(ms.slice(-20)).slice(0, 6);
   if (mc.length) lines.push("", "## Häufigste Fehler (letzte 20 Matches)", ...mc.map(([m, c]) => `- ${m}: ${c}×`));
-  const notes = ms.slice(-5).filter(m => m.notes).map(m => `- ${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.enemies.length ? ` gegen ${m.enemies.join(", ")}` : ""}: ${m.notes}`);
-  if (notes.length) lines.push("", "## Notizen aus den letzten Matches", ...notes);
+  const nts = ms.slice(-5).filter(m => m.notes).map(m => `- ${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.enemies.length ? ` gegen ${m.enemies.join(", ")}` : ""}: ${m.notes}`);
+  if (nts.length) lines.push("", "## Notizen aus den letzten Matches", ...nts);
   const openGoals = state.goals.filter(g => !g.done);
   if (openGoals.length) lines.push("", "## Meine aktuellen Lernziele", ...openGoals.map(g => `- ${g.title}${g.metric ? ` (${g.metric})` : ""}`));
   lines.push("", "## Meine Frage");
@@ -1492,12 +1963,82 @@ function buildPrompt() {
 }
 function renderAI() { $("#aiPrompt").textContent = buildPrompt(); }
 $("#aiFocus").addEventListener("change", renderAI);
-$("#aiCopy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(buildPrompt()); toast("Prompt kopiert!"); }
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg || "Kopiert!"); }
   catch (e) { toast("Kopieren nicht möglich – bitte manuell markieren"); }
-});
+}
+$("#aiCopy").addEventListener("click", () => copyText(buildPrompt(), "Prompt kopiert!"));
 
-// ---------- Daten ----------
+// ---------- Daten & Sync ----------
+function syncCommand() {
+  const name = (state.settings.playerName || "DeinName").replace(/"/g, "");
+  return `python rivals_sync.py "${name}"`;
+}
+function renderData() {
+  $("#syncPlayer").value = state.settings.playerName || "";
+  $("#syncCmd").textContent = syncCommand();
+  const s = state.sync, el = $("#syncStatus");
+  if (!s) {
+    el.className = "sync-status";
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">Folge den Schritten unten.</span></div>`;
+    return;
+  }
+  const n = state.matches.filter(m => m.source === "rivalsdata").length;
+  el.className = "sync-status ok";
+  el.innerHTML = `<span class="dot"></span><div><b>Synchronisiert${s.player && s.player.name ? ` als ${esc(s.player.name)}` : ""}</b><br>
+    <span class="muted small">Letzter Abgleich ${fmtDate(s.at)} · ${plural(n, "importiertes Match", "importierte Matches")} · ${plural((s.playerHeroes || []).length, "Helden-Statistik", "Helden-Statistiken")}${s.meta ? ` · globale Tierlist (${esc(s.meta.rank || "?")})` : ""}</span>
+    ${(s.warnings || []).length ? `<br><span class="small" style="color:var(--warn)">${plural(s.warnings.length, "Hinweis", "Hinweise")} beim Abruf: ${esc(s.warnings[0])}</span>` : ""}</div>`;
+}
+$("#syncPlayer").addEventListener("input", e => { state.settings.playerName = e.target.value.trim(); save(); $("#syncCmd").textContent = syncCommand(); });
+$("#syncCmdCopy").addEventListener("click", () => copyText(syncCommand(), "Befehl kopiert!"));
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copyText(b.dataset.copy, "Befehl kopiert!")));
+
+const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "swapped", "mvp", "svp", "ts", "date"];
+function importSync(data) {
+  if (!data || data.format !== "rivals-coach-sync" || !Array.isArray(data.matches)) throw new Error("Keine Rivals-Data-Sync-Datei");
+  const byExt = new Map(state.matches.filter(m => m.extId).map(m => [m.extId, m]));
+  let added = 0, updated = 0, merged = 0, unknown = 0;
+  data.matches.forEach(r => {
+    if (!r || !r.extId || !r.hero || (r.result !== "W" && r.result !== "L")) return;
+    if (!heroByName(r.hero)) unknown++;
+    const syncFields = {};
+    SYNC_FIELDS.forEach(k => { if (r[k] !== undefined && r[k] !== null && r[k] !== "") syncFields[k] = r[k]; });
+    if (Array.isArray(r.enemies) && r.enemies.length) syncFields.enemies = r.enemies;
+    if (Array.isArray(r.allies) && r.allies.length) syncFields.allies = r.allies;
+    const existing = byExt.get(r.extId);
+    if (existing) { Object.assign(existing, syncFields); updated++; return; }
+    // Manuell geloggtes Match mit gleichen Eckdaten? Dann zusammenführen statt doppelt anlegen
+    const manual = state.matches.find(m => !m.extId && m.date === r.date && m.hero === r.hero && m.result === r.result && m.k === r.k && m.d === r.d && m.a === r.a);
+    if (manual) {
+      SYNC_FIELDS.concat(["enemies", "allies"]).forEach(k => {
+        const empty = manual[k] === null || manual[k] === undefined || manual[k] === "" || (Array.isArray(manual[k]) && !manual[k].length);
+        if (empty && syncFields[k] !== undefined) manual[k] = syncFields[k];
+      });
+      manual.extId = r.extId; manual.source = "rivalsdata"; merged++;
+      return;
+    }
+    state.matches.push(Object.assign({ id: newId(), extId: r.extId, source: "rivalsdata", enemies: [], allies: [], mistakes: [], goods: [], notes: "", next: "", nemesis: "", mood: null }, syncFields));
+    added++;
+  });
+  state.matches.sort((a, b) => matchTime(a) - matchTime(b));
+  state.sync = { player: data.player || null, at: data.generated || new Date().toISOString(), playerHeroes: data.playerHeroes || [], meta: data.meta || null, warnings: data.warnings || [] };
+  if (data.player && data.player.name && !state.settings.playerName) state.settings.playerName = data.player.name;
+  save();
+  return { added, updated, merged, unknown };
+}
+async function readJsonFile(input) {
+  const file = input.files[0];
+  input.value = "";
+  if (!file) return null;
+  return JSON.parse(await file.text());
+}
+function syncToast(r) {
+  toast(`Rivals Data: ${r.added} neu, ${r.updated} aktualisiert${r.merged ? `, ${r.merged} zusammengeführt` : ""}${r.unknown ? ` · ${r.unknown} mit unbekanntem Helden` : ""}`);
+}
+$("#syncFile").addEventListener("change", async e => {
+  try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
+  catch (err) { toast("Import fehlgeschlagen: " + err.message); }
+});
 function download(name, text, type) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type }));
@@ -1506,21 +2047,20 @@ function download(name, text, type) {
 }
 $("#exportBtn").addEventListener("click", () => download(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"));
 $("#csvBtn").addEventListener("click", () => {
-  const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next"];
+  const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next", "source", "extId"];
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
   download(`rivals-matches-${today()}.csv`, [cols.join(","), ...state.matches.map(m => cols.map(c => cell(m[c])).join(","))].join("\n"), "text/csv");
 });
 $("#importFile").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) return;
   try {
-    const data = JSON.parse(await file.text());
+    const data = await readJsonFile(e.target);
+    if (!data) return;
+    if (data.format === "rivals-coach-sync") { const r = importSync(data); quiz = null; render(); syncToast(r); return; }
     if (!Array.isArray(data.matches)) throw new Error("Ungültige Datei");
     if (!confirm(`${data.matches.length} Matches importieren? Aktuelle Daten werden ersetzt.`)) return;
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
-    state = loadState(); quiz = null; render(); toast("Import erfolgreich");
+    state = loadState(); quiz = null; render(); toast("Backup importiert");
   } catch (err) { toast("Import fehlgeschlagen: " + err.message); }
-  e.target.value = "";
 });
 $("#resetBtn").addEventListener("click", () => {
   if (!confirm("Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden.")) return;
@@ -1533,11 +2073,12 @@ chipGroup($("#mistakeChips"), MISTAKES);
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
-  const visible = document.querySelector("main > section:not([hidden])").id.replace("tab-", "");
   ({ dashboard: renderDashboard, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: () => { renderQuiz(); renderRules(); }, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: () => {} })[visible]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData })[currentTab()]();
 }
+let resizeT = null;
+window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (currentTab() === "dashboard") renderDashboard(); }, 150); });
 let startTab = "dashboard";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "dashboard"; } catch (e) {}
 showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");

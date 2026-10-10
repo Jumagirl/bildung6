@@ -25,11 +25,32 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten** | Export/Import als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data, Backup als JSON, Export der Matches als CSV |
 
 !!! info "Datenschutz"
     Alle Eingaben werden ausschliesslich lokal in deinem Browser gespeichert (`localStorage`).
-    Es werden keine Daten an einen Server übertragen. Mit dem Export kannst du ein Backup erstellen.
+    Die App selbst überträgt keine Daten an einen Server. Mit dem Export kannst du ein Backup erstellen.
+
+## Abgleich mit Rivals Data
+
+Statt jedes Match von Hand einzutragen, kannst du deine öffentlichen Matches von
+[Rivals Data](https://rivalsdata.com) übernehmen. Rivals Data hat keine offizielle Schnittstelle und
+blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript die Daten ab:
+
+1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`
+2. [rivals_sync.py](rivals_sync.py) herunterladen.
+3. Im selben Ordner ausführen: `python rivals_sync.py "DeinSpielername"`
+4. Die erzeugte Datei `rivals-sync.json` in der App unter **Daten & Sync** importieren.
+
+Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams.
+Bereits vorhandene Matches werden aktualisiert statt doppelt angelegt, und deine Notizen bleiben erhalten.
+Zusätzlich lädt das Skript deine Helden-Statistik aus dem Profil und die globale Tierlist. Damit
+vergleicht die App unter **Auswertung** deine Winrate pro Held mit dem Schnitt aller Spieler.
+
+!!! warning "Inoffizielle Datenquelle"
+    Das Skript nutzt die Community-Bibliothek [rivals-api](https://github.com/GS-Rionnag/rivals-api),
+    die auf eine nicht dokumentierte Schnittstelle von Rivals Data zugreift. Diese kann sich jederzeit
+    ändern. Deine Match-History muss im Spiel öffentlich sein.
 
 ## So lernst du mit der App
 
