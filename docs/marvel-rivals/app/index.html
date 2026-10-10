@@ -85,6 +85,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--bg);
@@ -533,14 +534,14 @@ pre.prompt {
           <option>Competitive</option><option>Quick Match</option><option>Arcade / Event</option><option>Custom / Training</option>
         </select>
       </label>
-      <label>Map <input name="map" list="mapList" placeholder="Map wählen oder tippen"></label>
+      <label>Map <select name="map" id="mapSelect"></select></label>
+      <label id="mapOtherWrap" hidden>Andere Map <input name="mapOther" id="mapOther" placeholder="Name der Map"></label>
       <label>Spieltyp
         <select name="type">
           <option>Domination</option><option>Convoy</option><option>Convergence</option><option>Doom Match</option><option>Conquest</option><option>Anderer</option>
         </select>
       </label>
     </div>
-    <datalist id="mapList"></datalist>
     <div class="grid mt">
       <div class="field">Ergebnis
         <div class="seg result">
@@ -2031,8 +2032,7 @@ function renderLog() {
   $("#allySlots").innerHTML = [0, 1, 2, 3, 4].map(i => heroSelectHtml(`aria-label="Mitspieler ${i + 1}"`, al[i], `Mitspieler ${i + 1}`)).join("");
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
-  const maps = [...new Set(Object.keys(MAPS).concat(state.matches.map(m => m.map).filter(Boolean)))].sort();
-  $("#mapList").innerHTML = maps.map(m => `<option value="${esc(m)}">`).join("");
+  renderMapOptions($("#mapSelect").value);
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -2062,11 +2062,32 @@ function updateNemesis() {
   const opts = en.length ? [...new Set(en)] : allHeroes().map(h => h.name).sort();
   $("#nemesisSelect").innerHTML = `<option value="">– niemand Bestimmtes –</option>` + opts.map(h => `<option ${h === cur ? "selected" : ""}>${esc(h)}</option>`).join("");
 }
+const MAP_GROUPS = ["Convoy", "Domination", "Convergence", "Doom Match", "Conquest"];
+function renderMapOptions(selected) {
+  const custom = [...new Set(state.matches.map(m => m.map).filter(m => m && !MAPS[m]))].sort();
+  const opt = m => `<option value="${esc(m)}" ${m === selected ? "selected" : ""}>${esc(m)}</option>`;
+  $("#mapSelect").innerHTML = `<option value="">– Map wählen –</option>`
+    + MAP_GROUPS.map(g => {
+      const maps = Object.keys(MAPS).filter(m => MAPS[m] === g).sort();
+      return maps.length ? `<optgroup label="${g}">${maps.map(opt).join("")}</optgroup>` : "";
+    }).join("")
+    + (custom.length ? `<optgroup label="Weitere (aus deinen Matches)">${custom.map(opt).join("")}</optgroup>` : "")
+    + `<option value="__other" ${selected === "__other" ? "selected" : ""}>Andere Map eingeben …</option>`;
+  $("#mapOtherWrap").hidden = $("#mapSelect").value !== "__other";
+}
+function setMapValue(name) {
+  const sel = $("#mapSelect");
+  if (!name) { sel.value = ""; }
+  else if ([...sel.options].some(o => o.value === name)) { sel.value = name; }
+  else { sel.value = "__other"; $("#mapOther").value = name; }
+  $("#mapOtherWrap").hidden = sel.value !== "__other";
+}
 function clearForm() {
   const f = $("#matchForm");
   const keep = { hero: f.hero.value, mode: f.mode.value, type: f.type.value };
   f.reset();
   f.hero.value = keep.hero; f.mode.value = keep.mode; f.type.value = keep.type;
+  setMapValue("");
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   setChips($("#mistakeChips"), []); setChips($("#goodChips"), []);
   updateNemesis();
@@ -2077,7 +2098,7 @@ function startEdit(id) {
   editingId = id;
   showTab("log");
   const f = $("#matchForm");
-  f.hero.value = m.hero; f.mode.value = m.mode; f.type.value = m.type; f.map.value = m.map || "";
+  f.hero.value = m.hero; f.mode.value = m.mode; f.type.value = m.type; setMapValue(m.map || "");
   f.result.value = m.result; f.k.value = m.k; f.d.value = m.d; f.a.value = m.a;
   f.mood.value = String(m.mood || 3);
   f.dmg.value = m.dmg ?? ""; f.heal.value = m.heal ?? ""; f.block.value = m.block ?? "";
@@ -2099,9 +2120,11 @@ function cancelEdit() {
   clearForm();
 }
 $("#editCancel").addEventListener("click", cancelEdit);
-$("#matchForm").map.addEventListener("change", e => {
-  const type = MAPS[e.target.value.trim()];
-  if (type) $("#matchForm").type.value = type;
+$("#mapSelect").addEventListener("change", e => {
+  const v = e.target.value;
+  $("#mapOtherWrap").hidden = v !== "__other";
+  if (v === "__other") { $("#mapOther").focus(); return; }
+  if (MAPS[v]) $("#matchForm").type.value = MAPS[v];
 });
 $("#takeTeams").addEventListener("click", () => {
   let me = $("#heroSelect").value;
@@ -2117,7 +2140,7 @@ $("#matchForm").addEventListener("submit", e => {
   const f = new FormData(e.target);
   const num = k => { const v = f.get(k); return v === "" || v === null ? null : Number(v); };
   const fields = {
-    hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), map: f.get("map").trim(), result: f.get("result"),
+    hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), map: f.get("map") === "__other" ? (f.get("mapOther") || "").trim() : (f.get("map") || ""), result: f.get("result"),
     k: num("k") || 0, d: num("d") || 0, a: num("a") || 0, dmg: num("dmg"), heal: num("heal"), block: num("block"),
     mood: num("mood"), notes: f.get("notes").trim(), next: f.get("next").trim(),
     enemies: slotValues("enemySlots").filter(Boolean), allies: slotValues("allySlots").filter(Boolean),
