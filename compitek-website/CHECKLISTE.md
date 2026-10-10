@@ -8,7 +8,8 @@ Diese Punkte konnten nicht automatisch geprüft werden. Bitte mit Karl durchgehe
 - [ ] **Formular testen:** Nach dem Hochladen einmal selbst eine Anfrage schicken. Kommt keine Mail an, beim Webhoster nachfragen, ob PHP-`mail()` aktiv ist und ob die Absenderadresse `webformular@compitek.de` erlaubt ist (einstellbar oben in `kontakt.php`).
 - [ ] **Öffnungszeiten:** Montag, Dienstag und Donnerstag 9–12 und 15–18 Uhr, sonst geschlossen. Stimmt das noch?
 - [ ] **Preise:** 36 € (Werkstatt, erste 30 Min.), 72 € (vor Ort, erste 60 Min.), 18 € je weitere angefangene 15 Min., Fahrtkosten 30 € bis 20 km, Windows-11-Upgrade 72 €. Alles aktuell?
-- [ ] **Datenschutz:** Name und Anschrift des Webhosters sowie die Speicherdauer der Server-Logfiles eintragen (gelb markiert), danach den orangefarbenen „Entwurf“-Kasten entfernen.
+- [ ] **Vertrag zur Auftragsverarbeitung (AV-Vertrag) mit all-inkl:** Die Datenschutzerklärung nennt jetzt all-inkl als Webhoster und sagt, dass ein AV-Vertrag besteht. Den kann Karl bei all-inkl online abschließen, falls das noch nicht geschehen ist.
+- [ ] **Angaben zu all-inkl kurz gegenprüfen:** Anschrift (Neue Medien Münnich, Hauptstraße 68, 02742 Friedersdorf) und Speicherdauer der IP-Adressen (höchstens 7 Tage, anonymisierte Auswertungen) stammen aus öffentlichen Angaben von all-inkl. Am besten mit dem AV-Vertrag bzw. der Datenschutzerklärung von all-inkl abgleichen.
 
 ## Rechtstexte – bitte prüfen lassen
 

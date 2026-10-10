@@ -52,6 +52,29 @@ Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepa
 4. Testen: Startseite, Unterseiten, Handy-Ansicht, eine alte Adresse wie `compitek.de/service.html` (muss weiterleiten) und **das Formular einmal selbst abschicken** (die Mail muss bei `info@compitek.de` ankommen).
 5. Im Kundenmenü des Hosters „SSL/HTTPS erzwingen“ einschalten, falls noch nicht aktiv.
 
+### Schritt für Schritt bei all-inkl
+
+CompiTek liegt bei **all-inkl**. So geht der Umzug von der alten Seite (WordPress) auf die neue:
+
+1. **Zugangsdaten holen:** Im KAS von all-inkl (`kas.all-inkl.com`) unter **„FTP“** stehen FTP-Benutzer und Server. Das Passwort lässt sich dort bei Bedarf neu setzen.
+2. **Ordner der Domain finden:** Im KAS unter **„Domain“** steht bei `compitek.de`, auf welchen Ordner die Domain zeigt, zum Beispiel `/` oder `/compitek.de/`. Genau in diesen Ordner kommt die neue Seite.
+3. **Verbinden:** Mit **FileZilla** (kostenlos) oder dem **WebFTP** von all-inkl im Browser. In FileZilla unter *Server → Anzeige versteckter Dateien erzwingen* einschalten, damit die Datei `.htaccess` sichtbar ist.
+4. **Alte Seite sichern:**
+   - Zuerst den kompletten Ordner der Domain einmal auf den eigenen PC herunterladen (Sicherheitskopie).
+   - Dann auf dem Server im Ordner der Domain einen neuen Ordner `alte-seite` anlegen und **alle bisherigen Dateien und Ordner hineinschieben**. Bei WordPress sind das unter anderem `wp-admin`, `wp-content`, `wp-includes`, `index.php`, `wp-config.php` und `.htaccess`.
+   - Nichts löschen. So ist die alte Seite jederzeit wiederherstellbar. Die WordPress-Datenbank bleibt unverändert beim Hoster.
+5. **Neue Seite hochladen:** Die ZIP am PC entpacken, den Ordner `compitek-website` öffnen und **dessen Inhalt** (alle Dateien, den Ordner `assets` und `.htaccess`) in den Ordner der Domain hochladen. `README.md` und `CHECKLISTE.md` müssen nicht mit.
+6. **Testen:**
+   - `compitek.de` im Browser öffnen, bei Bedarf mit *Strg + F5* neu laden.
+   - Alle Seiten durchklicken, am PC und am Handy.
+   - `compitek.de/service.html` aufrufen: Die Seite muss zu den Leistungen springen.
+   - Das **Formular einmal selbst abschicken**: Die Mail muss bei `info@compitek.de` ankommen.
+7. **Falls Formular-Mails nicht ankommen:** Oben in `kontakt.php` bei `ABSENDER` eine echte Adresse der Domain eintragen (zum Beispiel `info@compitek.de`) und die Datei erneut hochladen. Hilft das nicht, weiß der all-inkl-Support weiter.
+8. **HTTPS prüfen:** Im KAS unter *Domain → compitek.de bearbeiten* sollte der SSL-Schutz (Let’s Encrypt) aktiv sein.
+9. **Nach etwa zwei Wochen:** Läuft alles, den Ordner `alte-seite` auf dem Server löschen. Ein altes, nicht mehr gepflegtes WordPress auf dem Server ist ein Sicherheitsrisiko. Die Kopie auf dem PC bleibt als Sicherung.
+
+Zurück zur alten Seite (falls nötig): die neuen Dateien entfernen und den Inhalt von `alte-seite` wieder in den Ordner der Domain schieben.
+
 ### Variante B: kostenlos über GitHub Pages
 
 1. Repository auf „Public“ stellen (GitHub Pages ist für private Repositories kostenpflichtig).
