@@ -241,7 +241,7 @@ pre.prompt {
       </label>
       <label>Spieltyp
         <select name="type">
-          <option>Domination</option><option>Convoy</option><option>Convergence</option><option>Anderer</option>
+          <option>Domination</option><option>Convoy</option><option>Convergence</option><option>Doom Match</option><option>Conquest</option><option>Anderer</option>
         </select>
       </label>
       <label>Map <input name="map" list="mapList" placeholder="optional"></label>
@@ -414,7 +414,7 @@ pre.prompt {
 <section id="tab-heroes" hidden>
   <div class="card">
     <h2>Helden-Guide</h2>
-    <p class="muted">Rollen-Tipps, Spielstil, Counter und deine persönlichen Matchup-Werte. Balancing und neue Helden ändern sich jede Season – du kannst eigene Helden, Tags und Notizen ergänzen.</p>
+    <p class="muted">Rollen-Tipps, Spielstil, Counter und deine persönlichen Matchup-Werte. Stand: Season 10 (Oktober 2026) mit allen 54 Helden – Deadpool ist als Vanguard, Duelist und Strategist einzeln aufgeführt. Balancing und neue Helden ändern sich jede Season – du kannst eigene Helden, Tags und Notizen ergänzen.</p>
     <div class="row">
       <input id="heroSearch" placeholder="Helden suchen…" style="max-width:260px">
       <div class="chips" id="roleFilter"></div>
@@ -588,6 +588,10 @@ const DEFAULT_HEROES = [
   { name: "Venom", role: "Vanguard", tags: ["Dive", "Brawl"], tips: ["Dive-Tank: Mit Schwingen schnell auf isolierte Ziele.", "Mehr Bonus-Gesundheit, je mehr Gegner in Reichweite sind.", "Nicht zu tief tauchen – Rückzugsweg planen."] },
   { name: "The Thing", role: "Vanguard", tags: ["Brawl", "AntiDive"], tips: ["Robuster Brawler, kann nicht weggeschleudert werden.", "Hält Gegner nah bei sich und schützt Verbündete.", "Gut gegen Dive-Kompositionen."] },
   { name: "Emma Frost", role: "Vanguard", tags: ["Brawl", "Schild"], tips: ["Diamantform für Haltbarkeit im Nahkampf.", "Platzierbare Barriere blockiert Sichtlinien.", "Fähigkeiten können Gegner aus Positionen ziehen."] },
+  { name: "Angela", role: "Vanguard", tags: ["Flieger", "Dive"], tips: ["Fliegender Dive-Tank: in der Luft mit dem Speer, am Boden mit zwei Äxten.", "Mit dem geladenen Speer-Angriff Gegner hochschleudern, dann das Team nachsetzen lassen.", "Kein starkes Schild – gegen Hitscan (Punisher, Hawkeye) Deckung suchen.", "Team-Up mit Thor: Er bekommt einen Donnerspeer, der Thorforce auflädt."] },
+  { name: "Devil Dinosaur", role: "Vanguard", tags: ["Brawl", "AntiTank"], tips: ["Bisse verursachen Blutung mit prozentualem Schaden – stark gegen Ziele mit viel Leben.", "Blutende Gegner beim Sprung-Biss packen und wegschleudern.", "Immun gegen Wegstossen und Hochschleudern.", "Ult: schneller Amoklauf mit Stampfern, die Gegner hochwerfen und bluten lassen."] },
+  { name: "Rogue", role: "Vanguard", tags: ["Dive", "Brawl"], tips: ["Komplexes Kit: Cooldowns und Combos sauber durchwechseln.", "Mit dem Dash reingehen, dann per Energie-Burst Gegner zu dir ziehen.", "Ult stiehlt Ult-Energie von Gegnern in der Nähe.", "Team-Up mit Gambit: Ihre Schläge erzeugen Schockwellen, die Verbündete heilen."] },
+  { name: "The Hood", role: "Vanguard", tags: ["Brawl"], tips: ["Normale Angriffe laden dämonische Energie – dann feuern die Pistolen wie Maschinenpistolen.", "Viel Lebensraub: Er heilt sich, solange er Schaden macht.", "Void Walk zum Repositionieren und für Überraschungsangriffe nutzen.", "Ult wirkt wie ein zweites Leben – Fights darfst du länger halten."] },
   // Duelists
   { name: "Black Panther", role: "Duelist", tags: ["Dive"], tips: ["Markieren und dann Spear-Dash für Resets nutzen.", "Ziel: Strategists isolieren und schnell ausschalten.", "Nur reingehen, wenn du einen Ausweg hast."] },
   { name: "Black Widow", role: "Duelist", tags: ["Sniper", "Hitscan"], tips: ["Sniper auf grosse Distanz – Positionierung ist alles.", "Nach jedem Schuss Position wechseln, wenn du entdeckt wirst.", "Kicks und Mobilität zum Entkommen sparen."] },
@@ -609,6 +613,13 @@ const DEFAULT_HEROES = [
   { name: "Winter Soldier", role: "Duelist", tags: ["Brawl"], tips: ["Haken zieht Gegner zu dir.", "Nahe Distanz für maximalen Schaden.", "Ult kann bei Kills zurückgesetzt werden."] },
   { name: "Wolverine", role: "Duelist", tags: ["AntiTank", "Dive"], tips: ["Anti-Tank: Je länger der Fight, desto stärker.", "Gegner greifen und wegtragen.", "Schadenreduktion durch Wut nutzen."] },
   { name: "Human Torch", role: "Duelist", tags: ["Flieger", "Raumkontrolle"], tips: ["Fliegt und erzeugt Feuerfelder.", "Feuerwände trennen Gegner.", "Stark aus der Luft auf Gruppen."] },
+  { name: "Black Cat", role: "Duelist", tags: ["Dive"], tips: ["Fortune-Ressource durch Treffer aufbauen und für Fähigkeiten nutzen.", "Doppelsprung und Wandklettern für überraschende Winkel.", "Während der Krallen-Combo (Phantom Pursuit) bist du nicht anvisierbar – auch zum Ausweichen nutzen.", "Mit dem Greifhaken Gegner treffen und ihnen Fortune stehlen."] },
+  { name: "Blade", role: "Duelist", tags: ["Dive", "Brawl"], tips: ["Heilungsreduktion ist der Kern seines Kits – ideal gegen starke Heiler.", "Mit der Schrotflinte anschiessen, mit dem Schwert erledigen.", "Zwei Daywalker-Dashes für Combos und Rückzug.", "Team-Up mit Cloak & Dagger und Moon Knight: Heilung und kurze Unsichtbarkeit."] },
+  { name: "Cyclops", role: "Duelist", tags: ["Hitscan", "Sniper"], tips: ["Hitscan-Optikstrahl: Druck aus mittlerer bis grosser Distanz.", "Propulsion Burst stösst dich und das Ziel zurück – gut, um Abstand zu schaffen.", "Mit Optic Ascent auf hohe Positionen springen.", "Ult zerstört Barrieren und hinterlässt explosive Energie."] },
+  { name: "Daredevil", role: "Duelist", tags: ["Dive"], tips: ["Radarsinn zeigt Gegner in der Nähe, auch durch Wände – ideal für Flanken.", "Nahkampf-Combos laden Fury auf.", "Sonic Pursuit springt auf ein Ziel und blendet es.", "Objection! blockt frontalen Schaden – im richtigen Moment einsetzen."] },
+  { name: "Elsa Bloodstone", role: "Duelist", tags: ["AntiDive", "AntiTank"], tips: ["Wechselt zwischen Schrotflinte (nah) und Elefantenbüchse (weit).", "Nach Helix Advance wird der nächste Schuss ein starker Monster-Piercer.", "Falle mit Diablo setzen, um Diver festzuhalten.", "Team-Up mit Deadpool und Jeff: spottende, verlangsamende Kugeln."] },
+  { name: "Gorr", role: "Duelist", tags: ["Brawl", "Raumkontrolle"], tips: ["Nahkampf mit dem Nekroschwert, unterstützt von Black-Berserker-Beschwörungen.", "Schaden deiner Berserker gibt dir Bonus-Leben.", "Wo ein Gegner fällt, erscheint ein neuer Berserker – Fights am Laufen halten.", "Ult beschwört neben jedem Gegner in Reichweite einen Berserker."] },
+  { name: "Phoenix", role: "Duelist", tags: ["Dive", "AntiDive"], tips: ["Primärfeuer setzt Funken – bei 3 Funken gibt es eine Explosion und du heilst dich.", "Telekinese-Stoss betäubt auf sehr grosse Distanz und kann Ults unterbrechen.", "Als Flanker mit Burst-Schaden und Selbstheilung spielen.", "Ult ist ein grosser Flächenangriff, der auch Schilde zerstört."] },
   // Strategists
   { name: "Adam Warlock", role: "Strategist", tags: ["Immobil"], tips: ["Seelenbund verteilt Schaden und heilt.", "Ult belebt gefallene Verbündete wieder – Timing ist alles.", "Er kann sich selbst wiederbeleben – trotzdem sicher spielen."] },
   { name: "Cloak & Dagger", role: "Strategist", tags: ["Immobil"], tips: ["Dagger heilt, Cloak macht Schaden/Blendung – wechseln je nach Situation.", "Dolch-Sturm-Fläche auf Tanks legen.", "Unsichtbarkeits-Fähigkeit für Team-Engages."] },
@@ -618,14 +629,38 @@ const DEFAULT_HEROES = [
   { name: "Luna Snow", role: "Strategist", tags: ["Immobil"], tips: ["Hitscan-Heilung – gutes Zielen lohnt sich.", "Kann zwischen Heilen und Schaden wechseln.", "Ult ist einer der stärksten Heil-Ults im Spiel."] },
   { name: "Mantis", role: "Strategist", tags: ["Immobil", "AntiDive"], tips: ["Buffs für Schaden und Heilung über Zeit.", "Kopftreffer füllen deine Ressource auf.", "Schlaf-Fähigkeit gegen Diver nutzen."] },
   { name: "Rocket Raccoon", role: "Strategist", tags: [], tips: ["Heilkugeln prallen ab – um Ecken heilen.", "Respawn-Bake platzieren für schnelles Zurückkommen.", "Damage-Booster-Ult für Teamfights."] },
-  { name: "Ultron", role: "Strategist", tags: ["Flieger"], tips: ["Fliegender Heiler mit Drohne auf Verbündeten.", "Kann Schaden auf Distanz machen.", "Mobil, aber Luft = sichtbar."] }
+  { name: "Ultron", role: "Strategist", tags: ["Flieger"], tips: ["Fliegender Heiler mit Drohne auf Verbündeten.", "Kann Schaden auf Distanz machen.", "Mobil, aber Luft = sichtbar."] },
+  { name: "Gambit", role: "Strategist", tags: ["Splash"], tips: ["Karten explodieren beim Aufprall: Schaden an Gegnern, Heilung an Verbündeten.", "Herz-Deck für Heilung und Reinigung, Pik-Deck für Schaden und Heilungsreduktion.", "Cajun Charge (Dash) zum Entkommen aufheben.", "Ult heilt, reinigt und gibt dem Team Tempo, Sprunghöhe und Schaden."] },
+  { name: "Jubilee", role: "Strategist", tags: ["Splash"], tips: ["Hybrid aus Heilung und Schaden – der Normalangriff ist die Hauptheilung.", "Sparkle Mark auslösen: kurz schnellere Angriffe ohne Energieverbrauch.", "Blooming Balls aktiv rotieren: setzen, laden, zünden, zurückholen.", "Mit dem Sprung-Boost hohe Positionen erreichen."] },
+  { name: "White Fox", role: "Strategist", tags: [], tips: ["Fox Marble verfolgt Ziele: Schaden an Gegnern, Heilung an Verbündeten.", "Spirit Sanctuary teleportiert dich zu einem Verbündeten, heilt und gibt Schild.", "Einziger Strategist mit Nah- und Fernkampf.", "Ult verwandelt dich in einen neunschwänzigen Fuchs mit viel Leben."] },
+  // Deadpool kann im Match zwischen allen drei Rollen wechseln – logge die Rolle, die du gespielt hast
+  { name: "Deadpool (Vanguard)", role: "Vanguard", tags: ["Brawl"], tips: ["Deadpool wechselt im Spawn frei zwischen Vanguard, Duelist und Strategist.", "Vanguard wählen, wenn euch Frontline fehlt oder eure Supports gedivt werden.", "Style-Meter und Upgrades im Match machen ihn stärker – aktiv bleiben.", "„Deadpool in Your Area“: Spott, Schaden über Zeit und verwirrtes Gegner-UI."] },
+  { name: "Deadpool (Duelist)", role: "Duelist", tags: ["Dive"], tips: ["Deadpool wechselt im Spawn frei zwischen Vanguard, Duelist und Strategist.", "Duelist wählen, wenn eurem Team Schaden oder Picks fehlen.", "Style-Meter und Upgrades im Match machen ihn stärker – aktiv bleiben.", "„Deadpool in Your Area“: Spott, Schaden über Zeit und verwirrtes Gegner-UI."] },
+  { name: "Deadpool (Strategist)", role: "Strategist", tags: [], tips: ["Deadpool wechselt im Spawn frei zwischen Vanguard, Duelist und Strategist.", "Strategist wählen, wenn eurem Team Heilung fehlt.", "Style-Meter und Upgrades im Match machen ihn stärker – aktiv bleiben.", "„Deadpool in Your Area“: Spott, Schaden über Zeit und verwirrtes Gegner-UI."] }
 ];
 
-const MAPS = [
-  "Yggsgard: Royal Palace", "Yggsgard: Yggdrasill Path", "Tokyo 2099: Shin-Shibuya", "Tokyo 2099: Spider-Islands",
-  "Wakanda: Birnin T'Challa", "Wakanda: Hall of Djalia", "Hydra Base: Hell's Heaven", "Klyntar: Symbiotic Surface",
-  "Empire of Eternal Night: Midtown", "Empire of Eternal Night: Central Park", "Empire of Eternal Night: Sanctum Sanctorum"
-];
+// Map → Spieltyp (Stand Season 10, Oktober 2026)
+const MAPS = {
+  "Yggsgard: Yggdrasill Path": "Convoy",
+  "Tokyo 2099: Spider-Islands": "Convoy",
+  "Empire of Eternal Night: Midtown": "Convoy",
+  "Hellfire Gala: Arakko": "Convoy",
+  "Museum of Contemplation": "Convoy",
+  "Yggsgard: Royal Palace": "Domination",
+  "Intergalactic Empire of Wakanda: Birnin T'Challa": "Domination",
+  "Hydra Charteris Base: Hell's Heaven": "Domination",
+  "Hellfire Gala: Krakoa": "Domination",
+  "Klyntar: Celestial Husk": "Domination",
+  "Tokyo 2099: Shin-Shibuya": "Convergence",
+  "Intergalactic Empire of Wakanda: Hall of Djalia": "Convergence",
+  "Klyntar: Symbiotic Surface": "Convergence",
+  "Empire of Eternal Night: Central Park": "Convergence",
+  "K'un-Lun: Heart of Heaven": "Convergence",
+  "Lower Manhattan": "Convergence",
+  "Empire of Eternal Night: Sanctum Sanctorum": "Doom Match",
+  "Alchemax Headquarters": "Doom Match",
+  "Tokyo 2099: Ninomaru": "Conquest"
+};
 
 const MISTAKES = [
   "Zu weit vorne", "Allein geflankt", "Ult verschwendet", "Ohne Team reingegangen",
@@ -675,6 +710,9 @@ function loadState() {
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
     quiz: { asked: 0, correct: 0, wrong: {} }
   }, s || {});
+  // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
+  const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
+  st.customHeroes = st.customHeroes.filter(h => !builtIn.has(h.name.toLowerCase()));
   // Ältere Matches ohne Teams nachrüsten
   st.matches.forEach(m => { m.enemies = m.enemies || []; m.allies = m.allies || []; m.map = m.map || ""; });
   return st;
@@ -927,7 +965,7 @@ function renderLog() {
   $("#allySlots").innerHTML = [0, 1, 2, 3, 4].map(i => heroSelectHtml(`aria-label="Mitspieler ${i + 1}"`, al[i], `Mitspieler ${i + 1}`)).join("");
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
-  const maps = [...new Set(MAPS.concat(state.matches.map(m => m.map).filter(Boolean)))].sort();
+  const maps = [...new Set(Object.keys(MAPS).concat(state.matches.map(m => m.map).filter(Boolean)))].sort();
   $("#mapList").innerHTML = maps.map(m => `<option value="${esc(m)}">`).join("");
 
   const rows = state.matches.slice().reverse();
@@ -950,6 +988,10 @@ function updateNemesis() {
   const opts = en.length ? [...new Set(en)] : allHeroes().map(h => h.name).sort();
   $("#nemesisSelect").innerHTML = `<option value="">– niemand Bestimmtes –</option>` + opts.map(h => `<option ${h === cur ? "selected" : ""}>${esc(h)}</option>`).join("");
 }
+$("#matchForm").map.addEventListener("change", e => {
+  const type = MAPS[e.target.value.trim()];
+  if (type) $("#matchForm").type.value = type;
+});
 $("#takeTeams").addEventListener("click", () => {
   let me = $("#heroSelect").value;
   if (!me && state.team[0]) { me = state.team[0]; $("#heroSelect").value = me; }
@@ -1144,7 +1186,8 @@ function renderTeam() {
   picked.forEach(h => { const r = heroRole(h); if (all[r] !== undefined) all[r]++; });
   if (!picked.length) { $("#teamFeedback").innerHTML = `<p class="muted">Wähle Helden aus, um die Rollenverteilung zu prüfen.</p>`; return; }
   const out = [["info", `Verteilung: ${all.Vanguard} Vanguard · ${all.Duelist} Duelist · ${all.Strategist} Strategist`]];
-  const dup = picked.filter((h, i) => picked.indexOf(h) !== i);
+  const base = picked.map(h => h.replace(/ \(.*\)$/, ""));
+  const dup = base.filter((h, i) => base.indexOf(h) !== i);
   if (dup.length) out.push(["bad", `Doppelte Helden: ${esc([...new Set(dup)].join(", "))} – jeder Held kann pro Team nur einmal gewählt werden.`]);
   if (all.Strategist === 0) out.push(["bad", "Kein Strategist! Ohne Heilung verliert ihr fast jeden längeren Teamfight."]);
   else if (all.Strategist === 1 && picked.length >= 5) out.push(["bad", "Nur ein Strategist – der wird schnell zum Fokusziel. Zwei sind meistens stabiler."]);
