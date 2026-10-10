@@ -16,6 +16,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 | Bereich | Wofür |
 |---|---|
+| **Tägliche Lektionen** | 35 Lektionen in 7 Modulen – jeden Tag eine: verstehen, Wissens-Check, üben, im Match anwenden, reflektieren; mit Wiederholungsfragen und Empfehlungen passend zu deinen Fehlern |
 | **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
 | **Match loggen** | Ergebnis, K/D/A, Map, Gegnerteam, Mitspieler, „Wer hat mir Probleme gemacht?“, Fehler und Stärken |
 | **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
@@ -52,6 +53,21 @@ vergleicht die App unter **Auswertung** deine Winrate pro Held mit dem Schnitt a
     die auf eine nicht dokumentierte Schnittstelle von Rivals Data zugreift. Diese kann sich jederzeit
     ändern. Deine Match-History muss im Spiel öffentlich sein.
 
+## Tägliche Lektionen
+
+Der Kern der App ist ein Kurs mit **35 kurzen Lektionen** (je 8–15 Minuten), aufgeteilt in sieben Module:
+Fundament, Überleben & Positionierung, Teamfights, Objectives & Maps, Counter & Anpassung,
+Rollen-Meisterschaft und Kopf & Fortschritt. Jede Lektion folgt fünf Schritten:
+
+1. **Verstehen** – kurze Erklärung und ein Merksatz
+2. **Wissens-Check** – Quizfragen, dazu Wiederholungsfragen aus früheren Lektionen
+3. **Üben** – konkrete Übungen im Practice Range, im Custom Game oder im Match
+4. **Anwenden** – ein Fokus für deine nächsten Matches, den du beim Loggen bewertest
+5. **Reflektieren** – eine Frage zum Nachdenken
+
+Die App schlägt dir jeden Tag die nächste Lektion vor, empfiehlt Lektionen passend zu deinen häufigsten
+Fehlern und zeigt, ob sich nach einer Lektion zum Beispiel deine Tode verringert haben.
+
 ## So lernst du mit der App
 
 ```mermaid
@@ -62,7 +78,7 @@ graph LR
   D --> A
 ```
 
-1. **Planen:** Lege im Tab *Lernziele* ein kleines, messbares Ziel fest – z.B. „Diese Woche als Strategist im Schnitt höchstens 5 Tode“.
+1. **Planen:** Mach die heutige Lektion und lege im Tab *Lernziele* ein kleines, messbares Ziel fest – z.B. „Diese Woche als Strategist im Schnitt höchstens 5 Tode“.
 2. **Durchführen:** Wärme dich mit dem Timer auf und spiele mit einem kleinen Hero-Pool (2–3 Helden pro Rolle).
 3. **Loggen:** Trage jedes Match direkt danach ein. Ehrlich markierte Fehler sind der wertvollste Teil.
 4. **Reflektieren:** Schau dir nach jeder Session das Dashboard und die Auswertung an. Der Coach erkennt Muster wie

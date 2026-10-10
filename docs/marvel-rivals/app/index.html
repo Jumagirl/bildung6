@@ -401,6 +401,47 @@ pre.prompt {
 .edit-banner { display: none; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; margin-bottom: 16px; }
 .edit-banner.show { display: flex; }
 
+/* Lektionen */
+.lesson-hero { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.lesson-stats { display: flex; gap: 18px; position: relative; }
+.lesson-stats > div { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(255,255,255,.14); border-radius: 14px; padding: 10px 14px; min-width: 96px; }
+.lesson-stats b { font-size: 1.4rem; line-height: 54px; }
+.lesson-stats span { font-size: .75rem; opacity: .9; }
+.lesson-stats .ring circle:first-child { stroke: rgba(255,255,255,.25); }
+.lesson-stats .ring circle:nth-child(2) { stroke: #fff; }
+.lesson-stats .ring text { fill: #fff !important; }
+.stepper { display: flex; gap: 6px; margin: 0 0 18px; overflow-x: auto; scrollbar-width: none; }
+.stepper button {
+  flex: 1; min-width: 118px; display: flex; align-items: center; gap: 8px; font: inherit; font-size: .85rem; font-weight: 600;
+  padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); color: var(--text-2); cursor: pointer;
+}
+.stepper .sn { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); font-size: .75rem; flex: none; }
+.stepper button.active { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+.stepper button.active .sn { background: var(--accent); color: var(--accent-text); }
+.stepper button.done .sn { background: var(--good); color: #fff; }
+.lesson-body { font-size: .95rem; }
+.lesson-text { padding-left: 20px; margin: 0 0 14px; }
+.lesson-text li { margin: 8px 0; line-height: 1.55; }
+.key { padding: 12px 16px; border-radius: 12px; font-weight: 600; background: color-mix(in srgb, var(--gold) 14%, var(--surface)); border-left: 4px solid var(--gold); }
+.qcard { padding: 14px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 12px; background: var(--surface); }
+.qcard .q { margin-bottom: 10px; }
+.qopts { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.qopts button { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font: inherit; font-size: .9rem; color: var(--text); cursor: pointer; transition: border-color .15s; }
+.qopts button:hover:not(:disabled) { border-color: var(--accent); }
+.qopts button:disabled { cursor: default; opacity: .75; }
+.qopts button.right { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); opacity: 1; }
+.qopts button.wrong { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); opacity: 1; }
+.lesson-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.lesson-item { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; transition: border-color .15s, transform .1s; }
+.lesson-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.lesson-item .num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8rem; background: var(--surface-3); flex: none; }
+.lesson-item.done .num { background: var(--good); color: #fff; }
+.lesson-item.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.lesson-item .badge { margin-left: auto; }
+.focus-card { border-color: var(--accent); background: linear-gradient(0deg, var(--accent-soft), var(--accent-soft)), var(--surface); }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-strong); font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -418,6 +459,7 @@ pre.prompt {
   </div>
   <nav class="tabs" role="tablist" aria-label="Bereiche">
     <button role="tab" data-tab="dashboard" data-icon="dashboard" aria-selected="true">Dashboard</button>
+    <button role="tab" data-tab="lessons" data-icon="book">Lektionen</button>
     <button role="tab" data-tab="log" data-icon="log">Match loggen</button>
     <button role="tab" data-tab="analysis" data-icon="analysis">Auswertung</button>
     <button role="tab" data-tab="team" data-icon="team">Team &amp; Counter</button>
@@ -470,10 +512,18 @@ pre.prompt {
   </div>
 </section>
 
+<!-- LESSONS -->
+<section id="tab-lessons" hidden>
+  <div id="lessonToday"></div>
+  <div class="card" id="lessonView" hidden></div>
+  <div id="lessonCourse"></div>
+</section>
+
 <!-- LOG -->
 <section id="tab-log" hidden>
   <div class="edit-banner" id="editBanner"><span id="editText">Match bearbeiten</span><button class="btn ghost small" type="button" id="editCancel">Abbrechen</button></div>
   <form id="matchForm">
+  <div class="card focus-card" id="focusCard" hidden></div>
   <div class="card">
     <div class="card-head"><h2 data-icon="log">Match</h2></div>
     <div class="grid">
@@ -941,6 +991,7 @@ const DRILLS = {
 };
 
 const DEFAULT_ROUTINE = [
+  "Tägliche Lektion im Rivals Coach",
   "10 Min. Aim-Warmup im Practice Range",
   "Ein Lernziel für die heutige Session festlegen",
   "10 Fragen im Counter-Training",
@@ -949,6 +1000,622 @@ const DEFAULT_ROUTINE = [
   "Session-Reflexion im Tab Lernziele"
 ];
 
+
+// ---------- Tägliche Lektionen ----------
+// Jede Lektion folgt dem 3-Phasen-Modell: verstehen & prüfen (Planen), üben & anwenden (Durchführen), reflektieren.
+const LESSON_MODULES = [
+  { id: "m1", title: "Fundament", desc: "Lernsystem, Rollen, Hero-Pool und Aufwärmen" },
+  { id: "m2", title: "Überleben & Positionierung", desc: "Weniger sterben ist der grösste Hebel" },
+  { id: "m3", title: "Teamfights", desc: "Zusammen ankommen, fokussieren, Ults nutzen" },
+  { id: "m4", title: "Objectives & Maps", desc: "Spielmodi verstehen und Maps lesen" },
+  { id: "m5", title: "Counter & Anpassung", desc: "Gegner lesen und richtig reagieren" },
+  { id: "m6", title: "Rollen-Meisterschaft", desc: "Vertiefung für deine Hauptrolle" },
+  { id: "m7", title: "Kopf & Fortschritt", desc: "Tilt, VOD-Review und dein Plan" }
+];
+
+const LESSONS = [
+  // ----- Modul 1: Fundament -----
+  { id: "l01", module: "m1", title: "Dein Lernsystem", minutes: 8, mistakes: [],
+    goal: "Du weisst, wie du mit dem Rivals Coach jeden Tag ein Stück besser wirst.",
+    theory: [
+      "Fortschritt entsteht nicht durch viele Matches, sondern durch bewusstes Üben: ein klares Ziel, gezielte Wiederholung und ehrliche Reflexion.",
+      "Der Coach folgt dem 3-Phasen-Modell: <b>Planen</b> (Lektion und Fokus), <b>Durchführen</b> (Üben und Matches mit Fokus), <b>Reflektieren</b> (Match loggen und auswerten).",
+      "Jede Lektion gibt dir einen Fokus für deine nächsten Matches. Beim Loggen bewertest du, ob es geklappt hat – so siehst du schwarz auf weiss, was wirkt.",
+      "Eine Lektion pro Tag reicht. Lieber 10 Minuten täglich als einmal pro Woche drei Stunden."
+    ],
+    key: "Ein Fokus pro Session. Wer auf alles gleichzeitig achtet, achtet auf nichts.",
+    practice: ["Lege im Tab Lernziele ein kleines Ziel für diese Woche an.", "Logge dein nächstes Match vollständig – inklusive Gegnerteam und mindestens einem Fehler.", "Optional: Synchronisiere deine bisherigen Matches mit Rivals Data."],
+    focus: "Logge jedes Match direkt danach und markiere mindestens eine Sache, die schiefging.",
+    quiz: [
+      { q: "Was bringt dich laut Lernforschung am schnellsten weiter?", opts: ["Möglichst viele Matches am Stück", "Gezieltes Üben mit einem klaren Fokus und Reflexion", "Jede Woche einen neuen Main", "Nur Competitive spielen"], a: 1, why: "Bewusstes Üben (Ziel → Übung → Feedback) schlägt reine Spielmenge deutlich." },
+      { q: "Wie viele Fokus-Punkte solltest du pro Session haben?", opts: ["Einen", "Drei bis fünf", "So viele wie möglich", "Keinen – einfach spielen"], a: 0, why: "Mit einem Fokus kann dein Kopf neue Gewohnheiten aufbauen, ohne überlastet zu werden." }
+    ],
+    reflect: "Was willst du in den nächsten vier Wochen in Marvel Rivals erreichen – und woran merkst du es?" },
+
+  { id: "l02", module: "m1", title: "Die drei Rollen verstehen", minutes: 10, mistakes: ["Heiler ignoriert"],
+    goal: "Du kennst den Job jeder Rolle und erkennst, welcher Job gerade gefragt ist.",
+    theory: [
+      "<b>Vanguard</b> (Tank): schafft Raum, nimmt Schaden auf, gibt das Tempo vor und schützt die Backline.",
+      "<b>Duelist</b> (Schaden): erzeugt Druck und Picks – am wertvollsten, wenn er Gegner ausschaltet, die das Team gerade bedrohen.",
+      "<b>Strategist</b> (Support): hält das Team am Leben, verstärkt es und kontert mit seiner Ult die Ults der Gegner.",
+      "Jede Rolle hat einen Hauptjob, aber die Situation entscheidet: Auch ein Duelist muss mal den Strategist beschützen, und ein Strategist darf Schaden machen, wenn alle voll sind."
+    ],
+    key: "Frag dich in jedem Fight: Was ist gerade MEIN Job für das Team?",
+    practice: ["Spiele je ein Quick Match pro Rolle.", "Achte darauf, was die besten Spieler in deinem Match pro Rolle tun.", "Notiere nach jedem Match einen Satz: „Mein Job war heute vor allem …“"],
+    focus: "Benenne vor jedem Teamfight still deinen Job (Raum schaffen / Picks / am Leben halten).",
+    quiz: [
+      { q: "Was ist die Hauptaufgabe eines Vanguards?", opts: ["Möglichst viele Kills", "Raum schaffen und Schaden für das Team aufnehmen", "Hinten bleiben und heilen", "Allein flanken"], a: 1, why: "Vanguards geben Tempo und Raum vor – ohne sie kann das Team kaum nach vorne." },
+      { q: "Alle Verbündeten haben volle Lebenspunkte. Was macht ein Strategist sinnvollerweise?", opts: ["Nichts, bis jemand Schaden nimmt", "Schaden machen und Position halten", "Allein auf den gegnerischen Tank gehen", "Zurück zum Spawn laufen"], a: 1, why: "Leerlauf verschenkt Druck. Schaden machen hilft dem Team, solange du sicher stehst." }
+    ],
+    reflect: "Welche Rolle liegt dir am meisten – und warum?" },
+
+  { id: "l03", module: "m1", title: "Dein Hero-Pool", minutes: 8, mistakes: ["Zu spät gewechselt (Held)"],
+    goal: "Du stellst dir einen kleinen Hero-Pool zusammen, mit dem du schnell besser wirst.",
+    theory: [
+      "Wer jedes Match einen anderen Helden spielt, lernt vor allem Steuerung – aber kaum Spielverständnis. Ein kleiner Pool lässt Erfahrung wachsen.",
+      "Empfehlung: <b>ein Main</b> plus <b>zwei Ausweichhelden</b> in deiner Hauptrolle und je ein Held in den anderen Rollen.",
+      "Wähle die Ausweichhelden so, dass sie andere Situationen abdecken – z.B. einen gegen Dive und einen gegen Poke.",
+      "In höheren Rängen können Helden gebannt werden. Ein zweiter vertrauter Held verhindert, dass du dann ohne Plan dastehst."
+    ],
+    key: "Tiefe vor Breite: Lieber drei Helden richtig gut als zehn halb.",
+    practice: ["Wähle deinen Main und zwei Ausweichhelden. Schau im Helden-Guide, gegen wen sie stark sind.", "Schreib die drei Helden als Ziel in den Tab Lernziele.", "Spiele heute nur Helden aus deinem Pool."],
+    focus: "Spiele ausschliesslich Helden aus deinem Pool.",
+    quiz: [
+      { q: "Warum ist ein kleiner Hero-Pool sinnvoll?", opts: ["Weil andere Helden schlecht sind", "Weil sich Erfahrung und Spielverständnis schneller aufbauen", "Weil man so nie wechseln muss", "Weil es weniger Spass macht"], a: 1, why: "Wiederholung mit denselben Helden macht Entscheidungen automatisch – dein Kopf wird frei für das Spielgeschehen." },
+      { q: "Wie wählst du deine Ausweichhelden am besten?", opts: ["Die zwei beliebtesten Helden", "Helden, die andere Situationen abdecken als dein Main", "Helden aus der gleichen Unterkategorie", "Zufällig"], a: 1, why: "Unterschiedliche Stärken geben dir eine Antwort, wenn dein Main gekontert oder gebannt wird." }
+    ],
+    reflect: "Welche drei Helden sind in deinem Pool – und gegen welche Gegner hilft dir jeder?" },
+
+  { id: "l04", module: "m1", title: "Einstellungen & Aim-Grundlage", minutes: 12, mistakes: ["Schlechtes Zielen"],
+    goal: "Du hast stabile Einstellungen, auf die sich dein Muskelgedächtnis verlassen kann.",
+    theory: [
+      "Muskelgedächtnis braucht Konstanz: Wer die Empfindlichkeit ständig ändert, fängt jedes Mal von vorne an.",
+      "Eine gute Empfindlichkeit erlaubt dir, dich zügig umzudrehen und trotzdem präzise kleine Korrekturen zu machen.",
+      "Das Fadenkreuz sollte auf jedem Hintergrund gut sichtbar sein, aber nicht ablenken.",
+      "Grundregel fürs Zielen: Halte das Fadenkreuz auf Kopfhöhe und dort, wo Gegner auftauchen werden – dann musst du weniger korrigieren."
+    ],
+    key: "Finde gute Einstellungen – und ändere sie dann mindestens eine Woche lang nicht.",
+    practice: ["Teste im Practice Range eine Empfindlichkeit: Kannst du ein Ziel verfolgen und dich schnell um 180° drehen?", "Stelle ein gut sichtbares Fadenkreuz ein.", "Laufe 3 Minuten durch den Practice Range und halte das Fadenkreuz bewusst auf Kopfhöhe."],
+    focus: "Fadenkreuz auf Kopfhöhe und dort halten, wo Gegner gleich auftauchen.",
+    quiz: [
+      { q: "Was schadet dem Muskelgedächtnis am meisten?", opts: ["Täglich aufwärmen", "Die Empfindlichkeit ständig zu ändern", "Ein auffälliges Fadenkreuz", "Kopfhörer"], a: 1, why: "Jede Änderung zwingt dein Gehirn, die Bewegungen neu zu lernen." },
+      { q: "Wo sollte dein Fadenkreuz idealerweise sein, wenn du um eine Ecke gehst?", opts: ["Auf dem Boden", "Auf Kopfhöhe, dort wo ein Gegner erscheinen kann", "In der Bildschirmmitte oben am Himmel", "Egal"], a: 1, why: "Gutes Vorzielen spart die Korrekturbewegung – du triffst schneller." }
+    ],
+    reflect: "Welche Einstellung hast du gewählt, und wie fühlt sie sich nach den ersten Matches an?" },
+
+  { id: "l05", module: "m1", title: "Deine Aufwärm-Routine", minutes: 10, mistakes: ["Schlechtes Zielen", "Cooldowns falsch genutzt"],
+    goal: "Du hast eine kurze Aufwärm-Routine, die du vor jeder Session machst.",
+    theory: [
+      "Die ersten Matches einer Session sind oft die schwächsten, weil Hände und Kopf noch nicht wach sind. Aufwärmen verschiebt das in den Practice Range.",
+      "Eine gute Routine dauert 5–10 Minuten und ist immer gleich: <b>Tracking</b> (Ziel verfolgen), <b>Flicks</b> (schnell auf ein Ziel), <b>Fähigkeiten-Combos</b> deines Mains.",
+      "Danach ein lockeres Quick Match, bevor du Competitive spielst.",
+      "Wichtig ist die Regelmässigkeit, nicht die Perfektion."
+    ],
+    key: "Gleiche Routine, jede Session – dann startest du nicht kalt ins erste Ranked-Match.",
+    practice: ["Starte den Aufwärm-Timer im Tab Training (10 Minuten).", "3 Min. Tracking auf bewegliche Bots, 3 Min. Flicks, 4 Min. Combos deines Mains.", "Hake im Tab Training die Routine ab."],
+    focus: "Vor jeder Session: 10 Minuten aufwärmen, dann ein lockeres Quick Match.",
+    quiz: [
+      { q: "Wozu dient eine Aufwärm-Routine vor allem?", opts: ["Um Zeit zu füllen", "Damit die ersten echten Matches nicht kalt gestartet werden", "Um neue Helden zu testen", "Für Erfolge im Spiel"], a: 1, why: "Aufwärmen bringt Aim und Reaktion auf Betriebstemperatur, bevor es zählt." },
+      { q: "Was gehört in eine gute Aufwärm-Routine?", opts: ["Nur Kills gegen Bots zählen", "Tracking, Flicks und Combos deines Mains", "Ein Ranked-Match", "Einstellungen ändern"], a: 1, why: "Diese drei Bausteine decken Zielen und Fähigkeiten ab." }
+    ],
+    reflect: "Wie hat sich dein erstes Match nach dem Aufwärmen angefühlt?" },
+
+  // ----- Modul 2: Überleben & Positionierung -----
+  { id: "l06", module: "m2", title: "Warum Tode so teuer sind", minutes: 8, mistakes: ["Zu weit vorne", "Allein geflankt"],
+    goal: "Du verstehst, was ein Tod deinem Team kostet, und setzt dir ein Tode-Ziel.",
+    theory: [
+      "Wenn du stirbst, kämpft dein Team zu fünft gegen sechs. Die meisten Teamfights werden genau so verloren.",
+      "Ein Tod kostet Zeit: Respawn und Rückweg. In dieser Zeit lädst du keine Ult und hilfst nicht am Objective.",
+      "Der Gegner, der dich ausschaltet, bekommt Ult-Ladung – dein Tod macht den nächsten Fight für sie leichter.",
+      "In der Auswertung siehst du: In Niederlagen stirbt man fast immer öfter. Weniger Tode ist für die meisten der grösste Hebel."
+    ],
+    key: "Am Leben bleiben ist kein Feigheit – es ist die Voraussetzung, um etwas beizutragen.",
+    practice: ["Schau in der Auswertung unter „Siege vs. Niederlagen“, wie viele Tode du im Schnitt hast.", "Lege ein Ziel an: Ø Tode = dein Schnitt minus 1.", "Spiele ein Match und zähle bewusst mit, wann und warum du stirbst."],
+    focus: "Stirb höchstens so oft wie dein Ziel – und frag dich bei jedem Tod: Musste das sein?",
+    quiz: [
+      { q: "Was passiert, wenn du vor einem Teamfight stirbst?", opts: ["Nichts Besonderes", "Dein Team kämpft 5 gegen 6", "Du bekommst Ult-Ladung", "Der Gegner verliert Ult-Ladung"], a: 1, why: "Zahlenvorteil entscheidet die meisten Fights." },
+      { q: "Warum stärkt dein Tod den Gegner zusätzlich?", opts: ["Er bekommt Ult-Ladung für den Kill", "Er heilt sich voll", "Er bekommt mehr Bewegungstempo", "Gar nicht"], a: 0, why: "Schaden und Kills laden Ults – dein Tod füttert die nächste gegnerische Ult." }
+    ],
+    reflect: "Bei welchen Toden heute hättest du anders entscheiden können?" },
+
+  { id: "l07", module: "m2", title: "Deckung & Peeken", minutes: 10, mistakes: ["Keine Deckung genutzt"],
+    goal: "Du kämpfst aus der Deckung heraus statt auf offener Fläche.",
+    theory: [
+      "Auf offener Fläche kann dich jeder Gegner treffen. Hinter Deckung entscheidest du, wann du dich zeigst.",
+      "<b>Peeken</b> heisst: kurz hervorkommen, Schaden machen, zurück in Deckung – bevor alle Gegner auf dich zielen.",
+      "Wechsle die Seite, aus der du peekst. Wer immer an derselben Stelle auftaucht, wird vorgezielt.",
+      "Die Kamera in der dritten Person hilft dir, Situationen hinter Ecken einzuschätzen, bevor du dich zeigst."
+    ],
+    key: "Zeigen – Schaden – Deckung. Nie stehen bleiben, wenn mehrere Gegner dich sehen.",
+    practice: ["Im Practice Range: hinter einer Wand stehen, rauspeeken, 1–2 Sekunden schiessen, zurück – 20 Wiederholungen.", "Übe das Peeken abwechselnd links und rechts.", "Achte im nächsten Match darauf, nach jedem Schusswechsel in Deckung zu gehen."],
+    focus: "Nach jedem Schusswechsel zurück in Deckung – und die Peek-Seite variieren.",
+    quiz: [
+      { q: "Was ist der Kern von gutem Peeken?", opts: ["So lange wie möglich draussen stehen", "Kurz zeigen, Schaden machen, zurück in Deckung", "Nur aus der Luft angreifen", "Immer an derselben Stelle auftauchen"], a: 1, why: "So nimmst du nur Schaden, wenn du selbst welchen machst." },
+      { q: "Warum solltest du die Peek-Seite variieren?", opts: ["Damit Gegner dich nicht vorzielen können", "Weil es mehr Ult-Ladung gibt", "Das ist egal", "Damit Verbündete dich sehen"], a: 0, why: "Vorhersehbarkeit wird bestraft – gute Gegner zielen dorthin, wo du gleich auftauchst." }
+    ],
+    reflect: "Wann hast du heute auf offener Fläche gekämpft – und welche Deckung wäre in der Nähe gewesen?" },
+
+  { id: "l08", module: "m2", title: "Sichtlinien & hohe Positionen", minutes: 10, mistakes: ["Zu weit vorne", "Heiler ignoriert"],
+    goal: "Du verstehst, wer dich sehen kann – und nutzt Höhe zu deinem Vorteil.",
+    theory: [
+      "Eine <b>Sichtlinie</b> ist jede freie Linie zwischen dir und einem Gegner. Wer dich nicht sehen kann, kann dich (meist) nicht treffen.",
+      "Gute Positionen haben möglichst wenige Sichtlinien zu Gegnern, aber eine Sichtlinie zu deinen Strategists – sonst können sie dich nicht heilen.",
+      "Hohe Positionen geben dir Überblick und bessere Winkel. Achte darauf, dass du einen Rückzugsweg hast.",
+      "Vor einem Fight lohnt sich ein kurzer Blick: Wo sind meine Heiler? Wo kann ich in Deckung gehen?"
+    ],
+    key: "Gute Position = wenige Gegner sehen dich, deine Heiler schon.",
+    practice: ["Lauf in einem Custom Game über eine Map und suche drei hohe Positionen mit Rückzugsweg.", "Stell dir bei jeder Position vor: Von wo könnten Gegner mich sehen?", "Spiele ein Match und prüfe vor jedem Fight, ob deine Heiler dich sehen."],
+    focus: "Vor jedem Fight: Sehen mich meine Heiler? Habe ich einen Rückzugsweg?",
+    quiz: [
+      { q: "Was macht eine gute Position aus?", opts: ["Möglichst viele Gegner sehen mich", "Wenige Gegner sehen mich, meine Heiler schon", "Möglichst weit weg vom Team", "Mitten auf dem Objective"], a: 1, why: "So bekommst du Heilung, ohne von allen Seiten beschossen zu werden." },
+      { q: "Was brauchst du bei einer hohen Position unbedingt?", opts: ["Einen Rückzugsweg", "Einen zweiten Spieler", "Eine Ult", "Volle Munition"], a: 0, why: "Ohne Ausweg wirst du dort oben schnell gefangen und ausgeschaltet." }
+    ],
+    reflect: "Wann hast du heute ohne Sichtlinie zu deinen Heilern gekämpft?" },
+
+  { id: "l09", module: "m2", title: "Zerstörbare Umgebung", minutes: 8, mistakes: ["Keine Deckung genutzt"],
+    goal: "Du rechnest damit, dass Deckung verschwinden kann – und nutzt das selbst.",
+    theory: [
+      "In Marvel Rivals lassen sich viele Teile der Umgebung zerstören. Deckung, die du am Anfang einer Runde hast, kann später weg sein.",
+      "Das bedeutet: Prüfe Positionen neu, wenn ein Fight länger dauert oder eine Runde neu beginnt.",
+      "Du kannst die Zerstörung auch selbst nutzen: Gegnerische Deckung wegschiessen öffnet Sichtlinien für dein Team.",
+      "Manche Strukturen lassen sich nicht zerstören – merke dir auf deinen Lieblingsmaps, welche Deckung sicher bleibt."
+    ],
+    key: "Deckung ist nicht für immer. Prüfe sie neu – und nimm sie dem Gegner weg.",
+    practice: ["Teste in einem Custom Game, welche Wände und Objekte auf einer Map zerstörbar sind.", "Merke dir pro Map zwei stabile Deckungen.", "Achte im Match darauf, wann deine Deckung zerstört wurde."],
+    focus: "Wenn ein Fight länger dauert: Ist meine Deckung noch da?",
+    quiz: [
+      { q: "Was solltest du nach einem langen Fight prüfen?", opts: ["Ob deine Deckung noch existiert", "Deine Einstellungen", "Die Tageszeit", "Den Chat"], a: 0, why: "Zerstörte Deckung macht eine sichere Position plötzlich gefährlich." },
+      { q: "Wie kannst du die zerstörbare Umgebung offensiv nutzen?", opts: ["Gar nicht", "Gegnerische Deckung zerstören, um Sichtlinien zu öffnen", "Nur zum Spass", "Um schneller zu laufen"], a: 1, why: "Ohne Deckung sind Gegner für dein ganzes Team angreifbar." }
+    ],
+    reflect: "Hat dich heute verschwundene Deckung überrascht?" },
+
+  { id: "l10", module: "m2", title: "Rückzug & Heilpakete", minutes: 8, mistakes: ["Zu weit vorne", "Ohne Team reingegangen"],
+    goal: "Du erkennst, wann ein Rückzug besser ist als weiterzukämpfen.",
+    theory: [
+      "Ein rechtzeitiger Rückzug rettet oft mehr als ein letzter Angriff. Wer mit wenig Leben bleibt, stirbt meist ohne Wirkung.",
+      "Faustregel: Unter etwa der Hälfte des Lebens und ohne Heiler in Sicht → zurück zur Deckung, zu deinem Strategist oder zum nächsten Heilpaket.",
+      "Merke dir auf jeder Map die Heilpakete in der Nähe der wichtigsten Kampfzonen.",
+      "Auch nach einem gewonnenen Duell lohnt sich oft ein kurzer Rückzug zum Heilen, statt direkt den nächsten Gegner zu suchen."
+    ],
+    key: "Wenig Leben + kein Heiler = Rückzug. Der nächste Fight braucht dich lebendig.",
+    practice: ["Suche in einem Custom Game auf zwei Maps alle Heilpakete in Objective-Nähe.", "Lege dir pro Map einen Rückzugsweg zur Heilung fest.", "Im Match: Jedes Mal, wenn du unter die Hälfte fällst, aktiv Heilung suchen."],
+    focus: "Unter halbem Leben ohne Heiler in Sicht: sofort zurück zu Deckung oder Heilung.",
+    quiz: [
+      { q: "Du hast nur noch wenig Leben, dein Heiler ist weit weg. Was tust du?", opts: ["Weiterkämpfen, vielleicht klappt es", "Zur Deckung, zum Heiler oder zu einem Heilpaket zurück", "Allein flanken", "Die Ult einsetzen, egal wo"], a: 1, why: "Ein Tod ohne Wirkung kostet mehr als ein kurzer Rückzug." },
+      { q: "Was ist nach einem gewonnenen Duell oft klug?", opts: ["Direkt den nächsten Gegner suchen", "Kurz zurück zum Heilen", "Stehen bleiben", "Emote machen"], a: 1, why: "Mit halbem Leben in den nächsten Kampf zu gehen, verschenkt deinen Vorteil." }
+    ],
+    reflect: "Welcher Tod heute wäre mit einem früheren Rückzug vermeidbar gewesen?" },
+
+  // ----- Modul 3: Teamfights -----
+  { id: "l11", module: "m3", title: "Anatomie eines Teamfights", minutes: 10, mistakes: ["Ohne Team reingegangen"],
+    goal: "Du erkennst die Phasen eines Teamfights und weisst, was in jeder Phase zählt.",
+    theory: [
+      "<b>1. Aufstellung:</b> Beide Teams positionieren sich, testen mit Poke und warten auf den Moment.",
+      "<b>2. Engage:</b> Ein Team geht rein – oft mit einem Tank, einem Dive oder einer Ult. Jetzt zählt, dass alle gleichzeitig mitgehen.",
+      "<b>3. Entscheidung:</b> Der erste Pick (Ausschalten eines Gegners) entscheidet die meisten Fights. Danach wird der Zahlenvorteil ausgenutzt.",
+      "<b>4. Aufräumen & Reset:</b> Nach dem Fight entweder das Objective sichern oder – bei Niederlage – gemeinsam zurückziehen und neu gruppieren."
+    ],
+    key: "Der erste Pick entscheidet meist den Fight. Sorge dafür, dass er auf eurer Seite passiert.",
+    practice: ["Schau dir ein Replay an und markiere in einem Fight die vier Phasen.", "Notiere, welches Team den ersten Pick hatte – und wer den Fight gewann.", "Achte im nächsten Match darauf, in welcher Phase du stirbst."],
+    focus: "Spiele in der Aufstellungsphase sicher und geh beim Engage gemeinsam mit deinem Team rein.",
+    quiz: [
+      { q: "Was entscheidet die meisten Teamfights?", opts: ["Wer zuerst eine Emote macht", "Der erste Pick", "Wer mehr Heilung hat", "Die Map"], a: 1, why: "Nach dem ersten Pick kämpft ein Team in Überzahl – ein enormer Vorteil." },
+      { q: "Ihr habt einen Fight klar verloren. Was ist sinnvoll?", opts: ["Einzeln weiterkämpfen", "Gemeinsam zurückziehen und neu gruppieren", "Sofort zurücklaufen, einer nach dem anderen", "Aufgeben"], a: 1, why: "Einzeln in eine Überzahl zu laufen verlängert die Niederlage." }
+    ],
+    reflect: "In welcher Phase eines Fights fühlst du dich am unsichersten?" },
+
+  { id: "l12", module: "m3", title: "Zusammen ankommen", minutes: 8, mistakes: ["Ohne Team reingegangen", "Allein geflankt"],
+    goal: "Du vermeidest „Tröpfeln“ – also einzeln in Fights zu laufen.",
+    theory: [
+      "<b>Tröpfeln</b> (Staggering) heisst: Spieler kommen nacheinander aus dem Spawn und laufen einzeln in den Fight. So verliert man Fight um Fight.",
+      "Nach einer Niederlage lieber ein paar Sekunden warten und gemeinsam angreifen, als sofort allein zurückzulaufen.",
+      "Zähle vor jedem Fight: Wie viele sind wir, wie viele sind sie? Ist der Zahlenvorteil auf ihrer Seite, warte oder verteidige defensiv.",
+      "Gemeinsames Ankommen ist besonders wichtig in Overtime und bei Konvoi-Verteidigungen."
+    ],
+    key: "Zählen vor dem Fight: Sind wir gleich viele? Wenn nicht – warten und gruppieren.",
+    practice: ["Schau in einem Replay auf die Teamübersicht: Wann seid ihr getröpfelt?", "Übe im nächsten Match, nach dem Respawn kurz auf ein bis zwei Mitspieler zu warten.", "Sag im Voice- oder Text-Chat „Gruppieren“, wenn ihr verstreut seid."],
+    focus: "Vor jedem Fight zählen – und nach dem Respawn auf Mitspieler warten.",
+    quiz: [
+      { q: "Was bedeutet „Tröpfeln“?", opts: ["Spieler laufen einzeln nacheinander in den Fight", "Heilung über Zeit", "Schaden durch Gift", "Langsam laufen"], a: 0, why: "Wer einzeln ankommt, kämpft jedes Mal in Unterzahl." },
+      { q: "Der Gegner ist 6 gegen 4. Was tust du?", opts: ["Angreifen, um Zeit zu gewinnen", "Warten oder defensiv spielen, bis ihr vollständig seid", "Allein flanken", "Die Ult für Spass einsetzen"], a: 1, why: "In Unterzahl anzugreifen schenkt dem Gegner nur weitere Kills." }
+    ],
+    reflect: "Wie oft bist du heute allein in einen Fight gelaufen?" },
+
+  { id: "l13", module: "m3", title: "Fokusfeuer & Zielpriorität", minutes: 10, mistakes: ["Fokus auf falsches Ziel", "Heiler ignoriert"],
+    goal: "Du wählst die Ziele, die den Fight am meisten beeinflussen.",
+    theory: [
+      "Schaden, der auf viele Gegner verteilt wird, tötet niemanden. Schaden auf ein Ziel konzentriert erzeugt Picks.",
+      "Grobe Priorität: <b>angeschlagene Gegner</b> → <b>isolierte Gegner</b> → <b>Strategists</b> → Duelists → Tanks.",
+      "Tanks haben viel Leben und werden geheilt – auf sie zu schiessen fühlt sich gut an, bringt aber oft wenig.",
+      "Ausnahme: Wenn ein Gegner gerade dich oder deinen Heiler bedroht, ist er das wichtigste Ziel."
+    ],
+    key: "Konzentriert schlägt verteilt. Wähle ein Ziel – am besten ein angeschlagenes oder isoliertes.",
+    practice: ["Spiele ein Match und frage dich bei jedem Schuss: Ist das das beste Ziel?", "Achte darauf, wann Gegner-Strategists ungeschützt stehen.", "Rufe ein Fokusziel aus (Ping oder Voice)."],
+    focus: "Schiess auf angeschlagene, isolierte Gegner und Strategists – nicht reflexartig auf den Tank.",
+    quiz: [
+      { q: "Welches Ziel hat meist die höchste Priorität?", opts: ["Der Tank mit vollem Leben", "Ein angeschlagener, isolierter Gegner", "Der Gegner, der am weitesten weg ist", "Immer der Gegner mit den meisten Kills"], a: 1, why: "Angeschlagene und isolierte Gegner fallen schnell – das erzeugt den Zahlenvorteil." },
+      { q: "Wann ist ein Duelist des Gegners das wichtigste Ziel?", opts: ["Nie", "Wenn er gerade deinen Strategist angreift", "Nur wenn er fliegt", "Nur in Overtime"], a: 1, why: "Wer deine Heilung bedroht, bedroht den ganzen Fight." }
+    ],
+    reflect: "Auf welche Ziele hast du heute zu viel Schaden verschwendet?" },
+
+  { id: "l14", module: "m3", title: "Ult-Ökonomie", minutes: 10, mistakes: ["Ult verschwendet"],
+    goal: "Du setzt deine Ult gezielt ein und behältst die Ults der Gegner im Blick.",
+    theory: [
+      "Ults laden durch Schaden und Heilung. Eine Ult ist ein wertvoller Rohstoff – sie sollte einen Fight entscheiden, nicht einen einzelnen Gegner ausschalten, der ohnehin fast tot ist.",
+      "Gute Momente: zum Start eines Fights (Engage), um eine gegnerische Ult zu kontern oder um einen sonst verlorenen Fight zu drehen.",
+      "Schlechte Momente: in einen bereits gewonnenen Fight, allein ohne Team, oder gleichzeitig mit einer zweiten Ult deines Teams, wenn eine gereicht hätte.",
+      "Merke dir, welche wichtigen Ults die Gegner gerade eingesetzt haben – direkt danach ist ein guter Moment anzugreifen."
+    ],
+    key: "Eine Ult soll einen Fight entscheiden – nicht einen sicheren Kill bestätigen.",
+    practice: ["Schreib dir für deinen Main zwei Situationen auf, in denen die Ult den grössten Wert hat.", "Achte im nächsten Match darauf, wann die Gegner ihre Ults eingesetzt haben.", "Markiere beim Loggen, ob deine Ults gut getimt waren."],
+    focus: "Ult nur bei Engage, als Konter oder um einen Fight zu drehen – nicht in gewonnene Fights.",
+    quiz: [
+      { q: "Wann ist eine Ult meistens verschwendet?", opts: ["Wenn sie einen Teamfight eröffnet", "Wenn sie in einen bereits gewonnenen Fight geht", "Wenn sie eine gegnerische Ult kontert", "Wenn sie einen verlorenen Fight dreht"], a: 1, why: "Im gewonnenen Fight bringt sie kaum zusätzlichen Wert und fehlt im nächsten." },
+      { q: "Der Gegner hat gerade seine wichtigste Ult eingesetzt. Was bedeutet das?", opts: ["Abwarten", "Guter Moment, um anzugreifen", "Sofort zurückziehen", "Nichts"], a: 1, why: "Ohne ihre Ult haben die Gegner eine Antwort weniger auf euren Angriff." }
+    ],
+    reflect: "Welche deiner Ults heute hat am meisten bewirkt – und welche war verschwendet?" },
+
+  { id: "l15", module: "m3", title: "Kommunikation & Pings", minutes: 8, mistakes: ["Kommunikation fehlte"],
+    goal: "Du gibst kurze, nützliche Infos an dein Team weiter.",
+    theory: [
+      "Gute Kommunikation ist kurz und konkret: <b>Wer, wo, was</b>. Zum Beispiel „Spider-Man hinten links“ oder „Luna Ult bereit“.",
+      "Wichtige Infos: gegnerische Flanker, eingesetzte Gegner-Ults, eigene Ult-Bereitschaft, Fokusziel, Rückzug.",
+      "Wer nicht sprechen möchte, kann Pings nutzen – auch das hilft dem Team enorm.",
+      "Vermeide Schuldzuweisungen. Sie verschlechtern die Stimmung und damit die Leistung des ganzen Teams."
+    ],
+    key: "Kurz, konkret, freundlich: Wer – wo – was.",
+    practice: ["Überlege dir drei Standard-Calls für deine Rolle.", "Nutze im nächsten Match mindestens drei Pings oder Calls.", "Melde, wenn deine Ult bereit ist."],
+    focus: "Mindestens drei nützliche Calls oder Pings pro Match – ohne Schuldzuweisungen.",
+    quiz: [
+      { q: "Welcher Call ist am hilfreichsten?", opts: ["„Ihr seid alle schlecht“", "„Spider-Man hinten links!“", "„Macht doch mal was“", "„Ich hab keine Lust mehr“"], a: 1, why: "Konkrete Infos (wer, wo) helfen sofort – Kritik hilft niemandem." },
+      { q: "Du willst nicht ins Mikrofon sprechen. Was kannst du tun?", opts: ["Nichts", "Pings nutzen", "Das Team stummschalten und ignorieren", "Den Chat spammen"], a: 1, why: "Pings transportieren die wichtigsten Infos ohne Voice." }
+    ],
+    reflect: "Welche Info hätte deinem Team heute am meisten geholfen?" },
+
+  // ----- Modul 4: Objectives & Maps -----
+  { id: "l16", module: "m4", title: "Domination verstehen", minutes: 8, mistakes: ["Objective verlassen"],
+    goal: "Du weisst, worauf es im Modus Domination ankommt.",
+    theory: [
+      "In <b>Domination</b> kämpfen beide Teams um einen Kontrollpunkt. Wer ihn hält, sammelt Fortschritt. Gespielt wird über mehrere Runden.",
+      "Den Punkt zu halten ist wichtiger als Kills. Kills sind nur Mittel zum Zweck.",
+      "Wenn der Gegner den Punkt hält, musst du ihn betreten, um seinen Fortschritt zu stoppen – Hauptsache jemand steht drauf.",
+      "Kurz vor Rundenende zählt jede Sekunde auf dem Punkt. Gemeinsam ankommen ist hier besonders wichtig."
+    ],
+    key: "Kills sind Mittel zum Zweck. Der Punkt gewinnt das Spiel.",
+    practice: ["Spiele ein Domination-Match und achte auf den Fortschrittsbalken.", "Notiere, wann ihr den Punkt verloren habt – und warum.", "Merke dir je zwei Deckungen rund um den Punkt."],
+    focus: "In Domination: Wenn der Gegner den Punkt hält, sofort mit dem Team darauf – nicht in Nebenduelle verzetteln.",
+    quiz: [
+      { q: "Was ist in Domination am wichtigsten?", opts: ["Die meisten Kills", "Den Kontrollpunkt halten", "Hohe Positionen weit weg vom Punkt", "Flanken ohne Team"], a: 1, why: "Nur der Punkt bringt Fortschritt – Kills helfen nur, wenn sie zum Punkt führen." },
+      { q: "Der Gegner hält den Punkt, Zeit läuft ab. Was tust du?", opts: ["Auf den Punkt gehen, um zu stören", "Abwarten", "Den Flanker jagen", "Zurück zum Spawn"], a: 0, why: "Wer auf dem Punkt steht, unterbricht den Fortschritt der Gegner." }
+    ],
+    reflect: "Wann hast du heute das Objective aus den Augen verloren?" },
+
+  { id: "l17", module: "m4", title: "Convoy: Angriff & Verteidigung", minutes: 10, mistakes: ["Objective verlassen"],
+    goal: "Du verstehst die Abläufe im Konvoi-Modus auf beiden Seiten.",
+    theory: [
+      "Im <b>Convoy</b>-Modus begleiten Angreifer ein Fahrzeug über die Map, Verteidiger versuchen es zu stoppen. Checkpoints geben zusätzliche Zeit.",
+      "<b>Angriff:</b> Das Fahrzeug bewegt sich nur, wenn jemand daneben steht. Gewonnene Fights in Fortschritt umwandeln!",
+      "<b>Verteidigung:</b> Spiele vor dem Fahrzeug und nutze den Raum: Je früher ihr den Angriff stoppt, desto mehr Zeit verbrennt der Gegner.",
+      "Nach jedem Checkpoint ändert sich die Umgebung – denk an neue Deckungen und Heilpakete."
+    ],
+    key: "Gewonnene Fights in Fortschritt umwandeln – das Fahrzeug fährt nicht von allein.",
+    practice: ["Spiele ein Convoy-Match und beobachte, wie lange das Fahrzeug nach gewonnenen Fights stillsteht.", "Merke dir auf einer Convoy-Map die stärksten Verteidigungspositionen.", "Achte darauf, beim Angriff nach einem Pick sofort zum Fahrzeug zu gehen."],
+    focus: "Im Angriff nach jedem gewonnenen Fight zum Fahrzeug; in der Verteidigung vor dem Fahrzeug Raum nutzen.",
+    quiz: [
+      { q: "Wann bewegt sich das Fahrzeug im Convoy?", opts: ["Immer", "Nur wenn Angreifer daneben stehen", "Nur wenn alle Gegner tot sind", "Nur in Overtime"], a: 1, why: "Ohne Spieler am Fahrzeug gibt es keinen Fortschritt." },
+      { q: "Was ist in der Verteidigung oft stark?", opts: ["Hinter dem Fahrzeug warten", "Vor dem Fahrzeug Raum nutzen und früh stoppen", "Allein in den gegnerischen Spawn", "Nur Poke ohne Ziel"], a: 1, why: "Früh gestoppte Angriffe kosten den Gegner viel Zeit." }
+    ],
+    reflect: "Hat dein Team heute gewonnene Fights in Fortschritt umgewandelt?" },
+
+  { id: "l18", module: "m4", title: "Convergence", minutes: 8, mistakes: ["Objective verlassen"],
+    goal: "Du kennst die zwei Phasen von Convergence.",
+    theory: [
+      "<b>Convergence</b> kombiniert zwei Phasen: Erst erobern die Angreifer einen Punkt, danach begleiten sie einen Konvoi.",
+      "In der ersten Phase gelten die Regeln von Kontrollpunkten: auf den Punkt, gemeinsam, nicht tröpfeln.",
+      "In der zweiten Phase gelten die Convoy-Regeln: Fortschritt nach gewonnenen Fights.",
+      "Verteidiger können in der ersten Phase viel Zeit gewinnen – ein früher Halt macht die zweite Phase für den Angreifer oft zu knapp."
+    ],
+    key: "Phase 1: Punkt. Phase 2: Konvoi. Erkenne den Wechsel und passe dein Spiel an.",
+    practice: ["Spiele ein Convergence-Match und markiere den Moment des Phasenwechsels.", "Achte auf neue Positionen nach dem Wechsel.", "Notiere, in welcher Phase ihr mehr Zeit verloren habt."],
+    focus: "In Convergence bewusst zwischen Punkt-Regeln und Konvoi-Regeln umschalten.",
+    quiz: [
+      { q: "Woraus besteht Convergence?", opts: ["Nur aus einem Kontrollpunkt", "Erst Punkt erobern, dann Konvoi begleiten", "Nur aus Konvoi", "Aus Doom Match"], a: 1, why: "Der Modus kombiniert beide Spielprinzipien." },
+      { q: "Warum ist ein früher Halt in Phase 1 für Verteidiger wertvoll?", opts: ["Weil der Angreifer Zeit für Phase 2 verliert", "Weil es Bonuspunkte gibt", "Gar nicht", "Weil man dann gewechselt wird"], a: 0, why: "Jede Sekunde in Phase 1 fehlt dem Angreifer später." }
+    ],
+    reflect: "Welche Phase liegt dir mehr – Punkt oder Konvoi?" },
+
+  { id: "l19", module: "m4", title: "Map-Wissen aufbauen", minutes: 12, mistakes: ["Nicht auf Minimap/Sound geachtet", "Allein geflankt"],
+    goal: "Du lernst Maps gezielt kennen statt nur nebenbei.",
+    theory: [
+      "Map-Wissen heisst: Flankenwege, hohe Positionen, Heilpakete, starke Deckungen und typische Kampfzonen kennen.",
+      "Am schnellsten lernst du eine Map in einem Custom Game – allein, ohne Druck.",
+      "Konzentriere dich auf die Maps, auf denen du laut Auswertung am häufigsten verlierst.",
+      "Wer Flankenwege kennt, wird seltener überrascht und kann selbst überraschen."
+    ],
+    key: "Eine Map pro Woche richtig lernen schlägt zehn Maps oberflächlich.",
+    practice: ["Wähle in der Auswertung deine schwächste Map.", "Lauf sie 10 Minuten im Custom Game ab: zwei Flankenwege, zwei hohe Positionen, alle Heilpakete.", "Notiere deine Erkenntnisse in einem Lernziel."],
+    focus: "Auf deiner Fokus-Map: Flankenwege im Blick behalten und Heilpakete nutzen.",
+    quiz: [
+      { q: "Wie lernst du eine Map am schnellsten?", opts: ["Nur in Ranked-Matches", "Allein im Custom Game ablaufen", "Videos ohne eigenes Spielen", "Gar nicht, das kommt von selbst"], a: 1, why: "Ohne Druck kannst du dir Wege und Positionen in Ruhe einprägen." },
+      { q: "Welche Map solltest du zuerst lernen?", opts: ["Die schönste", "Die, auf der du laut Auswertung am häufigsten verlierst", "Die neueste", "Zufällig"], a: 1, why: "Dort ist dein Verbesserungspotenzial am grössten." }
+    ],
+    reflect: "Welche Erkenntnis über deine Fokus-Map hat dich überrascht?" },
+
+  { id: "l20", module: "m4", title: "Overtime & Endphase", minutes: 8, mistakes: ["Objective verlassen", "Ohne Team reingegangen"],
+    goal: "Du spielst die letzten Sekunden einer Runde klug.",
+    theory: [
+      "Läuft die Zeit ab, während jemand das Objective umkämpft, gibt es <b>Overtime</b>. Solange jemand am Objective ist, geht es weiter.",
+      "In der Endphase zählt Überleben am Objective mehr als Kills. Ein Spieler, der das Objective berührt, kann das Spiel verlängern.",
+      "Nicht alle gleichzeitig sterben: Wer weit weg ist, sollte nicht einzeln in den Tod laufen, sondern mit dem Team ankommen – sofern die Zeit reicht.",
+      "Bewegliche und robuste Helden eignen sich gut, um in Overtime das Objective zu berühren."
+    ],
+    key: "In Overtime gewinnt, wer am Objective überlebt – nicht wer am meisten Kills hat.",
+    practice: ["Achte im nächsten Match bewusst auf Overtime-Situationen.", "Übe, das Objective kurz zu berühren und wieder in Deckung zu gehen.", "Notiere, ob ihr eine Overtime gewonnen oder verloren habt – und warum."],
+    focus: "In Overtime: Objective berühren, überleben, nicht einzeln in den Tod laufen.",
+    quiz: [
+      { q: "Was hält Overtime am Laufen?", opts: ["Kills", "Ein Spieler am Objective", "Ults", "Emotes"], a: 1, why: "Solange das Objective umkämpft ist, endet die Runde nicht." },
+      { q: "Was ist in der Endphase wichtiger als Kills?", opts: ["Am Objective zu überleben", "Schaden-Statistik", "Hohe Position weit weg", "Ult sparen fürs nächste Match"], a: 0, why: "Wer am Objective bleibt, entscheidet die Runde." }
+    ],
+    reflect: "Wie hast du dich heute in den letzten Sekunden einer Runde verhalten?" },
+
+  // ----- Modul 5: Counter & Anpassung -----
+  { id: "l21", module: "m5", title: "Counter verstehen statt auswendig lernen", minutes: 10, mistakes: ["Gegner-Counter ignoriert"],
+    goal: "Du verstehst die Prinzipien hinter Countern.",
+    theory: [
+      "Counter-Listen veralten mit jedem Patch. Prinzipien bleiben: Wer fliegt, ist offen für Hitscan. Wer reinspringt (Dive), wird von Kontrolleffekten bestraft. Wer auf Distanz spielt (Poke), leidet unter Dive und Schilden.",
+      "Im Rivals Coach sind diese Prinzipien als <b>Spielstil-Tags</b> und <b>Faustregeln</b> hinterlegt – sie stehen im Counter-Training.",
+      "Ein Counter ist ein Vorteil, kein Automatismus. Ein gut gespielter Held schlägt oft einen schlecht gespielten Counter.",
+      "Deshalb: Counter nur aus deinem Hero-Pool wählen. Ein ungeübter Counter hilft selten."
+    ],
+    key: "Lerne das Warum, nicht nur das Wer – dann bleiben Counter auch nach Patches richtig.",
+    practice: ["Lies die Counter-Faustregeln im Tab Counter-Training.", "Beantworte 10 Quizfragen.", "Schau im Helden-Guide, gegen wen dein Main stark ist und wer ihn kontert."],
+    focus: "Schau dir bei jeder Heldenauswahl das Gegnerteam an und benenne ihren Spielstil.",
+    quiz: [
+      { q: "Warum sind Counter-Prinzipien besser als Listen?", opts: ["Listen sind zu lang", "Prinzipien bleiben auch nach Patches gültig", "Listen sind verboten", "Es gibt keinen Unterschied"], a: 1, why: "Balance-Änderungen verschieben Details, aber selten die Grundmechanik." },
+      { q: "Solltest du einen Counter spielen, den du nie geübt hast?", opts: ["Ja, immer", "Meist nicht – lieber ein Counter aus deinem Pool", "Nur in Ranked", "Nur als Tank"], a: 1, why: "Ein ungeübter Held verliert den Vorteil des Counters schnell wieder." }
+    ],
+    reflect: "Welches Counter-Prinzip war dir bisher nicht bewusst?" },
+
+  { id: "l22", module: "m5", title: "Das Gegnerteam lesen", minutes: 8, mistakes: ["Gegner-Counter ignoriert", "Zu spät gewechselt (Held)"],
+    goal: "Du erkennst den Plan des Gegners anhand seiner Helden.",
+    theory: [
+      "Jede Komposition hat einen Plan: <b>Dive</b> (gemeinsam auf die Backline springen), <b>Poke</b> (auf Distanz zermürben), <b>Brawl</b> (Nahkampf mit robusten Helden).",
+      "Wenn du den Plan kennst, weisst du, was du verhindern musst: gegen Dive eng zusammenstehen, gegen Poke Distanz schliessen oder Deckung nutzen, gegen Brawl auf Distanz halten.",
+      "Der Tab Team &amp; Counter zeigt dir den Spielstil automatisch, wenn du das Gegnerteam einträgst.",
+      "Auch die Ults der Gegner gehören zum Plan – merke dir die gefährlichsten."
+    ],
+    key: "Erkenne den Plan des Gegners – und spiele so, dass er nicht aufgeht.",
+    practice: ["Trag im nächsten Match das Gegnerteam im Tab Team &amp; Counter ein.", "Benenne ihren Spielstil (Dive, Poke, Brawl).", "Überlege eine Antwort für dein Team."],
+    focus: "In der Heldenauswahl: Gegnerplan benennen (Dive / Poke / Brawl) und deine Antwort festlegen.",
+    quiz: [
+      { q: "Das Gegnerteam hat drei Diver. Was ist eine gute Antwort?", opts: ["Weit auseinander stehen", "Eng zusammenstehen und Anti-Dive-Helden wählen", "Nur Sniper spielen", "Alle flanken"], a: 1, why: "Diver suchen isolierte Ziele – eng zusammen und mit Kontrolleffekten werden sie bestraft." },
+      { q: "Wie spielt man gegen Poke?", opts: ["Offen stehen bleiben", "Deckung nutzen und die Distanz schliessen", "Nur auf Distanz zurückschiessen", "Gar nicht"], a: 1, why: "Poke lebt von freier Sicht auf grosse Distanz." }
+    ],
+    reflect: "Welchen gegnerischen Spielstil findest du am schwierigsten?" },
+
+  { id: "l23", module: "m5", title: "Wann wechseln?", minutes: 8, mistakes: ["Zu spät gewechselt (Held)"],
+    goal: "Du entscheidest bewusst, wann sich ein Heldenwechsel lohnt.",
+    theory: [
+      "Wechseln kostet: Ult-Ladung geht verloren und du startest mit weniger Erfahrung im Match.",
+      "Wechseln lohnt sich, wenn ein Gegner dich klar und wiederholt kontert, wenn eurem Team eine Rolle fehlt, oder wenn euer Plan gegen den Gegner nicht funktioniert.",
+      "Nicht wechseln, nur weil ein Fight verloren ging. Ein Fight ist Zufall, zwei bis drei verlorene Fights mit gleichem Muster sind ein Signal.",
+      "In der Auswertung siehst du, ob deine Wechsel bisher geholfen haben."
+    ],
+    key: "Ein verlorener Fight ist Zufall, drei mit gleichem Muster sind ein Grund zu wechseln.",
+    practice: ["Schau in der Auswertung, ob du bei Wechseln öfter gewinnst.", "Lege für deinen Main fest, gegen welche Gegner du wechselst.", "Markiere beim Loggen, ob du gewechselt hast."],
+    focus: "Wechsle nur bei einem klaren Muster – nicht nach dem ersten verlorenen Fight.",
+    quiz: [
+      { q: "Was geht beim Heldenwechsel verloren?", opts: ["Nichts", "Die aufgebaute Ult-Ladung", "Dein Rang", "Deine Kills"], a: 1, why: "Deshalb sollte ein Wechsel einen klaren Grund haben." },
+      { q: "Wann ist ein Wechsel meistens sinnvoll?", opts: ["Nach dem ersten verlorenen Fight", "Wenn mehrere Fights nach dem gleichen Muster verloren gehen", "Nie", "Jede Runde"], a: 1, why: "Ein wiederkehrendes Muster zeigt ein echtes Problem." }
+    ],
+    reflect: "Gab es heute einen Moment, in dem ein Wechsel geholfen hätte?" },
+
+  { id: "l24", module: "m5", title: "Gegen Dive spielen", minutes: 10, mistakes: ["Heiler ignoriert", "Zu weit vorne"],
+    goal: "Du überlebst gegnerische Dives und bestrafst sie.",
+    theory: [
+      "Dive-Helden springen auf eure verletzlichsten Spieler – meist die Strategists.",
+      "Gegenmittel: eng zusammenstehen, damit Diver in Reichweite von allen landen. Kontrolleffekte (Betäuben, Fallen, Wegstossen) für den Moment aufheben, in dem sie reinspringen.",
+      "<b>Peel</b> heisst: Verbündete schützen, indem man den Angreifer bekämpft. Duelists und Tanks sollten sich umdrehen, wenn ihre Heiler angegriffen werden.",
+      "Diver müssen nach dem Angriff wieder raus. Wer ihnen den Rückweg abschneidet, bekommt oft einen leichten Kill."
+    ],
+    key: "Gegen Dive: zusammenstehen, Kontrolle aufheben, Heiler schützen.",
+    practice: ["Wähle im Helden-Guide einen Anti-Dive-Helden aus deinem Pool.", "Übe im Match, dich bei Angriffen auf deine Heiler sofort umzudrehen.", "Hebe deine Kontrollfähigkeit bewusst für reinspringende Gegner auf."],
+    focus: "Wenn ein Diver auf eure Heiler springt: sofort umdrehen und gemeinsam bestrafen.",
+    quiz: [
+      { q: "Wen greifen Diver meistens an?", opts: ["Die Tanks", "Die verletzlichsten Spieler, oft Strategists", "Niemanden", "Nur andere Diver"], a: 1, why: "Strategists haben wenig Leben und halten das Team am Leben – ein lohnendes Ziel." },
+      { q: "Was bedeutet „Peel“?", opts: ["Allein flanken", "Verbündete schützen, indem man ihren Angreifer bekämpft", "Die Ult aufsparen", "Schnell zurück zum Spawn"], a: 1, why: "Peel rettet deine Heiler – und damit den Fight." }
+    ],
+    reflect: "Wie gut hat dein Team heute auf Dives reagiert?" },
+
+  { id: "l25", module: "m5", title: "Gegen Poke & Flieger spielen", minutes: 10, mistakes: ["Keine Deckung genutzt"],
+    goal: "Du nimmst Poke- und Flieger-Kompositionen ihre Stärke.",
+    theory: [
+      "<b>Poke</b> zermürbt dich auf Distanz, bevor ein Fight richtig beginnt. Gegenmittel: Deckung nutzen, Schilde einsetzen und die Distanz schnell gemeinsam schliessen.",
+      "<b>Flieger</b> kämpfen aus der Luft, wo es keine Deckung gibt. Helden mit Hitscan-Waffen oder Zielhilfe treffen sie zuverlässig.",
+      "Nicht offen stehen bleiben und zurückpoken, wenn der Gegner darin stärker ist – damit spielst du sein Spiel.",
+      "Gegen beide Stile hilft: geduldig in Deckung vorrücken und dann gemeinsam reingehen."
+    ],
+    key: "Spiel nicht das Spiel des Gegners: Gegen Poke Distanz schliessen, gegen Flieger Hitscan.",
+    practice: ["Schau im Helden-Guide, welche Helden aus deinem Pool Hitscan haben.", "Übe im Practice Range, bewegliche Ziele in der Luft zu verfolgen.", "Achte im Match darauf, nicht offen im Poke zu stehen."],
+    focus: "Gegen Poke: von Deckung zu Deckung vorrücken. Gegen Flieger: Hitscan-Helden einplanen.",
+    quiz: [
+      { q: "Wie spielt man am besten gegen ein Poke-Team?", opts: ["Offen stehen und zurückpoken", "Deckung nutzen und die Distanz gemeinsam schliessen", "Weit zurückziehen und warten", "Einzeln angreifen"], a: 1, why: "Poke lebt von Distanz und freier Sicht – beides nimmst du ihm so." },
+      { q: "Welche Helden sind gut gegen Flieger?", opts: ["Helden mit Hitscan oder Zielhilfe", "Nur Nahkämpfer", "Nur Tanks", "Keine"], a: 0, why: "In der Luft gibt es keine Deckung – sofort treffende Waffen nutzen das aus." }
+    ],
+    reflect: "Wie bist du heute mit Poke- oder Flieger-Gegnern umgegangen?" },
+
+  // ----- Modul 6: Rollen-Meisterschaft -----
+  { id: "l26", module: "m6", role: "Vanguard", title: "Vanguard I: Raum nehmen", minutes: 10, mistakes: ["Zu weit vorne", "Ohne Team reingegangen"],
+    goal: "Du schaffst als Vanguard Raum, ohne dein Team zurückzulassen.",
+    theory: [
+      "Raum nehmen heisst: Das Team kann sich hinter dir sicher vorwärts bewegen und bessere Positionen einnehmen.",
+      "Geh nur so weit nach vorne, wie dein Team folgen kann. Ein Tank ohne Heilung und Unterstützung ist nur ein grosses Ziel.",
+      "Nutze Ecken und Deckung auch als Tank – du musst nicht jeden Schuss abfangen.",
+      "Kommuniziere deine Absicht: „Ich gehe rein“ oder „Wir warten“ gibt dem Team Orientierung."
+    ],
+    key: "Ein Tank führt – aber nur so weit, wie das Team folgt.",
+    practice: ["Spiele ein Match als Vanguard und schau regelmässig nach hinten: Folgt dein Team?", "Sag vor jedem Engage kurz an, dass du reingehst.", "Notiere, wann du zu weit vorne warst."],
+    focus: "Als Vanguard regelmässig prüfen: Folgt mein Team? Erst dann weiter vorrücken.",
+    quiz: [
+      { q: "Wie weit sollte ein Vanguard nach vorne gehen?", opts: ["So weit wie möglich", "So weit, wie das Team folgen kann", "Gar nicht", "Immer bis zum gegnerischen Spawn"], a: 1, why: "Ohne Team im Rücken wird der Tank schnell ausgeschaltet." },
+      { q: "Warum sollte ein Tank seine Absicht ankündigen?", opts: ["Aus Höflichkeit", "Damit das Team gleichzeitig mitgeht", "Damit Gegner es hören", "Das ist unnötig"], a: 1, why: "Ein gemeinsamer Engage ist viel stärker als ein einzelner." }
+    ],
+    reflect: "Wann bist du heute als Tank zu weit vorgeprescht?" },
+
+  { id: "l27", module: "m6", role: "Vanguard", title: "Vanguard II: Schilde & Cooldowns timen", minutes: 10, mistakes: ["Cooldowns falsch genutzt"],
+    goal: "Du setzt Schilde und Verteidigungsfähigkeiten genau dann ein, wenn sie am meisten bringen.",
+    theory: [
+      "Defensive Fähigkeiten wirken am besten, wenn grosser Schaden kommt – etwa eine gegnerische Ult oder ein konzentrierter Angriff.",
+      "Wer Schilde dauerhaft hält oder Cooldowns sofort verbraucht, hat sie nicht, wenn es darauf ankommt.",
+      "Schütze auch deine Backline: Wenn ein Diver auf deine Heiler springt, sind deine Fähigkeiten dort oft wertvoller als vorne.",
+      "Merke dir die gefährlichsten Ults der Gegner und hebe dir eine Verteidigung dafür auf."
+    ],
+    key: "Verteidigung wirkt, wenn sie den grossen Schaden abfängt – nicht den kleinen.",
+    practice: ["Schreib dir für deinen Vanguard auf, gegen welche Gegner-Ults deine Verteidigung hilft.", "Halte im nächsten Match einen Defensiv-Cooldown bewusst für einen Engage zurück.", "Achte darauf, ob deine Heiler Schutz brauchen."],
+    focus: "Defensiv-Cooldowns für den grossen Schaden aufheben – auch für deine Backline.",
+    quiz: [
+      { q: "Wann bringt ein Schild am meisten?", opts: ["Dauerhaft gehalten", "Wenn grosser Schaden kommt, z.B. eine Ult", "Nur beim Laufen", "Nie"], a: 1, why: "Dann verhindert er die meisten Tode." },
+      { q: "Ein Diver springt auf deinen Heiler. Was tust du als Vanguard?", opts: ["Ignorieren und vorne bleiben", "Zurückdrehen und den Heiler schützen", "Die Ult in die leere Gegnerlinie", "Zum Spawn"], a: 1, why: "Ohne Heiler verliert auch der Tank den Fight." }
+    ],
+    reflect: "Welcher deiner Cooldowns war heute schlecht getimt?" },
+
+  { id: "l28", module: "m6", role: "Duelist", title: "Duelist I: Picks mit Plan", minutes: 10, mistakes: ["Allein geflankt", "Zu weit vorne"],
+    goal: "Du findest Picks, ohne dabei selbst sinnlos zu sterben.",
+    theory: [
+      "Ein Pick ist nur wertvoll, wenn dein Team ihn ausnutzen kann. Ein Kill weit weg vom Fight verpufft oft.",
+      "Flanken mit Plan: Vorher prüfen, ob dein Team gleichzeitig Druck macht. Ein Flank wirkt, wenn die Gegner nach vorne schauen.",
+      "Wähle Ziele, die du schnell ausschalten kannst – angeschlagene oder isolierte Gegner, ungeschützte Strategists.",
+      "Nach dem Pick: raus, heilen, neu positionieren. Gier kostet mehr Matches als fehlender Mut."
+    ],
+    key: "Ein Pick zählt, wenn das Team ihn nutzen kann – und du danach noch lebst.",
+    practice: ["Spiele ein Match und prüfe vor jedem Flank: Macht mein Team gerade Druck?", "Zähle deine Tode direkt nach einem Kill.", "Übe, nach einem Pick sofort in Deckung zu gehen."],
+    focus: "Vor jedem Flank: Macht mein Team Druck? Nach jedem Pick: raus und heilen.",
+    quiz: [
+      { q: "Wann ist ein Flank am wirkungsvollsten?", opts: ["Wenn dein Team gleichzeitig vorne Druck macht", "Wenn du allein bist und dein Team zurückfällt", "Am Anfang jeder Runde, egal was", "Nie"], a: 0, why: "Dann schauen die Gegner nach vorne und du kommst unbemerkt." },
+      { q: "Was solltest du direkt nach einem Pick tun?", opts: ["Den nächsten Gegner jagen", "Raus, heilen und neu positionieren", "Stehen bleiben", "Emote"], a: 1, why: "Wer nach einem Kill stirbt, gibt den Vorteil sofort zurück." }
+    ],
+    reflect: "Welcher deiner Flanks heute hatte keinen Plan?" },
+
+  { id: "l29", module: "m6", role: "Duelist", title: "Duelist II: Druck halten", minutes: 8, mistakes: ["Fokus auf falsches Ziel"],
+    goal: "Du erzeugst konstant Druck, auch wenn gerade kein Kill drin ist.",
+    theory: [
+      "Druck heisst: Die Gegner müssen reagieren – heilen, Deckung suchen, Fähigkeiten verbrauchen. Auch ohne Kill gewinnt dein Team dadurch Zeit und Raum.",
+      "Zwingst du die Strategists zum Dauerheilen, laden sie langsamer Schaden und haben weniger Ruhe für Positionierung.",
+      "Konstanter Schaden aus guter Position ist oft wertvoller als ein riskanter Versuch, einen Kill zu erzwingen.",
+      "Achte darauf, dass dein Schaden auf die richtigen Ziele geht – nicht nur auf Tanks, die gerade geheilt werden."
+    ],
+    key: "Druck ist mehr als Kills: Wer den Gegner reagieren lässt, bestimmt das Tempo.",
+    practice: ["Spiele ein Match und achte auf konstanten Schaden aus sicherer Position.", "Beobachte, wann die gegnerischen Strategists gezwungen sind zu heilen.", "Vergleiche deinen Schaden in Siegen und Niederlagen in der Auswertung."],
+    focus: "Konstant Druck aus sicherer Position – lieber dauerhaft treffen als riskant einen Kill erzwingen.",
+    quiz: [
+      { q: "Was bewirkt guter Druck auch ohne Kill?", opts: ["Nichts", "Die Gegner müssen reagieren und Fähigkeiten verbrauchen", "Der Gegner bekommt Ult-Ladung", "Er heilt den Gegner"], a: 1, why: "Wer reagieren muss, kann nicht selbst angreifen." },
+      { q: "Was ist oft wertvoller als ein riskanter Kill-Versuch?", opts: ["Konstanter Schaden aus guter Position", "Allein in den Gegner springen", "Gar nicht schiessen", "Die Ult sofort nutzen"], a: 0, why: "Konstanter Druck zermürbt, ohne dass du dein Leben riskierst." }
+    ],
+    reflect: "Wann hast du heute einen Kill erzwingen wollen, obwohl Druck gereicht hätte?" },
+
+  { id: "l30", module: "m6", role: "Strategist", title: "Strategist I: Überleben als Heiler", minutes: 10, mistakes: ["Zu weit vorne", "Keine Deckung genutzt"],
+    goal: "Du stehst als Strategist so, dass du heilen kannst und trotzdem überlebst.",
+    theory: [
+      "Ein toter Heiler heilt niemanden. Deine eigene Sicherheit ist deshalb Teil deines Jobs.",
+      "Stehe hinter deinen Tanks, in Sichtlinie zu deinem Team, aber nahe an Deckung.",
+      "Halte deine Fluchtfähigkeit für Diver bereit. Wer sie zum Herumlaufen nutzt, hat sie nicht, wenn Spider-Man oder Black Panther auftauchen.",
+      "Ruf Hilfe, wenn du angegriffen wirst – dein Team kann dich nur schützen, wenn es davon weiss."
+    ],
+    key: "Deine Sicherheit ist Teil deines Jobs: Hinter den Tanks, nahe an Deckung, Flucht bereithalten.",
+    practice: ["Spiele ein Match als Strategist und achte darauf, immer eine Deckung in Reichweite zu haben.", "Hebe deine Fluchtfähigkeit bewusst für Diver auf.", "Rufe oder pinge, wenn du angegriffen wirst."],
+    focus: "Als Strategist: immer Deckung in Reichweite und Fluchtfähigkeit für Diver bereithalten.",
+    quiz: [
+      { q: "Wo steht ein Strategist idealerweise?", opts: ["Vor den Tanks", "Hinter den Tanks, in Sichtlinie, nahe an Deckung", "Allein auf einer Flanke", "Im Spawn"], a: 1, why: "So kann er heilen und ist trotzdem geschützt." },
+      { q: "Wofür solltest du deine Fluchtfähigkeit aufheben?", opts: ["Zum schnelleren Laufen", "Für den Moment, in dem ein Diver dich angreift", "Für Emotes", "Gar nicht nutzen"], a: 1, why: "Gegen Diver ist sie oft deine einzige Rettung." }
+    ],
+    reflect: "Wann bist du heute als Heiler gestorben – und wo hättest du stehen sollen?" },
+
+  { id: "l31", module: "m6", role: "Strategist", title: "Strategist II: Heilprioritäten & Ult gegen Ult", minutes: 10, mistakes: ["Ult verschwendet", "Heiler ignoriert"],
+    goal: "Du heilst die richtigen Ziele und setzt deine Ult als Antwort ein.",
+    theory: [
+      "Heilprioritäten: Wer gleich stirbt und gerettet werden kann, kommt zuerst. Danach der zweite Strategist – ohne ihn bricht die Heilung zusammen. Dann Tanks unter Druck.",
+      "Tanks bekommen oft viel Schaden, aber nicht jeder Schaden ist gefährlich. Ein Duelist mit wenig Leben ist oft dringender.",
+      "Viele Heiler-Ults sind die beste Antwort auf gegnerische Ults. Merke dir, welche Gegner-Ults deine Ult kontern kann.",
+      "Absprache mit dem zweiten Strategist: Nicht beide Ults gleichzeitig verbrauchen, wenn eine reicht."
+    ],
+    key: "Heile, wer gleich stirbt – und halte deine Ult bereit, um die Ult der Gegner zu kontern.",
+    practice: ["Spiele ein Match und frag dich bei jeder Heilung: Ist das gerade die wichtigste?", "Notiere für deinen Strategist drei Gegner-Ults, die deine Ult kontert.", "Sprich dich mit dem zweiten Strategist über eure Ults ab."],
+    focus: "Heilung nach Dringlichkeit – und Ult für gegnerische Ults aufheben.",
+    quiz: [
+      { q: "Wen heilst du zuerst?", opts: ["Immer den Tank", "Den Verbündeten, der gleich stirbt und gerettet werden kann", "Dich selbst, egal wann", "Den mit den meisten Kills"], a: 1, why: "Ein geretteter Spieler verhindert eine Unterzahl." },
+      { q: "Wofür ist eine Heiler-Ult oft am besten geeignet?", opts: ["Um einen einzelnen Kratzer zu heilen", "Als Antwort auf eine gegnerische Ult", "Gleichzeitig mit der Ult des zweiten Heilers", "Am Rundenanfang ohne Fight"], a: 1, why: "Sie neutralisiert den grössten Schaden des Gegners." }
+    ],
+    reflect: "Welche Heilung heute war unnötig, welche hat einen Fight entschieden?" },
+
+  // ----- Modul 7: Kopf & Fortschritt -----
+  { id: "l32", module: "m7", title: "Tilt erkennen und stoppen", minutes: 8, mistakes: ["Tilt / Frust"],
+    goal: "Du erkennst Tilt früh und hast einen Plan dagegen.",
+    theory: [
+      "<b>Tilt</b> ist ein Zustand, in dem Frust deine Entscheidungen verschlechtert: riskanter spielen, schneller aufgeben, andere beschuldigen.",
+      "Warnzeichen: Du willst „nur noch eins“ spielen, um eine Niederlage auszugleichen. Du ärgerst dich über Mitspieler. Du spielst hastig.",
+      "Hilfreiche Regeln: Pause nach zwei Niederlagen in Folge, Wasser trinken, kurz bewegen. Den Chat stummschalten, wenn er dich runterzieht.",
+      "In der Auswertung siehst du, wie sich Stimmung und Winrate zusammenhängen."
+    ],
+    key: "Zwei Niederlagen in Folge = Pause. Der nächste Sieg kommt mit klarem Kopf schneller.",
+    practice: ["Schau in der Auswertung unter „Stimmung“, wie dein Gefühl mit der Winrate zusammenhängt.", "Lege eine persönliche Tilt-Regel fest und schreib sie als Lernziel auf.", "Bewerte bei jedem Match ehrlich dein Gefühl."],
+    focus: "Nach zwei Niederlagen in Folge: mindestens 5 Minuten Pause.",
+    quiz: [
+      { q: "Was ist ein typisches Tilt-Warnzeichen?", opts: ["Ruhig nach einem Plan spielen", "„Nur noch eins“ spielen wollen, um eine Niederlage auszugleichen", "Eine Pause machen", "Gute Laune"], a: 1, why: "Der Drang, sofort weiterzuspielen, kommt oft aus Frust – nicht aus Lust." },
+      { q: "Was hilft gegen Tilt?", opts: ["Schneller spielen", "Eine Pause nach mehreren Niederlagen", "Mitspieler beschimpfen", "Einstellungen ändern"], a: 1, why: "Eine kurze Pause unterbricht die Abwärtsspirale." }
+    ],
+    reflect: "Was ist dein persönliches Warnzeichen für Tilt?" },
+
+  { id: "l33", module: "m7", title: "VOD-Review richtig machen", minutes: 15, mistakes: [],
+    goal: "Du lernst aus deinen eigenen Replays.",
+    theory: [
+      "Ein <b>VOD-Review</b> ist das gezielte Anschauen eigener Matches. Profis lernen so mehr als durch weitere Matches.",
+      "Schau nicht das ganze Match. Nimm dir <b>eine Frage</b> vor, z.B. „Warum sterbe ich?“ oder „Wann verlieren wir Fights?“.",
+      "Pausiere bei jedem Tod und frag: Was wusste ich in dem Moment? Was hätte ich anders entscheiden können?",
+      "Notiere Zeitstempel und Erkenntnisse – im Coach im Notizfeld des Matches."
+    ],
+    key: "Eine Frage pro Review – und bei jedem Tod pausieren.",
+    practice: ["Wähle eine verlorene Partie und eine Frage (z.B. „Warum sterbe ich?“).", "Schau 5–10 Minuten davon und pausiere bei jedem Tod.", "Trag zwei Erkenntnisse mit Zeitstempel ins Notizfeld des Matches ein."],
+    focus: "Nach jeder Session ein kurzes Replay (5 Min.) mit einer Frage anschauen.",
+    quiz: [
+      { q: "Wie gehst du ein VOD-Review am besten an?", opts: ["Das ganze Match ohne Ziel anschauen", "Mit einer konkreten Frage und Pausen bei jedem Tod", "Nur die eigenen Kills anschauen", "Mit Musik nebenbei"], a: 1, why: "Eine klare Frage macht das Review fokussiert und lehrreich." },
+      { q: "Was fragst du dich bei einem Tod im Replay?", opts: ["Wer ist schuld?", "Was wusste ich und was hätte ich anders entscheiden können?", "Warum ist das Spiel unfair?", "Gar nichts"], a: 1, why: "Nur deine eigenen Entscheidungen kannst du verbessern." }
+    ],
+    reflect: "Welche Erkenntnis aus deinem Replay hat dich überrascht?" },
+
+  { id: "l34", module: "m7", title: "Ranked-Mindset: Prozess statt Rang", minutes: 8, mistakes: ["Tilt / Frust"],
+    goal: "Du misst deinen Fortschritt an deinen Entscheidungen, nicht nur am Rang.",
+    theory: [
+      "Einzelne Matches hängen von vielen Faktoren ab, die du nicht kontrollierst. Langfristig setzt sich aber durch, wer besser entscheidet.",
+      "Bewerte dich daher nach dem <b>Prozess</b>: Habe ich meinen Fokus umgesetzt? Bin ich weniger gestorben? Habe ich gut kommuniziert?",
+      "Schwankungen sind normal. Schau auf Trends über 20–50 Matches – das zeigt dir das Dashboard.",
+      "Wer am Prozess arbeitet, steigt mit der Zeit fast automatisch auf."
+    ],
+    key: "Kontrolliere, was du kontrollieren kannst: deine Entscheidungen. Der Rang folgt.",
+    practice: ["Schau dir im Dashboard den Winrate-Verlauf über die letzten Matches an.", "Bewerte deine letzten drei Matches nur nach deinem Fokus, nicht nach dem Ergebnis.", "Formuliere ein Prozess-Ziel statt eines Rang-Ziels."],
+    focus: "Bewerte jedes Match nach deinem Fokus, nicht nach Sieg oder Niederlage.",
+    quiz: [
+      { q: "Woran misst du Fortschritt am sinnvollsten?", opts: ["Nur am Rang nach jedem Match", "An deinen Entscheidungen und Trends über viele Matches", "An der Anzahl Kills", "Am Glück"], a: 1, why: "Einzelne Ergebnisse schwanken – Entscheidungen und Trends zeigen echten Fortschritt." },
+      { q: "Was ist ein gutes Prozess-Ziel?", opts: ["„Diese Woche Diamond erreichen“", "„Diese Woche im Schnitt einen Tod weniger“", "„Jedes Match gewinnen“", "„MVP werden“"], a: 1, why: "Ein Prozess-Ziel liegt in deiner Kontrolle und ist messbar." }
+    ],
+    reflect: "Welches Prozess-Ziel nimmst du dir für die nächste Woche vor?" },
+
+  { id: "l35", module: "m7", title: "Dein persönlicher Plan", minutes: 15, mistakes: [],
+    goal: "Du ziehst Bilanz und planst deine nächsten Schritte.",
+    theory: [
+      "Du hast den Kurs durchlaufen – jetzt ist Zeit für eine Bilanz. Schau, was sich seit dem Start verändert hat: Tode, Winrate, häufigste Fehler.",
+      "Die Lektionsübersicht zeigt dir, welche Fokus-Punkte du oft umgesetzt hast – und welche nicht.",
+      "Wiederhole die Lektionen, die zu deinen aktuellen Fehlern passen. Der Coach empfiehlt sie dir automatisch.",
+      "Nutze den KI-Coach, um aus deinen Daten einen neuen Wochenplan zu erstellen."
+    ],
+    key: "Lernen hört nicht auf: Bilanz ziehen, Schwerpunkt wählen, weiter üben.",
+    practice: ["Vergleiche in der Auswertung deine ersten und letzten 20 Matches.", "Lass dir im KI-Coach einen 7-Tage-Plan erstellen.", "Lege zwei neue Lernziele an."],
+    focus: "Arbeite in den nächsten Matches an deinem neuen Schwerpunkt aus der Bilanz.",
+    quiz: [
+      { q: "Was ist nach dem Kurs ein guter nächster Schritt?", opts: ["Aufhören zu üben", "Bilanz ziehen und passende Lektionen wiederholen", "Alle Einstellungen ändern", "Nur noch Ranked"], a: 1, why: "Gezielte Wiederholung festigt, was noch nicht sitzt." },
+      { q: "Wobei kann dir der KI-Coach helfen?", opts: ["Gar nicht", "Aus deinen Daten einen Wochenplan zu erstellen", "Matches für dich zu spielen", "Deinen Rang zu ändern"], a: 1, why: "Er fasst deine Statistik zusammen und macht daraus Vorschläge – kritisch prüfen bleibt wichtig." }
+    ],
+    reflect: "Was ist deine wichtigste Erkenntnis aus dem ganzen Kurs?" }
+];
 
 // ---------- Icons ----------
 const ICONS = {
@@ -975,13 +1642,15 @@ const ICONS = {
   download: '<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
-  x: '<path d="M18 6 6 18M6 6l12 12"/>'
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  book: '<path d="M2 5a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/><path d="M22 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>'
 };
 function icon(name) { return ICONS[name] ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : ""; }
 document.querySelectorAll("[data-icon]").forEach(el => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
 
 const TITLES = {
   dashboard: ["Dashboard", "Dein Fortschritt auf einen Blick"],
+  lessons: ["Tägliche Lektionen", "Jeden Tag ein Schritt: verstehen, üben, anwenden, reflektieren"],
   log: ["Match loggen", "Ergebnis, Teams und Reflexion festhalten"],
   analysis: ["Auswertung", "Muster in deinen Matches erkennen"],
   team: ["Team & Counter", "Counter-Picks für die Heldenauswahl"],
@@ -1004,6 +1673,7 @@ function loadState() {
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
     quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "" }
   }, s || {});
+  st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
   st.settings = Object.assign({ playerName: "" }, st.settings);
   // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
@@ -1251,9 +1921,10 @@ function renderDashboard() {
   if (!ms.length) {
     card.innerHTML = `<h2>Willkommen beim Rivals Coach!</h2><p>Logge dein erstes Match oder hol dir deine Matches automatisch von Rivals Data. Ab 5 Matches erkennt der Coach erste Muster.</p>
       <div class="row mt" style="position:relative"><button class="btn" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Erstes Match loggen</button>
-      <button class="btn ghost" type="button" data-go="data" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Rivals Data synchronisieren</button></div>`;
+      <button class="btn ghost" type="button" data-go="data" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Rivals Data synchronisieren</button>
+      <button class="btn ghost" type="button" data-go="lessons" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Lektion 1 starten</button></div>`;
   } else if (!tm.length) {
-    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>`;
+    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
   } else {
     const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
     card.innerHTML = `<h2>Heutige Session</h2>
@@ -1261,7 +1932,7 @@ function renderDashboard() {
       <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;font-weight:800;font-size:.8rem;background:${m.result === "W" ? "rgba(255,255,255,.95);color:#1b6b1b" : "rgba(0,0,0,.28);color:#fff"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
       ${tmc ? `<p class="small">Häufigster Fehler heute: <b>${esc(tmc[0])}</b> (${tmc[1]}×)</p>` : ""}
       ${lastNext ? `<p class="small">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
-      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}`;
+      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
   }
   card.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
 
@@ -1328,6 +1999,8 @@ function insights() {
   if (lowMood >= 5) out.push(["info", "Viele deiner letzten Matches hast du als frustrierend bewertet. Spass ist wichtig – spiele zwischendurch einfach mal locker."]);
   const top = mistakeCounts(ms.slice(-20))[0];
   if (top) out.push(["info", `Dein häufigster Fehler ist „${esc(top[0])}“. Übung dazu: ${esc(DRILLS[top[0]] || "Achte im nächsten Match bewusst darauf.")}`]);
+  const fl = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (fl) { const fs = focusStats(fl.id); if (fs.n >= 3) out.push([fs.yes / fs.n >= 0.5 ? "good" : "info", `Lektions-Fokus „${esc(fl.focus)}“: in ${fs.yes} von ${fs.n} Matches umgesetzt${fs.yes / fs.n >= 0.5 ? " – stark! Zeit für die nächste Lektion." : ". Bleib dran oder wiederhole die Lektion."}`]); }
   const unreflected = ms.filter(m => m.source === "rivalsdata" && !(m.mistakes || []).length && !m.notes).length;
   if (unreflected >= 3) out.push(["info", `${unreflected} importierte Matches haben noch keine Reflexion. Ergänze im Match-Verlauf (Stift-Symbol), was gut und schlecht lief – das macht die Auswertung viel genauer.`]);
   const withEnemies = ms.filter(m => m.enemies.length).length;
@@ -1350,6 +2023,7 @@ function setChips(el, values) {
 }
 function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)].map(s => s.value); }
 function renderLog() {
+  renderFocusCard();
   const prev = $("#heroSelect").value || (state.matches.length ? state.matches[state.matches.length - 1].hero : "");
   $("#heroSelect").outerHTML = heroSelectHtml('name="hero" id="heroSelect" required', prev, "– Held wählen –");
   const en = slotValues("enemySlots"), al = slotValues("allySlots");
@@ -1412,6 +2086,7 @@ function startEdit(id) {
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   setChips($("#mistakeChips"), m.mistakes || []); setChips($("#goodChips"), m.goods || []);
+  document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   $("#editText").textContent = `Match vom ${fmtDate(m.date)} bearbeiten (${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"})`;
   $("#editBanner").classList.add("show");
   $("#saveBtn").lastChild.textContent = "Änderungen speichern";
@@ -1451,6 +2126,7 @@ $("#matchForm").addEventListener("submit", e => {
     goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v)
   };
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
+  if (state.lessons.activeFocus && f.get("focusRating") !== null) fields.focus = { id: state.lessons.activeFocus, rating: Number(f.get("focusRating")) };
   if (editingId) {
     Object.assign(state.matches.find(m => m.id === editingId), fields);
     save(); cancelEdit(); render(); toast("Match aktualisiert");
@@ -1857,7 +2533,10 @@ function renderTraining() {
   }));
   const s = streakDays();
   $("#streakInfo").textContent = `${done.filter(d => state.routine.includes(d)).length}/${state.routine.length} heute · 🔥 ${s} Tag${s === 1 ? "" : "e"}`;
-  const drills = mistakeCounts(state.matches.slice(-20)).slice(0, 3).map(([m, c]) => ["info", `<b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}`]);
+  const drills = mistakeCounts(state.matches.slice(-20)).slice(0, 3).map(([m, c]) => {
+    const l = lessonForMistake(m);
+    return ["info", `<b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}${l ? `<br><button class="linkbtn small" type="button" data-lesson="${l.id}">📘 Passende Lektion: ${esc(l.title)}</button>` : ""}`];
+  });
   const badEnemy = enemyStats(state.matches.slice(-40)).filter(x => x[1].n >= 3).sort((a, b) => a[1].wr - b[1].wr)[0];
   if (badEnemy && badEnemy[1].wr < 0.5) {
     drills.push(["bad", `<b>Matchup: ${esc(badEnemy[0])}</b> (${pct(badEnemy[1].wr)} Winrate)<br>Lies im Helden-Guide, wer ${esc(badEnemy[0])} kontert, und spiele diese Woche 3 Quick Matches mit einem dieser Helden. ${counterTip(badEnemy[0])}.`]);
@@ -1948,6 +2627,8 @@ function buildPrompt() {
   if (mc.length) lines.push("", "## Häufigste Fehler (letzte 20 Matches)", ...mc.map(([m, c]) => `- ${m}: ${c}×`));
   const nts = ms.slice(-5).filter(m => m.notes).map(m => `- ${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.enemies.length ? ` gegen ${m.enemies.join(", ")}` : ""}: ${m.notes}`);
   if (nts.length) lines.push("", "## Notizen aus den letzten Matches", ...nts);
+  const lessonFocus = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (lessonFocus) lines.push("", "## Mein aktueller Trainingsfokus", `- Lektion „${lessonFocus.title}“ (${Object.keys(state.lessons.done).length}/${LESSONS.length} Lektionen abgeschlossen)`, `- Fokus: ${lessonFocus.focus}`);
   const openGoals = state.goals.filter(g => !g.done);
   if (openGoals.length) lines.push("", "## Meine aktuellen Lernziele", ...openGoals.map(g => `- ${g.title}${g.metric ? ` (${g.metric})` : ""}`));
   lines.push("", "## Meine Frage");
@@ -2068,12 +2749,245 @@ $("#resetBtn").addEventListener("click", () => {
   state = loadState(); quiz = null; render(); toast("Alle Daten gelöscht");
 });
 
+// ---------- Tägliche Lektionen: Logik ----------
+const LESSON_STEPS = ["Verstehen", "Wissens-Check", "Üben", "Anwenden", "Reflektieren"];
+const FOCUS_RATINGS = [[3, "Ja"], [2, "Teilweise"], [1, "Nein"], [0, "Nicht drauf geachtet"]];
+let openLesson = null;
+function lessonById(id) { return LESSONS.find(l => l.id === id); }
+function lessonNo(id) { return LESSONS.findIndex(l => l.id === id) + 1; }
+function moduleById(id) { return LESSON_MODULES.find(m => m.id === id); }
+function lessonsDone() { return state.lessons.done; }
+function mainRole() {
+  const recent = state.matches.slice(-50);
+  if (recent.length < 5) return null;
+  const c = group(recent, m => heroRole(m.hero));
+  return ROLES.slice().sort((a, b) => (c[b] || []).length - (c[a] || []).length)[0];
+}
+function nextLesson() {
+  const done = lessonsDone(), role = mainRole();
+  return LESSONS.find(l => !done[l.id] && (!l.role || !role || l.role === role)) || LESSONS.find(l => !done[l.id]) || null;
+}
+function doneToday() { return Object.values(lessonsDone()).some(d => d.date === today()); }
+function lessonStreak() {
+  const days = new Set(Object.values(lessonsDone()).map(d => d.date));
+  const d = new Date();
+  if (!days.has(today())) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (days.has(d.toISOString().slice(0, 10))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function lessonForMistake(mistake, excludeId) {
+  const done = lessonsDone();
+  const cands = LESSONS.filter(l => l.mistakes.includes(mistake) && l.id !== excludeId);
+  return cands.find(l => !done[l.id]) || cands.sort((a, b) => (done[a.id] ? done[a.id].ts : 0) - (done[b.id] ? done[b.id].ts : 0))[0] || null;
+}
+function recommendedLesson() {
+  const next = nextLesson();
+  const top = mistakeCounts(state.matches.slice(-20))[0];
+  if (!top) return null;
+  const l = lessonForMistake(top[0], next && next.id);
+  return l ? { lesson: l, reason: `Passend zu deinem häufigsten Fehler „${top[0]}“ (${top[1]}× in den letzten 20 Matches)` } : null;
+}
+function focusStats(id) {
+  const rated = state.matches.filter(m => m.focus && m.focus.id === id && m.focus.rating > 0);
+  return { n: rated.length, yes: rated.filter(m => m.focus.rating === 3).length, partly: rated.filter(m => m.focus.rating === 2).length };
+}
+function lessonEffect(id) {
+  const d = lessonsDone()[id];
+  if (!d) return null;
+  const before = state.matches.filter(m => matchTime(m) < d.ts).slice(-10), after = state.matches.filter(m => matchTime(m) >= d.ts);
+  return after.length >= 3 && before.length >= 3 ? { before: summary(before), after: summary(after) } : null;
+}
+function lessonProgress(id) {
+  const p = state.lessons.progress;
+  if (!p[id]) {
+    // Bis zu zwei Wiederholungsfragen aus abgeschlossenen Lektionen, bevorzugt falsch beantwortete
+    const pool = [];
+    Object.keys(lessonsDone()).filter(x => x !== id && lessonById(x)).forEach(lid => lessonById(lid).quiz.forEach((q, qi) => pool.push({ lid, qi })));
+    const review = [];
+    const weight = r => 1 + (state.lessons.wrong[`${r.lid}:${r.qi}`] || 0) * 3;
+    while (review.length < 2 && pool.length) {
+      const pick = weightedPick(pool, weight);
+      review.push(pick); pool.splice(pool.indexOf(pick), 1);
+    }
+    p[id] = { step: 0, answers: {}, practice: [], reflection: "", review };
+  }
+  return p[id];
+}
+function openLessonId(id) {
+  if (!lessonById(id)) return;
+  openLesson = id;
+  lessonProgress(id); save();
+  showTab("lessons");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-lesson]");
+  if (b) openLessonId(b.dataset.lesson);
+});
+
+function lessonQuestions(l, p) {
+  const own = l.quiz.map((q, qi) => ({ key: `${l.id}:${qi}`, q, label: "" }));
+  const rev = p.review.filter(r => lessonById(r.lid) && lessonById(r.lid).quiz[r.qi])
+    .map(r => ({ key: `${r.lid}:${r.qi}`, q: lessonById(r.lid).quiz[r.qi], label: `Wiederholung aus Lektion ${lessonNo(r.lid)}: ${lessonById(r.lid).title}` }));
+  return own.concat(rev);
+}
+function renderLessonView() {
+  const el = $("#lessonView");
+  if (!openLesson) { el.hidden = true; el.innerHTML = ""; return; }
+  const l = lessonById(openLesson), p = lessonProgress(l.id), mod = moduleById(l.module);
+  const done = lessonsDone()[l.id];
+  el.hidden = false;
+  const qs = lessonQuestions(l, p);
+  const answered = qs.filter(x => p.answers[x.key] !== undefined).length;
+  const stepDone = [true, answered === qs.length, p.practice.filter(Boolean).length > 0, p.step > 3, false];
+  let body = "";
+  if (p.step === 0) {
+    body = `<p class="lead" style="margin-top:0"><b>Lernziel:</b> ${esc(l.goal)}</p>
+      <ul class="lesson-text">${l.theory.map(t => `<li>${t}</li>`).join("")}</ul>
+      <div class="key">💡 ${esc(l.key)}</div>`;
+  } else if (p.step === 1) {
+    body = qs.map((x, i) => {
+      const a = p.answers[x.key];
+      return `<div class="qcard">${x.label ? `<div class="badge" style="margin-bottom:8px">${esc(x.label)}</div>` : ""}
+        <div class="q"><b>${i + 1}. ${esc(x.q.q)}</b></div>
+        <div class="qopts">${x.q.opts.map((o, oi) => `<button type="button" data-qkey="${x.key}" data-oi="${oi}" ${a !== undefined ? "disabled" : ""}
+          class="${a !== undefined ? (oi === x.q.a ? "right" : oi === a ? "wrong" : "") : ""}">${esc(o)}</button>`).join("")}</div>
+        ${a !== undefined ? `<div class="small mt" style="color:${a === x.q.a ? "var(--good-text)" : "var(--bad)"}"><b>${a === x.q.a ? "Richtig!" : "Nicht ganz."}</b> <span class="muted">${esc(x.q.why)}</span></div>` : ""}
+      </div>`;
+    }).join("") + `<p class="muted small">${answered}/${qs.length} beantwortet</p>`;
+  } else if (p.step === 2) {
+    body = `<p class="lead" style="margin-top:0">Übe das im Practice Range, in einem Custom Game oder in deinen nächsten Matches. Hake ab, was du gemacht hast.</p>
+      ${l.practice.map((t, i) => `<div class="check ${p.practice[i] ? "done" : ""}"><input type="checkbox" id="lp${i}" data-pi="${i}" ${p.practice[i] ? "checked" : ""}><label for="lp${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${t}</label></div>`).join("")}
+      <div class="row mt"><button class="btn ghost small" type="button" data-go="training">${icon("clock")}Aufwärm-Timer</button><button class="btn ghost small" type="button" data-go="goals">${icon("goals")}Lernziel anlegen</button></div>`;
+  } else if (p.step === 3) {
+    const fs = focusStats(l.id);
+    body = `<p class="lead" style="margin-top:0">Das ist dein Fokus für die nächsten Matches. Er erscheint beim Match-Loggen – dort bewertest du, ob du ihn umgesetzt hast.</p>
+      <div class="key">🎯 ${esc(l.focus)}</div>
+      ${fs.n ? `<p class="small mt">Bisher bewertet: ${fs.n} Matches · ${fs.yes}× ja · ${fs.partly}× teilweise</p>` : ""}
+      <p class="muted small mt">Tipp: Spiel jetzt 1–3 Matches mit diesem Fokus und komm danach für die Reflexion zurück – oder schliesse die Lektion direkt ab.</p>`;
+  } else {
+    body = `<label>${esc(l.reflect)}<textarea id="lessonReflect" placeholder="Deine Gedanken …">${esc(p.reflection)}</textarea></label>
+      <p class="muted small mt">Mit dem Abschluss wird „${esc(l.focus)}“ dein aktiver Match-Fokus.</p>`;
+  }
+  el.innerHTML = `<div class="card-head">
+      <div><div class="muted small">Lektion ${lessonNo(l.id)} von ${LESSONS.length} · ${esc(mod.title)}${l.role ? ` · ${esc(l.role)}` : ""}</div><h2 style="font-size:1.25rem">${esc(l.title)}</h2></div>
+      <div class="row"><span class="badge">${icon("clock")}ca. ${l.minutes} Min.</span>${done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ abgeschlossen ${fmtDate(done.date)}</span>` : ""}
+      <button class="btn ghost small icon" type="button" id="lessonClose" aria-label="Lektion schliessen" title="Schliessen">${icon("x")}</button></div>
+    </div>
+    <div class="stepper">${LESSON_STEPS.map((s, i) => `<button type="button" data-step="${i}" class="${i === p.step ? "active" : ""} ${i < p.step || (stepDone[i] && i !== p.step && i > 0) ? "done" : ""}"><span class="sn">${i < p.step ? "✓" : i + 1}</span>${s}</button>`).join("")}</div>
+    <div class="lesson-body">${body}</div>
+    <div class="row between mt">
+      <button class="btn ghost" type="button" id="lessonPrev" ${p.step === 0 ? "disabled style='visibility:hidden'" : ""}>← Zurück</button>
+      ${p.step < 4 ? `<button class="btn" type="button" id="lessonNext">Weiter →</button>` : `<button class="btn" type="button" id="lessonDone">${icon("check")}Lektion abschliessen</button>`}
+    </div>`;
+
+  el.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => { savePending(); p.step = +b.dataset.step; save(); renderLessonView(); }));
+  $("#lessonClose").addEventListener("click", () => { savePending(); openLesson = null; save(); renderLessons(); });
+  if ($("#lessonPrev")) $("#lessonPrev").addEventListener("click", () => { savePending(); p.step = Math.max(0, p.step - 1); save(); renderLessonView(); });
+  if ($("#lessonNext")) $("#lessonNext").addEventListener("click", () => { savePending(); p.step = Math.min(4, p.step + 1); save(); renderLessonView(); el.scrollIntoView({ behavior: "smooth", block: "start" }); });
+  if ($("#lessonDone")) $("#lessonDone").addEventListener("click", () => completeLesson(l, p));
+  el.querySelectorAll("[data-qkey]").forEach(b => b.addEventListener("click", () => {
+    const key = b.dataset.qkey, oi = +b.dataset.oi;
+    const q = qs.find(x => x.key === key).q;
+    p.answers[key] = oi;
+    const w = state.lessons.wrong;
+    if (oi === q.a) { if (w[key]) w[key]--; } else w[key] = (w[key] || 0) + 1;
+    save(); renderLessonView();
+  }));
+  el.querySelectorAll("[data-pi]").forEach(c => c.addEventListener("change", () => { p.practice[+c.dataset.pi] = c.checked; save(); renderLessonView(); }));
+  el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
+  function savePending() { const t = $("#lessonReflect"); if (t) p.reflection = t.value; }
+}
+function completeLesson(l, p) {
+  const t = $("#lessonReflect");
+  if (t) p.reflection = t.value;
+  const qs = lessonQuestions(l, p);
+  const own = l.quiz.map((q, qi) => p.answers[`${l.id}:${qi}`] === q.a).filter(Boolean).length;
+  state.lessons.done[l.id] = { date: today(), ts: Date.now(), score: own, total: l.quiz.length, answered: qs.filter(x => p.answers[x.key] !== undefined).length, reflection: p.reflection.trim() };
+  state.lessons.activeFocus = l.id;
+  delete state.lessons.progress[l.id];
+  // Routine-Punkt „Tägliche Lektion …“ automatisch abhaken
+  const item = state.routine.find(r => r.toLowerCase().startsWith("tägliche lektion"));
+  if (item) state.routineDone[today()] = [...new Set((state.routineDone[today()] || []).concat(item))];
+  openLesson = null;
+  save(); renderLessons();
+  toast(`Lektion abgeschlossen! 🎉 Dein Match-Fokus: ${l.focus}`);
+}
+function renderLessons() {
+  renderLessonView();
+  const done = lessonsDone(), next = nextLesson(), total = LESSONS.length, n = Object.keys(done).filter(id => lessonById(id)).length;
+  const streak = lessonStreak(), rec = recommendedLesson(), role = mainRole();
+  const today_ = $("#lessonToday");
+  today_.hidden = !!openLesson;
+  if (!openLesson) {
+    let main;
+    if (!next) {
+      main = `<h2>Kurs abgeschlossen 🎉</h2><p>Du hast alle ${total} Lektionen durchgearbeitet. Wiederhole die Lektionen, die zu deinen aktuellen Fehlern passen – der Coach empfiehlt sie dir unten.</p>`;
+    } else if (doneToday()) {
+      const last = Object.entries(done).filter(([, d]) => d.date === today()).map(([id]) => lessonById(id)).filter(Boolean).slice(-1)[0];
+      main = `<h2>✓ Heutige Lektion erledigt</h2><p>${last ? `„${esc(last.title)}“ ist abgeschlossen. ` : ""}Morgen wartet Lektion ${lessonNo(next.id)}: <b>${esc(next.title)}</b>. Du willst mehr? Dann leg direkt los.</p>
+        <div class="row mt" style="position:relative"><button class="btn ghost" type="button" data-lesson="${next.id}" style="color:#fff;border-color:rgba(255,255,255,.45)">Trotzdem weitermachen</button></div>`;
+    } else {
+      const started = state.lessons.progress[next.id];
+      main = `<div class="small" style="opacity:.85;position:relative">Heute · Lektion ${lessonNo(next.id)} von ${total} · ${esc(moduleById(next.module).title)} · ca. ${next.minutes} Min.</div>
+        <h2 style="font-size:1.35rem;margin-top:4px">${esc(next.title)}</h2><p>${esc(next.goal)}</p>
+        <div class="row mt" style="position:relative"><button class="btn" type="button" data-lesson="${next.id}" style="background:#fff;color:#2b1f8f">${started ? "Lektion fortsetzen" : "Lektion starten"} →</button></div>`;
+    }
+    today_.innerHTML = `<div class="card hero-banner lesson-hero"><div style="flex:1;min-width:240px">${main}</div>
+      <div class="lesson-stats"><div>${ring(n / total, `${n}/${total}`)}<span>Lektionen</span></div><div><b>🔥 ${streak}</b><span>${streak === 1 ? "Tag" : "Tage"} in Folge</span></div></div></div>`;
+  }
+  const extras = [];
+  if (rec) extras.push(["info", `${esc(rec.reason)}: <button class="linkbtn" type="button" data-lesson="${rec.lesson.id}">Lektion ${lessonNo(rec.lesson.id)} – ${esc(rec.lesson.title)}</button>`]);
+  const af = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (af) {
+    const fs = focusStats(af.id);
+    extras.push(["good", `<b>Aktueller Match-Fokus:</b> ${esc(af.focus)}<br><span class="small muted">aus Lektion ${lessonNo(af.id)} · ${fs.n ? `${fs.yes} von ${fs.n} bewerteten Matches umgesetzt` : "noch in keinem Match bewertet – bewerte ihn beim Loggen"}</span>`]);
+  }
+  $("#lessonCourse").innerHTML = (extras.length ? `<div class="card">${notes(extras)}</div>` : "") + LESSON_MODULES.map(mod => {
+    const ls = LESSONS.filter(l => l.module === mod.id);
+    const dn = ls.filter(l => done[l.id]).length;
+    return `<div class="card"><div class="card-head"><div><h2>${esc(mod.title)}</h2><div class="muted small">${esc(mod.desc)}</div></div><span class="badge">${dn}/${ls.length}</span></div>
+      <div class="lesson-list">${ls.map(l => {
+        const d = done[l.id], isNext = next && next.id === l.id, isRec = rec && rec.lesson.id === l.id;
+        const eff = d ? lessonEffect(l.id) : null;
+        const sub = d ? `✓ ${fmtDate(d.date)}${d.total ? ` · Quiz ${d.score}/${d.total}` : ""}${eff ? ` · Ø Tode ${eff.before.d.toFixed(1)} → ${eff.after.d.toFixed(1)}` : ""}`
+          : `ca. ${l.minutes} Min.${l.role ? ` · ${l.role}${role === l.role ? " (deine Rolle)" : ""}` : ""}`;
+        return `<button type="button" class="lesson-item ${d ? "done" : ""} ${isNext ? "today" : ""}" data-lesson="${l.id}">
+          <span class="num">${d ? "✓" : lessonNo(l.id)}</span>
+          <span style="min-width:0"><b>${esc(l.title)}</b><span class="small muted" style="display:block">${sub}</span></span>
+          ${isNext ? '<span class="badge">Heute</span>' : isRec ? '<span class="badge">Empfohlen</span>' : ""}</button>`;
+      }).join("")}</div></div>`;
+  }).join("");
+}
+function lessonBannerHtml(onGradient) {
+  const next = nextLesson();
+  if (!next) return "";
+  const btnStyle = onGradient ? 'style="background:#fff;color:#2b1f8f"' : "";
+  if (doneToday()) return `<p class="small">✓ Heutige Lektion erledigt · Morgen: ${esc(next.title)}</p>`;
+  return `<p>📘 Heutige Lektion: <b>${esc(next.title)}</b> · ca. ${next.minutes} Min.</p>
+    <div class="row mt" style="position:relative"><button class="btn" type="button" data-lesson="${next.id}" ${btnStyle}>Lektion starten</button></div>`;
+}
+function renderFocusCard() {
+  const el = $("#focusCard");
+  const l = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (!l) { el.hidden = true; el.innerHTML = ""; return; }
+  const cur = document.querySelector('input[name="focusRating"]:checked');
+  const val = cur ? cur.value : "";
+  el.hidden = false;
+  el.innerHTML = `<div class="card-head"><h2>${icon("book")}Lektions-Fokus</h2><button class="linkbtn small" type="button" data-lesson="${l.id}">Lektion ${lessonNo(l.id)}: ${esc(l.title)}</button></div>
+    <p style="margin:0 0 12px;font-weight:600">${esc(l.focus)}</p>
+    <div class="field">Hast du den Fokus in diesem Match umgesetzt?
+      <div class="seg" style="flex-wrap:wrap">${FOCUS_RATINGS.map(([v, t]) => `<input type="radio" name="focusRating" value="${v}" id="fr${v}" ${String(v) === val ? "checked" : ""}><label for="fr${v}">${t}</label>`).join("")}</div>
+    </div>`;
+}
+
 // ---------- Render ----------
 chipGroup($("#mistakeChips"), MISTAKES);
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
-  ({ dashboard: renderDashboard, log: renderLog, analysis: renderAnalysis, team: renderTeam,
+  ({ dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: () => { renderQuiz(); renderRules(); }, heroes: renderHeroes,
      training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData })[currentTab()]();
 }
