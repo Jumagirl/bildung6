@@ -27,13 +27,15 @@ def load_block(block_name):
 
 
 def on_nav(Navigation, config, files):
-    desired_order = ["", "Quests", "Chancen & Risiken", "Guides", "Leitlinien", "Tools", 'Über das Projekt', "AnwenderInnen", "Anwendungsfälle"]
+    desired_order = ["", "Quests", "Chancen & Risiken", "Guides", "Leitlinien", "Tools", 'Über das Projekt', "AnwenderInnen", "Anwendungsfälle", "Marvel Rivals"]
 
     for section in Navigation:
         if section.title == "Chancenrisiken":
             section.title = 'Chancen & Risiken'
         if section.title == "Projekt":
             section.title = 'Über das Projekt'
+        if section.title == "Marvel rivals":
+            section.title = 'Marvel Rivals'
 
     title_to_element = {}
     for element in Navigation.items:

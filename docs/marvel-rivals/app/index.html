@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rivals Coach</title>
+<style>
+:root {
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --surface-2: #eef0f8;
+  --text: #1c1f2e;
+  --muted: #5d6275;
+  --border: #d8dbe8;
+  --accent: #4051b5;
+  --accent-text: #ffffff;
+  --win: #1f8a4c;
+  --loss: #c0392b;
+  --warn: #b7791f;
+  --vanguard: #2f6fd6;
+  --duelist: #c0392b;
+  --strategist: #1f8a4c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141c;
+    --surface: #1b1e2a;
+    --surface-2: #252938;
+    --text: #e8eaf3;
+    --muted: #9aa0b8;
+    --border: #333849;
+    --accent: #7b8cf0;
+    --accent-text: #10121a;
+    --win: #4cc685;
+    --loss: #ef6b5b;
+    --warn: #e0a84a;
+    --vanguard: #6c9cf0;
+    --duelist: #ef6b5b;
+    --strategist: #4cc685;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141c;
+  --surface: #1b1e2a;
+  --surface-2: #252938;
+  --text: #e8eaf3;
+  --muted: #9aa0b8;
+  --border: #333849;
+  --accent: #7b8cf0;
+  --accent-text: #10121a;
+  --win: #4cc685;
+  --loss: #ef6b5b;
+  --warn: #e0a84a;
+  --vanguard: #6c9cf0;
+  --duelist: #ef6b5b;
+  --strategist: #4cc685;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+header h1 { font-size: 1.2rem; margin: 0; flex: 1; }
+header a { color: var(--accent); text-decoration: none; font-size: .9rem; }
+nav.tabs {
+  display: flex; gap: 4px; overflow-x: auto;
+  padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+nav.tabs button {
+  border: 0; background: transparent; color: var(--muted);
+  padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; white-space: nowrap;
+}
+nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+section[hidden] { display: none; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; margin-bottom: 16px;
+}
+.card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+.card h3 { margin: 12px 0 6px; font-size: .95rem; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px; width: 100%;
+}
+textarea { min-height: 70px; resize: vertical; }
+button.btn {
+  font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text);
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+}
+button.btn.ghost { background: transparent; color: var(--accent); }
+button.btn.small { padding: 4px 8px; font-size: .8rem; }
+button.btn.danger { border-color: var(--loss); background: transparent; color: var(--loss); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 999px; padding: 4px 10px; font-size: .8rem; cursor: pointer; user-select: none;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.stat { background: var(--surface-2); border-radius: 10px; padding: 12px; }
+.stat .v { font-size: 1.6rem; font-weight: 700; }
+.stat .l { color: var(--muted); font-size: .8rem; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+.win { color: var(--win); font-weight: 600; }
+.loss { color: var(--loss); font-weight: 600; }
+.muted { color: var(--muted); }
+.role-Vanguard { color: var(--vanguard); }
+.role-Duelist { color: var(--duelist); }
+.role-Strategist { color: var(--strategist); }
+.hero-card { border-left: 4px solid var(--border); }
+.hero-card.Vanguard { border-left-color: var(--vanguard); }
+.hero-card.Duelist { border-left-color: var(--duelist); }
+.hero-card.Strategist { border-left-color: var(--strategist); }
+.hero-card ul { margin: 4px 0 0; padding-left: 18px; }
+.bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.check { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.check input { width: auto; margin-top: 4px; }
+.check.done span { text-decoration: line-through; color: var(--muted); }
+.feedback { padding: 8px 12px; border-radius: 8px; background: var(--surface-2); margin: 6px 0; }
+.feedback.good { border-left: 4px solid var(--win); }
+.feedback.bad { border-left: 4px solid var(--loss); }
+.feedback.info { border-left: 4px solid var(--warn); }
+svg text { fill: var(--muted); font-size: 11px; }
+pre.prompt {
+  white-space: pre-wrap; background: var(--surface-2); padding: 12px; border-radius: 8px;
+  font-size: .85rem; max-height: 320px; overflow: auto;
+}
+.toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px;
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+@media (max-width: 480px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 Rivals Coach <span class="muted" style="font-weight:400;font-size:.85rem">– besser werden in Marvel Rivals</span></h1>
+  <a href="../">← Zurück zur Lernseite</a>
+  <button class="btn ghost small" id="themeBtn" type="button">Hell/Dunkel</button>
+</header>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+  <button role="tab" data-tab="log">Match loggen</button>
+  <button role="tab" data-tab="heroes">Helden-Guide</button>
+  <button role="tab" data-tab="team">Team-Check</button>
+  <button role="tab" data-tab="training">Training</button>
+  <button role="tab" data-tab="goals">Lernziele</button>
+  <button role="tab" data-tab="ai">KI-Coach</button>
+  <button role="tab" data-tab="data">Daten</button>
+</nav>
+
+<main>
+<!-- DASHBOARD -->
+<section id="tab-dashboard">
+  <div class="card">
+    <h2>Überblick</h2>
+    <div class="grid" id="kpis"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Winrate-Verlauf (letzte 30 Matches, gleitend über 5)</h2>
+      <div id="trend"></div>
+    </div>
+    <div class="card">
+      <h2>Nach Rolle</h2>
+      <div id="byRole"></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Deine Helden</h2>
+      <div class="table-wrap" id="byHero"></div>
+    </div>
+    <div class="card">
+      <h2>Häufigste Fehler</h2>
+      <div id="topMistakes"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Coach-Hinweise</h2>
+    <div id="insights"></div>
+  </div>
+</section>
+
+<!-- LOG -->
+<section id="tab-log" hidden>
+  <div class="card">
+    <h2>Neues Match</h2>
+    <form id="matchForm">
+      <div class="grid">
+        <label>Held <select name="hero" id="heroSelect" required></select></label>
+        <label>Modus
+          <select name="mode">
+            <option>Competitive</option><option>Quick Match</option><option>Custom / Training</option>
+          </select>
+        </label>
+        <label>Spieltyp
+          <select name="type">
+            <option>Domination</option><option>Convoy</option><option>Convergence</option><option>Anderer</option>
+          </select>
+        </label>
+        <label>Ergebnis
+          <select name="result"><option value="W">Sieg</option><option value="L">Niederlage</option></select>
+        </label>
+        <label>Kills (K) <input type="number" name="k" min="0" value="0"></label>
+        <label>Deaths (D) <input type="number" name="d" min="0" value="0"></label>
+        <label>Assists (A) <input type="number" name="a" min="0" value="0"></label>
+        <label>Schaden <input type="number" name="dmg" min="0" step="100" placeholder="optional"></label>
+        <label>Heilung <input type="number" name="heal" min="0" step="100" placeholder="optional"></label>
+        <label>Geblockt <input type="number" name="block" min="0" step="100" placeholder="optional"></label>
+        <label>Gefühl (1–5) <input type="range" name="mood" min="1" max="5" value="3"></label>
+      </div>
+      <h3>Was lief schief? (Mehrfachauswahl)</h3>
+      <div class="chips" id="mistakeChips"></div>
+      <h3>Was lief gut?</h3>
+      <div class="chips" id="goodChips"></div>
+      <div class="grid-2" style="margin-top:12px">
+        <label>Notizen / VOD-Zeitstempel <textarea name="notes" placeholder="z.B. 04:12 – ohne Heiler in den Fight gerannt"></textarea></label>
+        <label>Eine Sache, die ich nächstes Match besser mache <textarea name="next" placeholder="z.B. Ult für den nächsten Teamfight aufheben"></textarea></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" type="submit">Match speichern</button>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Match-Verlauf</h2>
+    <div class="table-wrap" id="matchTable"></div>
+  </div>
+</section>
+
+<!-- HEROES -->
+<section id="tab-heroes" hidden>
+  <div class="card">
+    <h2>Helden-Guide</h2>
+    <p class="muted">Rollen-Tipps und Spielweise für jeden Helden. Balancing und neue Helden ändern sich jede Season – du kannst unten eigene Helden und Notizen ergänzen.</p>
+    <div class="row">
+      <input id="heroSearch" placeholder="Helden suchen…" style="max-width:260px">
+      <div class="chips" id="roleFilter"></div>
+    </div>
+  </div>
+  <div class="card" id="roleTips"></div>
+  <div class="grid-2" id="heroCards"></div>
+  <div class="card">
+    <h2>Eigenen Helden hinzufügen</h2>
+    <form id="heroForm" class="grid">
+      <label>Name <input name="name" required></label>
+      <label>Rolle <select name="role"><option>Vanguard</option><option>Duelist</option><option>Strategist</option></select></label>
+      <label>Tipps (eine Zeile pro Tipp) <textarea name="tips"></textarea></label>
+      <div class="row"><button class="btn" type="submit">Hinzufügen</button></div>
+    </form>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="tab-team" hidden>
+  <div class="card">
+    <h2>Team-Komposition prüfen</h2>
+    <p class="muted">Wähle bis zu 6 Helden deines Teams aus. Du bekommst Feedback zur Rollenverteilung.</p>
+    <div class="grid" id="teamSlots"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" type="button" id="teamClear">Zurücksetzen</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Feedback</h2>
+    <div id="teamFeedback"></div>
+  </div>
+</section>
+
+<!-- TRAINING -->
+<section id="tab-training" hidden>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Tägliche Routine</h2>
+      <p class="muted" id="streakInfo"></p>
+      <div id="routine"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="routineNew" placeholder="Eigene Übung hinzufügen…">
+        <button class="btn small" type="button" id="routineAdd">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Fokus der Woche</h2>
+      <p class="muted">Auf Basis deiner häufigsten Fehler vorgeschlagene Übungen:</p>
+      <div id="drills"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Aufwärm-Timer</h2>
+    <div class="row">
+      <select id="timerMin" style="max-width:140px">
+        <option value="5">5 Minuten</option><option value="10" selected>10 Minuten</option><option value="15">15 Minuten</option>
+      </select>
+      <button class="btn" type="button" id="timerBtn">Start</button>
+      <span id="timerOut" style="font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums">10:00</span>
+    </div>
+  </div>
+</section>
+
+<!-- GOALS -->
+<section id="tab-goals" hidden>
+  <div class="card">
+    <h2>Lernziele nach dem 3-Phasen-Modell</h2>
+    <p class="muted">Wie beim selbständigen Lernen: <b>Planen</b> (konkretes Ziel), <b>Durchführen</b> (üben und spielen), <b>Reflektieren</b> (was hat funktioniert?). Formuliere Ziele SMART, z.B. „Diese Woche als Luna Snow pro Match max. 6 Tode“.</p>
+    <form id="goalForm" class="grid">
+      <label>Ziel <input name="title" required placeholder="Was willst du erreichen?"></label>
+      <label>Messbar durch <input name="metric" placeholder="z.B. Ø Deaths ≤ 6"></label>
+      <label>Bis wann <input type="date" name="due"></label>
+      <div class="row"><button class="btn" type="submit">Ziel anlegen</button></div>
+    </form>
+  </div>
+  <div id="goalList"></div>
+</section>
+
+<!-- AI -->
+<section id="tab-ai" hidden>
+  <div class="card">
+    <h2>KI-Coach-Prompt</h2>
+    <p class="muted">Die App fasst deine Statistik zusammen. Kopiere den Prompt in einen KI-Chatbot (z.B. ChatGPT), um persönliches Feedback zu bekommen. Prüfe die Antworten kritisch – KI kann sich bei Spieldetails irren, und neue Patches kennt sie oft nicht.</p>
+    <div class="row">
+      <label style="flex-direction:row;align-items:center;gap:6px">Fokus
+        <select id="aiFocus" style="width:auto">
+          <option value="allgemein">Allgemeine Analyse</option>
+          <option value="held">Mein meistgespielter Held</option>
+          <option value="fehler">Meine häufigsten Fehler</option>
+          <option value="plan">Trainingsplan für 7 Tage</option>
+        </select>
+      </label>
+      <button class="btn" type="button" id="aiCopy">Prompt kopieren</button>
+    </div>
+    <pre class="prompt" id="aiPrompt"></pre>
+  </div>
+</section>
+
+<!-- DATA -->
+<section id="tab-data" hidden>
+  <div class="card">
+    <h2>Daten sichern</h2>
+    <p class="muted">Alle Daten werden nur lokal in deinem Browser gespeichert. Exportiere sie regelmässig als Backup oder um sie auf ein anderes Gerät zu übertragen.</p>
+    <div class="row">
+      <button class="btn" type="button" id="exportBtn">Als JSON exportieren</button>
+      <label class="btn ghost" style="flex-direction:row;cursor:pointer;color:var(--accent)">JSON importieren
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </label>
+      <button class="btn" type="button" id="csvBtn">Matches als CSV</button>
+      <button class="btn danger" type="button" id="resetBtn">Alles löschen</button>
+    </div>
+  </div>
+</section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+// ---------- Basisdaten ----------
+const ROLES = ["Vanguard", "Duelist", "Strategist"];
+const ROLE_DE = { Vanguard: "Vanguard (Tank)", Duelist: "Duelist (Schaden)", Strategist: "Strategist (Support)" };
+
+const ROLE_TIPS = {
+  Vanguard: [
+    "Du bestimmst das Tempo: Gehe nur nach vorne, wenn dein Team folgen kann.",
+    "Nutze Deckung und Schilde gezielt – nicht dauerhaft, sondern wenn Schaden kommt.",
+    "Spiele um Ecken und kontrolliere den Raum vor dem Objective.",
+    "Beschütze deine Strategists vor flankenden Duelists."
+  ],
+  Duelist: [
+    "Spiele mit deinem Team, nicht allein – Picks zählen nur, wenn das Team nachsetzt.",
+    "Fokussiere Ziele, die bereits Schaden genommen haben oder isoliert stehen.",
+    "Achte auf Positionierung: Hohe Positionen und Flankenwege bringen bessere Winkel.",
+    "Gehe nach dem Kill raus und heile dich, statt den nächsten riskanten Duel zu suchen."
+  ],
+  Strategist: [
+    "Am Leben bleiben ist dein wichtigster Job – ein toter Heiler heilt niemanden.",
+    "Bleibe in Sichtlinie deiner Tanks, aber hinter Deckung.",
+    "Spare deine Ult für Gegner-Ults oder entscheidende Teamfights auf.",
+    "Wenn alle voll sind: Schaden machen hilft dem Team auch."
+  ]
+};
+
+const DEFAULT_HEROES = [
+  // Vanguards
+  { name: "Captain America", role: "Vanguard", tips: ["Aggressiver Dive-Tank: Mit Sprint und Sprüngen in die Backline springen.", "Schild reflektiert Projektile – timen statt dauerhaft halten.", "Gut zusammen mit Dive-Duelists wie Spider-Man oder Black Panther."] },
+  { name: "Doctor Strange", role: "Vanguard", tips: ["Grosses Schild schützt das ganze Team – achte auf die Schild-Energie.", "Portale ermöglichen Rotationen und Überraschungsangriffe.", "Stark als Haupttank bei Konvoi-Maps."] },
+  { name: "Groot", role: "Vanguard", tips: ["Wände platzieren, um Sichtlinien zu blockieren und Gegner zu trennen.", "Defensiv stark auf engen Maps und Chokepoints.", "Wände sind zerstörbar – nicht blind darauf verlassen."] },
+  { name: "Hulk", role: "Vanguard", tips: ["Bruce Banner → Hulk: Wechsel im richtigen Moment, nicht mitten im Feuer.", "Mobil: Springe auf Supporter in der Backline.", "Gamma-Schild schützt Verbündete vor Kontrolleffekten."] },
+  { name: "Magneto", role: "Vanguard", tips: ["Schild auf Verbündete legen, die gerade fokussiert werden.", "Spielt gut auf Distanz als Poke-Tank.", "Ult absorbiert Projektile – sicher hinter Deckung zünden."] },
+  { name: "Peni Parker", role: "Vanguard", tips: ["Netze und Minen machen Bereiche zu deiner Festung.", "Stark beim Verteidigen eines Punktes.", "Nest regelmässig neu aufbauen, wenn es zerstört wird."] },
+  { name: "Thor", role: "Vanguard", tips: ["Thorforce-Ressource managen: erst aufladen, dann reingehen.", "Guter Brawl-Tank mit Selbstheilung über Rüstung.", "Ult früh im Fight kann Gegner auseinanderreissen."] },
+  { name: "Venom", role: "Vanguard", tips: ["Dive-Tank: Mit Schwingen schnell auf isolierte Ziele.", "Mehr Bonus-Gesundheit, je mehr Gegner in Reichweite sind.", "Nicht zu tief tauchen – Rückzugsweg planen."] },
+  { name: "The Thing", role: "Vanguard", tips: ["Robuster Brawler, kann nicht weggeschleudert werden.", "Hält Gegner nah bei sich und schützt Verbündete.", "Gut gegen Dive-Kompositionen."] },
+  { name: "Emma Frost", role: "Vanguard", tips: ["Diamantform für Haltbarkeit im Nahkampf.", "Platzierbare Barriere blockiert Sichtlinien.", "Fähigkeiten können Gegner aus Positionen ziehen."] },
+  // Duelists
+  { name: "Black Panther", role: "Duelist", tips: ["Markieren und dann Spear-Dash für Resets nutzen.", "Ziel: Strategists isolieren und schnell ausschalten.", "Nur reingehen, wenn du einen Ausweg hast."] },
+  { name: "Black Widow", role: "Duelist", tips: ["Sniper auf grosse Distanz – Positionierung ist alles.", "Nach jedem Schuss Position wechseln, wenn du entdeckt wirst.", "Kicks und Mobilität zum Entkommen sparen."] },
+  { name: "Hawkeye", role: "Duelist", tips: ["Pfeile voll aufladen für Maximalschaden.", "Kopftreffer üben – hoher Skill-Cap.", "Hohe Positionen mit Rückzugsweg suchen."] },
+  { name: "Hela", role: "Duelist", tips: ["Hitscan-Damage auf Distanz, Kopftreffer sind stark.", "Stun-Fähigkeit gegen Flanker aufheben.", "Hinter deinen Tanks bleiben, nicht vorne kämpfen."] },
+  { name: "Iron Fist", role: "Duelist", tips: ["Nahkampf-Diver mit Block, der dich schützt.", "Schnell auf Strategists, dann raus.", "Wandlaufen für Mobilität nutzen."] },
+  { name: "Iron Man", role: "Duelist", tips: ["Fliegend Druck von oben machen.", "Achte auf Hitscan-Helden – in der Luft bist du ein Ziel.", "Überladung für Burst-Schaden einsetzen."] },
+  { name: "Magik", role: "Duelist", tips: ["Portale und Teleports für Flanken.", "Darkchild-Form für Burst nutzen.", "Combo-lastig: Abläufe im Training üben."] },
+  { name: "Mister Fantastic", role: "Duelist", tips: ["Bruiser: steckt viel ein und baut Elastizität auf.", "Gegner einfangen und zum Team ziehen.", "Schwer zu töten – aber nicht unsterblich, auf Rückzug achten."] },
+  { name: "Moon Knight", role: "Duelist", tips: ["Ankhs platzieren, damit Angriffe abprallen.", "Stark gegen dicht stehende Gegnergruppen.", "Haken zum Entkommen sparen."] },
+  { name: "Namor", role: "Duelist", tips: ["Türme (Monstro-Spawns) für Raumkontrolle platzieren.", "Gut zum Verteidigen von Punkten.", "Türme neu setzen, sobald sie zerstört sind."] },
+  { name: "Psylocke", role: "Duelist", tips: ["Unsichtbarkeit zum Flanken und Entkommen.", "Burst-Schaden auf Strategists.", "Ult in einer Gegnergruppe zünden."] },
+  { name: "Scarlet Witch", role: "Duelist", tips: ["Dauerschaden über Chaos-Strahl, kein Zielen auf Kopf nötig.", "Mobil über Teleport/Flug.", "Ult braucht Zeit – nicht ungeschützt aufladen."] },
+  { name: "Spider-Man", role: "Duelist", tips: ["Hoher Skill-Cap: Combos (Marke + Zug + Schlag) üben.", "Ständig in Bewegung bleiben, nie stehen bleiben.", "Ziel: Strategists stören und schnell raus."] },
+  { name: "Squirrel Girl", role: "Duelist", tips: ["Abprallende Eichhörnchen-Bomben um Ecken schiessen.", "Spam-Schaden auf Chokepoints.", "Gegner mit Falle festsetzen."] },
+  { name: "Star-Lord", role: "Duelist", tips: ["Sehr mobil – auf Flanken Gegner überraschen.", "Hohe Feuerrate, gut gegen Supports.", "Ult für automatischen Schaden in Gruppen."] },
+  { name: "Storm", role: "Duelist", tips: ["Buffs für Team (Tempo oder Schaden) aktiv wechseln.", "Fliegend Druck machen.", "Teamfights durch Buff-Timing gewinnen."] },
+  { name: "The Punisher", role: "Duelist", tips: ["Konstanter Schaden – gut für Einsteiger.", "Geschütz-Turret auf Chokepoints.", "Rauch und Seil zur Repositionierung."] },
+  { name: "Winter Soldier", role: "Duelist", tips: ["Haken zieht Gegner zu dir.", "Nahe Distanz für maximalen Schaden.", "Ult kann bei Kills zurückgesetzt werden."] },
+  { name: "Wolverine", role: "Duelist", tips: ["Anti-Tank: Je länger der Fight, desto stärker.", "Gegner greifen und wegtragen.", "Schadenreduktion durch Wut nutzen."] },
+  { name: "Human Torch", role: "Duelist", tips: ["Fliegt und erzeugt Feuerfelder.", "Feuerwände trennen Gegner.", "Stark aus der Luft auf Gruppen."] },
+  // Strategists
+  { name: "Adam Warlock", role: "Strategist", tips: ["Seelenbund verteilt Schaden und heilt.", "Ult belebt gefallene Verbündete wieder – Timing ist alles.", "Er kann sich selbst wiederbeleben – trotzdem sicher spielen."] },
+  { name: "Cloak & Dagger", role: "Strategist", tips: ["Dagger heilt, Cloak macht Schaden/Blendung – wechseln je nach Situation.", "Dolch-Sturm-Fläche auf Tanks legen.", "Unsichtbarkeits-Fähigkeit für Team-Engages."] },
+  { name: "Invisible Woman", role: "Strategist", tips: ["Schild und Unsichtbarkeit schützen Verbündete.", "Gegner wegstossen, um Dive abzuwehren.", "Ult macht Team unsichtbar und heilt."] },
+  { name: "Jeff the Land Shark", role: "Strategist", tips: ["Kleine Hitbox – schwer zu treffen.", "Heilt im Bogen, nicht zu nah ran.", "Ult kann Gegner verschlucken – Abgründe beachten."] },
+  { name: "Loki", role: "Strategist", tips: ["Doppelgänger heilen mit – clever platzieren.", "Kann gegnerische Ults kopieren.", "Hoher Skill-Cap, viel Spielwissen nötig."] },
+  { name: "Luna Snow", role: "Strategist", tips: ["Hitscan-Heilung – gutes Zielen lohnt sich.", "Kann zwischen Heilen und Schaden wechseln.", "Ult ist einer der stärksten Heil-Ults im Spiel."] },
+  { name: "Mantis", role: "Strategist", tips: ["Buffs für Schaden und Heilung über Zeit.", "Kopftreffer füllen deine Ressource auf.", "Schlaf-Fähigkeit gegen Diver nutzen."] },
+  { name: "Rocket Raccoon", role: "Strategist", tips: ["Heilkugeln prallen ab – um Ecken heilen.", "Respawn-Bake platzieren für schnelles Zurückkommen.", "Damage-Booster-Ult für Teamfights."] },
+  { name: "Ultron", role: "Strategist", tips: ["Fliegender Heiler mit Drohne auf Verbündeten.", "Kann Schaden auf Distanz machen.", "Mobil, aber Luft = sichtbar."] }
+];
+
+const MISTAKES = [
+  "Zu weit vorne", "Allein geflankt", "Ult verschwendet", "Ohne Team reingegangen",
+  "Fokus auf falsches Ziel", "Keine Deckung genutzt", "Heiler ignoriert", "Objective verlassen",
+  "Schlechtes Zielen", "Zu spät gewechselt (Held)", "Tilt / Frust", "Kommunikation fehlte",
+  "Cooldowns falsch genutzt", "Nicht auf Minimap/Sound geachtet"
+];
+const GOODS = [
+  "Gutes Ult-Timing", "Gute Positionierung", "Viele Picks", "Team gut unterstützt",
+  "Ruhig geblieben", "Gute Calls", "Objective gespielt", "Cooldowns gut genutzt"
+];
+
+const DRILLS = {
+  "Zu weit vorne": "Spiele 3 Matches, in denen du immer mindestens einen Verbündeten in Sichtweite hast. Notiere jeden Tod, bei dem du allein warst.",
+  "Allein geflankt": "Vor jedem Flank kurz prüfen: Ist mein Tank vorne? Kommt mein Team in 5 Sekunden nach? Sonst bleiben.",
+  "Ult verschwendet": "Ult-Regel: Nur einsetzen, wenn mindestens 2 Gegner betroffen sind oder sie eine Gegner-Ult kontert.",
+  "Ohne Team reingegangen": "Zählen vor dem Fight: Sind wir 6 gegen 6? Wenn nicht, warten und neu gruppieren.",
+  "Fokus auf falsches Ziel": "Prioritäten üben: angeschlagene Gegner > Strategists > Duelists > Tanks.",
+  "Keine Deckung genutzt": "Im Practice Range nach jedem Schuss hinter eine Deckung bewegen (Peek-Schiessen-Zurück).",
+  "Heiler ignoriert": "Bei jedem Teamfight einmal den Fokus auf den gegnerischen Strategist ansagen oder selbst setzen.",
+  "Objective verlassen": "Achte bei Overtime und auf Konvoi darauf, dass immer jemand auf dem Objective steht.",
+  "Schlechtes Zielen": "10 Minuten Aim-Warmup im Practice Range: Tracking auf bewegliche Bots, dann Flicks.",
+  "Zu spät gewechselt (Held)": "Wenn ihr den ersten Punkt klar verliert: Komposition des Gegners ansehen und Konter prüfen (Team-Check-Tab).",
+  "Tilt / Frust": "Nach 2 Niederlagen in Folge: 5 Minuten Pause. Atmen, Wasser trinken, Ziel neu lesen.",
+  "Kommunikation fehlte": "Nutze Ping und Voice-Callouts: Gegner-Ults, Fokusziele und Positionen ansagen.",
+  "Cooldowns falsch genutzt": "Schreibe für deinen Main 3 Situationen auf, in denen jede Fähigkeit genutzt werden soll.",
+  "Nicht auf Minimap/Sound geachtet": "Spiele mit Kopfhörern und schaue alle 5–10 Sekunden auf die Teamübersicht."
+};
+
+const DEFAULT_ROUTINE = [
+  "10 Min. Aim-Warmup im Practice Range",
+  "Ein Lernziel für die heutige Session festlegen",
+  "Nach jeder Niederlage einen Fehler notieren",
+  "1 Replay / VOD (5 Min.) anschauen",
+  "Session-Reflexion im Tab Lernziele"
+];
+
+// ---------- Speicher ----------
+const STORE_KEY = "rivals-coach-v1";
+function loadState() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { s = null; }
+  return Object.assign({
+    matches: [], customHeroes: [], heroNotes: {}, goals: [],
+    routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""]
+  }, s || {});
+}
+let state = loadState();
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* privat-modus */ }
+}
+function allHeroes() { return DEFAULT_HEROES.concat(state.customHeroes); }
+function heroRole(name) { const h = allHeroes().find(x => x.name === name); return h ? h.role : "?"; }
+
+// ---------- Hilfsfunktionen ----------
+const $ = sel => document.querySelector(sel);
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function pct(n) { return isFinite(n) ? Math.round(n * 100) + "%" : "–"; }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800); }
+function today() { return new Date().toISOString().slice(0, 10); }
+function kda(m) { return (m.k + m.a) / Math.max(1, m.d); }
+function group(list, keyFn) {
+  const out = {};
+  list.forEach(x => { const k = keyFn(x); (out[k] = out[k] || []).push(x); });
+  return out;
+}
+function summary(list) {
+  const w = list.filter(m => m.result === "W").length;
+  const avg = f => list.length ? list.reduce((s, m) => s + (m[f] || 0), 0) / list.length : 0;
+  return { n: list.length, w, wr: list.length ? w / list.length : NaN, k: avg("k"), d: avg("d"), a: avg("a"),
+    kda: list.length ? list.reduce((s, m) => s + kda(m), 0) / list.length : NaN };
+}
+function mistakeCounts(list) {
+  const c = {};
+  list.forEach(m => (m.mistakes || []).forEach(x => { c[x] = (c[x] || 0) + 1; }));
+  return Object.entries(c).sort((a, b) => b[1] - a[1]);
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll("nav.tabs button").forEach(btn => {
+  btn.addEventListener("click", () => showTab(btn.dataset.tab));
+});
+function showTab(name) {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  document.querySelectorAll("main > section").forEach(s => { s.hidden = s.id !== "tab-" + name; });
+  try { localStorage.setItem(STORE_KEY + "-tab", name); } catch (e) {}
+  render();
+}
+
+// ---------- Theme ----------
+$("#themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme
+    || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem(STORE_KEY + "-theme", next); } catch (e) {}
+});
+try { const t = localStorage.getItem(STORE_KEY + "-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+// ---------- Dashboard ----------
+function renderDashboard() {
+  const ms = state.matches;
+  const s = summary(ms);
+  const last10 = summary(ms.slice(-10));
+  let streak = 0, streakType = "";
+  for (let i = ms.length - 1; i >= 0; i--) {
+    if (!streakType) streakType = ms[i].result;
+    if (ms[i].result !== streakType) break;
+    streak++;
+  }
+  $("#kpis").innerHTML = [
+    ["Matches", s.n],
+    ["Winrate gesamt", pct(s.wr)],
+    ["Winrate letzte 10", pct(last10.wr)],
+    ["Ø KDA", isFinite(s.kda) ? s.kda.toFixed(2) : "–"],
+    ["Ø Tode", s.n ? s.d.toFixed(1) : "–"],
+    ["Serie", streak ? `${streak} ${streakType === "W" ? "Siege" : "Niederl."}` : "–"]
+  ].map(([l, v]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
+
+  // Trend
+  const recent = ms.slice(-30);
+  if (recent.length < 2) {
+    $("#trend").innerHTML = `<p class="muted">Logge mindestens 2 Matches, um einen Verlauf zu sehen.</p>`;
+  } else {
+    const pts = recent.map((m, i) => {
+      const win = recent.slice(Math.max(0, i - 4), i + 1);
+      return win.filter(x => x.result === "W").length / win.length;
+    });
+    const W = 500, H = 160, P = 24;
+    const x = i => P + i * (W - 2 * P) / (pts.length - 1);
+    const y = v => H - P - v * (H - 2 * P);
+    const path = pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const dots = recent.map((m, i) => `<circle cx="${x(i)}" cy="${y(pts[i])}" r="3" fill="var(--${m.result === "W" ? "win" : "loss"})"><title>${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}</title></circle>`).join("");
+    $("#trend").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Winrate-Verlauf">
+      <line x1="${P}" x2="${W - P}" y1="${y(.5)}" y2="${y(.5)}" stroke="var(--border)" stroke-dasharray="4 4"/>
+      <text x="2" y="${y(1) + 4}">100%</text><text x="2" y="${y(.5) + 4}">50%</text><text x="2" y="${y(0) + 4}">0%</text>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>${dots}</svg>`;
+  }
+
+  // Rolle
+  const byRole = group(ms, m => heroRole(m.hero));
+  $("#byRole").innerHTML = ROLES.map(r => {
+    const rs = summary(byRole[r] || []);
+    return `<div style="margin-bottom:10px"><div class="row" style="justify-content:space-between">
+      <b class="role-${r}">${ROLE_DE[r]}</b><span class="muted">${rs.n} Matches · ${pct(rs.wr)}</span></div>
+      <div class="bar"><span style="width:${rs.n ? rs.wr * 100 : 0}%"></span></div></div>`;
+  }).join("");
+
+  // Helden
+  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
+  $("#byHero").innerHTML = byHero.length ? `<table><thead><tr><th>Held</th><th>Matches</th><th>Winrate</th><th>Ø K/D/A</th></tr></thead><tbody>
+    ${byHero.map(([h, s]) => `<tr><td class="role-${heroRole(h)}">${esc(h)}</td><td>${s.n}</td><td>${pct(s.wr)}</td><td>${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}</td></tr>`).join("")}
+    </tbody></table>` : `<p class="muted">Noch keine Matches geloggt.</p>`;
+
+  // Fehler
+  const mc = mistakeCounts(ms.slice(-20));
+  const max = mc.length ? mc[0][1] : 1;
+  $("#topMistakes").innerHTML = mc.length ? mc.slice(0, 6).map(([m, c]) => `<div style="margin-bottom:8px">
+      <div class="row" style="justify-content:space-between"><span>${esc(m)}</span><span class="muted">${c}×</span></div>
+      <div class="bar"><span style="width:${c / max * 100}%;background:var(--loss)"></span></div></div>`).join("")
+    + `<p class="muted" style="font-size:.8rem">Basis: letzte 20 Matches</p>`
+    : `<p class="muted">Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster.</p>`;
+
+  $("#insights").innerHTML = insights().map(i => `<div class="feedback ${i[0]}">${i[1]}</div>`).join("");
+}
+
+function insights() {
+  const ms = state.matches, out = [];
+  if (ms.length < 5) {
+    out.push(["info", `Logge noch ${5 - ms.length} Match(es), damit der Coach Muster erkennen kann.`]);
+    return out;
+  }
+  const s = summary(ms), l10 = summary(ms.slice(-10));
+  if (l10.wr > s.wr + 0.1) out.push(["good", `Du bist im Aufwind: Die letzten 10 Matches liegen ${pct(l10.wr - s.wr)} über deinem Schnitt. Weiter so!`]);
+  if (l10.wr < s.wr - 0.1) out.push(["bad", `Deine letzten 10 Matches liegen unter deinem Schnitt. Vielleicht eine Pause oder ein neues Lernziel?`]);
+  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(x => x[1].n >= 3);
+  if (byHero.length) {
+    const best = byHero.slice().sort((a, b) => b[1].wr - a[1].wr)[0];
+    const worst = byHero.slice().sort((a, b) => a[1].wr - b[1].wr)[0];
+    out.push(["good", `Bester Held: <b>${esc(best[0])}</b> mit ${pct(best[1].wr)} Winrate (${best[1].n} Matches).`]);
+    if (worst[0] !== best[0] && worst[1].wr < 0.45) out.push(["bad", `<b>${esc(worst[0])}</b> läuft mit ${pct(worst[1].wr)} schwach. Übe den Helden in Quick Match, bevor du ihn in Competitive spielst.`]);
+  }
+  const heroCount = new Set(ms.slice(-20).map(m => m.hero)).size;
+  if (heroCount > 8) out.push(["info", `Du hast in den letzten 20 Matches ${heroCount} verschiedene Helden gespielt. Ein kleiner Hero-Pool (2–3 pro Rolle) bringt schneller Fortschritt.`]);
+  const deathsW = summary(ms.filter(m => m.result === "W")).d, deathsL = summary(ms.filter(m => m.result === "L")).d;
+  if (deathsL - deathsW > 1.5) out.push(["info", `In Niederlagen stirbst du im Schnitt ${(deathsL - deathsW).toFixed(1)}× öfter als in Siegen. Weniger sterben ist dein grösster Hebel.`]);
+  const tilt = ms.slice(-20).filter(m => (m.mistakes || []).includes("Tilt / Frust")).length;
+  if (tilt >= 3) out.push(["bad", `Tilt taucht ${tilt}× in den letzten 20 Matches auf. Setze dir ein Limit, z.B. Pause nach 2 Niederlagen in Folge.`]);
+  const lowMood = ms.slice(-10).filter(m => m.mood <= 2).length;
+  if (lowMood >= 5) out.push(["info", "Viele deiner letzten Matches hast du als frustrierend bewertet. Spass ist wichtig – spiele zwischendurch einfach mal locker."]);
+  const top = mistakeCounts(ms.slice(-20))[0];
+  if (top) out.push(["info", `Dein häufigster Fehler ist „${esc(top[0])}“. Übung dazu: ${esc(DRILLS[top[0]] || "Achte im nächsten Match bewusst darauf.")}`]);
+  return out;
+}
+
+// ---------- Match loggen ----------
+function chipGroup(el, list, name) {
+  el.innerHTML = list.map(x => `<span class="chip" data-v="${esc(x)}" role="checkbox" aria-checked="false" tabindex="0">${esc(x)}</span>`).join("");
+  el.querySelectorAll(".chip").forEach(c => {
+    const toggle = () => { c.classList.toggle("on"); c.setAttribute("aria-checked", c.classList.contains("on")); };
+    c.addEventListener("click", toggle);
+    c.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); } });
+  });
+}
+function heroOptions(selected) {
+  return `<option value="">– Held wählen –</option>` + ROLES.map(r =>
+    `<optgroup label="${ROLE_DE[r]}">${allHeroes().filter(h => h.role === r).sort((a, b) => a.name.localeCompare(b.name))
+      .map(h => `<option ${h.name === selected ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</optgroup>`).join("");
+}
+function renderLog() {
+  const sel = $("#heroSelect"), prev = sel.value || (state.matches.length ? state.matches[state.matches.length - 1].hero : "");
+  sel.innerHTML = heroOptions(prev);
+  const rows = state.matches.slice().reverse();
+  $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Modus</th><th>Ergebnis</th><th>K/D/A</th><th>Fehler</th><th>Notiz</th><th></th></tr></thead><tbody>
+    ${rows.map(m => `<tr><td>${esc(m.date)}</td><td class="role-${heroRole(m.hero)}">${esc(m.hero)}</td><td>${esc(m.mode)}<br><span class="muted">${esc(m.type)}</span></td>
+      <td class="${m.result === "W" ? "win" : "loss"}">${m.result === "W" ? "Sieg" : "Niederlage"}</td>
+      <td>${m.k}/${m.d}/${m.a}</td><td>${esc((m.mistakes || []).join(", "))}</td><td>${esc(m.notes)}</td>
+      <td><button class="btn danger small" data-del="${m.id}" type="button">✕</button></td></tr>`).join("")}
+    </tbody></table>` : `<p class="muted">Noch keine Matches.</p>`;
+  $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+    if (!confirm("Match löschen?")) return;
+    state.matches = state.matches.filter(m => m.id !== b.dataset.del); save(); render();
+  }));
+}
+$("#matchForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const num = k => { const v = f.get(k); return v === "" || v === null ? null : Number(v); };
+  const m = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date: today(), hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), result: f.get("result"),
+    k: num("k") || 0, d: num("d") || 0, a: num("a") || 0, dmg: num("dmg"), heal: num("heal"), block: num("block"),
+    mood: num("mood"), notes: f.get("notes").trim(), next: f.get("next").trim(),
+    mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
+    goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v)
+  };
+  if (!m.hero) { toast("Bitte einen Helden wählen"); return; }
+  state.matches.push(m); save();
+  e.target.reset();
+  document.querySelectorAll("#matchForm .chip.on").forEach(c => { c.classList.remove("on"); c.setAttribute("aria-checked", "false"); });
+  render();
+  toast(m.next ? `Gespeichert! Nächstes Match: ${m.next}` : "Match gespeichert!");
+});
+
+// ---------- Helden ----------
+let roleFilter = "";
+function renderHeroes() {
+  $("#roleFilter").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${roleFilter === r ? "on" : ""}" data-r="${r}">${r ? ROLE_DE[r] : "Alle"}</span>`).join("");
+  $("#roleFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { roleFilter = c.dataset.r; renderHeroes(); }));
+  const q = $("#heroSearch").value.trim().toLowerCase();
+  $("#roleTips").innerHTML = roleFilter
+    ? `<h2 class="role-${roleFilter}">Grundregeln: ${ROLE_DE[roleFilter]}</h2><ul>${ROLE_TIPS[roleFilter].map(t => `<li>${esc(t)}</li>`).join("")}</ul>`
+    : `<h2>Grundregeln pro Rolle</h2><div class="grid-2">${ROLES.map(r => `<div><h3 class="role-${r}">${ROLE_DE[r]}</h3><ul>${ROLE_TIPS[r].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>`;
+  const stats = group(state.matches, m => m.hero);
+  const list = allHeroes().filter(h => (!roleFilter || h.role === roleFilter) && h.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  $("#heroCards").innerHTML = list.map(h => {
+    const s = summary(stats[h.name] || []);
+    const custom = state.customHeroes.includes(h);
+    return `<div class="card hero-card ${h.role}">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(h.name)}</h2><span class="role-${h.role}">${h.role}</span></div>
+      <p class="muted" style="margin:4px 0">${s.n ? `${s.n} Matches · ${pct(s.wr)} Winrate · Ø KDA ${s.kda.toFixed(2)}` : "Noch nicht gespielt"}</p>
+      <ul>${h.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+      <label style="margin-top:8px">Meine Notizen <textarea data-note="${esc(h.name)}" placeholder="Combos, Matchups, Erkenntnisse…">${esc(state.heroNotes[h.name] || "")}</textarea></label>
+      ${custom ? `<button class="btn danger small" type="button" data-rmhero="${esc(h.name)}" style="margin-top:6px">Entfernen</button>` : ""}
+    </div>`;
+  }).join("") || `<p class="muted">Kein Held gefunden.</p>`;
+  $("#heroCards").querySelectorAll("[data-note]").forEach(t => t.addEventListener("change", () => {
+    state.heroNotes[t.dataset.note] = t.value; save(); toast("Notiz gespeichert");
+  }));
+  $("#heroCards").querySelectorAll("[data-rmhero]").forEach(b => b.addEventListener("click", () => {
+    state.customHeroes = state.customHeroes.filter(h => h.name !== b.dataset.rmhero); save(); render();
+  }));
+}
+$("#heroSearch").addEventListener("input", renderHeroes);
+$("#heroForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const name = f.get("name").trim();
+  if (allHeroes().some(h => h.name.toLowerCase() === name.toLowerCase())) { toast("Held existiert bereits"); return; }
+  state.customHeroes.push({ name, role: f.get("role"), tips: f.get("tips").split("\n").map(s => s.trim()).filter(Boolean) });
+  save(); e.target.reset(); render(); toast(`${name} hinzugefügt`);
+});
+
+// ---------- Team-Check ----------
+function renderTeam() {
+  $("#teamSlots").innerHTML = state.team.map((h, i) => `<label>Slot ${i + 1}<select data-slot="${i}">${heroOptions(h)}</select></label>`).join("");
+  $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => {
+    state.team[+s.dataset.slot] = s.value; save(); renderTeam();
+  }));
+  const picked = state.team.filter(Boolean);
+  const cnt = { Vanguard: 0, Duelist: 0, Strategist: 0 };
+  picked.forEach(h => { const r = heroRole(h); if (cnt[r] !== undefined) cnt[r]++; });
+  const fb = [];
+  if (!picked.length) { $("#teamFeedback").innerHTML = `<p class="muted">Wähle Helden aus.</p>`; return; }
+  fb.push(["info", `Verteilung: ${cnt.Vanguard} Vanguard · ${cnt.Duelist} Duelist · ${cnt.Strategist} Strategist`]);
+  const dup = picked.filter((h, i) => picked.indexOf(h) !== i);
+  if (dup.length) fb.push(["bad", `Doppelte Helden: ${esc([...new Set(dup)].join(", "))} – jeder Held kann pro Team nur einmal gewählt werden.`]);
+  if (cnt.Strategist === 0) fb.push(["bad", "Kein Strategist! Ohne Heilung verliert ihr fast jeden längeren Teamfight."]);
+  else if (cnt.Strategist === 1 && picked.length >= 5) fb.push(["bad", "Nur ein Strategist – der wird schnell zum Fokusziel. Zwei sind meistens stabiler."]);
+  if (cnt.Vanguard === 0) fb.push(["bad", "Kein Vanguard – niemand kann Raum schaffen oder Schaden abfangen."]);
+  if (cnt.Duelist >= 4) fb.push(["bad", `${cnt.Duelist} Duelists sind sehr riskant. Überlege, ob jemand auf Vanguard oder Strategist wechseln kann.`]);
+  if (picked.length === 6 && cnt.Vanguard === 2 && cnt.Duelist === 2 && cnt.Strategist === 2) fb.push(["good", "Klassische 2-2-2-Aufteilung – solide Basis für fast jede Map."]);
+  else if (picked.length === 6 && cnt.Strategist >= 2 && cnt.Vanguard >= 1) fb.push(["good", "Spielbare Komposition. Achtet darauf, dass Tanks und Supports zusammenbleiben."]);
+  const dive = ["Captain America", "Venom", "Spider-Man", "Black Panther", "Psylocke", "Magik", "Iron Fist", "Wolverine"];
+  const poke = ["Hawkeye", "Hela", "Black Widow", "Magneto", "Doctor Strange", "The Punisher"];
+  const nDive = picked.filter(h => dive.includes(h)).length, nPoke = picked.filter(h => poke.includes(h)).length;
+  if (nDive >= 3) fb.push(["info", "Dive-Komposition: Gemeinsam schnell auf ein Ziel (meist die Strategists) – Timing absprechen!"]);
+  if (nPoke >= 3) fb.push(["info", "Poke-Komposition: Auf Distanz bleiben, hohe Positionen halten und Gegner langsam zermürben."]);
+  $("#teamFeedback").innerHTML = fb.map(i => `<div class="feedback ${i[0]}">${i[1]}</div>`).join("");
+}
+$("#teamClear").addEventListener("click", () => { state.team = ["", "", "", "", "", ""]; save(); renderTeam(); });
+
+// ---------- Training ----------
+function streakDays() {
+  let n = 0;
+  const d = new Date();
+  // Heute zählt nur, wenn schon etwas erledigt ist
+  if (!(state.routineDone[today()] || []).length) d.setDate(d.getDate() - 1);
+  for (;;) {
+    const key = d.toISOString().slice(0, 10);
+    if ((state.routineDone[key] || []).length) { n++; d.setDate(d.getDate() - 1); } else break;
+  }
+  return n;
+}
+function renderTraining() {
+  const done = state.routineDone[today()] || [];
+  $("#routine").innerHTML = state.routine.map((r, i) => `<div class="check ${done.includes(r) ? "done" : ""}">
+      <input type="checkbox" id="rt${i}" ${done.includes(r) ? "checked" : ""}>
+      <span style="flex:1"><label for="rt${i}" style="color:inherit;font-size:inherit;display:inline">${esc(r)}</label></span>
+      <button class="btn danger small" type="button" data-rmr="${i}" aria-label="Entfernen">✕</button></div>`).join("");
+  $("#routine").querySelectorAll("input[type=checkbox]").forEach((c, i) => c.addEventListener("change", () => {
+    const item = state.routine[i];
+    const d = new Set(state.routineDone[today()] || []);
+    c.checked ? d.add(item) : d.delete(item);
+    state.routineDone[today()] = [...d]; save(); renderTraining();
+  }));
+  $("#routine").querySelectorAll("[data-rmr]").forEach(b => b.addEventListener("click", () => {
+    state.routine.splice(+b.dataset.rmr, 1); save(); renderTraining();
+  }));
+  const s = streakDays();
+  $("#streakInfo").textContent = `Heute erledigt: ${done.filter(d => state.routine.includes(d)).length}/${state.routine.length} · Serie: ${s} Tag${s === 1 ? "" : "e"} 🔥`;
+  const top = mistakeCounts(state.matches.slice(-20)).slice(0, 3);
+  $("#drills").innerHTML = top.length
+    ? top.map(([m, c]) => `<div class="feedback info"><b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}</div>`).join("")
+    : `<p class="muted">Sobald du Fehler in Matches markierst, erscheinen hier passende Übungen.</p>`;
+}
+$("#routineAdd").addEventListener("click", () => {
+  const v = $("#routineNew").value.trim();
+  if (!v) return;
+  state.routine.push(v); $("#routineNew").value = ""; save(); renderTraining();
+});
+let timer = null, timerEnd = 0;
+function fmt(sec) { return `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`; }
+$("#timerMin").addEventListener("change", () => { if (!timer) $("#timerOut").textContent = fmt($("#timerMin").value * 60); });
+$("#timerBtn").addEventListener("click", () => {
+  if (timer) { clearInterval(timer); timer = null; $("#timerBtn").textContent = "Start"; $("#timerOut").textContent = fmt($("#timerMin").value * 60); return; }
+  timerEnd = Date.now() + $("#timerMin").value * 60000;
+  $("#timerBtn").textContent = "Stopp";
+  timer = setInterval(() => {
+    const left = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+    $("#timerOut").textContent = fmt(left);
+    if (!left) { clearInterval(timer); timer = null; $("#timerBtn").textContent = "Start"; toast("Aufwärmen fertig – ab ins Match! 🎯"); }
+  }, 250);
+});
+
+// ---------- Lernziele ----------
+function renderGoals() {
+  $("#goalList").innerHTML = state.goals.length ? state.goals.slice().reverse().map(g => `<div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">${g.done ? "✅ " : "🎯 "}${esc(g.title)}</h2>
+        <span class="muted">${g.due ? "bis " + esc(g.due) : ""}</span></div>
+      ${g.metric ? `<p class="muted" style="margin:4px 0">Messbar durch: ${esc(g.metric)}</p>` : ""}
+      <div class="grid-2">
+        <label>Durchführen – was übe ich konkret? <textarea data-g="${g.id}" data-f="plan">${esc(g.plan || "")}</textarea></label>
+        <label>Reflektieren – was hat funktioniert, was nicht? <textarea data-g="${g.id}" data-f="reflection">${esc(g.reflection || "")}</textarea></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn small ${g.done ? "ghost" : ""}" type="button" data-done="${g.id}">${g.done ? "Wieder öffnen" : "Als erreicht markieren"}</button>
+        <button class="btn danger small" type="button" data-rmg="${g.id}">Löschen</button>
+      </div></div>`).join("")
+    : `<div class="card"><p class="muted">Noch keine Ziele. Starte mit einem kleinen, konkreten Ziel für diese Woche.</p></div>`;
+  $("#goalList").querySelectorAll("textarea[data-g]").forEach(t => t.addEventListener("change", () => {
+    const g = state.goals.find(x => x.id === t.dataset.g); g[t.dataset.f] = t.value; save(); toast("Gespeichert");
+  }));
+  $("#goalList").querySelectorAll("[data-done]").forEach(b => b.addEventListener("click", () => {
+    const g = state.goals.find(x => x.id === b.dataset.done); g.done = !g.done; save(); renderGoals();
+    if (g.done) toast("Ziel erreicht! 🎉");
+  }));
+  $("#goalList").querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", () => {
+    if (!confirm("Ziel löschen?")) return;
+    state.goals = state.goals.filter(x => x.id !== b.dataset.rmg); save(); renderGoals();
+  }));
+}
+$("#goalForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  state.goals.push({ id: Date.now().toString(36), title: f.get("title").trim(), metric: f.get("metric").trim(), due: f.get("due"), done: false });
+  save(); e.target.reset(); renderGoals();
+});
+
+// ---------- KI-Coach ----------
+function buildPrompt() {
+  const ms = state.matches, s = summary(ms), focus = $("#aiFocus").value;
+  const heroes = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
+  const lines = [
+    "Du bist ein erfahrener Marvel-Rivals-Coach. Analysiere meine Statistik und gib mir konkretes, umsetzbares Feedback auf Deutsch.",
+    "Wenn du dir bei aktuellen Helden-Fähigkeiten oder Balancing nicht sicher bist, sag das ehrlich.",
+    "",
+    `## Meine Statistik (${s.n} Matches)`,
+    `- Winrate: ${pct(s.wr)} | letzte 10: ${pct(summary(ms.slice(-10)).wr)}`,
+    `- Ø K/D/A: ${s.n ? `${s.k.toFixed(1)}/${s.d.toFixed(1)}/${s.a.toFixed(1)}` : "–"}`,
+    "",
+    "## Helden",
+    ...heroes.slice(0, 8).map(([h, x]) => `- ${h} (${heroRole(h)}): ${x.n} Matches, ${pct(x.wr)} WR, Ø KDA ${x.kda.toFixed(2)}`),
+    "",
+    "## Häufigste Fehler (letzte 20 Matches)",
+    ...(mistakeCounts(ms.slice(-20)).slice(0, 6).map(([m, c]) => `- ${m}: ${c}×`)),
+  ];
+  const notes = ms.slice(-5).filter(m => m.notes).map(m => `- ${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"}: ${m.notes}`);
+  if (notes.length) lines.push("", "## Notizen aus den letzten Matches", ...notes);
+  const openGoals = state.goals.filter(g => !g.done);
+  if (openGoals.length) lines.push("", "## Meine aktuellen Lernziele", ...openGoals.map(g => `- ${g.title}${g.metric ? ` (${g.metric})` : ""}`));
+  lines.push("", "## Meine Frage");
+  const top = heroes[0] ? heroes[0][0] : "meinem Main";
+  lines.push({
+    allgemein: "Was sind die 3 wichtigsten Dinge, an denen ich arbeiten sollte? Begründe kurz anhand meiner Daten.",
+    held: `Wie kann ich mit ${top} besser werden? Nenne Positionierung, Fähigkeiten-Timing und typische Fehler.`,
+    fehler: "Erkläre, warum meine häufigsten Fehler passieren, und gib zu jedem eine konkrete Übung.",
+    plan: "Erstelle mir einen 7-Tage-Trainingsplan mit täglich ca. 60 Minuten, der meine Schwächen gezielt angeht."
+  }[focus]);
+  return lines.join("\n");
+}
+function renderAI() { $("#aiPrompt").textContent = buildPrompt(); }
+$("#aiFocus").addEventListener("change", renderAI);
+$("#aiCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(buildPrompt()); toast("Prompt kopiert!"); }
+  catch (e) { toast("Kopieren nicht möglich – bitte manuell markieren"); }
+});
+
+// ---------- Daten ----------
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$("#exportBtn").addEventListener("click", () => download(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"));
+$("#csvBtn").addEventListener("click", () => {
+  const cols = ["date", "hero", "mode", "type", "result", "k", "d", "a", "dmg", "heal", "block", "mood", "mistakes", "goods", "notes", "next"];
+  const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
+  download(`rivals-matches-${today()}.csv`, [cols.join(","), ...state.matches.map(m => cols.map(c => cell(m[c])).join(","))].join("\n"), "text/csv");
+});
+$("#importFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data.matches)) throw new Error("Ungültige Datei");
+    if (!confirm(`${data.matches.length} Matches importieren? Aktuelle Daten werden ersetzt.`)) return;
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    state = loadState(); render(); toast("Import erfolgreich");
+  } catch (err) { toast("Import fehlgeschlagen: " + err.message); }
+  e.target.value = "";
+});
+$("#resetBtn").addEventListener("click", () => {
+  if (!confirm("Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden.")) return;
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  state = loadState(); render(); toast("Alle Daten gelöscht");
+});
+
+// ---------- Render ----------
+chipGroup($("#mistakeChips"), MISTAKES);
+chipGroup($("#goodChips"), GOODS);
+function render() {
+  const visible = document.querySelector("main > section:not([hidden])").id.replace("tab-", "");
+  ({ dashboard: renderDashboard, log: renderLog, heroes: renderHeroes, team: renderTeam,
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: () => {} })[visible]();
+}
+let startTab = "dashboard";
+try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "dashboard"; } catch (e) {}
+showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");
+</script>
+</body>
+</html>
