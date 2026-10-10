@@ -16,11 +16,13 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 | Bereich | Wofür |
 |---|---|
-| **Dashboard** | Winrate, KDA, Verlauf, Statistik pro Held und Rolle sowie automatische Coach-Hinweise |
-| **Match loggen** | Ergebnis, K/D/A, Schaden/Heilung, Fehler und Stärken pro Match festhalten |
-| **Helden-Guide** | Grundregeln für Vanguard, Duelist und Strategist, Tipps zu jedem Helden und eigene Notizen |
-| **Team-Check** | Rollenverteilung deines Teams prüfen (z.B. 2-2-2) und Hinweise zu Dive- oder Poke-Kompositionen |
-| **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern, Aufwärm-Timer |
+| **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
+| **Match loggen** | Ergebnis, K/D/A, Map, Gegnerteam, Mitspieler, „Wer hat mir Probleme gemacht?“, Fehler und Stärken |
+| **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
+| **Team & Counter** | Gegnerteam eintragen und passende Counter-Picks bekommen – aus Faustregeln und deinen eigenen Matchup-Daten; dazu Check der eigenen Rollenverteilung |
+| **Counter-Training** | Quiz zum Lernen von Counters; Gegner, gegen die du oft spielst oder die du falsch beantwortest, kommen häufiger |
+| **Helden-Guide** | Grundregeln pro Rolle, Tipps, Spielstil-Tags, „Stark gegen / Gekontert von“, persönliche Matchup-Werte und Notizen |
+| **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
 | **Daten** | Export/Import als JSON, Export der Matches als CSV |
@@ -42,8 +44,16 @@ graph LR
 1. **Planen:** Lege im Tab *Lernziele* ein kleines, messbares Ziel fest – z.B. „Diese Woche als Strategist im Schnitt höchstens 5 Tode“.
 2. **Durchführen:** Wärme dich mit dem Timer auf und spiele mit einem kleinen Hero-Pool (2–3 Helden pro Rolle).
 3. **Loggen:** Trage jedes Match direkt danach ein. Ehrlich markierte Fehler sind der wertvollste Teil.
-4. **Reflektieren:** Schau dir nach jeder Session das Dashboard an. Der Coach erkennt Muster wie
-   „In Niederlagen stirbst du deutlich öfter“ und schlägt passende Übungen vor.
+4. **Reflektieren:** Schau dir nach jeder Session das Dashboard und die Auswertung an. Der Coach erkennt Muster wie
+   „In Niederlagen stirbst du deutlich öfter“ oder „Gegen Spider-Man gewinnst du nur 30 %“ und schlägt passende Übungen und Counter vor.
+
+## Counter lernen
+
+Counter beruhen in der App auf **Spielstil-Tags** (z.B. *Dive*, *Flieger*, *Hitscan*, *AntiDive*) und einfachen
+Faustregeln – etwa „Flieger werden von Hitscan-Helden gekontert“ oder „Diver werden von Anti-Dive-Fähigkeiten bestraft“.
+So lernst du nicht nur auswendig, *wer* wen kontert, sondern verstehst, *warum*. Je mehr Matches du mit Gegnerteam
+loggst, desto stärker fliessen deine eigenen Erfahrungen in die Vorschläge ein. Da sich das Balancing mit jeder Season
+ändert, kannst du die Tags im Helden-Guide jederzeit anpassen.
 
 ## KI als Coach nutzen
 
