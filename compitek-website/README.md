@@ -38,6 +38,7 @@ Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepa
 - **Formular-Auswahl** (Häkchen): Wer Punkte ändert, muss sie in `kontakt.html` *und* in den Listen oben in `kontakt.php` anpassen (gleicher `value`).
 - **Preise:** in `index.html` (Abschnitte „Windows 11“ und „Preise“) und in `windows-11.html` (Angebotskarte).
 - **Hinweis-Leiste** (z. B. „Urlaub bis …“): in `index.html` beim Element `<div class="notice" … hidden>` das Wort `hidden` entfernen und den Text anpassen.
+- **Google-Bewertungen:** in `index.html` im Abschnitt „Bewertungen“. Dort steht eine Vorlage im Kommentar: je Bewertung ein Listeneintrag, nur Vorname und Initial, den Hinweistext darunter stehen lassen.
 - **Foto für „Über mich“:** Bild als `assets/img/karl-stockenhofen.jpg` speichern (Hochformat, ca. 800 × 1000 px) und in `index.html` die vorbereitete Zeile im Abschnitt „Über mich“ einkommentieren.
 - **Kopf- und Fußbereich** stehen in jeder HTML-Datei. Bei Änderungen dort bitte alle Dateien anpassen.
 

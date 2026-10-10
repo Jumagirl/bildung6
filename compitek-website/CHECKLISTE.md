@@ -18,10 +18,10 @@ Impressum und AGB sind von der alten Seite übernommen (Name jetzt „Karl-Walte
 - [ ] **AGB Nr. 6 (Zahlung):** Der „Diskontsatz der Deutschen Bundesbank“ existiert seit 1999 nicht mehr (heute: Basiszinssatz). Auch die Höhe der Verzugszinsen gegenüber Privatkunden ist gesetzlich geregelt.
 - [ ] **AGB Nr. 6 und 11 vs. Preisseite:** In den AGB stehen Scheck und Zahlung 14 Tage nach Rechnung, auf der Preisseite „nur Vorabüberweisung oder Barzahlung“. Das sollte zusammenpassen.
 - [ ] **AGB Nr. 7, 10 und 12:** Pauschaler Schadenersatz (25 %), Haftungsbegrenzung auf den Verkaufswert sowie Erfüllungsort/Gerichtsstand sind gegenüber Privatkunden oft nur eingeschränkt zulässig.
-- [ ] **Schreibweise:** In den alten AGB stand „CompITek“. Das habe ich zu „CompiTek“ vereinheitlicht.
 
 ## Sollte geklärt werden
 
+- [ ] **Google-Bewertungen:** Der Abschnitt „Bewertungen“ auf der Startseite verlinkt bisher nur auf Google. Für echte Zitate bitte Screenshots der Google-Rezensionen schicken. Übernommen werden nur Vorname und Initial, dazu der vorgeschriebene Hinweis, dass die Bewertungen nicht auf Echtheit geprüft werden (§ 5b UWG).
 - [ ] **Foto für „Über mich“:** Ein freundliches Foto von Karl, gern in der Werkstatt, wirkt viel persönlicher als die Initialen „KS“.
 - [ ] **Logo:** Für die neue Seite gibt es ein neues Zeichen: ein „C“ im Regenbogen-Verlauf, als Anklang an die bunte alte Seite, mit einem grünen „Läuft“-Punkt. Passt das, oder soll ein vorhandenes Logo verwendet werden?
 - [ ] **Faxnummer:** Die Gemeinde Weyhe listet ein Fax (04203 7456145). Noch aktuell und gewünscht?
