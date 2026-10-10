@@ -849,7 +849,7 @@ const ROLE_TIPS = {
 // Spielstil-Tags: Grundlage für die Counter-Faustregeln
 const TAGS = {
   Dive: "Springt schnell in die gegnerische Backline",
-  Flieger: "Kämpft viel aus der Luft",
+  Flyer: "Kämpft viel aus der Luft",
   Hitscan: "Trifft sofort ohne Projektilflug",
   Sniper: "Hoher Schaden auf grosse Distanz",
   Poke: "Macht Druck aus mittlerer bis grosser Distanz",
@@ -859,12 +859,12 @@ const TAGS = {
   Splash: "Flächenschaden, trifft auch um Ecken",
   AntiDive: "Stuns, Fallen, Schlaf oder Wegstossen gegen Diver",
   AntiTank: "Besonders stark gegen viel Lebenspunkte",
-  AntiFlyer: "Trifft Flieger zuverlässig (Zielhilfe, Hitscan)",
+  AntiFlyer: "Trifft Flyer zuverlässig (Zielhilfe, Hitscan)",
   Immobil: "Wenig Fluchtmöglichkeiten"
 };
 
 const COUNTER_RULES = [
-  { target: "Flieger", by: ["Hitscan", "AntiFlyer"], why: "Flieger haben in der Luft keine Deckung – Hitscan-Waffen und Zielhilfe treffen sie zuverlässig." },
+  { target: "Flyer", by: ["Hitscan", "AntiFlyer"], why: "Flyer haben in der Luft keine Deckung – Hitscan-Waffen und Zielhilfe treffen sie zuverlässig." },
   { target: "Dive", by: ["AntiDive"], why: "Diver brauchen Zeit am Ziel – Stuns, Schlaf, Fallen und Wegstossen bestrafen das Reinspringen." },
   { target: "Sniper", by: ["Dive"], why: "Sniper sind im Nahkampf schwach – wer schnell bei ihnen ist, gewinnt das Duell." },
   { target: "Poke", by: ["Dive", "Schild"], why: "Poke braucht freie Sicht – Schilde blockieren den Schaden, Diver zwingen in den Nahkampf." },
@@ -888,7 +888,7 @@ const DEFAULT_HEROES = [
   { name: "Venom", role: "Vanguard", tags: ["Dive", "Brawl"], tips: ["Dive-Tank: Mit Schwingen schnell auf isolierte Ziele.", "Mehr Bonus-Gesundheit, je mehr Gegner in Reichweite sind.", "Nicht zu tief tauchen – Rückzugsweg planen."] },
   { name: "The Thing", role: "Vanguard", tags: ["Brawl", "AntiDive"], tips: ["Robuster Brawler, kann nicht weggeschleudert werden.", "Hält Gegner nah bei sich und schützt Verbündete.", "Gut gegen Dive-Kompositionen."] },
   { name: "Emma Frost", role: "Vanguard", tags: ["Brawl", "Schild"], tips: ["Diamantform für Haltbarkeit im Nahkampf.", "Platzierbare Barriere blockiert Sichtlinien.", "Fähigkeiten können Gegner aus Positionen ziehen."] },
-  { name: "Angela", role: "Vanguard", tags: ["Flieger", "Dive"], tips: ["Fliegender Dive-Tank: in der Luft mit dem Speer, am Boden mit zwei Äxten.", "Mit dem geladenen Speer-Angriff Gegner hochschleudern, dann das Team nachsetzen lassen.", "Kein starkes Schild – gegen Hitscan (Punisher, Hawkeye) Deckung suchen.", "Team-Up mit Thor: Er bekommt einen Donnerspeer, der Thorforce auflädt."] },
+  { name: "Angela", role: "Vanguard", tags: ["Flyer", "Dive"], tips: ["Fliegender Dive-Tank: in der Luft mit dem Speer, am Boden mit zwei Äxten.", "Mit dem geladenen Speer-Angriff Gegner hochschleudern, dann das Team nachsetzen lassen.", "Kein starkes Schild – gegen Hitscan (Punisher, Hawkeye) Deckung suchen.", "Team-Up mit Thor: Er bekommt einen Donnerspeer, der Thorforce auflädt."] },
   { name: "Devil Dinosaur", role: "Vanguard", tags: ["Brawl", "AntiTank"], tips: ["Bisse verursachen Blutung mit prozentualem Schaden – stark gegen Ziele mit viel Leben.", "Blutende Gegner beim Sprung-Biss packen und wegschleudern.", "Immun gegen Wegstossen und Hochschleudern.", "Ult: schneller Amoklauf mit Stampfern, die Gegner hochwerfen und bluten lassen."] },
   { name: "Rogue", role: "Vanguard", tags: ["Dive", "Brawl"], tips: ["Komplexes Kit: Cooldowns und Combos sauber durchwechseln.", "Mit dem Dash reingehen, dann per Energie-Burst Gegner zu dir ziehen.", "Ult stiehlt Ult-Energie von Gegnern in der Nähe.", "Team-Up mit Gambit: Ihre Schläge erzeugen Schockwellen, die Verbündete heilen."] },
   { name: "The Hood", role: "Vanguard", tags: ["Brawl"], tips: ["Normale Angriffe laden dämonische Energie – dann feuern die Pistolen wie Maschinenpistolen.", "Viel Lebensraub: Er heilt sich, solange er Schaden macht.", "Void Walk zum Repositionieren und für Überraschungsangriffe nutzen.", "Ult wirkt wie ein zweites Leben – Fights darfst du länger halten."] },
@@ -898,7 +898,7 @@ const DEFAULT_HEROES = [
   { name: "Hawkeye", role: "Duelist", tags: ["Sniper", "Poke"], tips: ["Pfeile voll aufladen für Maximalschaden.", "Kopftreffer üben – hoher Skill-Cap.", "Hohe Positionen mit Rückzugsweg suchen."] },
   { name: "Hela", role: "Duelist", tags: ["Hitscan", "Poke", "AntiDive"], tips: ["Hitscan-Damage auf Distanz, Kopftreffer sind stark.", "Stun-Fähigkeit gegen Flanker aufheben.", "Hinter deinen Tanks bleiben, nicht vorne kämpfen."] },
   { name: "Iron Fist", role: "Duelist", tags: ["Dive"], tips: ["Nahkampf-Diver mit Block, der dich schützt.", "Schnell auf Strategists, dann raus.", "Wandlaufen für Mobilität nutzen."] },
-  { name: "Iron Man", role: "Duelist", tags: ["Flieger", "Poke"], tips: ["Fliegend Druck von oben machen.", "Achte auf Hitscan-Helden – in der Luft bist du ein Ziel.", "Überladung für Burst-Schaden einsetzen."] },
+  { name: "Iron Man", role: "Duelist", tags: ["Flyer", "Poke"], tips: ["Fliegend Druck von oben machen.", "Achte auf Hitscan-Helden – in der Luft bist du ein Ziel.", "Überladung für Burst-Schaden einsetzen."] },
   { name: "Magik", role: "Duelist", tags: ["Dive"], tips: ["Portale und Teleports für Flanken.", "Darkchild-Form für Burst nutzen.", "Combo-lastig: Abläufe im Training üben."] },
   { name: "Mister Fantastic", role: "Duelist", tags: ["Brawl"], tips: ["Bruiser: steckt viel ein und baut Elastizität auf.", "Gegner einfangen und zum Team ziehen.", "Schwer zu töten – aber nicht unsterblich, auf Rückzug achten."] },
   { name: "Moon Knight", role: "Duelist", tags: ["Splash"], tips: ["Ankhs platzieren, damit Angriffe abprallen.", "Stark gegen dicht stehende Gegnergruppen.", "Haken zum Entkommen sparen."] },
@@ -908,11 +908,11 @@ const DEFAULT_HEROES = [
   { name: "Spider-Man", role: "Duelist", tags: ["Dive"], tips: ["Hoher Skill-Cap: Combos (Marke + Zug + Schlag) üben.", "Ständig in Bewegung bleiben, nie stehen bleiben.", "Ziel: Strategists stören und schnell raus."] },
   { name: "Squirrel Girl", role: "Duelist", tags: ["Splash"], tips: ["Abprallende Eichhörnchen-Bomben um Ecken schiessen.", "Spam-Schaden auf Chokepoints.", "Gegner mit Falle festsetzen."] },
   { name: "Star-Lord", role: "Duelist", tags: ["Dive"], tips: ["Sehr mobil – auf Flanken Gegner überraschen.", "Hohe Feuerrate, gut gegen Supports.", "Ult für automatischen Schaden in Gruppen."] },
-  { name: "Storm", role: "Duelist", tags: ["Flieger", "Poke"], tips: ["Buffs für Team (Tempo oder Schaden) aktiv wechseln.", "Fliegend Druck machen.", "Teamfights durch Buff-Timing gewinnen."] },
+  { name: "Storm", role: "Duelist", tags: ["Flyer", "Poke"], tips: ["Buffs für Team (Tempo oder Schaden) aktiv wechseln.", "Fliegend Druck machen.", "Teamfights durch Buff-Timing gewinnen."] },
   { name: "The Punisher", role: "Duelist", tags: ["Hitscan", "AntiFlyer"], tips: ["Konstanter Schaden – gut für Einsteiger.", "Geschütz-Turret auf Chokepoints.", "Rauch und Seil zur Repositionierung."] },
   { name: "Winter Soldier", role: "Duelist", tags: ["Brawl"], tips: ["Haken zieht Gegner zu dir.", "Nahe Distanz für maximalen Schaden.", "Ult kann bei Kills zurückgesetzt werden."] },
   { name: "Wolverine", role: "Duelist", tags: ["AntiTank", "Dive"], tips: ["Anti-Tank: Je länger der Fight, desto stärker.", "Gegner greifen und wegtragen.", "Schadenreduktion durch Wut nutzen."] },
-  { name: "Human Torch", role: "Duelist", tags: ["Flieger", "Raumkontrolle"], tips: ["Fliegt und erzeugt Feuerfelder.", "Feuerwände trennen Gegner.", "Stark aus der Luft auf Gruppen."] },
+  { name: "Human Torch", role: "Duelist", tags: ["Flyer", "Raumkontrolle"], tips: ["Fliegt und erzeugt Feuerfelder.", "Feuerwände trennen Gegner.", "Stark aus der Luft auf Gruppen."] },
   { name: "Black Cat", role: "Duelist", tags: ["Dive"], tips: ["Fortune-Ressource durch Treffer aufbauen und für Fähigkeiten nutzen.", "Doppelsprung und Wandklettern für überraschende Winkel.", "Während der Krallen-Combo (Phantom Pursuit) bist du nicht anvisierbar – auch zum Ausweichen nutzen.", "Mit dem Greifhaken Gegner treffen und ihnen Fortune stehlen."] },
   { name: "Blade", role: "Duelist", tags: ["Dive", "Brawl"], tips: ["Heilungsreduktion ist der Kern seines Kits – ideal gegen starke Heiler.", "Mit der Schrotflinte anschiessen, mit dem Schwert erledigen.", "Zwei Daywalker-Dashes für Combos und Rückzug.", "Team-Up mit Cloak & Dagger und Moon Knight: Heilung und kurze Unsichtbarkeit."] },
   { name: "Cyclops", role: "Duelist", tags: ["Hitscan", "Sniper"], tips: ["Hitscan-Optikstrahl: Druck aus mittlerer bis grosser Distanz.", "Propulsion Burst stösst dich und das Ziel zurück – gut, um Abstand zu schaffen.", "Mit Optic Ascent auf hohe Positionen springen.", "Ult zerstört Barrieren und hinterlässt explosive Energie."] },
@@ -929,7 +929,7 @@ const DEFAULT_HEROES = [
   { name: "Luna Snow", role: "Strategist", tags: ["Immobil"], tips: ["Hitscan-Heilung – gutes Zielen lohnt sich.", "Kann zwischen Heilen und Schaden wechseln.", "Ult ist einer der stärksten Heil-Ults im Spiel."] },
   { name: "Mantis", role: "Strategist", tags: ["Immobil", "AntiDive"], tips: ["Buffs für Schaden und Heilung über Zeit.", "Kopftreffer füllen deine Ressource auf.", "Schlaf-Fähigkeit gegen Diver nutzen."] },
   { name: "Rocket Raccoon", role: "Strategist", tags: [], tips: ["Heilkugeln prallen ab – um Ecken heilen.", "Respawn-Bake platzieren für schnelles Zurückkommen.", "Damage-Booster-Ult für Teamfights."] },
-  { name: "Ultron", role: "Strategist", tags: ["Flieger"], tips: ["Fliegender Heiler mit Drohne auf Verbündeten.", "Kann Schaden auf Distanz machen.", "Mobil, aber Luft = sichtbar."] },
+  { name: "Ultron", role: "Strategist", tags: ["Flyer"], tips: ["Fliegender Heiler mit Drohne auf Verbündeten.", "Kann Schaden auf Distanz machen.", "Mobil, aber Luft = sichtbar."] },
   { name: "Gambit", role: "Strategist", tags: ["Splash"], tips: ["Karten explodieren beim Aufprall: Schaden an Gegnern, Heilung an Verbündeten.", "Herz-Deck für Heilung und Reinigung, Pik-Deck für Schaden und Heilungsreduktion.", "Cajun Charge (Dash) zum Entkommen aufheben.", "Ult heilt, reinigt und gibt dem Team Tempo, Sprunghöhe und Schaden."] },
   { name: "Jubilee", role: "Strategist", tags: ["Splash"], tips: ["Hybrid aus Heilung und Schaden – der Normalangriff ist die Hauptheilung.", "Sparkle Mark auslösen: kurz schnellere Angriffe ohne Energieverbrauch.", "Blooming Balls aktiv rotieren: setzen, laden, zünden, zurückholen.", "Mit dem Sprung-Boost hohe Positionen erreichen."] },
   { name: "White Fox", role: "Strategist", tags: [], tips: ["Fox Marble verfolgt Ziele: Schaden an Gegnern, Heilung an Verbündeten.", "Spirit Sanctuary teleportiert dich zu einem Verbündeten, heilt und gibt Schild.", "Einziger Strategist mit Nah- und Fernkampf.", "Ult verwandelt dich in einen neunschwänzigen Fuchs mit viel Leben."] },
@@ -1428,22 +1428,22 @@ const LESSONS = [
     ],
     reflect: "Wie gut hat dein Team heute auf Dives reagiert?" },
 
-  { id: "l25", module: "m5", title: "Gegen Poke & Flieger spielen", minutes: 10, mistakes: ["Keine Deckung genutzt"],
-    goal: "Du nimmst Poke- und Flieger-Kompositionen ihre Stärke.",
+  { id: "l25", module: "m5", title: "Gegen Poke & Flyer spielen", minutes: 10, mistakes: ["Keine Deckung genutzt"],
+    goal: "Du nimmst Poke- und Flyer-Kompositionen ihre Stärke.",
     theory: [
       "<b>Poke</b> zermürbt dich auf Distanz, bevor ein Fight richtig beginnt. Gegenmittel: Deckung nutzen, Schilde einsetzen und die Distanz schnell gemeinsam schliessen.",
-      "<b>Flieger</b> kämpfen aus der Luft, wo es keine Deckung gibt. Helden mit Hitscan-Waffen oder Zielhilfe treffen sie zuverlässig.",
+      "<b>Flyer</b> kämpfen aus der Luft, wo es keine Deckung gibt. Helden mit Hitscan-Waffen oder Zielhilfe treffen sie zuverlässig.",
       "Nicht offen stehen bleiben und zurückpoken, wenn der Gegner darin stärker ist – damit spielst du sein Spiel.",
       "Gegen beide Stile hilft: geduldig in Deckung vorrücken und dann gemeinsam reingehen."
     ],
-    key: "Spiel nicht das Spiel des Gegners: Gegen Poke Distanz schliessen, gegen Flieger Hitscan.",
+    key: "Spiel nicht das Spiel des Gegners: Gegen Poke Distanz schliessen, gegen Flyer Hitscan.",
     practice: ["Schau im Helden-Guide, welche Helden aus deinem Pool Hitscan haben.", "Übe im Practice Range, bewegliche Ziele in der Luft zu verfolgen.", "Achte im Match darauf, nicht offen im Poke zu stehen."],
-    focus: "Gegen Poke: von Deckung zu Deckung vorrücken. Gegen Flieger: Hitscan-Helden einplanen.",
+    focus: "Gegen Poke: von Deckung zu Deckung vorrücken. Gegen Flyer: Hitscan-Helden einplanen.",
     quiz: [
       { q: "Wie spielt man am besten gegen ein Poke-Team?", opts: ["Offen stehen und zurückpoken", "Deckung nutzen und die Distanz gemeinsam schliessen", "Weit zurückziehen und warten", "Einzeln angreifen"], a: 1, why: "Poke lebt von Distanz und freier Sicht – beides nimmst du ihm so." },
-      { q: "Welche Helden sind gut gegen Flieger?", opts: ["Helden mit Hitscan oder Zielhilfe", "Nur Nahkämpfer", "Nur Tanks", "Keine"], a: 0, why: "In der Luft gibt es keine Deckung – sofort treffende Waffen nutzen das aus." }
+      { q: "Welche Helden sind gut gegen Flyer?", opts: ["Helden mit Hitscan oder Zielhilfe", "Nur Nahkämpfer", "Nur Tanks", "Keine"], a: 0, why: "In der Luft gibt es keine Deckung – sofort treffende Waffen nutzen das aus." }
     ],
-    reflect: "Wie bist du heute mit Poke- oder Flieger-Gegnern umgegangen?" },
+    reflect: "Wie bist du heute mit Poke- oder Flyer-Gegnern umgegangen?" },
 
   // ----- Modul 6: Rollen-Meisterschaft -----
   { id: "l26", module: "m6", role: "Vanguard", title: "Vanguard I: Raum nehmen", minutes: 10, mistakes: ["Zu weit vorne", "Ohne Team reingegangen"],
@@ -1675,8 +1675,9 @@ function loadState() {
     quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "" }
   }, s || {});
   st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
-  // Umbenannter Tag in gespeicherten Daten: AntiFlieger → AntiFlyer
-  const renameTag = tags => (tags || []).map(t => (t === "AntiFlieger" ? "AntiFlyer" : t));
+  // Umbenannte Tags in gespeicherten Daten: Flieger → Flyer, AntiFlieger → AntiFlyer
+  const TAG_RENAMES = { Flieger: "Flyer", AntiFlieger: "AntiFlyer" };
+  const renameTag = tags => (tags || []).map(t => TAG_RENAMES[t] || t);
   Object.keys(st.heroTagOverrides).forEach(k => { st.heroTagOverrides[k] = renameTag(st.heroTagOverrides[k]); });
   st.customHeroes.forEach(h => { h.tags = renameTag(h.tags); });
   st.settings = Object.assign({ playerName: "" }, st.settings);

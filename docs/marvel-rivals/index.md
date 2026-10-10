@@ -86,8 +86,8 @@ graph LR
 
 ## Counter lernen
 
-Counter beruhen in der App auf **Spielstil-Tags** (z.B. *Dive*, *Flieger*, *Hitscan*, *AntiDive*) und einfachen
-Faustregeln – etwa „Flieger werden von Hitscan-Helden gekontert“ oder „Diver werden von Anti-Dive-Fähigkeiten bestraft“.
+Counter beruhen in der App auf **Spielstil-Tags** (z.B. *Dive*, *Flyer*, *Hitscan*, *AntiDive*) und einfachen
+Faustregeln – etwa „Flyer werden von Hitscan-Helden gekontert“ oder „Diver werden von Anti-Dive-Fähigkeiten bestraft“.
 So lernst du nicht nur auswendig, *wer* wen kontert, sondern verstehst, *warum*. Je mehr Matches du mit Gegnerteam
 loggst, desto stärker fliessen deine eigenen Erfahrungen in die Vorschläge ein. Da sich das Balancing mit jeder Season
 ändert, kannst du die Tags im Helden-Guide jederzeit anpassen.
