@@ -15,10 +15,14 @@ Die Seite besteht aus reinem HTML und CSS. Sie braucht kein WordPress, keine Dat
 | --- | --- |
 | `index.html` | Startseite: Windows-11-Angebot, Leistungen, Preise, Ablauf, Über mich, Kontakt & Öffnungszeiten |
 | `windows-11.html` | Alles zum Upgrade von Windows 10 auf Windows 11 |
-| `impressum.html`, `datenschutz.html`, `agb.html` | Rechtliches (Entwürfe, siehe Checkliste) |
+| `kontakt.html` | Kontaktseite mit Anfrage-Formular (Häkchen), Öffnungszeiten und Anfahrt mit Google-Maps-Karte |
+| `kontakt.php` | Verschickt das Anfrage-Formular als E-Mail (braucht PHP beim Webhoster) |
+| `danke.html` | Bestätigung nach dem Absenden des Formulars |
+| `tipps.html` | Tipps & Links: empfohlene Programme und IT-Sicherheit (BSI) |
+| `impressum.html`, `datenschutz.html`, `agb.html` | Rechtliches (siehe Checkliste) |
 | `404.html` | Fehlerseite für nicht vorhandene Adressen |
 | `assets/css/style.css` | Gestaltung (Farben, Schrift, Layout) |
-| `assets/js/main.js` | Handy-Menü, Anzeige „Jetzt geöffnet“, Anruf-Leiste |
+| `assets/js/main.js` | Handy-Menü, Anzeige „Jetzt geöffnet“, Anruf-Leiste, Formular-Prüfung, Karte nach Klick |
 | `assets/fonts/` | Schrift „Figtree“ (lokal, Lizenz: SIL OFL) |
 | `favicon.svg`, `apple-touch-icon.png`, `assets/img/logo.svg` | Logo und App-Symbol |
 | `.htaccess` | Weiterleitungen alter Adressen, Fehlerseite, Caching (nur Apache-Webserver) |
@@ -29,7 +33,9 @@ Die Seite besteht aus reinem HTML und CSS. Sie braucht kein WordPress, keine Dat
 Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepad++ oder VS Code).
 
 - **Texte:** direkt in der jeweiligen HTML-Datei ändern.
-- **Öffnungszeiten:** in `index.html` die Tabelle im Abschnitt „Kontakt“ anpassen, und zwar den sichtbaren Text *und* das Attribut `data-hours` (leer = geschlossen). Daraus berechnet die Seite automatisch „Jetzt geöffnet“ oder „Geschlossen – öffnet …“. Zusätzlich die Angaben im Block `application/ld+json` oben in `index.html` anpassen (die liest Google).
+- **Öffnungszeiten:** stehen in `index.html` (Abschnitt „Kontakt“) und in `kontakt.html`. Jeweils den sichtbaren Text *und* das Attribut `data-hours` anpassen (leer = geschlossen). Daraus berechnet die Seite automatisch „Jetzt geöffnet“ oder „Geschlossen – öffnet …“. Zusätzlich die Angaben im Block `application/ld+json` oben in `index.html` anpassen (die liest Google).
+- **Formular-Empfänger:** ganz oben in `kontakt.php` (`EMPFAENGER`). `ABSENDER` muss eine Adresse der eigenen Domain sein, sonst landen die Mails leicht im Spam.
+- **Formular-Auswahl** (Häkchen): Wer Punkte ändert, muss sie in `kontakt.html` *und* in den Listen oben in `kontakt.php` anpassen (gleicher `value`).
 - **Preise:** in `index.html` (Abschnitte „Windows 11“ und „Preise“) und in `windows-11.html` (Angebotskarte).
 - **Hinweis-Leiste** (z. B. „Urlaub bis …“): in `index.html` beim Element `<div class="notice" … hidden>` das Wort `hidden` entfernen und den Text anpassen.
 - **Foto für „Über mich“:** Bild als `assets/img/karl-stockenhofen.jpg` speichern (Hochformat, ca. 800 × 1000 px) und in `index.html` die vorbereitete Zeile im Abschnitt „Über mich“ einkommentieren.
@@ -42,7 +48,7 @@ Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepa
 1. Die bisherige Seite komplett sichern (Backup beim Hoster oder per FTP herunterladen).
 2. Die alten Dateien aus dem Webverzeichnis entfernen bzw. in einen Unterordner verschieben, insbesondere eine alte `index.php`.
 3. Alle Dateien aus diesem Ordner per FTP oder Dateimanager hochladen, auch `.htaccess` (versteckte Datei!). `README.md` und `CHECKLISTE.md` müssen nicht mit hoch.
-4. Testen: Startseite, Unterseiten, Handy-Ansicht, eine alte Adresse wie `compitek.de/service.html` (muss weiterleiten).
+4. Testen: Startseite, Unterseiten, Handy-Ansicht, eine alte Adresse wie `compitek.de/service.html` (muss weiterleiten) und **das Formular einmal selbst abschicken** (die Mail muss bei `info@compitek.de` ankommen).
 5. Im Kundenmenü des Hosters „SSL/HTTPS erzwingen“ einschalten, falls noch nicht aktiv.
 
 ### Variante B: kostenlos über GitHub Pages
@@ -51,16 +57,17 @@ Alle Dateien lassen sich mit einem einfachen Texteditor bearbeiten (z. B. Notepa
 2. *Settings → Pages → Deploy from a branch → `main` / `(root)`*.
 3. Beim Domain-Anbieter die DNS-Einträge für `compitek.de` auf GitHub Pages umstellen und die Domain in den Pages-Einstellungen eintragen.
 
-Hinweis: GitHub Pages wertet `.htaccess` nicht aus. Die Weiterleitungen alter Adressen funktionieren dort nicht.
+Hinweis: GitHub Pages wertet weder `.htaccess` noch PHP aus. Weiterleitungen und **das Anfrage-Formular funktionieren dort nicht**. Für die CompiTek-Seite ist deshalb Variante A die richtige.
 
 ## Technik und Datenschutz
 
 - **Keine Cookies, kein Tracking, keine externen Dienste.** Die Schrift liegt auf dem eigenen Server (kein Google Fonts). Deshalb ist **kein Cookie-Banner** nötig.
-- **Karten** werden nicht eingebettet, sondern nur verlinkt (Google Maps, OpenStreetMap).
+- **Google-Maps-Karte** (Kontaktseite) wird erst nach einem Klick auf „Karte laden“ geladen (2-Klick-Lösung). Vorher fließen keine Daten zu Google.
+- **Anfrage-Formular:** Prüfung direkt im Browser und noch einmal auf dem Server, Schutz vor Spam (unsichtbares Fallen-Feld und das „Spam-Roboter“-Häkchen), keine Speicherung auf dem Server, nur Versand per E-Mail.
 - **Suchmaschinen:** aussagekräftige Seitentitel und Beschreibungen, strukturierte Daten für Google (Adresse, Öffnungszeiten, Einzugsgebiet), `sitemap.xml`.
 - **Barrierearm:** große Schrift, hohe Kontraste, mit Tastatur bedienbar, Sprunglink zum Inhalt, reduzierte Animationen, wenn im System eingestellt.
 - **Handy:** Telefonnummern sind antippbar, unten erscheint beim Scrollen eine „Jetzt anrufen“-Leiste.
 
 ## Herkunft der Inhalte
 
-Die Texte stammen von der bisherigen Seite compitek.de (Startseite, Windows 11, Service, Preise, Öffnungszeiten, AGB-Angaben) und wurden sprachlich überarbeitet und neu gegliedert. Was noch zu prüfen ist, steht in der [CHECKLISTE.md](CHECKLISTE.md).
+Die Texte stammen von der bisherigen Seite compitek.de (Startseite, Windows 11, Service, Preise, Kontakt mit Formular, Anfahrt, Sicherheit, Tipps & Tricks, Impressum, Datenschutz, AGB). Werbetexte wurden sprachlich überarbeitet und neu gegliedert, Rechtstexte (AGB, Haftungsausschluss) wörtlich übernommen. Was noch zu prüfen ist, steht in der [CHECKLISTE.md](CHECKLISTE.md).

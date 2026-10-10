@@ -21,8 +21,7 @@ ErrorDocument 404 /404.html
   # TODO: Liste vervollständigen, sobald alle alten Adressen bekannt sind.
   RewriteRule ^service\.html$                /#leistungen      [R=301,L,NE]
   RewriteRule ^preise\.html$                 /#preise          [R=301,L,NE]
-  RewriteRule ^kontakt\.html$                /#kontakt         [R=301,L,NE]
-  RewriteRule ^infos/kontakt\.html$          /#kontakt         [R=301,L,NE]
+  RewriteRule ^infos/kontakt\.html$          /kontakt.html     [R=301,L]
   RewriteRule ^infos/oeffnungszeiten\.html$  /#kontakt         [R=301,L,NE]
   RewriteRule ^agbs\.html$                   /agb.html         [R=301,L]
 

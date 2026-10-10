@@ -132,6 +132,138 @@
     callbar.classList.add("is-visible");
   }
 
+  /* ---------- Google Maps erst nach Klick laden (2-Klick-Lösung, DSGVO) ---------- */
+  document.querySelectorAll("[data-map-src]").forEach(function (map) {
+    var button = map.querySelector(".map-load");
+    if (!button) return;
+    button.addEventListener("click", function () {
+      var iframe = document.createElement("iframe");
+      iframe.src = map.getAttribute("data-map-src");
+      iframe.title = map.getAttribute("data-map-title") || "Karte";
+      iframe.referrerPolicy = "no-referrer-when-downgrade";
+      iframe.allowFullscreen = true;
+      map.replaceChildren(iframe);
+      iframe.focus();
+    });
+  });
+
+  /* ---------- Anfrage-Formular: Eingaben prüfen, bevor es losgeht ---------- */
+  var form = document.getElementById("formular");
+
+  if (form) {
+    var summary = form.querySelector(".form-error");
+    var submit = form.querySelector("[type=submit]");
+    var submitLabel = submit ? submit.innerHTML : "";
+    var field = function (name) { return form.elements.namedItem(name); };
+
+    var showError = function (container, message) {
+      var el = container.querySelector(":scope > .field-error");
+      if (el) {
+        el.textContent = message;
+        el.hidden = false;
+      }
+      container.classList.add("is-invalid");
+    };
+
+    var clearError = function (container) {
+      var el = container.querySelector(":scope > .field-error");
+      if (el) {
+        el.textContent = "";
+        el.hidden = true;
+      }
+      container.classList.remove("is-invalid");
+      container.querySelectorAll("[aria-invalid]").forEach(function (input) {
+        input.removeAttribute("aria-invalid");
+      });
+    };
+
+    var invalid = function (input, container, message, list) {
+      input.setAttribute("aria-invalid", "true");
+      showError(container, message);
+      list.push(container);
+    };
+
+    var validate = function () {
+      var problems = [];
+      form.querySelectorAll(".field-group, .field, .robot").forEach(clearError);
+
+      form.querySelectorAll("[data-min]").forEach(function (group) {
+        if (group.querySelectorAll("input:checked").length < Number(group.getAttribute("data-min"))) {
+          showError(group, group.getAttribute("data-error"));
+          problems.push(group);
+        }
+      });
+
+      var message = field("nachricht");
+      if (form.querySelector("[data-needs-message]:checked") && !message.value.trim()) {
+        invalid(message, message.closest(".field"), "Sie haben „Sonstiges“ angekreuzt – bitte beschreiben Sie das Problem kurz.", problems);
+      }
+
+      var name = field("name");
+      if (!name.value.trim()) {
+        invalid(name, name.closest(".field"), "Bitte geben Sie Ihren Namen an.", problems);
+      }
+
+      var phone = field("telefon");
+      var mail = field("email");
+      var contact = form.querySelector("[data-contact]");
+      if (!phone.value.trim() && !mail.value.trim()) {
+        phone.setAttribute("aria-invalid", "true");
+        mail.setAttribute("aria-invalid", "true");
+        showError(contact, contact.getAttribute("data-error"));
+        problems.push(contact);
+      } else {
+        if (mail.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail.value.trim())) {
+          invalid(mail, mail.closest(".field"), "Bitte prüfen Sie die E-Mail-Adresse.", problems);
+        }
+        if (phone.value.trim() && !/^[0-9+()\/. -]{5,}$/.test(phone.value.trim())) {
+          invalid(phone, phone.closest(".field"), "Bitte nur Ziffern, Leerzeichen und + / - verwenden.", problems);
+        }
+      }
+
+      var robot = field("roboter");
+      if (robot.checked) {
+        invalid(robot, robot.closest(".robot"), "Echt jetzt? Falls Sie kein Roboter sind, entfernen Sie bitte dieses Häkchen.", problems);
+      }
+
+      return problems;
+    };
+
+    form.addEventListener("submit", function (event) {
+      var problems = validate();
+      if (problems.length) {
+        event.preventDefault();
+        summary.textContent = problems.length === 1
+          ? "Bitte prüfen Sie die markierte Angabe."
+          : "Bitte prüfen Sie die " + problems.length + " markierten Angaben.";
+        summary.hidden = false;
+        problems[0].scrollIntoView({ block: "start" });
+        var first = problems[0].querySelector("input, textarea");
+        if (first) first.focus({ preventScroll: true });
+        return;
+      }
+      summary.hidden = true;
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = "Wird gesendet …";
+      }
+    });
+
+    // Fehlermeldung verschwindet, sobald korrigiert wird
+    form.addEventListener("input", function (event) {
+      var container = event.target.closest(".is-invalid");
+      if (container) clearError(container);
+    });
+
+    // Nach „Zurück“ im Browser den Knopf wieder freigeben
+    window.addEventListener("pageshow", function () {
+      if (submit) {
+        submit.disabled = false;
+        submit.innerHTML = submitLabel;
+      }
+    });
+  }
+
   /* ---------- Jahr im Footer ---------- */
   document.querySelectorAll("[data-year]").forEach(function (el) {
     el.textContent = new Date().getFullYear();
