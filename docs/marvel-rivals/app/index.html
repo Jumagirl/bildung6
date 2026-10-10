@@ -506,6 +506,17 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .lvl.warn { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--text); }
 .lvl.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
 
+/* Ults */
+.ult-box { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: .86rem; }
+.ult-box p { margin: 4px 0; }
+.ult-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ult-head svg.i { width: 16px; height: 16px; color: var(--gold); }
+.ult-by { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.ult-ours { color: var(--good-text); }
+.ult-row { display: flex; flex-direction: column; gap: 1px; }
+.ult-row > span.small { padding-left: 30px; line-height: 1.35; }
+.fcard .ult-box { background: var(--surface); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -528,6 +539,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <button role="tab" data-tab="analysis" data-icon="analysis">Auswertung</button>
     <button role="tab" data-tab="team" data-icon="team">Team &amp; Counter</button>
     <button role="tab" data-tab="quiz" data-icon="quiz">Counter-Training</button>
+    <button role="tab" data-tab="lexicon" data-icon="zap">Lexikon</button>
     <button role="tab" data-tab="heroes" data-icon="heroes">Helden-Guide</button>
     <button role="tab" data-tab="training" data-icon="training">Training</button>
     <button role="tab" data-tab="goals" data-icon="goals">Lernziele</button>
@@ -765,6 +777,18 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <p class="lead">Die Counter-Vorschläge beruhen auf diesen Regeln und den Spielstil-Tags der Helden. Balance-Patches ändern Details – Tags kannst du im Helden-Guide anpassen.</p>
     <div class="table-wrap" id="ruleList"></div>
   </div>
+</section>
+
+<!-- LEXICON -->
+<section id="tab-lexicon" hidden>
+  <div class="card">
+    <div class="row between">
+      <div class="chips" id="lexTabs"></div>
+      <input id="lexSearch" placeholder="Held, Ult oder Effekt suchen …" style="max-width:280px" aria-label="Lexikon durchsuchen">
+    </div>
+    <label class="inline-label mt" id="lexEnemyWrap"><input type="checkbox" id="lexEnemy"> Nur Helden aus dem Gegnerteam (Tab Team &amp; Counter)</label>
+  </div>
+  <div id="lexBody"></div>
 </section>
 
 <!-- HEROES -->
@@ -1826,6 +1850,106 @@ const META_SNAPSHOT = {
   }
 };
 
+// ---------- Ults & Konter ----------
+// Nur Ults, deren Wirkung durch Guides belegt ist. by = konkrete Helden, die die Ult kontern können.
+const ULT_RULES = [
+  ["Aufgeladene Ults", "Scarlet Witch, Storm, Iron Man", "Während des Aufladens ausschalten oder betäuben – danach ist es oft zu spät."],
+  ["Bereichs-Ults", "Thor, Moon Knight, Namor, Doctor Strange, Phoenix", "Auseinanderstehen und den markierten Bereich sofort verlassen."],
+  ["Ults aus der Luft", "Hela, Iron Man, Storm", "Hitscan trifft sie zuverlässig; Schilde fangen den Schaden ab."],
+  ["Ults mit Zielerfassung", "Star-Lord, Black Cat, Daredevil", "Sichtlinie mit Deckung brechen – Blendung nimmt ihnen die Ziele."],
+  ["Grosse Schadens-Ults", "Psylocke, Punisher, Spider-Man, Scarlet Witch", "Heil-Ults (z.B. Luna Snow, Invisible Woman, Mantis) halten das Team am Leben, Adam Warlock belebt danach wieder."],
+  ["Heil-Ults", "Luna Snow, Invisible Woman, Mantis, Jubilee", "Mit Burst durchbrechen, Heilungsreduktion einsetzen oder Gegner aus dem Feld drängen."],
+  ["Verwandlungs-Ults", "Hulk, The Hood, Magik, White Fox", "Kiten und Zeit gewinnen, bis die Verwandlung endet – Burst für danach aufheben."],
+  ["Eure eigene Ult", "Rogue, Loki", "Rogue stiehlt Ult-Energie, Loki kann Ults kopieren – Abstand halten und euer Timing bewusst wählen."]
+];
+
+const ULTS = {
+  // Vanguards
+  "Captain America": { name: "Freedom Charge", types: ["Buff"], what: "Gibt ihm und Verbündeten in der Nähe Bonus-Leben und mehr Tempo – ideal für einen gemeinsamen Angriff.", counter: "Nicht in den Ansturm hineinlaufen: kurz zurückweichen, bis Tempo und Bonus-Leben vorbei sind, dann kontern.", by: [["Invisible Woman", "Wegstossen hält den Ansturm von eurer Backline fern"]] },
+  "Doctor Strange": { name: "Eye of Agamotto", types: ["Bereich", "Kontrolle"], what: "Trennt in einem Bereich die Seelen der Gegner von ihren Körpern – Schaden an den Seelen trifft auch die Körper.", counter: "Sofort aus dem Wirkungsbereich laufen und nicht gruppiert stehen; eine Heil-Ult fängt den Folgeschaden ab.", by: [["Luna Snow", "Ihre Heil-Performance hält das Team trotz Folgeschaden am Leben"], ["Adam Warlock", "Belebt Gefallene danach wieder"]] },
+  "Groot": { name: "Strangling Prison", types: ["Kontrolle"], what: "Hält mehrere Gegner in einem Bereich fest.", counter: "Auseinanderstehen, damit nicht das ganze Team gefangen wird; Reinigung befreit.", by: [["Gambit", "Seine Ult heilt und reinigt Verbündete"]] },
+  "Hulk": { name: "", types: ["Verwandlung"], what: "Verwandlung in Monster Hulk: Angriffe schleudern weg, World Breaker packt Gegner und schmettert sie zu Boden.", counter: "Abstand halten und kiten, bis die Verwandlung endet; nicht nahe an Abgründen kämpfen.", by: [] },
+  "Magneto": { name: "Meteor M", types: ["Bereich", "Schaden"], what: "Formt einen Meteor und schleudert ihn auf einen Bereich.", counter: "Dem Einschlagsbereich ausweichen, sobald der Meteor erscheint; nicht gruppiert stehen.", by: [] },
+  "Thor": { name: "God of Thunder", types: ["Bereich", "Kontrolle"], what: "Lädt Donnerkraft auf und schlägt in einem Bereich ein – Gegner werden betäubt.", counter: "Beim Aufladen auseinandergehen und aus dem markierten Bereich laufen.", by: [] },
+  "Venom": { name: "Feast of the Abyss", types: ["Bereich"], what: "Taucht ab und bricht in einem Bereich hervor; er erhält dabei Bonus-Leben.", counter: "Gilt als gut ausweichbar: Wenn er abtaucht, aus dem Bereich laufen.", by: [] },
+  "Angela": { name: "Heven's Retribution", types: ["Kontrolle", "Bereich"], what: "Grosser Wurf mit Flächenwirkung: Gegner in der Nähe werden gefesselt und festgesetzt.", counter: "Nicht eng stehen, wenn sie zielt; Reinigung oder Heil-Ult nach dem Treffer.", by: [["Gambit", "Reinigt festgesetzte Verbündete mit seiner Ult"]] },
+  "Devil Dinosaur": { name: "Devil-Beast Rampage", types: ["Bewegung", "Kontrolle"], what: "Grosser Tempo-Boost, Stampfer schleudern Gegner hoch und lassen sie bluten.", counter: "Auseinandergehen, von Kanten fernbleiben und die Blutung danach heilen.", by: [] },
+  "Rogue": { name: "Heartbreaker", types: ["Sonstiges"], what: "Saugt laufend Ult-Energie von Gegnern in der Nähe ab und stiehlt Werte je nach deren Rolle.", counter: "Abstand halten und eure eigene Ult möglichst vorher einsetzen.", by: [] },
+  "The Hood": { name: "Demon of the End", types: ["Verwandlung"], what: "Volle Dämonenform – wirkt wie ein zweites Leben.", counter: "Nicht alle Fähigkeiten verbrauchen, bevor die Form endet; Burst für danach aufheben.", by: [["Blade", "Heilungsreduktion schwächt seinen Lebensraub"], ["Gambit", "Sein Pik-Deck verursacht Heilungsreduktion"]] },
+  // Duelists
+  "Black Cat": { name: "Calling Card", types: ["Zielerfassung"], what: "Markiert alle Gegner und springt sofort zu einem Gegner in Sicht und Reichweite, um ihn zu zerkratzen.", counter: "Sichtlinie brechen und Deckung nutzen; angeschlagene Spieler zurückziehen.", by: [] },
+  "Black Panther": { name: "Bast's Descent", types: ["Bereich"], what: "Ruft Bast und stürmt nach vorne durch die Gegner.", counter: "Seitlich ausweichen; danach steht er oft tief in eurem Team – sofort fokussieren.", by: [] },
+  "Black Widow": { name: "Electro-Plasma Explosion", types: ["Bereich", "Schaden"], what: "Elektrische Plasma-Explosion in einem Bereich.", counter: "Den Bereich sofort verlassen.", by: [] },
+  "Blade": { name: "Thousand-Fold Slash", types: ["Schaden", "Debuff"], what: "Iaido-Sprungschlag mit dem Schwert Draculas; die Schnittzone verursacht Heilungsreduktion.", counter: "Schnittzone verlassen und nicht auf Heilung setzen – Schilde und Bonus-Leben helfen.", by: [] },
+  "Cyclops": { name: "Ruby Rage", types: ["Schaden"], what: "Nimmt das Visier ab und feuert einen schwenkenden Strahl, der Barrieren zerstört; zurück bleibt explosive Energie.", counter: "Nicht auf Schilde verlassen, aus dem Strahl heraus und die explodierende Energie meiden.", by: [] },
+  "Daredevil": { name: "Let the Devil Out", types: ["Debuff", "Zielerfassung"], what: "Gegner, die Daredevil in Sichtlinie haben, nehmen Schaden und werden zunehmend geblendet.", counter: "Sichtlinie brechen: hinter Deckung gehen, statt ihn anzuschauen.", by: [] },
+  "Elsa Bloodstone": { name: "Apex Predator", types: ["Schaden"], what: "Schickt den Glartrox nach vorne; zurückgerufen läuft er denselben Weg zurück und beisst beim Aufprall an Terrain oder bei der Rückkehr kräftig zu.", counter: "Aus der Laufbahn ausweichen und nicht direkt vor Wänden stehen.", by: [] },
+  "Gorr": { name: "Twilight of the Gods", types: ["Bereich"], what: "Verwandelt sein Schwert in die Annihilablade; neben jedem Gegner in Reichweite erscheint ein Berserker.", counter: "Berserker schnell ausschalten und Abstand halten.", by: [] },
+  "Hela": { name: "Goddess of Death", types: ["Flug", "Schaden"], what: "Schwebt in die Luft und feuert explosive Salven.", counter: "Hinter unzerstörbare Deckung gehen; Hitscan trifft sie, solange sie schwebt.", by: [["Doctor Strange", "Shield of the Seraphim blockt ihre Geschosse"], ["Magneto", "Seine Schild-Blase absorbiert die Salve"], ["The Punisher", "Hitscan trifft sie, solange sie schwebt"]] },
+  "Iron Man": { name: "Invincible Pulse Cannon", types: ["Flug", "Aufladen", "Schaden"], what: "Steigt auf und feuert einen gewaltigen Energiestoss auf einen Bereich.", counter: "Ihn ausschalten, während er in der Luft feststeckt; nach dem Schuss den Einschlag mit Schilden abfangen.", by: [["Hela", "Hitscan trifft ihn, während er in der Luft feststeckt"], ["Doctor Strange", "Sein Schild fängt den Einschlag ab"], ["Magneto", "Ein Schild auf dem Ziel fängt den Schaden ab"]] },
+  "Magik": { name: "Darkchild", types: ["Verwandlung"], what: "Verwandlung in die Darkchild-Form mit stärkeren Angriffen.", counter: "Kiten und Kontrolle bereithalten, bis die Form endet.", by: [] },
+  "Moon Knight": { name: "Hand of Khonshu", types: ["Bereich"], what: "Khonshus Krallen schlagen in einem Bereich ein.", counter: "Den Bereich sofort verlassen.", by: [] },
+  "Namor": { name: "Horn of Proteus", types: ["Kontrolle", "Bereich"], what: "Ruft Monstro, der Gegner niederwirft – sie können kurz nicht handeln.", counter: "Auseinanderstehen, damit nicht alle getroffen werden.", by: [] },
+  "Phoenix": { name: "Endsong Inferno", types: ["Bereich"], what: "Grosser Flächenangriff, der auch Schilde und ähnliche Effekte zerstört.", counter: "Nicht auf Schilde verlassen, auseinandergehen und eine Heil-Ult bereithalten.", by: [["Luna Snow", "Ihre Heil-Performance gleicht den Schaden aus"]] },
+  "Psylocke": { name: "Dance of the Butterfly", types: ["Bereich", "Schaden"], what: "Unverwundbar schneidet sie durch alle Gegner in der Nähe.", counter: "Schaden auf sie bringt währenddessen nichts – aus dem Bereich fliehen oder mit einer Heil-Ult überleben.", by: [["Luna Snow", "Heil-Performance hält das Team am Leben"], ["Invisible Woman", "Ihr Heilfeld fängt den Schaden ab"], ["Adam Warlock", "Belebt Gefallene danach wieder"]] },
+  "Scarlet Witch": { name: "Reality Erasure", types: ["Aufladen", "Bereich"], what: "Lädt eine gewaltige Explosion auf, die einen grossen Bereich trifft.", counter: "Während des Aufladens betäuben oder ausschalten, sonst aus dem Radius laufen.", by: [["Doctor Strange", "Shield of the Seraphim blockt die Explosion"], ["Luna Snow", "Ihr Einfrieren unterbricht die Ult"], ["Phoenix", "Ihr Telekinese-Stoss betäubt aus grosser Distanz"]] },
+  "Spider-Man": { name: "Spectacular Spin", types: ["Bereich", "Schaden"], what: "Netzangriff in einem Bereich – seit Buffs eine echte Kill-Gefahr.", counter: "Eine defensive Ult bereithalten und nicht eng gruppiert stehen.", by: [["Cloak & Dagger", "Ihre defensive Ult schützt das Team"], ["Adam Warlock", "Belebt Gefallene danach wieder"]] },
+  "Squirrel Girl": { name: "Squirrel Tsunami", types: ["Bereich"], what: "Eine Welle aus Eichhörnchen rollt durch den Bereich.", counter: "Aus der Laufbahn gehen.", by: [] },
+  "Star-Lord": { name: "Galactic Legend", types: ["Zielerfassung", "Flug"], what: "Fliegt und schiesst automatisch auf Gegner in Sicht.", counter: "Deckung suchen, damit er dich nicht erfasst; Blendung verhindert, dass seine Ult Ziele findet.", by: [["Daredevil", "Seine Blendung nimmt Star-Lord die Ziele"], ["Cloak & Dagger", "Cloaks Blendung nimmt ihm die Ziele"]] },
+  "Storm": { name: "Omega Hurricane", types: ["Aufladen", "Kontrolle"], what: "Verwandelt sich in einen Hurrikan, der Gegner anzieht und Schaden macht.", counter: "Beim Aufladen ausschalten; sonst mit Mobilität aus dem Sog fliehen.", by: [["Hela", "Hitscan erwischt sie beim Aufladen"]] },
+  "The Punisher": { name: "Final Judgement", types: ["Schaden"], what: "Feuert mit schweren Waffen eine Salve in Blickrichtung.", counter: "Schilde blocken den Schaden komplett; Deckung suchen oder ihn flankieren.", by: [["Doctor Strange", "Sein Schild blockt die Salve"], ["Magneto", "Sein Schild blockt die Salve"], ["Venom", "Taucht in ihn hinein, bevor er reagieren kann"]] },
+  "Winter Soldier": { name: "Kraken Impact", types: ["Bereich"], what: "Sprungschlag mit Bereichsschaden, der sich bei Kills zurücksetzt.", counter: "Angeschlagene Verbündete zurückziehen, damit er keine Resets bekommt.", by: [] },
+  // Strategists
+  "Adam Warlock": { name: "Karmic Revival", types: ["Wiederbelebung"], what: "Belebt alle gefallenen Verbündeten im Umkreis sofort wieder; wer in den nächsten Sekunden im Bereich fällt, wird ebenfalls zurückgeholt.", counter: "Eure grossen Ults erst nach seiner Ult zünden; Gegner danach erneut ausschalten oder aus dem Bereich drängen.", by: [] },
+  "Invisible Woman": { name: "Invisible Boundary", types: ["Heilung"], what: "Feld mit Heilung über Zeit; Verbündete darin sind für Gegner draussen unsichtbar, eintretende Gegner werden verlangsamt.", counter: "Gegner aus dem Feld locken oder herausstossen; hoher Burst und Flächenschaden.", by: [["Blade", "Heilungsreduktion schwächt die Heilung"], ["Gambit", "Sein Pik-Deck verursacht Heilungsreduktion"]] },
+  "Jeff the Land Shark": { name: "It's Jeff!", types: ["Kontrolle"], what: "Verschlingt Gegner oder Verbündete und spuckt sie in eine Richtung – auch über Kanten.", counter: "Nicht an Abgründen stehen und auseinandergehen.", by: [] },
+  "Loki": { name: "God of Mischief", types: ["Sonstiges"], what: "Verwandelt sich in einen Helden und nutzt alle dessen Fähigkeiten ausser Team-Ups.", counter: "Achte darauf, wen er kopiert – starke Helden in eurem Team geben ihm starke Kopien.", by: [] },
+  "Luna Snow": { name: "Fate of Both Worlds", types: ["Heilung", "Buff"], what: "Tanzt und schaltet zwischen starker Heilung und Schadensbonus für Verbündete um.", counter: "Mit hohem Burst durchbrechen oder zuschlagen, wenn sie auf Schaden umschaltet; Heilungsreduktion schwächt die Heilung.", by: [["Hawkeye", "Ein Kopftreffer-Burst überholt die Heilung"], ["Blade", "Heilungsreduktion"], ["Gambit", "Pik-Deck: Heilungsreduktion"]] },
+  "Mantis": { name: "Soul Resurgence", types: ["Heilung"], what: "Heilt Verbündete dauerhaft, gibt ihnen Schutz und mehr Tempo.", counter: "Heilungsreduktion und Burst; den Fight verzögern, bis die Ult vorbei ist.", by: [["Blade", "Heilungsreduktion"], ["Gambit", "Pik-Deck: Heilungsreduktion"]] },
+  "Rocket Raccoon": { name: "", types: ["Buff"], what: "Verstärkt den Schaden seines Teams, ist aber eher an einen Ort gebunden.", counter: "Nicht im Wirkungsbereich kämpfen – zurückweichen und Zeit gewinnen.", by: [] },
+  "Gambit": { name: "Ragin' Royal Flush", types: ["Heilung", "Buff"], what: "Feuert Asse auf einen Verbündeten, die heilen und reinigen; das Team erhält Tempo, Sprunghöhe und Schaden.", counter: "Burst vorher; während der Ult zurückweichen und Kontrolleffekte erst danach einsetzen (die Ult reinigt).", by: [] },
+  "Jubilee": { name: "Firework Finale", types: ["Heilung", "Kontrolle"], what: "Schleudert Gegner in der Nähe hoch; danach heilt ihr Feld Verbündete und schadet Gegnern für etwa acht Sekunden.", counter: "Das Feld verlassen; Heilungsreduktion schwächt die Heilung.", by: [["Blade", "Heilungsreduktion"]] },
+  "White Fox": { name: "Kumiho Unleashed", types: ["Verwandlung"], what: "Verwandlung in einen neunschwänzigen Fuchs mit viel Leben.", counter: "Abstand halten, Kontrolleffekte nutzen und auf ihre Verbündeten wechseln.", by: [] }
+};
+
+// ---------- Effekte-Lexikon ----------
+// src: [Held, Fähigkeit/Hinweis]
+const EFFECTS = [
+  { cat: "Harte Kontrolle", name: "Betäubung", en: "Stun", what: "Das Ziel kann sich nicht bewegen und keine Fähigkeiten nutzen.", src: [["Thor", "Ult God of Thunder"], ["Phoenix", "Telekinese-Stoss, auf grosse Distanz"], ["Hela", "Betäubungs-Fähigkeit"]], counter: "Auseinanderstehen und Abstand halten; Unaufhaltsam schützt; dank Chain-CC-Schutz folgen nicht beliebig viele Betäubungen aufeinander." },
+  { cat: "Harte Kontrolle", name: "Einfrieren", en: "Freeze", what: "Wie eine Betäubung, endet aber vorzeitig, sobald das Ziel Schaden nimmt.", src: [["Luna Snow", "Einfrieren – unterbricht laut Guides sogar Scarlet Witchs Ult"]], counter: "Eingefrorene Gegner nicht sofort angreifen, wenn du sie gefangen halten willst; selbst Deckung suchen." },
+  { cat: "Harte Kontrolle", name: "Schlaf", en: "Sleep", what: "Das Ziel schläft ein und ist handlungsunfähig.", src: [["Mantis", "Schlaf-Fähigkeit gegen Diver"]], counter: "Nicht direkt vor Mantis landen, seitlich angreifen." },
+  { cat: "Harte Kontrolle", name: "Verbannt", en: "Exiled", what: "Das Ziel ist betäubt, nimmt aber auch keinen Schaden und erhält keine Heilung. Endet früher, wenn Hulk das Ziel erneut trifft.", src: [["Hulk", "Radioactive Lockdown"]], counter: "Verbannte Gegner nicht beschiessen – die Zeit für Repositionierung nutzen." },
+  { cat: "Harte Kontrolle", name: "Niedergeworfen", en: "Knock Down", what: "Das Ziel liegt am Boden und kann kurz nicht handeln.", src: [["Namor", "Ult Horn of Proteus"]], counter: "Auseinanderstehen, damit nicht das ganze Team getroffen wird." },
+  { cat: "Harte Kontrolle", name: "Gepackt", en: "Grab", what: "Das Ziel wird gepackt und weggetragen oder zu Boden geschmettert.", src: [["Wolverine", "Packt und trägt Gegner weg"], ["Hulk", "World Breaker als Monster Hulk"]], counter: "Verbündete befreien, indem ihr den Angreifer mit Kontrolle stoppt; nicht allein in seine Reichweite." },
+  { cat: "Bewegung einschränken", name: "Festgesetzt", en: "Immobilize / Root", what: "Das Ziel kann sich nicht bewegen. Je nach Fähigkeit kann es trotzdem angreifen.", src: [["Groot", "Ult Strangling Prison"], ["Angela", "Ult Heven's Retribution"], ["Elsa Bloodstone", "Falle Smoky Snare"]], counter: "Nicht eng stehen; Reinigung (z.B. Gambits Ult) befreit." },
+  { cat: "Bewegung einschränken", name: "Gebunden", en: "Bound", what: "Bindet das Ziel an einen Punkt oder ein Ziel – je weiter es sich entfernt, desto stärker wird es verlangsamt.", src: [["Angela", "Bänder ihres Speer-Wurfs"]], counter: "Nicht gegen die Bindung ankämpfen, sondern Richtung Bindungspunkt ausweichen und Hilfe rufen." },
+  { cat: "Bewegung einschränken", name: "Verlangsamung", en: "Slow", what: "Das Ziel bewegt sich langsamer.", src: [["Hawkeye", "Hypersonic Arrow"], ["Venom", "Cellular Corrosion"], ["Invisible Woman", "Gegner in ihrem Ult-Feld"], ["Devil Dinosaur", "Buddy Barrier"]], counter: "Mobilitäts-Fähigkeiten aufheben und den verlangsamenden Bereich meiden." },
+  { cat: "Verschieben", name: "Wegstossen & Hochschleudern", en: "Knockback / Launch", what: "Das Ziel wird weggestossen oder in die Luft geschleudert – an Kanten kann das tödlich sein.", src: [["Invisible Woman", "Force Physics"], ["Angela", "Geladener Speer-Angriff"], ["Cyclops", "Propulsion Burst"], ["Jubilee", "Ult Firework Finale"], ["Devil Dinosaur", "Ult Devil-Beast Rampage"]], counter: "Von Abgründen fernbleiben; Unaufhaltsame Helden (z.B. Devil Dinosaur, The Thing) sind immun." },
+  { cat: "Verschieben", name: "Heranziehen", en: "Pull", what: "Das Ziel wird zum Angreifer oder in einen Bereich gezogen.", src: [["Winter Soldier", "Haken"], ["Rogue", "Fatal Attraction"], ["Storm", "Ult Omega Hurricane"], ["Invisible Woman", "Force Physics (ziehen)"]], counter: "Abstand halten und den Zug abwarten; Deckung zwischen dich und den Angreifer bringen." },
+  { cat: "Verschieben", name: "Verschluckt", en: "Swallow", what: "Jeff verschlingt Spieler und spuckt sie in eine Richtung – auch über Kanten.", src: [["Jeff the Land Shark", "Ult It's Jeff!"]], counter: "Nicht an Abgründen stehen und auseinandergehen." },
+  { cat: "Schaden über Zeit", name: "Blutung", en: "Bleed", what: "Fortlaufender Schaden, der sich an den Lebenspunkten des Ziels orientiert.", src: [["Devil Dinosaur", "Primal Bite"]], counter: "Nach dem Biss schnell Heilung suchen und Abstand halten." },
+  { cat: "Schaden über Zeit", name: "Funken & Feuer", en: "Sparks / Burn", what: "Phoenix stapelt Funken – bei drei Funken gibt es eine Explosion. Feuerfelder verursachen Schaden, solange man darin steht.", src: [["Phoenix", "Cosmic Flames"], ["Human Torch", "Feuerfelder und Feuerwände"]], counter: "Nicht lange im Feuer stehen bleiben, Funken-Stapel durch Rückzug auslaufen lassen." },
+  { cat: "Heilung blockieren", name: "Heilungsreduktion", en: "Reduced Healing", what: "Das Ziel erhält weniger Heilung aus allen Quellen.", src: [["Blade", "Kern seines Kits, auch seine Ult"], ["Gambit", "Pik-Deck"], ["Venom", "Laut Wiki"], ["Phoenix", "Laut Wiki"]], counter: "Schilde blocken die Treffer (z.B. Magneto, Doctor Strange, Groot, Emma Frost); Bonus-Leben ist nicht betroffen." },
+  { cat: "Heilung blockieren", name: "Heilsperre", en: "Anti-Heal", what: "Das Ziel kann gar keine Heilung erhalten.", src: [], counter: "Sofort zurückziehen und Deckung suchen, bis der Effekt endet." },
+  { cat: "Sicht & Steuerung", name: "Blendung", en: "Blind", what: "Die Sicht des Ziels ist stark eingeschränkt – Ults mit Zielerfassung finden kein Ziel mehr.", src: [["Daredevil", "Sonic Pursuit und Ult Let the Devil Out"], ["Cloak & Dagger", "Cloaks Blendung"]], counter: "Sichtlinie zu Daredevil in seiner Ult brechen; geblendet kurz zurückziehen." },
+  { cat: "Sicht & Steuerung", name: "Spott & UI-Störung", en: "Taunt", what: "Gegner werden verspottet; Deadpool verwirrt zusätzlich die Anzeige (Leben und Cooldowns sind schwer lesbar).", src: [["Deadpool (Strategist)", "Deadpool in Your Area"], ["Elsa Bloodstone", "Team-Up mit Deadpool und Jeff"]], counter: "Ruhe bewahren, Cooldowns im Kopf mitzählen und aus dem Bereich gehen." },
+  { cat: "Sicht & Steuerung", name: "Markierung", en: "Mark", what: "Markierte Gegner sind Ziel für Folgeangriffe oder Resets.", src: [["Black Panther", "Markierungen für Resets"], ["Spider-Man", "Markierung für Combos"], ["Black Cat", "Ult Calling Card"]], counter: "Markierte Verbündete schützen oder zurückziehen." },
+  { cat: "Sicht & Steuerung", name: "Seele getrennt", en: "Soul Separation", what: "Die Seele wird vom Körper getrennt – Schaden an der Seele trifft auch den Körper.", src: [["Doctor Strange", "Ult Eye of Agamotto"]], counter: "Aus dem Bereich laufen und eine Heil-Ult bereithalten." },
+  { cat: "Schutz", name: "Unsichtbarkeit", en: "Invisibility", what: "Der Held ist für Gegner nicht sichtbar.", src: [["Psylocke", "Unsichtbarkeit zum Flanken"], ["Invisible Woman", "Fähigkeit und Ult"], ["Cloak & Dagger", "Dark Teleportation"], ["Blade", "Team-Up mit Cloak & Dagger und Moon Knight"]], counter: "Auf Geräusche achten, eng zusammenstehen, Flächenschaden in verdächtige Bereiche." },
+  { cat: "Schutz", name: "Unverwundbar / nicht anvisierbar", en: "Invulnerable", what: "Der Held nimmt keinen Schaden oder kann nicht anvisiert werden.", src: [["Psylocke", "Während ihrer Ult"], ["Black Cat", "Während Phantom Pursuit"], ["Cloak & Dagger", "Dark Teleportation macht Verbündete ungreifbar"]], counter: "Keine Munition und Fähigkeiten verschwenden – Kontrolle für den Moment danach bereithalten." },
+  { cat: "Schutz", name: "Unaufhaltsam", en: "Unstoppable", what: "Immun gegen Betäubungen und Wegstossen.", src: [["Devil Dinosaur", "Prehistoric Plating"], ["The Thing", "Kann nicht weggeschleudert werden"]], counter: "Schaden statt Kontrolle einsetzen und den Helden kiten." },
+  { cat: "Schutz", name: "Chain-CC-Schutz", en: "Chain-CC Protection", what: "Seit Season 7.5 verhindert ein System, dass Spieler endlos hintereinander betäubt werden.", src: [], counter: "Kontrolleffekte im Team absprechen statt alle auf dasselbe Ziel zu werfen." },
+  { cat: "Schutz", name: "Schild & Barriere", en: "Shield / Barrier", what: "Fängt Schaden ab, bis er gebrochen ist.", src: [["Doctor Strange", "Shield of the Seraphim"], ["Magneto", "Schilde auf Verbündeten"], ["Groot", "Wände"], ["Emma Frost", "Barriere"], ["Devil Dinosaur", "Buddy Barrier"], ["White Fox", "Spirit Sanctuary"]], counter: "Konzentrierter Schaden bricht Schilde; Phoenix' und Cyclops' Ults zerstören Barrieren; Flächenschaden geht um Schilde herum." },
+  { cat: "Schutz", name: "Bonus-Leben", en: "Bonus Health", what: "Zusätzliche Lebenspunkte über dem Maximum.", src: [["Captain America", "Ult Freedom Charge"], ["Venom", "Je mehr Gegner in der Nähe"], ["Gorr", "Durch Berserker-Schaden"], ["Devil Dinosaur", "Passiv Apex Advantage"], ["Elsa Bloodstone", "Ruthless Pursuit"]], counter: "Burst-Schaden; kurz abwarten, bis das Bonus-Leben aufgebraucht ist." },
+  { cat: "Stärkung", name: "Heilung über Zeit", en: "Healing over Time", what: "Heilt das Ziel fortlaufend über mehrere Sekunden.", src: [["Mantis", "Heilung und Ult"], ["Invisible Woman", "Ult-Feld"], ["Phoenix", "Nach Funken-Explosion"], ["Blade", "Team-Up mit Cloak & Dagger und Moon Knight"]], counter: "Burst-Schaden und Heilungsreduktion." },
+  { cat: "Stärkung", name: "Schadensbonus", en: "Damage Boost", what: "Verbündete verursachen mehr Schaden.", src: [["Luna Snow", "Schadensmodus ihrer Ult"], ["Rocket Raccoon", "Ult"], ["Storm", "Schadens-Buff"], ["Gambit", "Ult"], ["Mantis", "Buffs"]], counter: "Den Buff-Geber zuerst fokussieren oder während des Buffs zurückweichen." },
+  { cat: "Stärkung", name: "Tempo-Boost", en: "Speed Boost", what: "Verbündete bewegen sich schneller.", src: [["Captain America", "Ult"], ["Mantis", "Ult"], ["Storm", "Tempo-Buff"], ["Gambit", "Ult"], ["Cloak & Dagger", "Dark Teleportation"]], counter: "Verlangsamung und Kontrolle; Engpässe halten statt offen zu kämpfen." },
+  { cat: "Stärkung", name: "Reinigung", en: "Cleanse / Purify", what: "Entfernt negative Effekte von Verbündeten.", src: [["Gambit", "Herz-Deck und Ult"]], counter: "Kontrolleffekte erst nach seiner Reinigung einsetzen." },
+  { cat: "Stärkung", name: "Wiederbelebung", en: "Revive", what: "Gefallene Verbündete kehren sofort zurück.", src: [["Adam Warlock", "Ult Karmic Revival und Selbst-Wiederbelebung"]], counter: "Eure grossen Ults erst nach seiner Ult zünden; Gegner danach erneut ausschalten." },
+  { cat: "Ult-Energie", name: "Ult-Energie-Diebstahl", en: "Ult Steal", what: "Ult-Energie wird von Gegnern in der Nähe abgezogen.", src: [["Rogue", "Ult Heartbreaker"]], counter: "Abstand halten und die eigene Ult vorher einsetzen." },
+  { cat: "Ult-Energie", name: "Kopie", en: "Copy", what: "Ein Held übernimmt die Fähigkeiten eines anderen – inklusive Ult.", src: [["Loki", "Ult God of Mischief"]], counter: "Im Blick behalten, wen Loki kopiert, und darauf reagieren." }
+];
+
 // ---------- Icons ----------
 const ICONS = {
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
@@ -1852,6 +1976,7 @@ const ICONS = {
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
   chevron: '<path d="m6 9 6 6 6-6"/>',
   book: '<path d="M2 5a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/><path d="M22 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>'
 };
@@ -1865,6 +1990,7 @@ const TITLES = {
   analysis: ["Auswertung", "Muster in deinen Matches erkennen"],
   team: ["Team & Counter", "Counter-Picks für die Heldenauswahl"],
   quiz: ["Counter-Training", "Counter verstehen statt auswendig lernen"],
+  lexicon: ["Lexikon", "Ults, ihre Konter und alle Effekte erklärt"],
   heroes: ["Helden-Guide", "Alle Helden, ihre Counter und deine Matchups"],
   training: ["Training", "Routine, gezielte Übungen und Aufwärmen"],
   goals: ["Lernziele", "Ziele setzen nach dem 3-Phasen-Modell"],
@@ -2521,6 +2647,9 @@ function renderTeam() {
       if (state.counterNotes[e]) ea.push(["good", `Deine Notiz zu <b>${esc(e)}</b>: ${esc(state.counterNotes[e])}`]);
     });
   }
+  const myTeam = new Set(state.team.filter(Boolean));
+  const ultAnswers = [...new Set(enemies)].filter(e => ULTS[e]).map(e => [e, ULTS[e].by.filter(([h]) => myTeam.has(h))]).filter(x => x[1].length);
+  if (ultAnswers.length) ea.push(["good", `<b>Ult-Konter in eurem Team:</b> <ul style="margin:4px 0 0;padding-left:18px">${ultAnswers.map(([e, by]) => `<li><b>${esc(by[0][0])}</b> gegen ${esc(e)} – ${esc(ultName(ULTS[e]))}: ${esc(by[0][1])}</li>`).join("")}</ul>`]);
   if (enemies.length === 6) {
     const ef = formatOf(enemies), known = FORMATS.find(f => f.id === ef.id);
     if (!known) ea.push(["info", `Der Gegner spielt ${ef.id} (Vanguard–Duelist–Strategist).`]);
@@ -2707,6 +2836,7 @@ function renderHeroes() {
       <ul>${h.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
       <div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div>
       <div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>
+      ${ULTS[h.name] ? `<details class="cp"><summary><span class="cp-name"><b>Ult: ${esc(ultName(ULTS[h.name]))}</b></span></summary><div class="cp-body" style="padding-left:14px">${ultCounterHtml(h.name)}</div></details>` : ""}
       ${(COUNTERPLAY[h.name] || []).length ? `<details class="cp"><summary><span class="cp-name"><b>So spielst du gegen ${esc(h.name)}</b></span></summary><div class="cp-body" style="padding-left:14px"><ul>${COUNTERPLAY[h.name].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div></details>` : ""}
       ${pc.length ? `<div class="vs-line"><span class="lbl">Bei dir klappt dagegen</span>${pc.slice(0, 3).map(([n, x]) => `${esc(n)} (${pct(x.wr)})`).join(", ")}</div>` : ""}
       <details><summary>Notizen &amp; Tags</summary>
@@ -3332,6 +3462,7 @@ function counterplayHtml(enemy) {
       <span class="cp-meta">${st.n ? `du: ${wrBadge(st)} <span class="muted small">in ${st.n}</span>` : ""}</span></summary>
     <div class="cp-body">
       ${tips.length ? `<h3>So spielst du dagegen</h3><ul>${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+      ${ULTS[enemy] ? ultCounterHtml(enemy, true) : ""}
       ${best.length ? `<h3>Gute Antworten${pc.length ? " (zuerst deine bewährten)" : ""}</h3><div class="row" style="gap:6px">${best.map(h => heroChip(h)).join("")}</div>` : ""}
       ${state.counterNotes[enemy] ? `<h3>Deine Notiz</h3><p class="small" style="margin:0">${esc(state.counterNotes[enemy])}</p>` : ""}
     </div></details>`;
@@ -3394,13 +3525,66 @@ function renderFormats(mine, enemies) {
     <p class="muted small mt">Winrates schwanken je nach Rang, Plattform und Patch. ${metaMap().size ? "Die Werte stammen aus deinem letzten Rivals-Data-Sync." : "Mit einem Rivals-Data-Sync (Tab Daten &amp; Sync) siehst du hier tagesaktuelle Werte."}</p>`;
 }
 
+// ---------- Lexikon: Ults & Effekte ----------
+let lexTab = "ults";
+function ultName(u) { return u.name || "Ult"; }
+function ultCounterHtml(hero, compact) {
+  const u = ULTS[hero];
+  if (!u) return "";
+  const mine = new Set(state.team.filter(Boolean));
+  const by = u.by.map(([h, how]) => ({ h, how, mine: mine.has(h) }));
+  const ours = by.filter(x => x.mine);
+  return `<div class="ult-box">
+    <div class="ult-head">${icon("ai")}<b>Ult: ${esc(ultName(u))}</b>${u.types.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+    <p>${esc(u.what)}</p>
+    <p><b>So konterst du sie:</b> ${esc(u.counter)}</p>
+    ${ours.length && compact ? `<p class="ult-ours">✓ <b>Euer Team kann kontern:</b> ${ours.map(x => `${esc(x.h)} – ${esc(x.how)}`).join("; ")}</p>` : ""}
+    ${by.length && !(compact && ours.length === by.length) ? `<div class="ult-by">${by.filter(x => !compact || !x.mine).map(x => `<div class="ult-row"><div class="row" style="gap:6px">${heroChip(x.h)}${x.mine ? '<span class="badge">dein Team</span>' : ""}</div><span class="small muted">${esc(x.how)}</span></div>`).join("")}</div>` : ""}
+  </div>`;
+}
+function renderLexicon() {
+  $("#lexTabs").innerHTML = [["ults", "Ults & Konter"], ["effects", "Effekte"]].map(([k, t]) => `<span class="chip ${lexTab === k ? "on" : ""}" data-lex="${k}">${t}</span>`).join("");
+  $("#lexTabs").querySelectorAll("[data-lex]").forEach(c => c.addEventListener("click", () => { lexTab = c.dataset.lex; renderLexicon(); }));
+  const q = $("#lexSearch").value.trim().toLowerCase();
+  const enemyOnly = $("#lexEnemy").checked;
+  const enemies = new Set(state.enemyTeam.filter(Boolean));
+  $("#lexEnemyWrap").hidden = lexTab !== "ults";
+  if (lexTab === "ults") {
+    const heroes = Object.keys(ULTS).filter(h => (!enemyOnly || enemies.has(h)) && (!q || [h, ULTS[h].name, ULTS[h].what, ...ULTS[h].types, ...ULTS[h].by.map(b => b[0])].join(" ").toLowerCase().includes(q)));
+    const rules = `<div class="card"><div class="card-head"><h2>${icon("quiz")}So kontert man Ults</h2></div>
+      ${table(["Ult-Typ", "Beispiele", "Konter"], ULT_RULES.map(([t, ex, c]) => [`<b>${esc(t)}</b>`, `<span class="small muted">${esc(ex)}</span>`, esc(c)]))}</div>`;
+    const groups = ROLES.map(r => {
+      const list = heroes.filter(h => heroRole(h) === r).sort((a, b) => a.localeCompare(b));
+      if (!list.length) return "";
+      return `<div class="card"><div class="card-head"><h2>${roleChip(r, ROLE_DE[r])}</h2><span class="muted small">${plural(list.length, "Ult", "Ults")}</span></div>
+        <div class="formats">${list.map(h => `<div class="fcard"><div class="hero-card-head">${av(h, "lg")}<div><b>${esc(h)}</b>${enemies.has(h) ? ' <span class="badge">im Gegnerteam</span>' : ""}</div></div>${ultCounterHtml(h)}</div>`).join("")}</div></div>`;
+    }).join("");
+    $("#lexBody").innerHTML = (q || enemyOnly ? "" : rules) + (groups || `<div class="card">${empty(enemyOnly ? "Trag im Tab Team &amp; Counter das Gegnerteam ein – oder für diese Helden ist keine Ult hinterlegt." : "Nichts gefunden.", "ai")}</div>`)
+      + `<p class="muted small">Ults sind hier nur aufgeführt, wenn ihre Wirkung in Guides belegt ist (Stand Season 10.5). Werte und Details ändern sich mit Patches.</p>`;
+  } else {
+    const list = EFFECTS.filter(e => !q || [e.name, e.en, e.what, e.counter, ...e.src.map(s => s.join(" "))].join(" ").toLowerCase().includes(q));
+    const cats = [...new Set(EFFECTS.map(e => e.cat))];
+    $("#lexBody").innerHTML = cats.map(c => {
+      const items = list.filter(e => e.cat === c);
+      if (!items.length) return "";
+      return `<div class="card"><div class="card-head"><h2>${esc(c)}</h2></div><div class="formats">${items.map(e => `<div class="fcard">
+        <div class="fhead"><b>${esc(e.name)}</b><span class="tag">${esc(e.en)}</span></div>
+        <p>${esc(e.what)}</p>
+        ${e.src.length ? `<p class="small"><b>Ausgelöst von:</b></p><div class="ult-by">${e.src.map(([h, how]) => `<div class="ult-row">${heroChip(h)}<span class="small muted">${esc(how)}</span></div>`).join("")}</div>` : ""}
+        <p><b>Konter:</b> ${esc(e.counter)}</p></div>`).join("")}</div></div>`;
+    }).join("") || `<div class="card">${empty("Nichts gefunden.", "list")}</div>`;
+  }
+}
+$("#lexSearch").addEventListener("input", renderLexicon);
+$("#lexEnemy").addEventListener("change", renderLexicon);
+
 // ---------- Render ----------
 chipGroup($("#mistakeChips"), MISTAKES);
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
   ({ dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
-     quiz: () => { renderQuiz(); renderRules(); }, heroes: renderHeroes,
+     quiz: () => { renderQuiz(); renderRules(); }, lexicon: renderLexicon, heroes: renderHeroes,
      training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData })[currentTab()]();
 }
 let resizeT = null;

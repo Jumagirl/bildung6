@@ -22,6 +22,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
 | **Team & Counter** | Gegnerteam eintragen: Counter-Picks, Tipps „So spielst du dagegen“ für jeden Helden, Team-Aufstellungen (2-2-2, 1-3-2, 2-1-3, 3-1-2) mit Wann & Warum, Spielstile und aktuelle Meta-Picks |
 | **Counter-Training** | Quiz zum Lernen von Counters; Gegner, gegen die du oft spielst oder die du falsch beantwortest, kommen häufiger |
+| **Lexikon** | Ults & Konter (was jede Ult macht, wie man sie kontert und welche Helden sie konkret ausschalten) und ein Effekte-Lexikon (Betäubung, Blendung, Heilungsreduktion & Co.: Wirkung, Auslöser, Konter) |
 | **Helden-Guide** | Alle 54 Helden (Stand Season 10, Oktober 2026): Grundregeln pro Rolle, Tipps, Spielstil-Tags, „Stark gegen / Gekontert von“, persönliche Matchup-Werte und Notizen |
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
