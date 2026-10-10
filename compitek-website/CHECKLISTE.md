@@ -19,6 +19,8 @@ Impressum und AGB sind von der alten Seite übernommen (Name jetzt „Karl-Walte
 - [ ] **AGB Nr. 6 und 11 vs. Preisseite:** In den AGB stehen Scheck und Zahlung 14 Tage nach Rechnung, auf der Preisseite „nur Vorabüberweisung oder Barzahlung“. Das sollte zusammenpassen.
 - [ ] **AGB Nr. 7, 10 und 12:** Pauschaler Schadenersatz (25 %), Haftungsbegrenzung auf den Verkaufswert sowie Erfüllungsort/Gerichtsstand sind gegenüber Privatkunden oft nur eingeschränkt zulässig.
 
+- [x] **Schreibweise:** In den alten AGB stand teilweise „CompITek“. Auf Wunsch heißt die Firma jetzt überall einheitlich „CompiTek“, auch in den AGB, weil das „I“ sonst mit einem „l“ verwechselt wurde.
+
 ## Sollte geklärt werden
 
 - [ ] **Google-Bewertungen:** Der Abschnitt „Bewertungen“ auf der Startseite verlinkt bisher nur auf Google. Für echte Zitate bitte Screenshots der Google-Rezensionen schicken. Übernommen werden nur Vorname und Initial, dazu der vorgeschriebene Hinweis, dass die Bewertungen nicht auf Echtheit geprüft werden (§ 5b UWG).
