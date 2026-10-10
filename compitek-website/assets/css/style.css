@@ -1409,24 +1409,45 @@ html:not(.js) .map-load { display: none; }
 
 .stars { margin: 0 0 8px; color: #f5a524; font-size: 1.25rem; letter-spacing: .12em; line-height: 1; }
 .reviews {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin: 0 0 18px;
+  columns: 3 300px;
+  column-gap: 18px;
+  margin: 0 0 6px;
   padding: 0;
   list-style: none;
 }
 .review {
-  display: flex;
-  flex-direction: column;
+  break-inside: avoid;
+  margin: 0 0 18px;
   padding: 26px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.review blockquote { flex: 1; margin: 0 0 16px; }
-.review blockquote p { margin: 0; font-size: 1.08rem; color: var(--text); }
-.review-meta { margin: 0; font-size: .95rem; font-weight: 700; color: var(--muted); }
+.review blockquote { margin: 0 0 18px; }
+.review blockquote p { margin: 0 0 .7em; font-size: 1.08rem; line-height: 1.55; color: var(--text); }
+.review blockquote p:last-child { margin-bottom: 0; }
+.review blockquote p:first-child::before { content: "„"; }
+.review blockquote p:last-child::after { content: "“"; }
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: .92rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.review-meta strong { color: var(--ink); font-size: 1rem; }
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--green);
+  font-weight: 800;
+}
 .review-note { margin: 0 0 24px; }
 .review-cta {
   display: flex;
@@ -1441,8 +1462,7 @@ html:not(.js) .map-load { display: none; }
 }
 .review-cta h3 { margin-bottom: .25em; font-size: 1.35rem; }
 .review-cta p:last-child { margin: 0; max-width: 40em; color: var(--muted); }
-@media (max-width: 960px) { .reviews { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px) { .reviews { grid-template-columns: 1fr; } .review-cta .btn { width: 100%; } }
+@media (max-width: 600px) { .review-cta .btn { width: 100%; } }
 
 /* Platzhalter, die vor dem Livegang ersetzt werden müssen */
 .todo {
