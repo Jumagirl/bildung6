@@ -191,7 +191,7 @@ a:hover { color: var(--ink); }
 
 .site-header {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 50;
   background: rgba(255, 255, 255, .92);
   -webkit-backdrop-filter: saturate(1.4) blur(10px);
