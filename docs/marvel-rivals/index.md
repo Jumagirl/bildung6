@@ -20,7 +20,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
 | **Match loggen** | Ergebnis, K/D/A, Map, Gegnerteam, Mitspieler, „Wer hat mir Probleme gemacht?“, Fehler und Stärken |
 | **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
-| **Team & Counter** | Gegnerteam eintragen und passende Counter-Picks bekommen – aus Faustregeln und deinen eigenen Matchup-Daten; dazu Check der eigenen Rollenverteilung |
+| **Team & Counter** | Gegnerteam eintragen: Counter-Picks, Tipps „So spielst du dagegen“ für jeden Helden, Team-Aufstellungen (2-2-2, 1-3-2, 2-1-3, 3-1-2) mit Wann & Warum, Spielstile und aktuelle Meta-Picks |
 | **Counter-Training** | Quiz zum Lernen von Counters; Gegner, gegen die du oft spielst oder die du falsch beantwortest, kommen häufiger |
 | **Helden-Guide** | Alle 54 Helden (Stand Season 10, Oktober 2026): Grundregeln pro Rolle, Tipps, Spielstil-Tags, „Stark gegen / Gekontert von“, persönliche Matchup-Werte und Notizen |
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |

@@ -443,6 +443,69 @@ pre.prompt {
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-strong); font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
 .btn:disabled { opacity: .5; cursor: default; }
 
+/* Helden-Auswahl */
+.hp { position: relative; display: block; min-width: 0; }
+.hp > select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.hp-btn {
+  position: relative; width: 100%; display: flex; align-items: center; gap: 8px; font: inherit; font-size: .92rem; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 5px 10px; min-height: 40px; cursor: pointer; text-align: left;
+}
+.hp-btn:hover, .hp-btn:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.hp-btn .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-btn .ph { color: var(--muted); }
+.hp-btn svg.i { width: 16px; height: 16px; color: var(--muted); }
+.picker-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(8, 10, 18, .55); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; }
+.picker { width: min(680px, 100%); max-height: 86vh; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 24px 64px rgba(0, 0, 0, .35); overflow: hidden; }
+.picker-head { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--grid); }
+.picker-body { overflow-y: auto; padding: 4px 14px 14px; overscroll-behavior: contain; }
+.picker-sec h4 { margin: 12px 0 6px; font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.picker-sec h4 svg.i { width: 14px; height: 14px; }
+.ptiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; }
+.ptile { display: flex; align-items: center; gap: 8px; padding: 6px 8px; min-height: 44px; border-radius: 10px; border: 1px solid transparent; background: var(--surface-2); font: inherit; font-size: .82rem; color: var(--text); cursor: pointer; text-align: left; min-width: 0; }
+.ptile span:last-child { overflow: hidden; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.ptile:hover, .ptile:focus-visible { border-color: var(--accent); outline: none; }
+.ptile.sel { background: var(--accent-soft); border-color: var(--accent); }
+.ptile.taken { opacity: .45; }
+.picker-foot { padding: 10px 14px; border-top: 1px solid var(--grid); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+@media (max-width: 600px) {
+  .picker-backdrop { align-items: flex-end; padding: 0; }
+  .picker { border-radius: 18px 18px 0 0; max-height: 90vh; }
+  .ptiles { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .picker-foot .muted { display: none; }
+}
+/* Konterspiel */
+.cp-list { display: flex; flex-direction: column; gap: 8px; }
+details.cp { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+details.cp summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; color: var(--text); font-size: .9rem; font-weight: 400; margin: 0; }
+details.cp summary::-webkit-details-marker { display: none; }
+details.cp summary::after { content: "▾"; margin-left: 8px; color: var(--muted); transition: transform .15s; }
+details.cp[open] summary::after { transform: rotate(180deg); }
+.cp-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.cp-meta { margin-left: auto; font-size: .82rem; white-space: nowrap; }
+.cp-body { padding: 0 14px 12px 52px; font-size: .88rem; }
+.cp-body h3 { margin: 8px 0 4px; }
+.cp-body ul { margin: 0; padding-left: 18px; }
+.cp-body li { margin: 3px 0; }
+@media (max-width: 600px) { .cp-body { padding-left: 14px; } }
+/* Aufstellungen */
+.formats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.fcard { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: var(--surface-2); font-size: .88rem; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fcard p { margin: 2px 0; }
+.fcard ul { margin: 4px 0; padding-left: 18px; }
+.fcard.rec { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.fcard.mine { background: var(--accent-soft); }
+.fhead { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
+.rdots { display: inline-flex; gap: 3px; margin-top: 5px; }
+.rdot { width: 14px; height: 8px; border-radius: 2px; background: var(--muted); }
+.rdot.Vanguard { background: var(--vanguard); }
+.rdot.Duelist { background: var(--duelist); }
+.rdot.Strategist { background: var(--strategist); }
+.lvl { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.lvl.good { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+.lvl.info { background: var(--accent-soft); color: var(--accent-strong); }
+.lvl.warn { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--text); }
+.lvl.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -528,7 +591,7 @@ pre.prompt {
   <div class="card">
     <div class="card-head"><h2 data-icon="log">Match</h2></div>
     <div class="grid">
-      <label>Mein Held <select name="hero" id="heroSelect" required></select></label>
+      <div class="field">Mein Held <span id="heroPickWrap"><select name="hero" id="heroSelect"></select></span></div>
       <label>Modus
         <select name="mode">
           <option>Competitive</option><option>Quick Match</option><option>Arcade / Event</option><option>Custom / Training</option>
@@ -676,6 +739,19 @@ pre.prompt {
     <div class="grid-6" id="teamSlots"></div>
     <div id="teamFeedback" class="mt"></div>
   </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="team">Team-Aufstellungen</h2><span class="muted small">Vanguard – Duelist – Strategist</span></div>
+    <p class="lead">Marvel Rivals hat keine feste Rollenverteilung – jeder darf jeden Helden wählen. Laut aktuellen Statistiken gewinnt die Standard-Aufstellung 2-2-2 am häufigsten; andere Aufstellungen sind Anpassungen für bestimmte Situationen.</p>
+    <div id="formats"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="quiz">Spielstile</h2><span class="muted small">Dive · Brawl · Poke</span></div>
+    <div id="archetypes"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="analysis">Aktuelle Meta-Picks</h2><span class="muted small" id="metaInfoTeam"></span></div>
+    <div id="metaPicks"></div>
+  </div>
 </section>
 
 <!-- QUIZ -->
@@ -815,6 +891,17 @@ pre.prompt {
 </section>
 </main>
 </div>
+</div>
+<div class="picker-backdrop" id="picker" hidden>
+  <div class="picker" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+    <div class="picker-head">
+      <div class="row between"><b id="pickerTitle">Held wählen</b><button class="btn ghost small icon" type="button" id="pickerClose" aria-label="Schliessen" data-icon="x"></button></div>
+      <input id="pickerSearch" placeholder="Held suchen …" autocomplete="off" aria-label="Held suchen">
+      <div class="chips" id="pickerRoles"></div>
+    </div>
+    <div class="picker-body" id="pickerBody"></div>
+    <div class="picker-foot"><span class="muted small">Tipp: Anfangsbuchstaben tippen und Enter drücken.</span><button class="btn ghost small" type="button" id="pickerClear">Auswahl entfernen</button></div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1618,6 +1705,127 @@ const LESSONS = [
     reflect: "Was ist deine wichtigste Erkenntnis aus dem ganzen Kurs?" }
 ];
 
+// ---------- So spielst du dagegen ----------
+const COUNTERPLAY = {
+  // Vanguards
+  "Captain America": ["Er springt oft allein in die Backline – Strategists eng bei den Tanks halten und ihn gemeinsam fokussieren.", "Sein Schild reflektiert Projektile: nicht stur in den erhobenen Schild schiessen, sondern von der Seite angreifen oder warten.", "Kontrolleffekte (Betäuben, Schlaf, Fallen) stoppen seinen Sprint und Sprung."],
+  "Doctor Strange": ["Sein grosses Schild hat begrenzte Energie – konzentrierter Schaden bricht es, danach steht sein Team offen.", "Flächenschaden (z.B. Squirrel Girl, Moon Knight) trifft Gegner hinter dem Schild.", "Auf Portale achten: Danach kommen Gegner oft aus unerwarteter Richtung."],
+  "Groot": ["Seine Wände sind zerstörbar – gezielt die Wand wegschiessen, die seine Heiler schützt.", "Nicht in engen Gängen gegen ihn kämpfen, sondern auf offene Flächen ausweichen.", "Von hohen Positionen oder Flanken angreifen, wo seine Wände nicht schützen."],
+  "Hulk": ["Als Bruce Banner ist er verwundbar – vor der Verwandlung Druck machen.", "Sein Gamma-Schild schützt Verbündete vor Kontrolleffekten: Kontrolle erst einsetzen, wenn das Schild weg ist.", "Springt er in die Backline: zusammenstehen und ihn gemeinsam bestrafen."],
+  "Magneto": ["Er schützt einzelne Verbündete mit Schilden – das Ziel wechseln, sobald ein Schild aufgeht.", "Nicht in seine Ult schiessen, denn sie sammelt Projektile – ausweichen oder Deckung suchen.", "Auf Distanz ist er stark: mit Divern oder Nahkämpfern Druck machen."],
+  "Peni Parker": ["Ihr Nest und ihre Minen kontrollieren einen Bereich – zuerst das Nest mit Flächenschaden zerstören.", "Nicht durch ihre Netze laufen; Minen aus der Distanz wegschiessen.", "Sie ist wenig mobil: aus der Distanz zermürben, statt in ihr Gebiet zu laufen."],
+  "Thor": ["Er braucht Thorforce für seine stärksten Angriffe – auf Distanz halten und kiten.", "Anti-Tank-Schaden (z.B. Wolverine) und Fokusfeuer bringen ihn trotz Rüstung zu Fall.", "Bei seiner Ult auseinandergehen, statt eng zu stehen."],
+  "Venom": ["Er bekommt mehr Bonus-Leben, je mehr Gegner um ihn herum stehen – nicht alle eng um ihn sammeln.", "Schwingt er rein: Kontrolleffekte und Fokus, denn er muss danach wieder raus.", "Seinen Rückweg abschneiden – dann ist der Dive für ihn tödlich."],
+  "The Thing": ["Wegstossen und Hochschleudern wirken bei ihm nicht – stattdessen auf Distanz halten.", "Er ist langsam: kiten und mit Poke zermürben.", "Den Fokus auf seine Heiler legen, statt dich an ihm festzubeissen."],
+  "Emma Frost": ["In Diamantform hält sie viel aus – Schaden lieber auf ihre Verbündeten lenken.", "Ihre Barriere blockiert die Sicht: umgehen statt hindurchschiessen.", "Positionen absichern, denn sie kann Gegner aus Positionen herausziehen."],
+  "Angela": ["Als fliegender Tank ist sie offen für Hitscan (z.B. Punisher, Hawkeye).", "Sie hat kein starkes Schild – konzentriertes Feuer, sobald sie reinspringt.", "Nicht eng stehen, wenn sie ihren Speer wirft: Die Bänder fesseln Gegner in der Nähe."],
+  "Devil Dinosaur": ["Seine Bisse lassen bluten – nach einem Biss schnell Heilung suchen.", "Wegstossen wirkt bei ihm nicht: lieber Abstand halten.", "Er ist ein Nahkämpfer – Poke und Flyer haben gegen ihn Vorteile."],
+  "Rogue": ["Ihre Ult stiehlt Ult-Energie – nicht eng bei ihr stehen, wenn eure Ults fast voll sind.", "Ihr Dash zieht Gegner zu ihr: Abstand halten und den Zug abwarten.", "Nach ihren Cooldowns angreifen – ihr Kit lebt von Combos."],
+  "The Hood": ["Er heilt sich über Lebensraub – Heilungsreduktion (z.B. Blade, Gambit) ist sehr stark gegen ihn.", "Seine Ult wirkt wie ein zweites Leben: Fähigkeiten nicht verbrauchen, bevor sie vorbei ist.", "Auf Distanz halten, damit er wenig Schaden – und damit wenig Heilung – erzeugt."],
+  // Duelists
+  "Black Panther": ["Er braucht Markierungen für seine Resets – Kontrolleffekte unterbrechen die Combo.", "Strategists eng bei den Tanks halten.", "Nach seinem Dive fehlt ihm oft die Flucht: sofort gemeinsam fokussieren."],
+  "Black Widow": ["Sniperin: Deckung nutzen und offene Sichtlinien zu ihr meiden.", "Mit Divern (z.B. Spider-Man, Black Panther) unter Druck setzen.", "Nach ihrem Schuss die Position merken und gezielt flanken."],
+  "Hawkeye": ["Aufgeladene Pfeile machen viel Schaden – nicht stillstehen, Deckung nutzen.", "Er ist im Nahkampf schwach: Diver und Flanker auf ihn schicken.", "Hohe Positionen kontrollieren, bevor er sie besetzt."],
+  "Hela": ["Hitscan auf Distanz: Deckung nutzen und Sichtlinien vermeiden.", "Mit Divern bedrängen – aber erst reingehen, wenn ihre Betäubung verbraucht ist.", "Schilde (z.B. Magneto, Doctor Strange) blocken ihren Poke."],
+  "Iron Fist": ["Sein Block schützt ihn – warten, bis der Block vorbei ist, dann Schaden machen.", "Kontrolleffekte und eng stehen bremsen seine Dives.", "Er sucht eure Strategists: peelen und sofort gemeinsam reagieren."],
+  "Iron Man": ["Flyer: Hitscan (z.B. Punisher, Hela) und Zielhilfe (z.B. Scarlet Witch) treffen ihn zuverlässig.", "Deckung nach oben suchen, wenn er überladen angreift.", "Nicht ignorieren – von oben macht er viel Schaden."],
+  "Magik": ["Portale ermöglichen Flanken – auf Geräusche und die Teamübersicht achten.", "Ihre Darkchild-Form erkennen und Kontrolle bereithalten.", "Nach ihrem Burst sind die Cooldowns weg: dann fokussieren."],
+  "Mister Fantastic": ["Er steckt viel ein – lieber seine Heiler unter Druck setzen.", "Er zieht Gegner zu seinem Team: Abstand halten.", "Anti-Tank-Schaden wirkt gut gegen ihn."],
+  "Moon Knight": ["Seine Ankhs lassen Angriffe abprallen – Ankh zerstören oder auseinanderstehen.", "Er hat wenig Leben: Diver stören ihn stark.", "In seiner Ult nicht dicht gruppiert stehen."],
+  "Namor": ["Seine Turrets zuerst mit Flächenschaden zerstören.", "Ohne Turrets ist er deutlich schwächer – aus der Distanz pokern.", "Nicht direkt in sein Gebiet diven."],
+  "Psylocke": ["Sie wird unsichtbar – auf Geräusche achten und eng zusammenstehen.", "Ihre Ult trifft Gruppen: auseinandergehen.", "Kontrolleffekte direkt nach dem Auftauchen einsetzen."],
+  "Scarlet Witch": ["Ihr Strahl hat Zielhilfe – Sichtlinie mit Deckung brechen statt ausweichen zu wollen.", "Ihre Ult braucht Aufladezeit: Betäuben oder Deckung suchen.", "Diver setzen sie unter Druck."],
+  "Spider-Man": ["Kontrolleffekte und eng stehen (Anti-Dive wie Namor, Peni Parker, Mantis).", "Auf seine Markierung achten und markierte Verbündete schützen.", "Er hat wenig Leben: ein konzentrierter Burst reicht."],
+  "Squirrel Girl": ["Ihre Bomben prallen ab – nicht in engen Gängen stehen.", "Sie ist wenig mobil: Diver auf sie schicken.", "Ihre Falle meiden und Abstand halten."],
+  "Star-Lord": ["Sehr mobil – Kontrolleffekte und eng stehen.", "Seine Ult schiesst automatisch: Deckung suchen.", "Eure Strategists vor seinen Flanken schützen."],
+  "Storm": ["Flyer: Hitscan und Zielhilfe treffen sie zuverlässig.", "Sie bufft ihr ganzes Team – früh fokussieren.", "Nicht ignorieren, nur weil sie wenig direkten Schaden zu machen scheint."],
+  "The Punisher": ["Sein Turret kontrolliert Chokepoints – umgehen oder zerstören.", "Mit Divern bedrängen; im Nahkampf ist er verwundbarer.", "Konstantem Schaden mit Deckung ausweichen."],
+  "Winter Soldier": ["Sein Haken zieht dich zu ihm – Abstand und Deckung halten.", "Seine Ult setzt sich bei Kills zurück: angeschlagene Verbündete zurückziehen.", "Auf Distanz halten, nahe Distanz ist seine Stärke."],
+  "Wolverine": ["Je länger der Fight, desto stärker wird er – Fights kurz halten und kiten.", "Kontrolleffekte einsetzen, wenn er einen Verbündeten packt.", "Tanks nicht allein lassen, er ist ein Anti-Tank."],
+  "Human Torch": ["Flyer: Hitscan trifft ihn zuverlässig.", "Nicht in seinen Feuerfeldern und Feuerwänden stehen bleiben.", "Druck machen, wenn er landet oder seine Cooldowns verbraucht hat."],
+  "Black Cat": ["Während Phantom Pursuit ist sie nicht anvisierbar – danach sofort fokussieren.", "Doppelsprung und Wandklettern: auf vertikale Winkel achten.", "Kontrolleffekte nach ihrem Greifhaken einsetzen."],
+  "Blade": ["Seine Heilungsreduktion macht lange Fights teuer – nicht allein kämpfen, Abstand halten.", "Er hat zwei Dashes: Kontrolle erst nach den Dashes einsetzen.", "Kiten – auf kurze und mittlere Distanz ist er am stärksten."],
+  "Cyclops": ["Hitscan auf Distanz: Deckung nutzen und Sichtlinien vermeiden.", "Seine Ult zerstört Barrieren – nicht auf Schilde verlassen, sondern auseinandergehen.", "Diver und Flanker setzen ihn unter Druck."],
+  "Daredevil": ["Er spürt Gegner durch Wände – Verstecken bringt wenig, lieber eng zusammenstehen.", "Objection! blockt frontalen Schaden: von der Seite angreifen.", "Kontrolleffekte nach seinem Sprung (Sonic Pursuit) einsetzen."],
+  "Elsa Bloodstone": ["Ihre Falle hält Diver fest – nicht blind in ihre Nähe springen.", "Abstand halten, wenn sie die Schrotflinte nutzt.", "Von der Seite flanken statt frontal anzugreifen."],
+  "Gorr": ["Seine Berserker ausschalten – sie geben ihm Bonus-Leben.", "Fights kurz halten: Für jeden besiegten Gegner erscheint ein weiterer Berserker.", "Kiten – er ist auf Nahkampf ausgelegt."],
+  "Phoenix": ["Ihr Telekinese-Stoss betäubt auf grosse Distanz – offene Sichtlinien meiden.", "Nicht lange in ihrem Feuer stehen, sonst explodieren die Funken.", "Ihre Ult zerstört Schilde: nicht allein auf Schilde verlassen."],
+  // Strategists
+  "Adam Warlock": ["Er kann sich selbst wiederbeleben und mit der Ult Verbündete zurückholen – nach seiner Ult sofort nachsetzen.", "Er ist wenig mobil: Diver auf ihn schicken.", "Sein Seelenbund verteilt Schaden – mit Burst statt verteiltem Schaden antworten."],
+  "Cloak & Dagger": ["Sie wechseln zwischen Heilung und Schaden – Diver zwingen sie in den Nahkampf.", "Aus der Dolch-Sturm-Fläche heraustreten.", "Mit Flächenschaden auf ihre Unsichtbarkeit beim Engage reagieren."],
+  "Invisible Woman": ["Schild und Wegstossen wehren Diver ab – nicht allein auf sie springen.", "Ihre Ult macht ihr Team unsichtbar: Flächenschaden und Fokus auf bekannte Positionen.", "Aus der Distanz pokern."],
+  "Jeff the Land Shark": ["Kleine Hitbox – Flächenschaden trifft ihn leichter.", "Bei seiner Ult nicht nahe an Abgründen stehen.", "Diver auf ihn schicken, er heilt auf kurze Distanz."],
+  "Loki": ["Doppelgänger verwirren – den echten Loki an seinen Bewegungen erkennen.", "Er kann Ults kopieren: Achtet darauf, wann ihr eure Ult zündet.", "Er ist wenig mobil: Diver auf ihn schicken."],
+  "Luna Snow": ["Ihre Ult heilt sehr stark – Burst vorher oder Heilungsreduktion währenddessen.", "Sie ist wenig mobil: Diver auf sie schicken.", "Beachten, wenn sie in den Schadensmodus wechselt."],
+  "Mantis": ["Ihr Schlaf stoppt Diver – nicht direkt vor ihr landen, sondern seitlich angreifen.", "Kopftreffer laden ihre Ressource: Deckung nutzen.", "Sie bufft ihr Team – früh unter Druck setzen."],
+  "Rocket Raccoon": ["Seine Respawn-Bake zerstören, sonst kommen Gegner schneller zurück.", "Er heilt mit abprallenden Kugeln um Ecken – Hitscan trifft ihn trotz Mobilität.", "Vor seiner Ult fokussieren, sie verstärkt den Schaden seines Teams."],
+  "Ultron": ["Fliegender Heiler: Hitscan und Zielhilfe treffen ihn zuverlässig.", "Seine Drohne auf einem Verbündeten verrät, wen er gerade unterstützt.", "In der Luft ist er sichtbar – Diver und Flyer können ihn jagen."],
+  "Gambit": ["Seine Heilungsreduktion trifft euch hart – Schilde (z.B. Magneto, Doctor Strange, Groot, Emma Frost) blocken sie.", "Aus der Distanz mit Snipern (z.B. Hela, Hawkeye, Phoenix) angreifen.", "Nach seinem Dash (Cajun Charge) ist er verwundbar."],
+  "Jubilee": ["Sie hat wenig Leben – Diver und Flanker setzen ihr stark zu.", "Den Explosionen ihrer Blooming Balls ausweichen.", "Nach ihrem Angriffs-Boost (Sparkle Mark) kurz Deckung suchen."],
+  "White Fox": ["Sie teleportiert zu Verbündeten – angreifen, wenn sie allein steht.", "In ihrer Ult ist sie ein Fuchs mit viel Leben: Abstand und Kontrolleffekte.", "Ihren verfolgenden Kugeln mit Deckung ausweichen."],
+  "Deadpool (Vanguard)": ["Er wird mit Style-Meter und Upgrades stärker – früh Druck machen.", "„Deadpool in Your Area“ verwirrt eure Anzeige: Ruhe bewahren und Cooldowns im Kopf behalten.", "Er wechselt im Spawn die Rolle – nach jedem Tod neu prüfen, was er spielt."],
+  "Deadpool (Duelist)": ["Er wird mit Style-Meter und Upgrades stärker – früh Druck machen.", "„Deadpool in Your Area“ verwirrt eure Anzeige: Ruhe bewahren und Cooldowns im Kopf behalten.", "Er wechselt im Spawn die Rolle – nach jedem Tod neu prüfen, was er spielt."],
+  "Deadpool (Strategist)": ["Er wird mit Style-Meter und Upgrades stärker – früh Druck machen.", "„Deadpool in Your Area“ verwirrt eure Anzeige: Ruhe bewahren und Cooldowns im Kopf behalten.", "Als Heiler ist er ein lohnendes Ziel für Diver."]
+};
+
+// ---------- Team-Aufstellungen ----------
+// Reihenfolge: Vanguard-Duelist-Strategist. Einschätzung nach aktuellen Statistiken (Season 10.5): 2-2-2 hat die beste Winrate.
+const FORMATS = [
+  { id: "2-2-2", name: "2-2-2 · Standard", level: "Empfohlen", v: 2, d: 2, s: 2,
+    when: "Fast immer – besonders in Solo-Queue oder wenn du den Gegner noch nicht kennst.",
+    why: "Zwei Tanks halten die Front, zwei Duelists erzeugen Druck, zwei Strategists halten das Team am Leben. Fällt einer aus, ist die Rolle trotzdem noch besetzt. Laut aktuellen Statistiken hat diese Aufstellung die beste Winrate.",
+    tips: ["Ein Tank geht vor (Main-Tank), der zweite schützt die Backline oder macht Raum auf der Seite.", "Die Duelists spielen um den Tank herum statt allein zu flanken.", "Die Strategists sprechen sich bei ihren Ults ab."],
+    counter: "Es gibt keinen klaren Konter – sie verliert nur durch schlechte Koordination." },
+  { id: "1-3-2", name: "1-3-2 · Drei Duelists", level: "Riskant", v: 1, d: 3, s: 2,
+    when: "Passiert in Solo-Queue oft ungewollt. Sinnvoll höchstens mit einem sehr starken Solo-Tank und disziplinierten Duelists.",
+    why: "Viel Schaden und Druck, aber nur ein Tank: Fällt er, bricht die Front zusammen und die Strategists sind ungeschützt.",
+    tips: ["Den Tank um jeden Preis am Leben halten – Strategists konzentrieren sich auf ihn.", "Ein Duelist übernimmt das Peelen für die Strategists.", "Ein Tank mit Schild oder Raumkontrolle (z.B. Peni Parker, Doctor Strange, Magneto) trägt diese Aufstellung am besten."],
+    counter: "Den einzelnen Tank fokussieren oder mit Dive auf die schlecht geschützte Backline gehen." },
+  { id: "2-1-3", name: "2-1-3 · Triple Support", level: "Situativ", v: 2, d: 1, s: 3,
+    when: "Gegen starken Dive oder hohen Burst-Schaden, beim Verteidigen und Hinauszögern, in Overtime.",
+    why: "Sehr viel Heilung und Überlebensfähigkeit – dafür fehlt Schaden, um Kills zu sichern. Statistisch schwächer als 2-2-2, kann aber die richtige Anpassung sein.",
+    tips: ["Mindestens ein Strategist mit viel Schaden oder Buffs (z.B. Mantis, Adam Warlock) als dritter Heiler.", "Fights in die Länge ziehen und den Gegner Ressourcen verbrauchen lassen.", "Den einzigen Duelist schützen – er muss die Kills holen."],
+    counter: "Mit Dive die Backline unter Dauerdruck setzen oder mehr Duelists spielen und ein Ziel konsequent fokussieren." },
+  { id: "3-1-2", name: "3-1-2 · Triple Tank", level: "Nische", v: 3, d: 1, s: 2,
+    when: "Auf engen Maps und bei Konvoi-Pushes, gegen Poke-Teams oder wenn euer Team viel stirbt.",
+    why: "Eine sehr robuste Front mit viel Raumkontrolle und Schilden – dafür wenig Schaden und anfällig für Kiting.",
+    tips: ["Gemeinsam vorrücken und den Raum Stück für Stück übernehmen.", "Tanks mit eigenem Schaden wählen (z.B. Peni Parker, Thor, The Hood).", "Am Objective spielen – die Stärke liegt im Halten und Pushen."],
+    counter: "Kiten mit Poke und Flyern, Anti-Tank-Helden (z.B. Wolverine) und Heilungsreduktion." },
+  { id: "2-3-1", name: "2-3-1 · Ein Strategist", level: "Nicht empfohlen", v: 2, d: 3, s: 1,
+    when: "Fast nie. Notlösung, wenn niemand einen zweiten Strategist spielen will.",
+    why: "Der einzige Heiler wird sofort zum Fokusziel. Ohne ihn verliert ihr nahezu jeden längeren Fight.",
+    tips: ["Wenn es nicht anders geht: Der Strategist braucht dauerhaft einen Beschützer.", "Kurze, explosive Fights suchen statt lange Kämpfe.", "Lieber freundlich fragen, ob jemand wechselt."],
+    counter: "Den einzigen Strategist fokussieren – danach bricht das Team zusammen." }
+];
+
+const ARCHETYPES = [
+  { id: "dive", name: "Dive", tag: "Dive",
+    idea: "Das ganze Team springt gemeinsam auf ein Ziel – meist einen Strategist – und schaltet es aus, bevor der Gegner reagiert.",
+    when: "Gegen wenig mobile Backlines und Sniper, mit Voice-Absprache.",
+    lineup: ["Venom", "Captain America", "Spider-Man", "Magik", "Mantis", "Ultron"],
+    weak: "Anti-Dive (Betäuben, Fallen, Schlaf) und eng stehende Teams." },
+  { id: "brawl", name: "Brawl", tag: "Brawl",
+    idea: "Robuste Helden kämpfen auf kurze Distanz und gewinnen über Ausdauer, Buffs und konstanten Schaden.",
+    when: "Auf engen Maps, bei Konvoi-Pushes und gegen Poke-Teams ohne Schutz.",
+    lineup: ["Thor", "Peni Parker", "Gorr", "Storm", "Mantis", "Jeff the Land Shark"],
+    weak: "Kiting durch Poke und Flyer, Anti-Tank-Schaden." },
+  { id: "poke", name: "Poke", tag: "Poke",
+    idea: "Gegner werden aus sicherer Distanz zermürbt, bevor es zum eigentlichen Fight kommt.",
+    when: "Auf offenen Maps mit langen Sichtlinien und hohen Positionen.",
+    lineup: ["Doctor Strange", "Magneto", "Hela", "Cyclops", "Loki", "Rocket Raccoon"],
+    weak: "Entschlossener Dive und Schilde, die den Poke blocken." }
+];
+
+// Momentaufnahme der Statistiken (Season 10.5, Oktober 2026) – wird durch Rivals-Data-Sync ersetzt
+const META_SNAPSHOT = {
+  label: "Season 10.5 · Oktober 2026",
+  picks: {
+    Vanguard: [["Peni Parker", "ca. 57–60 %"], ["Devil Dinosaur", "ca. 51–52 %"], ["Thor", "ca. 51–52 %"]],
+    Duelist: [["Storm", "ca. 56 %"], ["Gorr", "ca. 55–56 %"], ["Magik", "ca. 54–55 %"]],
+    Strategist: [["Ultron", "ca. 55–57 %"], ["Mantis", "ca. 55–56 %"]]
+  }
+};
+
 // ---------- Icons ----------
 const ICONS = {
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
@@ -1644,6 +1852,7 @@ const ICONS = {
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
   book: '<path d="M2 5a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/><path d="M22 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>'
 };
 function icon(name) { return ICONS[name] ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : ""; }
@@ -1788,10 +1997,13 @@ function bars(items, opts) {
     <div class="top"><span>${label}</span><span class="v">${right}</span></div>
     <div class="track ${cls || ""}"><span style="width:${Math.max(0, Math.min(1, v || 0)) * 100}%"></span></div></div>`).join("")}</div>`;
 }
-function heroSelectHtml(attrs, selected, placeholder) {
-  return `<select ${attrs}><option value="">${placeholder || "–"}</option>${ROLES.map(r =>
+function heroSelectHtml(attrs, selected, placeholder, ctx) {
+  const ph = placeholder || "–";
+  const select = `<select class="hero-sel" data-ctx="${ctx || "any"}" tabindex="-1" aria-hidden="true" ${attrs}><option value="">${esc(ph)}</option>${ROLES.map(r =>
     `<optgroup label="${ROLE_DE[r]}">${allHeroes().filter(h => h.role === r).sort((a, b) => a.name.localeCompare(b.name))
       .map(h => `<option ${h.name === selected ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</optgroup>`).join("")}</select>`;
+  const label = selected && heroByName(selected) ? `${av(selected, "sm")}<span class="nm">${esc(selected)}</span>` : `<span class="nm ph">${esc(ph)}</span>`;
+  return `<span class="hp">${select}<button type="button" class="hp-btn" aria-label="${esc(ph.replace(/–/g, "").trim())}" title="${esc(selected || ph.replace(/–/g, "").trim())}">${label}${icon("chevron")}</button></span>`;
 }
 // Wie gut läuft es gegen jeden Gegner-Helden: [Held, Summary, wie oft "Probleme gemacht"]
 function enemyStats(list) {
@@ -2031,10 +2243,10 @@ function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)]
 function renderLog() {
   renderFocusCard();
   const prev = $("#heroSelect").value || (state.matches.length ? state.matches[state.matches.length - 1].hero : "");
-  $("#heroSelect").outerHTML = heroSelectHtml('name="hero" id="heroSelect" required', prev, "– Held wählen –");
+  $("#heroPickWrap").innerHTML = heroSelectHtml('name="hero" id="heroSelect"', prev, "– Held wählen –", "me");
   const en = slotValues("enemySlots"), al = slotValues("allySlots");
-  $("#enemySlots").innerHTML = [0, 1, 2, 3, 4, 5].map(i => heroSelectHtml(`aria-label="Gegner ${i + 1}"`, en[i], `Gegner ${i + 1}`)).join("");
-  $("#allySlots").innerHTML = [0, 1, 2, 3, 4].map(i => heroSelectHtml(`aria-label="Mitspieler ${i + 1}"`, al[i], `Mitspieler ${i + 1}`)).join("");
+  $("#enemySlots").innerHTML = [0, 1, 2, 3, 4, 5].map(i => heroSelectHtml(`aria-label="Gegner ${i + 1}"`, en[i], `Gegner ${i + 1}`, "enemy")).join("");
+  $("#allySlots").innerHTML = [0, 1, 2, 3, 4].map(i => heroSelectHtml(`aria-label="Mitspieler ${i + 1}"`, al[i], `Mitspieler ${i + 1}`, "ally")).join("");
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
@@ -2096,6 +2308,7 @@ function clearForm() {
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   setChips($("#mistakeChips"), []); setChips($("#goodChips"), []);
   updateNemesis();
+  refreshPickers($("#matchForm"));
 }
 function startEdit(id) {
   const m = state.matches.find(x => x.id === id);
@@ -2113,6 +2326,7 @@ function startEdit(id) {
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   setChips($("#mistakeChips"), m.mistakes || []); setChips($("#goodChips"), m.goods || []);
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
+  refreshPickers($("#matchForm"));
   $("#editText").textContent = `Match vom ${fmtDate(m.date)} bearbeiten (${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"})`;
   $("#editBanner").classList.add("show");
   $("#saveBtn").lastChild.textContent = "Änderungen speichern";
@@ -2138,6 +2352,7 @@ $("#takeTeams").addEventListener("click", () => {
   document.querySelectorAll("#enemySlots select").forEach((s, i) => { s.value = state.enemyTeam[i] || ""; });
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = mates[i] || ""; });
   updateNemesis();
+  refreshPickers($("#matchForm"));
   toast("Teams übernommen");
 });
 $("#matchForm").addEventListener("submit", e => {
@@ -2287,8 +2502,8 @@ function renderAnalysis() {
 
 // ---------- Team & Counter ----------
 function renderTeam() {
-  $("#teamEnemySlots").innerHTML = state.enemyTeam.map((h, i) => heroSelectHtml(`data-eslot="${i}" aria-label="Gegner ${i + 1}"`, h, `Gegner ${i + 1}`)).join("");
-  $("#teamSlots").innerHTML = state.team.map((h, i) => heroSelectHtml(`data-slot="${i}" aria-label="${i === 0 ? "Ich" : "Mitspieler " + i}"`, h, i === 0 ? "Ich" : `Mitspieler ${i}`)).join("");
+  $("#teamEnemySlots").innerHTML = state.enemyTeam.map((h, i) => heroSelectHtml(`data-eslot="${i}" aria-label="Gegner ${i + 1}"`, h, `Gegner ${i + 1}`, "enemy")).join("");
+  $("#teamSlots").innerHTML = state.team.map((h, i) => heroSelectHtml(`data-slot="${i}" aria-label="${i === 0 ? "Ich" : "Mitspieler " + i}"`, h, i === 0 ? "Ich" : `Mitspieler ${i}`, i === 0 ? "me" : "ally")).join("");
   $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.enemyTeam[+s.dataset.eslot] = s.value; save(); renderTeam(); }));
   $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.team[+s.dataset.slot] = s.value; save(); renderTeam(); }));
 
@@ -2306,7 +2521,13 @@ function renderTeam() {
       if (state.counterNotes[e]) ea.push(["good", `Deine Notiz zu <b>${esc(e)}</b>: ${esc(state.counterNotes[e])}`]);
     });
   }
-  $("#enemyAnalysis").innerHTML = notes(ea);
+  if (enemies.length === 6) {
+    const ef = formatOf(enemies), known = FORMATS.find(f => f.id === ef.id);
+    if (!known) ea.push(["info", `Der Gegner spielt ${ef.id} (Vanguard–Duelist–Strategist).`]);
+  }
+  $("#enemyAnalysis").innerHTML = notes(ea) + (enemies.length
+    ? `<h3>So spielst du gegen ihr Team</h3><div class="cp-list">${[...new Set(enemies)].map(counterplayHtml).join("")}</div>` : "");
+  renderFormats(state.team.filter(Boolean), enemies);
 
   const roleF = $("#pickRole").value, poolOnly = $("#pickPool").checked;
   const played = new Set(state.matches.map(m => m.hero));
@@ -2486,6 +2707,7 @@ function renderHeroes() {
       <ul>${h.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
       <div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div>
       <div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>
+      ${(COUNTERPLAY[h.name] || []).length ? `<details class="cp"><summary><span class="cp-name"><b>So spielst du gegen ${esc(h.name)}</b></span></summary><div class="cp-body" style="padding-left:14px"><ul>${COUNTERPLAY[h.name].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div></details>` : ""}
       ${pc.length ? `<div class="vs-line"><span class="lbl">Bei dir klappt dagegen</span>${pc.slice(0, 3).map(([n, x]) => `${esc(n)} (${pct(x.wr)})`).join(", ")}</div>` : ""}
       <details><summary>Notizen &amp; Tags</summary>
         <label class="mt">Meine Notizen (wenn ich ${esc(h.name)} spiele) <textarea data-note="${esc(h.name)}" placeholder="Combos, Erkenntnisse…">${esc(state.heroNotes[h.name] || "")}</textarea></label>
@@ -3008,6 +3230,168 @@ function renderFocusCard() {
     <div class="field">Hast du den Fokus in diesem Match umgesetzt?
       <div class="seg" style="flex-wrap:wrap">${FOCUS_RATINGS.map(([v, t]) => `<input type="radio" name="focusRating" value="${v}" id="fr${v}" ${String(v) === val ? "checked" : ""}><label for="fr${v}">${t}</label>`).join("")}</div>
     </div>`;
+}
+
+// ---------- Helden-Auswahl (Suchfenster statt langer Liste) ----------
+// Das native <select> bleibt für Werte, Formulare und change-Events erhalten; der Button öffnet das Auswahlfenster.
+let pickerTarget = null, pickerRole = "";
+function pickerLabel(sel) {
+  const v = sel.value, ph = sel.options[0] ? sel.options[0].text : "Held wählen";
+  return v ? `${av(v, "sm")}<span class="nm">${esc(v)}</span>${icon("chevron")}` : `<span class="nm ph">${esc(ph)}</span>${icon("chevron")}`;
+}
+function refreshPickers(root) {
+  (root || document).querySelectorAll(".hp").forEach(w => {
+    const sel = w.querySelector("select"), btn = w.querySelector(".hp-btn");
+    if (sel && btn) { btn.innerHTML = pickerLabel(sel); btn.title = sel.value || (sel.options[0] ? sel.options[0].text.replace(/–/g, "").trim() : ""); }
+  });
+}
+function frequentFor(ctx) {
+  const c = {};
+  state.matches.forEach(m => {
+    const list = ctx === "me" ? [m.hero] : ctx === "enemy" ? m.enemies : ctx === "ally" ? m.allies : [m.hero, ...m.enemies, ...m.allies];
+    list.forEach(h => { if (h) c[h] = (c[h] || 0) + 1; });
+  });
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).map(x => x[0]).filter(h => heroByName(h)).slice(0, 8);
+}
+function openPicker(sel) {
+  pickerTarget = sel; pickerRole = "";
+  $("#pickerTitle").textContent = sel.options[0] ? sel.options[0].text.replace(/^–\s*|\s*–$/g, "") : "Held wählen";
+  $("#pickerSearch").value = "";
+  $("#picker").hidden = false;
+  document.body.style.overflow = "hidden";
+  renderPicker();
+  setTimeout(() => $("#pickerSearch").focus(), 30);
+}
+function closePicker() {
+  const btn = pickerTarget && pickerTarget.closest(".hp") && pickerTarget.closest(".hp").querySelector(".hp-btn");
+  $("#picker").hidden = true; document.body.style.overflow = ""; pickerTarget = null;
+  if (btn && document.body.contains(btn)) btn.focus();
+}
+function pickHero(name) {
+  const sel = pickerTarget;
+  if (!sel) return;
+  sel.value = name;
+  closePicker();
+  refreshPickers(sel.closest(".hp").parentElement || document);
+  sel.dispatchEvent(new Event("change", { bubbles: true }));
+}
+function renderPicker() {
+  const sel = pickerTarget, q = $("#pickerSearch").value.trim().toLowerCase();
+  const group = sel.closest(".grid-6");
+  const taken = new Set(group ? [...group.querySelectorAll("select")].filter(s => s !== sel).map(s => s.value).filter(Boolean) : []);
+  $("#pickerRoles").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${pickerRole === r ? "on" : ""}" data-prole="${r}">${r || "Alle"}</span>`).join("");
+  const match = h => (!pickerRole || h.role === pickerRole) && (!q || h.name.toLowerCase().includes(q) || initials(h.name).toLowerCase() === q);
+  const tile = name => `<button type="button" class="ptile ${name === sel.value ? "sel" : ""} ${taken.has(name) ? "taken" : ""}" data-hero="${esc(name)}" title="${taken.has(name) ? "Schon in diesem Team gewählt" : esc(name)}">${av(name, "sm")}<span>${esc(name)}</span></button>`;
+  let html = "";
+  const freq = !q && !pickerRole ? frequentFor(sel.dataset.ctx) : [];
+  if (freq.length) html += `<div class="picker-sec"><h4>${icon("clock")}Häufig gewählt</h4><div class="ptiles">${freq.map(tile).join("")}</div></div>`;
+  ROLES.forEach(r => {
+    const list = allHeroes().filter(h => h.role === r && match(h)).sort((a, b) => a.name.localeCompare(b.name));
+    if (list.length) html += `<div class="picker-sec"><h4>${roleChip(r, ROLE_DE[r])}</h4><div class="ptiles">${list.map(h => tile(h.name)).join("")}</div></div>`;
+  });
+  $("#pickerBody").innerHTML = html || empty("Kein Held gefunden.", "heroes");
+  $("#pickerClear").hidden = !sel.value;
+}
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".hp-btn");
+  if (btn) { openPicker(btn.closest(".hp").querySelector("select")); return; }
+  const t = e.target.closest(".ptile");
+  if (t) { pickHero(t.dataset.hero); return; }
+  const r = e.target.closest("[data-prole]");
+  if (r) { pickerRole = r.dataset.prole; renderPicker(); $("#pickerSearch").focus(); return; }
+  if (e.target.id === "picker") closePicker();
+});
+document.addEventListener("change", e => { if (e.target.matches && e.target.matches("select.hero-sel")) refreshPickers(e.target.closest(".hp")); });
+$("#pickerSearch").addEventListener("input", renderPicker);
+$("#pickerSearch").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); const first = $("#pickerBody .ptile:not(.taken)") || $("#pickerBody .ptile"); if (first) pickHero(first.dataset.hero); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#picker").hidden) closePicker(); });
+$("#pickerClose").addEventListener("click", closePicker);
+$("#pickerClear").addEventListener("click", () => pickHero(""));
+
+// ---------- Konterspiel & Aufstellungen ----------
+function formatOf(heroes) {
+  const c = { Vanguard: 0, Duelist: 0, Strategist: 0 };
+  heroes.forEach(h => { const r = heroRole(h); if (c[r] !== undefined) c[r]++; });
+  return { v: c.Vanguard, d: c.Duelist, s: c.Strategist, id: `${c.Vanguard}-${c.Duelist}-${c.Strategist}` };
+}
+function roleDots(v, d, s) {
+  const dot = r => `<span class="rdot ${r}" title="${r}"></span>`;
+  return `<span class="rdots" aria-label="${v} Vanguard, ${d} Duelist, ${s} Strategist">${dot("Vanguard").repeat(v)}${dot("Duelist").repeat(d)}${dot("Strategist").repeat(s)}</span>`;
+}
+function counterplayHtml(enemy) {
+  const tips = COUNTERPLAY[enemy] || [];
+  const st = summary(state.matches.filter(m => m.enemies.includes(enemy)));
+  const played = new Set(state.matches.map(m => m.hero));
+  const counters = countersOf(enemy);
+  const pc = personalCounters(enemy).map(x => x[0]);
+  const best = [...new Set(pc.concat(counters.filter(h => played.has(h)), counters))].slice(0, 5);
+  return `<details class="cp">
+    <summary>${av(enemy)}<span class="cp-name"><b>${esc(enemy)}</b> ${roleChip(heroRole(enemy))}</span>
+      <span class="cp-meta">${st.n ? `du: ${wrBadge(st)} <span class="muted small">in ${st.n}</span>` : ""}</span></summary>
+    <div class="cp-body">
+      ${tips.length ? `<h3>So spielst du dagegen</h3><ul>${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+      ${best.length ? `<h3>Gute Antworten${pc.length ? " (zuerst deine bewährten)" : ""}</h3><div class="row" style="gap:6px">${best.map(h => heroChip(h)).join("")}</div>` : ""}
+      ${state.counterNotes[enemy] ? `<h3>Deine Notiz</h3><p class="small" style="margin:0">${esc(state.counterNotes[enemy])}</p>` : ""}
+    </div></details>`;
+}
+function metaPicks() {
+  const meta = metaMap();
+  if (meta.size) {
+    const out = {};
+    ROLES.forEach(r => {
+      out[r] = [...meta.values()].filter(h => heroRole(h.hero) === r && isFinite(h.winrate) && (!isFinite(h.pickrate) || h.pickrate >= 1))
+        .sort((a, b) => b.winrate - a.winrate).slice(0, 3).map(h => [h.hero, `${h.winrate.toFixed(1)} %`]);
+      // Fehlen im Sync Werte für eine Rolle, die gespeicherte Momentaufnahme zeigen
+      if (!out[r].length) out[r] = META_SNAPSHOT.picks[r].map(([h, wr]) => [h, `${wr} (${META_SNAPSHOT.label})`]);
+    });
+    return { label: `Rivals Data · Sync vom ${fmtDate(state.sync.at)}${state.sync.meta.rank ? ` · ${state.sync.meta.rank}` : ""}`, picks: out };
+  }
+  return META_SNAPSHOT;
+}
+function renderFormats(mine, enemies) {
+  const myF = mine.length === 6 ? formatOf(mine).id : null;
+  const enF = enemies.length === 6 ? formatOf(enemies) : null;
+  // Empfehlung gegen das Gegnerteam
+  let rec = "2-2-2", why = "Die Standard-Aufstellung ist laut Statistik die sicherste Wahl.";
+  if (enemies.length) {
+    const dive = enemies.filter(e => heroTags(e).includes("Dive")).length;
+    if (enF && enF.s >= 3) { rec = "2-2-2"; why = "Gegen Triple Support: mit Dive oder viel Schaden ein Ziel konsequent fokussieren – 2-2-2 mit Divern ist eine gute Antwort."; }
+    else if (dive >= 3) { rec = "2-1-3"; why = `Gegen ${dive} Diver kann ein dritter Strategist mit Kontrolle (z.B. Mantis) helfen – oder 2-2-2 mit Anti-Dive-Helden.`; }
+    else if (enF && enF.v >= 3) { rec = "2-2-2"; why = "Gegen Triple Tank: kiten, Anti-Tank-Helden (z.B. Wolverine) und Heilungsreduktion einplanen."; }
+  }
+  const lvlCls = { "Empfohlen": "good", "Situativ": "info", "Riskant": "warn", "Nische": "warn", "Nicht empfohlen": "bad" };
+  const enNotes = [];
+  const enKnown = enF && FORMATS.find(f => f.id === enF.id);
+  if (enKnown && enKnown.id !== "2-2-2") enNotes.push(["bad", `<b>Der Gegner spielt ${esc(enKnown.name)}.</b> Konter: ${esc(enKnown.counter)}`]);
+  if (enemies.length >= 4) {
+    // Spielstil des Gegners aus den Tags ableiten
+    const style = ARCHETYPES.map(a => [a, enemies.filter(e => heroTags(e).includes(a.tag) || (a.tag === "Poke" && heroTags(e).includes("Sniper"))).length]).sort((x, y) => y[1] - x[1])[0];
+    if (style && style[1] >= 2) enNotes.push(["info", `<b>Gegnerischer Spielstil: ${esc(style[0].name)}</b> (${style[1]} Helden). ${esc(style[0].idea)} Schwach gegen: ${esc(style[0].weak)}`]);
+  }
+  $("#formats").innerHTML = notes([["info", `<b>Empfehlung${enemies.length ? " gegen dieses Gegnerteam" : ""}: ${rec}.</b> ${esc(why)}`]].concat(enNotes))
+    + `<div class="formats mt">${FORMATS.map(f => `<div class="fcard ${f.id === myF ? "mine" : ""} ${f.id === rec ? "rec" : ""}">
+      <div class="fhead"><div><b>${esc(f.name)}</b><div>${roleDots(f.v, f.d, f.s)}</div></div>
+        <div class="row" style="gap:4px;justify-content:flex-end">${f.id === myF ? '<span class="badge">Eure Aufstellung</span>' : ""}${enF && f.id === enF.id ? '<span class="badge">Gegner</span>' : ""}<span class="lvl ${lvlCls[f.level]}">${esc(f.level)}</span></div></div>
+      <p><b>Wann:</b> ${esc(f.when)}</p>
+      <p><b>Warum:</b> ${esc(f.why)}</p>
+      <details><summary>Tipps &amp; Konter</summary><ul>${f.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="small"><b>So wird sie gekontert:</b> ${esc(f.counter)}</p></details>
+    </div>`).join("")}</div>`;
+  $("#archetypes").innerHTML = `<div class="formats">${ARCHETYPES.map(a => {
+    const n = mine.filter(h => heroTags(h).includes(a.tag)).length;
+    return `<div class="fcard"><div class="fhead"><b>${esc(a.name)}</b>${n >= 2 ? `<span class="badge">${n} eurer Helden</span>` : ""}</div>
+      <p>${esc(a.idea)}</p><p><b>Wann:</b> ${esc(a.when)}</p>
+      <div class="row" style="gap:4px;margin:6px 0">${a.lineup.map(h => av(h)).join("")}</div>
+      <p class="small muted">Beispiel: ${a.lineup.map(esc).join(", ")}</p>
+      <p class="small"><b>Schwach gegen:</b> ${esc(a.weak)}</p></div>`;
+  }).join("")}</div>`;
+  const mp = metaPicks();
+  $("#metaInfoTeam").textContent = mp.label;
+  $("#metaPicks").innerHTML = `<div class="formats">${ROLES.map(r => `<div class="fcard"><div class="fhead">${roleChip(r, ROLE_DE[r])}</div>
+      ${(mp.picks[r] || []).map(([h, wr]) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--grid)">${heroChip(h)}<span class="muted small">${esc(wr)}</span></div>`).join("") || '<p class="muted small">Keine Daten</p>'}
+    </div>`).join("")}</div>
+    <p class="muted small mt">Winrates schwanken je nach Rang, Plattform und Patch. ${metaMap().size ? "Die Werte stammen aus deinem letzten Rivals-Data-Sync." : "Mit einem Rivals-Data-Sync (Tab Daten &amp; Sync) siehst du hier tagesaktuelle Werte."}</p>`;
 }
 
 // ---------- Render ----------
