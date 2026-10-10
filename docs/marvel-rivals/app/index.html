@@ -859,12 +859,12 @@ const TAGS = {
   Splash: "Flächenschaden, trifft auch um Ecken",
   AntiDive: "Stuns, Fallen, Schlaf oder Wegstossen gegen Diver",
   AntiTank: "Besonders stark gegen viel Lebenspunkte",
-  AntiFlieger: "Trifft Flieger zuverlässig (Zielhilfe, Hitscan)",
+  AntiFlyer: "Trifft Flieger zuverlässig (Zielhilfe, Hitscan)",
   Immobil: "Wenig Fluchtmöglichkeiten"
 };
 
 const COUNTER_RULES = [
-  { target: "Flieger", by: ["Hitscan", "AntiFlieger"], why: "Flieger haben in der Luft keine Deckung – Hitscan-Waffen und Zielhilfe treffen sie zuverlässig." },
+  { target: "Flieger", by: ["Hitscan", "AntiFlyer"], why: "Flieger haben in der Luft keine Deckung – Hitscan-Waffen und Zielhilfe treffen sie zuverlässig." },
   { target: "Dive", by: ["AntiDive"], why: "Diver brauchen Zeit am Ziel – Stuns, Schlaf, Fallen und Wegstossen bestrafen das Reinspringen." },
   { target: "Sniper", by: ["Dive"], why: "Sniper sind im Nahkampf schwach – wer schnell bei ihnen ist, gewinnt das Duell." },
   { target: "Poke", by: ["Dive", "Schild"], why: "Poke braucht freie Sicht – Schilde blockieren den Schaden, Diver zwingen in den Nahkampf." },
@@ -904,12 +904,12 @@ const DEFAULT_HEROES = [
   { name: "Moon Knight", role: "Duelist", tags: ["Splash"], tips: ["Ankhs platzieren, damit Angriffe abprallen.", "Stark gegen dicht stehende Gegnergruppen.", "Haken zum Entkommen sparen."] },
   { name: "Namor", role: "Duelist", tags: ["Raumkontrolle", "AntiDive"], tips: ["Turrets (Monstro-Spawns) für Raumkontrolle platzieren.", "Gut zum Verteidigen von Punkten.", "Turrets neu setzen, sobald sie zerstört sind."] },
   { name: "Psylocke", role: "Duelist", tags: ["Dive"], tips: ["Unsichtbarkeit zum Flanken und Entkommen.", "Burst-Schaden auf Strategists.", "Ult in einer Gegnergruppe zünden."] },
-  { name: "Scarlet Witch", role: "Duelist", tags: ["AntiFlieger"], tips: ["Dauerschaden über Chaos-Strahl mit Zielhilfe, kein Kopfzielen nötig.", "Mobil über Teleport/Flug.", "Ult braucht Zeit – nicht ungeschützt aufladen."] },
+  { name: "Scarlet Witch", role: "Duelist", tags: ["AntiFlyer"], tips: ["Dauerschaden über Chaos-Strahl mit Zielhilfe, kein Kopfzielen nötig.", "Mobil über Teleport/Flug.", "Ult braucht Zeit – nicht ungeschützt aufladen."] },
   { name: "Spider-Man", role: "Duelist", tags: ["Dive"], tips: ["Hoher Skill-Cap: Combos (Marke + Zug + Schlag) üben.", "Ständig in Bewegung bleiben, nie stehen bleiben.", "Ziel: Strategists stören und schnell raus."] },
   { name: "Squirrel Girl", role: "Duelist", tags: ["Splash"], tips: ["Abprallende Eichhörnchen-Bomben um Ecken schiessen.", "Spam-Schaden auf Chokepoints.", "Gegner mit Falle festsetzen."] },
   { name: "Star-Lord", role: "Duelist", tags: ["Dive"], tips: ["Sehr mobil – auf Flanken Gegner überraschen.", "Hohe Feuerrate, gut gegen Supports.", "Ult für automatischen Schaden in Gruppen."] },
   { name: "Storm", role: "Duelist", tags: ["Flieger", "Poke"], tips: ["Buffs für Team (Tempo oder Schaden) aktiv wechseln.", "Fliegend Druck machen.", "Teamfights durch Buff-Timing gewinnen."] },
-  { name: "The Punisher", role: "Duelist", tags: ["Hitscan", "AntiFlieger"], tips: ["Konstanter Schaden – gut für Einsteiger.", "Geschütz-Turret auf Chokepoints.", "Rauch und Seil zur Repositionierung."] },
+  { name: "The Punisher", role: "Duelist", tags: ["Hitscan", "AntiFlyer"], tips: ["Konstanter Schaden – gut für Einsteiger.", "Geschütz-Turret auf Chokepoints.", "Rauch und Seil zur Repositionierung."] },
   { name: "Winter Soldier", role: "Duelist", tags: ["Brawl"], tips: ["Haken zieht Gegner zu dir.", "Nahe Distanz für maximalen Schaden.", "Ult kann bei Kills zurückgesetzt werden."] },
   { name: "Wolverine", role: "Duelist", tags: ["AntiTank", "Dive"], tips: ["Anti-Tank: Je länger der Fight, desto stärker.", "Gegner greifen und wegtragen.", "Schadenreduktion durch Wut nutzen."] },
   { name: "Human Torch", role: "Duelist", tags: ["Flieger", "Raumkontrolle"], tips: ["Fliegt und erzeugt Feuerfelder.", "Feuerwände trennen Gegner.", "Stark aus der Luft auf Gruppen."] },
@@ -1675,6 +1675,10 @@ function loadState() {
     quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "" }
   }, s || {});
   st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
+  // Umbenannter Tag in gespeicherten Daten: AntiFlieger → AntiFlyer
+  const renameTag = tags => (tags || []).map(t => (t === "AntiFlieger" ? "AntiFlyer" : t));
+  Object.keys(st.heroTagOverrides).forEach(k => { st.heroTagOverrides[k] = renameTag(st.heroTagOverrides[k]); });
+  st.customHeroes.forEach(h => { h.tags = renameTag(h.tags); });
   st.settings = Object.assign({ playerName: "" }, st.settings);
   // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
