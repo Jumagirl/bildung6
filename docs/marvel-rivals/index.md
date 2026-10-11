@@ -29,9 +29,15 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
 | **Daten & Sync** | Abgleich mit Rivals Data, Backup als JSON, Export der Matches als CSV |
 
-!!! info "Datenschutz"
-    Alle Eingaben werden ausschliesslich lokal in deinem Browser gespeichert (`localStorage`).
-    Die App selbst überträgt keine Daten an einen Server. Mit dem Export kannst du ein Backup erstellen.
+!!! info "Wo werden deine Daten gespeichert?"
+    - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
+      Deine Einträge liegen privat in deinem Claude-Konto – nur du siehst sie, auf jedem Gerät, auf dem du angemeldet bist.
+    - **Diese Website oder eine heruntergeladene Datei:** Die Daten bleiben nur in diesem Browser (`localStorage`).
+      In Vorschau-Apps, im privaten Modus oder nach dem Löschen des Browserverlaufs gehen sie verloren.
+      Oben rechts in der App siehst du jederzeit, wo gespeichert wird; ist Speichern nicht möglich, erscheint eine Warnung.
+
+    Mit **Daten & Sync → Als JSON exportieren** erstellst du ein Backup, das du überall wieder importieren kannst –
+    so überträgst du auch bisherige Daten in die Online-Version.
 
 ## Abgleich mit Rivals Data
 

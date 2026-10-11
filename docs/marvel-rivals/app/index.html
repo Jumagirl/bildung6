@@ -99,7 +99,7 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 /* ---------- Layout ---------- */
 .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 .sidebar {
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  position: sticky; top: env(safe-area-inset-top, 0px); height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto;
   background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 18px 14px; gap: 18px;
 }
@@ -137,7 +137,7 @@ section[hidden] { display: none; }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .sidebar {
-    position: sticky; top: 0; z-index: 20; height: auto; flex-direction: column; gap: 10px;
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; height: auto; flex-direction: column; gap: 10px;
     padding: 10px 16px 8px; border-right: 0; border-bottom: 1px solid var(--border);
   }
   .brand-mark { width: 30px; height: 30px; }
@@ -517,6 +517,22 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .ult-row > span.small { padding-left: 30px; line-height: 1.35; }
 .fcard .ult-box { background: var(--surface); }
 
+/* Speicherstatus & Dialoge */
+.head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.save-chip { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+.save-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.save-chip.ok .dot { background: var(--good); }
+.save-chip.warn .dot { background: var(--warn); }
+.save-chip.bad .dot { background: var(--bad); }
+.save-chip.bad { color: var(--bad); }
+.storage-banner { padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; font-size: .9rem; background: color-mix(in srgb, var(--bad) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); }
+.storage-banner a { color: var(--accent-strong); font-weight: 600; }
+.confirm-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(8, 10, 18, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.confirm-box { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 24px 64px rgba(0, 0, 0, .35); display: flex; flex-direction: column; gap: 14px; }
+.confirm-box p { margin: 0; font-size: .95rem; }
+.btn.danger-solid { background: var(--bad); color: #fff; }
+.btn.danger-solid:hover { background: var(--bad); filter: brightness(1.08); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -555,9 +571,10 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <div class="content">
 <div class="page-head">
   <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p></div>
-  <button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button>
+  <div class="head-actions"><span class="save-chip" id="saveChip" role="status"></span><button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button></div>
 </div>
 <main>
+<div class="storage-banner" id="storageBanner" role="alert" hidden></div>
 <!-- DASHBOARD -->
 <section id="tab-dashboard">
   <div class="kpis" id="kpis"></div>
@@ -887,13 +904,18 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <!-- DATA -->
 <section id="tab-data" hidden>
   <div class="card">
+    <div class="card-head"><h2 data-icon="data">Speicherort</h2></div>
+    <div class="sync-status" id="storageInfo"></div>
+  </div>
+  <div class="card">
     <div class="card-head"><h2 data-icon="sync">Mit Rivals Data synchronisieren</h2></div>
     <div class="sync-status" id="syncStatus"></div>
     <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript deine öffentlichen Matches und die globalen Helden-Statistiken und speichert sie als Datei, die du hier einliest.</p>
     <ol class="steps">
       <li><div>Einmalig die Bibliothek installieren (Python 3.10 oder neuer):
         <div class="code"><code>python -m pip install rivals-api</code><button class="btn ghost small" type="button" data-copy="python -m pip install rivals-api">Kopieren</button></div></div></li>
-      <li><div>Das Skript <a href="../rivals_sync.py" download>rivals_sync.py</a> herunterladen und in einen Ordner legen.</div></li>
+      <li><div><span id="scriptLinkWrap">Das Skript <a href="../rivals_sync.py" download>rivals_sync.py</a> herunterladen – oder </span>den Code kopieren und als Datei <code>rivals_sync.py</code> in einem Ordner speichern.
+        <div class="row mt"><button class="btn ghost small" type="button" id="copyScript" data-icon="copy">Skript-Code kopieren</button></div></div></li>
       <li><div>Deinen Spielernamen (oder deine UID) eintragen und den Befehl im selben Ordner ausführen:
         <div class="row mt"><input id="syncPlayer" placeholder="Spielername oder UID" style="max-width:260px"></div>
         <div class="code"><code id="syncCmd"></code><button class="btn ghost small" type="button" id="syncCmdCopy">Kopieren</button></div>
@@ -904,7 +926,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="data">Backup</h2></div>
-    <p class="lead">Alle Daten liegen nur lokal in deinem Browser. Exportiere sie regelmässig als Backup oder um sie auf ein anderes Gerät zu übertragen.</p>
+    <p class="lead">Exportiere regelmässig ein Backup – damit kannst du deine Daten auch auf ein anderes Gerät oder in die Online-Version übertragen.</p>
     <div class="row">
       <button class="btn" type="button" id="exportBtn" data-icon="download">Als JSON exportieren</button>
       <label class="btn ghost" style="cursor:pointer;flex-direction:row" data-icon="upload">Backup importieren<input type="file" id="importFile" accept="application/json,.json" hidden></label>
@@ -927,6 +949,396 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="picker-foot"><span class="muted small">Tipp: Anfangsbuchstaben tippen und Enter drücken.</span><button class="btn ghost small" type="button" id="pickerClear">Auswahl entfernen</button></div>
   </div>
 </div>
+<div class="confirm-backdrop" id="confirmDlg" hidden>
+  <div class="confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirmText">
+    <p id="confirmText"></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" type="button" id="confirmCancel">Abbrechen</button><button class="btn" type="button" id="confirmOk">OK</button></div>
+  </div>
+</div>
+<script type="text/plain" id="syncScriptSrc">#!/usr/bin/env python3
+"""Rivals-Data-Sync für den Rivals Coach.
+
+Holt deine öffentlichen Marvel-Rivals-Daten von RivalsData (über die
+Community-Bibliothek ``rivals-api``) und schreibt sie in eine JSON-Datei,
+die du im Rivals Coach unter „Daten → Rivals Data importieren“ einliest.
+
+Installation (einmalig):
+    python -m pip install rivals-api
+
+Benutzung:
+    python rivals_sync.py "DeinSpielername"
+    python rivals_sync.py 1970288503 --limit 100
+    python rivals_sync.py "DeinSpielername" --no-details   # schneller, ohne Teams
+
+Hinweise:
+- Deine Match-History muss öffentlich sein, sonst liefert RivalsData keine Matches.
+- ``rivals-api`` ist inoffiziell und nutzt eine nicht dokumentierte Schnittstelle;
+  Felder können sich ändern. Das Skript überspringt Matches, die es nicht lesen kann.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from typing import Any, Iterable, Mapping
+
+FORMAT = "rivals-coach-sync"
+VERSION = 1
+
+# Namen, die in der App anders heissen als in rivals-api
+NAME_FIXES = {
+    "Tankpool": "Deadpool (Vanguard)",
+    "DPSpool": "Deadpool (Duelist)",
+    "Stratpool": "Deadpool (Strategist)",
+    "Gorr the God Butcher": "Gorr",
+}
+# Queue-Codes laut rivals-api: 1 Quick Match, 2 Competitive, 3 Custom, 4 Arcade
+MODES = {1: "Quick Match", 2: "Competitive", 3: "Custom / Training", 4: "Arcade / Event"}
+GAME_TYPES = ("Domination", "Convoy", "Convergence", "Doom Match", "Conquest")
+
+
+# ---------- Hilfsfunktionen (ohne Netzwerk, testbar) ----------
+
+def as_dict(value: Any) -> Any:
+    """Wandelt rivals-api-Modelle rekursiv in normale dicts/lists um."""
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, Mapping):
+        return {k: as_dict(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [as_dict(v) for v in value]
+    return value
+
+
+def values(container: Any) -> list:
+    """Teams und Spieler kommen als Liste oder als dict (nach Slot) – beides erlauben."""
+    if isinstance(container, Mapping):
+        return list(container.values())
+    if isinstance(container, list):
+        return container
+    return []
+
+
+def to_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def ref_name(ref: Any) -> str | None:
+    """Name aus einer serialisierten Referenz ({id, name, is_known}) lesen."""
+    if isinstance(ref, Mapping):
+        if ref.get("is_known") is False:
+            return None
+        return ref.get("name")
+    if isinstance(ref, str):
+        return ref
+    return None
+
+
+def hero_label(hero_id: Any, fallback: Any = None) -> str | None:
+    try:
+        from rivals_api import hero_name
+    except ImportError:  # in Tests ohne installierte Bibliothek
+        hero_name = None
+    name = hero_name(hero_id) if hero_name and hero_id is not None else None
+    name = name or ref_name(fallback)
+    if not name or name.lower().startswith("unknown"):
+        return None
+    if name == "Deadpool":  # Rolle unbekannt
+        return "Deadpool (Duelist)"
+    return NAME_FIXES.get(name, name)
+
+
+def timestamp_ms(value: Any) -> int | None:
+    if value is None:
+        return None
+    number = to_int(value)
+    if number is not None:
+        return number if number > 10**12 else number * 1000
+    try:
+        text = str(value).replace("Z", "+00:00")
+        return int(datetime.fromisoformat(text).timestamp() * 1000)
+    except ValueError:
+        return None
+
+
+def map_label(row: Mapping[str, Any]) -> tuple[str, str]:
+    """Liefert (Map-Name im App-Format, Spieltyp)."""
+    ref = row.get("map") if isinstance(row.get("map"), Mapping) else {}
+    name = ref_name(ref) or (row.get("map_name") if isinstance(row.get("map_name"), str) else None)
+    location = ref.get("location") if isinstance(ref, Mapping) else None
+    label = f"{location}: {name}" if name and location and location not in name else (name or "")
+    gameplay = ref.get("gameplay_name") if isinstance(ref, Mapping) else None
+    gameplay = gameplay or row.get("map_mode_name") or ref_name(row.get("gameplay_mode"))
+    game_type = next((t for t in GAME_TYPES if gameplay and t.lower() in str(gameplay).lower()), "Anderer")
+    return label, game_type
+
+
+def main_hero(player: Mapping[str, Any]) -> tuple[str | None, bool]:
+    """Längstgespielter Held eines Match-Teilnehmers und ob gewechselt wurde."""
+    heroes = [h for h in values(player.get("heroes") or player.get("top_heroes")) if isinstance(h, Mapping)]
+    if heroes:
+        def play_time(h: Mapping[str, Any]) -> float:
+            try:
+                return float(h.get("play_time") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        totals: dict[str, float] = {}
+        for h in heroes:
+            name = hero_label(h.get("hero_id", h.get("id")), h)
+            if name:
+                totals[name] = totals.get(name, 0.0) + play_time(h)
+        if totals:
+            best = max(totals, key=totals.get)
+            swapped = sum(1 for t in totals.values() if t >= 30) > 1
+            return best, swapped
+    hero = player.get("hero") if isinstance(player.get("hero"), Mapping) else {}
+    return hero_label(player.get("hero_id", hero.get("hero_id")), hero), False
+
+
+def number(value: Any) -> int | None:
+    try:
+        return round(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] | None) -> dict | None:
+    """Wandelt einen History-Eintrag (+ optionale Details) ins Match-Format der App um."""
+    match_id = row.get("match_uid")
+    if match_id is None:
+        return None
+    is_win = row.get("is_win")
+    if to_int(row.get("winner_camp")) == 12 or is_win is None:
+        return None  # Unentschieden oder unbekanntes Ergebnis
+    ts = timestamp_ms(row.get("timestamp")) or int(datetime.now(timezone.utc).timestamp() * 1000)
+    map_name, game_type = map_label(row)
+    hero = hero_label(row.get("hero_id"), row.get("hero"))
+    match = {
+        "extId": str(match_id),
+        "source": "rivalsdata",
+        "ts": ts,
+        "date": datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d"),
+        "hero": hero,
+        "mode": MODES.get(to_int(row.get("game_mode_id")), "Anderer"),
+        "type": game_type,
+        "map": map_name,
+        "result": "W" if is_win else "L",
+        "k": to_int(row.get("kills")) or 0,
+        "d": to_int(row.get("deaths")) or 0,
+        "a": to_int(row.get("assists")) or 0,
+        "dmg": None, "heal": None, "block": None,
+        "mvp": bool(row.get("is_mvp")), "svp": bool(row.get("is_svp")),
+        "enemies": [], "allies": [], "swapped": False,
+    }
+    if details:
+        apply_details(match, details, uid)
+    if not match["hero"]:
+        return None
+    return match
+
+
+def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
+    """Ergänzt Teams, Schaden, Heilung und Heldenwechsel aus den Match-Details."""
+    if not match["map"]:
+        match["map"], match["type"] = map_label(details)
+    me_team = None
+    entries: list[tuple[Any, Mapping[str, Any]]] = []
+    for team in values(details.get("teams")):
+        if not isinstance(team, Mapping):
+            continue
+        camp = team.get("camp", team.get("team_id", team.get("side")))
+        for player in values(team.get("players")):
+            if not isinstance(player, Mapping):
+                continue
+            player_camp = player.get("camp", camp)
+            entries.append((player_camp, player))
+            if str(player.get("uid", player.get("player_uid"))) == str(uid):
+                me_team = player_camp
+                hero, swapped = main_hero(player)
+                match["hero"] = hero or match["hero"]
+                match["swapped"] = swapped
+                match["dmg"] = number(player.get("damage"))
+                match["heal"] = number(player.get("healing"))
+                match["block"] = number(player.get("blocked"))
+    if me_team is None:
+        return
+    for camp, player in entries:
+        if str(player.get("uid", player.get("player_uid"))) == str(uid):
+            continue
+        hero, _ = main_hero(player)
+        if hero:
+            (match["allies"] if str(camp) == str(me_team) else match["enemies"]).append(hero)
+
+
+def percent(value: Any) -> float | None:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(v * 100, 1) if v <= 1 else round(v, 1)
+
+
+def first(row: Mapping[str, Any], keys: Iterable[str]) -> Any:
+    for key in keys:
+        if row.get(key) is not None:
+            return row[key]
+    return None
+
+
+def convert_meta(tier_list: Mapping[str, Any]) -> list[dict]:
+    rows = []
+    for row in values(tier_list.get("heroes")):
+        if not isinstance(row, Mapping):
+            continue
+        hero = hero_label(row.get("hero_id", row.get("id")), row)
+        if not hero:
+            continue
+        rows.append({
+            "hero": hero,
+            "winrate": percent(first(row, ("winrate", "win_rate", "wr"))),
+            "winrateNoMirror": percent(row.get("winrate_no_mirror")),
+            "pickrate": percent(first(row, ("pick_rate", "pickrate"))),
+            "banrate": percent(first(row, ("ban_rate", "banrate"))),
+            "games": to_int(first(row, ("total_games", "games", "picks"))),
+            "tier": row.get("tier"),
+        })
+    return rows
+
+
+def convert_player_heroes(rows: Iterable[Any]) -> list[dict]:
+    out = []
+    for row in rows:
+        row = as_dict(row)
+        if not isinstance(row, Mapping):
+            continue
+        hero = hero_label(row.get("hero_id"), row)
+        games = to_int(row.get("games"))
+        if not hero or not games:
+            continue
+        wins = to_int(row.get("wins"))
+        out.append({"hero": hero, "games": games, "wins": wins, "losses": to_int(row.get("losses")),
+                    "winrate": round(wins / games * 100, 1) if wins is not None else None,
+                    "kda": row.get("kda")})
+    return out
+
+
+# ---------- Abruf ----------
+
+def sync(args: argparse.Namespace) -> dict:
+    from rivals_api import RivalsClient
+
+    result: dict[str, Any] = {"format": FORMAT, "version": VERSION, "source": "rivalsdata",
+                              "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                              "matches": [], "playerHeroes": [], "meta": None, "warnings": []}
+    with RivalsClient(use_browser_fallback=args.browser) as client:
+        player = client.get_player(args.player)
+        uid = player.uid
+        result["player"] = {"name": getattr(player, "name", None) or str(args.player), "uid": uid,
+                            "level": getattr(player, "level", None)}
+        print(f"Spieler gefunden: {result['player']['name']} (UID {uid})")
+
+        try:
+            history = player.matches.fetch(limit=args.limit)
+            rows = list(history.matches)
+        except Exception as exc:  # z.B. private Match-History
+            rows = []
+            result["warnings"].append(f"Match-History nicht abrufbar: {exc}")
+            print(f"! Match-History nicht abrufbar: {exc}")
+
+        skipped = 0
+        for i, row in enumerate(rows, 1):
+            details = None
+            if args.details:
+                try:
+                    details = as_dict(row.get_details())
+                except Exception as exc:
+                    result["warnings"].append(f"Details zu {row.match_uid} fehlen: {exc}")
+            try:
+                match = convert_match(as_dict(row), uid, details)
+            except Exception as exc:
+                match = None
+                result["warnings"].append(f"Match übersprungen: {exc}")
+            if match:
+                result["matches"].append(match)
+            else:
+                skipped += 1
+            print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
+        if rows:
+            print()
+        if skipped:
+            print(f"{skipped} Match(es) übersprungen (Unentschieden oder unvollständig).")
+
+        try:
+            result["playerHeroes"] = convert_player_heroes(player.heroes.summary(season="all"))
+        except Exception as exc:
+            result["warnings"].append(f"Helden-Statistik nicht abrufbar: {exc}")
+
+        try:
+            tier = as_dict(client.heroes.tier_list(platform=args.platform, rank=args.rank))
+            result["meta"] = {"rank": args.rank, "platform": args.platform,
+                              "updated": tier.get("last_update"), "heroes": convert_meta(tier)}
+        except Exception as exc:
+            result["warnings"].append(f"Globale Tierlist nicht abrufbar: {exc}")
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Rivals-Data-Sync für den Rivals Coach")
+    parser.add_argument("player", help="Spielername oder numerische UID")
+    parser.add_argument("--limit", type=int, default=50, help="Anzahl Matches (Standard: 50)")
+    parser.add_argument("--no-details", dest="details", action="store_false",
+                        help="Keine Match-Details abrufen (schneller, aber ohne Teams, Schaden und Heilung)")
+    parser.add_argument("--rank", default="grandmaster_plus",
+                        help="Rang-Filter für die globale Tierlist (Standard: grandmaster_plus)")
+    parser.add_argument("--platform", default=1, type=int, help="1 = PC, 2 = PlayStation, 4 = Xbox")
+    parser.add_argument("--browser", action="store_true",
+                        help='Browser-Fallback bei Cloudflare-Sperre (vorher: pip install "rivals-api[browser]")')
+    parser.add_argument("-o", "--out", default="rivals-sync.json", help="Ausgabedatei")
+    args = parser.parse_args()
+
+    try:
+        import rivals_api  # noqa: F401
+    except ImportError:
+        print("Bitte zuerst installieren:  python -m pip install rivals-api")
+        return 1
+    from rivals_api import CloudflareError, PlayerNotFoundError, PrivacyError, RivalsDataError
+
+    try:
+        data = sync(args)
+    except PlayerNotFoundError:
+        print(f"Spieler „{args.player}“ nicht gefunden. Tipp: Probiere deine numerische UID.")
+        return 1
+    except PrivacyError:
+        print("Dein Profil oder deine Match-History ist privat. Stelle sie im Spiel auf öffentlich.")
+        return 1
+    except CloudflareError:
+        print('Cloudflare blockiert die Anfrage. Installiere  pip install "rivals-api[browser]"  '
+              "und starte das Skript mit --browser.")
+        return 1
+    except RivalsDataError as exc:
+        print(f"Abruf fehlgeschlagen: {exc}")
+        print("Prüfe deine Internetverbindung und versuche es später erneut "
+              '(bei Cloudflare-Problemen: pip install "rivals-api[browser]" und --browser).')
+        return 1
+
+    with open(args.out, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+    print(f"Fertig: {len(data['matches'])} Matches, {len(data['playerHeroes'])} Helden-Statistiken"
+          f"{', globale Tierlist' if data['meta'] else ''} → {args.out}")
+    for warning in data["warnings"][:5]:
+        print(f"  Hinweis: {warning}")
+    print("Jetzt im Rivals Coach unter „Daten → Rivals Data importieren“ einlesen.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+</script>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -2001,9 +2413,9 @@ const TITLES = {
 // ---------- Speicher ----------
 const STORE_KEY = "rivals-coach-v1";
 function matchTime(m) { return m.ts || Date.parse(`${m.date}T12:00:00`) || 0; }
-function loadState() {
-  let s = null;
-  try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { s = null; }
+function loadState(raw) {
+  let s = raw === undefined ? null : raw;
+  if (raw === undefined) { try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { s = null; } }
   const st = Object.assign({
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
@@ -2025,9 +2437,203 @@ function loadState() {
   return st;
 }
 let state = loadState();
-function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* privat-modus */ }
+
+// ---------- Speicherung: Konto (online) oder Browser (lokal) ----------
+// Online-Version: privat im Claude-Konto (db-Capability, data/users/<id>/...), auf allen Geräten gleich.
+// Lokale Datei: localStorage dieses Browsers. Fehlt beides, warnt die App deutlich.
+const ONLINE_URL = "https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw";
+let storageOK = false;
+try { const k = STORE_KEY + "-probe"; localStorage.setItem(k, "1"); storageOK = localStorage.getItem(k) === "1"; localStorage.removeItem(k); } catch (e) { storageOK = false; }
+const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
+const Cloud = { db: null, base: null, ready: false, status: "init", rev: null, lastJson: {}, chunkCount: 0, timer: null, queue: Promise.resolve(), unsub: null, error: "" };
+const CHUNK_BYTES = 180000; // Sicherheitsabstand zur Dokumentgrenze von 256 KiB
+function plainJson(x) { return JSON.parse(JSON.stringify(x)); }
+function hasUserData(s) { return s.matches.length || s.goals.length || Object.keys(s.lessons.done).length || Object.keys(s.heroNotes).length || s.sync; }
+
+function setSyncStatus(status, error) {
+  Cloud.status = status; Cloud.error = error || "";
+  const map = {
+    init: ["", "Lade Daten …"],
+    loading: ["", "Lade aus deinem Konto …"],
+    saving: ["", "Speichert …"],
+    cloud: ["ok", "In deinem Konto gespeichert"],
+    local: [storageOK ? "warn" : "bad", storageOK ? "Nur in diesem Browser gespeichert" : "Wird nicht gespeichert"],
+    error: ["bad", "Speichern im Konto fehlgeschlagen"]
+  };
+  const [cls, text] = map[status] || map.local;
+  const chip = $("#saveChip");
+  if (chip) { chip.className = `save-chip ${cls}`; chip.innerHTML = `<span class="dot"></span>${esc(text)}`; chip.title = error || text; }
+  const banner = $("#storageBanner");
+  if (banner) {
+    const lost = status === "local" && !storageOK;
+    const failed = status === "error";
+    banner.hidden = !(lost || failed);
+    if (lost) banner.innerHTML = `<b>Achtung: In dieser Ansicht werden deine Einträge nicht gespeichert.</b> Beim nächsten Öffnen wären sie weg. ${ONLINE_URL
+      ? `Nutze die <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version des Rivals Coach</a> – dort liegen deine Daten in deinem Konto.`
+      : "Öffne die Datei in Chrome, Edge oder Firefox (nicht im privaten Modus und nicht in einer Vorschau-App)."} Sichere bis dahin über <b>Daten &amp; Sync → Als JSON exportieren</b>.`;
+    if (failed) banner.innerHTML = `<b>Deine letzten Änderungen konnten nicht in deinem Konto gespeichert werden.</b> ${esc(error || "")} Sie sind vorerst nur in diesem Browser gesichert; der nächste Speichervorgang versucht es erneut.`;
+  }
+  if (currentTabSafe() === "data") renderStorageInfo();
 }
+function currentTabSafe() { try { return currentTab(); } catch (e) { return ""; } }
+
+// Lokales Speichern (immer zusätzlich, als schneller Zwischenspeicher)
+function saveLocal() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
+}
+function save() {
+  state.updatedAt = Date.now();
+  saveLocal();
+  if (Cloud.ready) scheduleCloud();
+}
+function scheduleCloud() {
+  clearTimeout(Cloud.timer);
+  setSyncStatus("saving");
+  Cloud.timer = setTimeout(() => { Cloud.queue = Cloud.queue.then(() => writeCloud(false)).catch(() => {}); }, 700);
+}
+function chunkMatches(matches) {
+  const chunks = [];
+  let cur = [], size = 0;
+  matches.forEach(m => {
+    const len = JSON.stringify(m).length + 1;
+    if (cur.length && size + len > CHUNK_BYTES) { chunks.push(cur); cur = []; size = 0; }
+    cur.push(m); size += len;
+  });
+  if (cur.length) chunks.push(cur);
+  return chunks;
+}
+async function writeCloud(force) {
+  if (!Cloud.base) return;
+  try {
+    const rev = newId();
+    const { matches, ...rest } = plainJson(state);
+    const chunks = chunkMatches(matches);
+    for (let i = 0; i < chunks.length; i++) {
+      const body = { i, matches: chunks[i] };
+      const json = JSON.stringify(body);
+      if (force || Cloud.lastJson[i] !== json) { await Cloud.base.doc(`matches-${i}`).set(body); Cloud.lastJson[i] = json; }
+    }
+    for (let i = chunks.length; i < Cloud.chunkCount; i++) { await Cloud.base.doc(`matches-${i}`).delete(); delete Cloud.lastJson[i]; }
+    Cloud.chunkCount = chunks.length;
+    Cloud.rev = rev;
+    await Cloud.base.doc("state").set({ rev, updatedAt: state.updatedAt || Date.now(), chunks: chunks.length, state: rest });
+    setSyncStatus("cloud");
+  } catch (e) {
+    const msg = e && e.code === "quota_exceeded" ? "Der Speicherplatz in deinem Konto ist voll – lösche alte Matches oder exportiere ein Backup." : (e && e.message) || "";
+    setSyncStatus("error", msg);
+  }
+}
+async function readCloud(meta) {
+  const n = meta.chunks || 0;
+  const docs = await Promise.all(Array.from({ length: n }, (_, i) => Cloud.base.doc(`matches-${i}`).get()));
+  const matches = [];
+  Cloud.lastJson = {};
+  docs.forEach((d, i) => {
+    if (d.exists) { const body = d.data(); matches.push(...(body.matches || [])); Cloud.lastJson[i] = JSON.stringify({ i, matches: body.matches || [] }); }
+  });
+  Cloud.chunkCount = n;
+  return Object.assign({}, plainJson(meta.state || {}), { matches, updatedAt: meta.updatedAt });
+}
+function applyRemote(remote, rev) {
+  state = loadState(remote);
+  Cloud.rev = rev;
+  saveLocal();
+  quiz = null;
+  render();
+}
+async function initCloud() {
+  if (!IN_VIEWER) { setSyncStatus("local"); return; }
+  // Stand dieses Browsers beim Start merken; Einträge während des Ladens bleiben lokal und werden danach übernommen
+  const startUpdated = state.updatedAt || 0, startHadData = hasUserData(state);
+  let db = null, user = null;
+  try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch (e) { db = null; }
+  const uid = user ? await user.id() : null;
+  if (!db || !uid) { setSyncStatus("local"); return; }
+  Cloud.db = db;
+  Cloud.base = db.collection(`data/users/${uid}`);
+  setSyncStatus("loading");
+  try {
+    const metaSnap = await Cloud.base.doc("state").get();
+    if (metaSnap.exists) {
+      const meta = metaSnap.data();
+      // Neuerer Stand gewinnt: Konto oder dieser Browser
+      if ((meta.updatedAt || 0) >= startUpdated || !startHadData) {
+        const remote = await readCloud(meta);
+        const editedMeanwhile = (state.updatedAt || 0) > startUpdated;
+        if (editedMeanwhile) {
+          const ids = new Set(remote.matches.map(m => m.id));
+          remote.matches.push(...state.matches.filter(m => !ids.has(m.id)));
+        }
+        applyRemote(remote, meta.rev);
+        if (editedMeanwhile) { state.updatedAt = Date.now(); saveLocal(); await writeCloud(true); }
+      } else { await readCloud(meta); await writeCloud(true); }
+    } else if (hasUserData(state)) {
+      await writeCloud(true);
+    }
+    Cloud.ready = true;
+    setSyncStatus("cloud");
+    // Änderungen von anderen Geräten live übernehmen
+    Cloud.unsub = Cloud.base.doc("state").onSnapshot(async snap => {
+      if (!snap.exists || snap.metadata.hasPendingWrites) return;
+      const meta = snap.data();
+      if (!meta.rev || meta.rev === Cloud.rev) return;
+      if ((meta.updatedAt || 0) < (state.updatedAt || 0)) return;
+      try { applyRemote(await readCloud(meta), meta.rev); toast("Neuer Stand von einem anderen Gerät geladen"); } catch (e) { /* nächster Snapshot versucht es erneut */ }
+    }, () => setSyncStatus("error", "Die Verbindung zu deinem Konto wurde unterbrochen. Lade die Seite neu."));
+  } catch (e) {
+    setSyncStatus("error", (e && e.message) || "");
+  }
+}
+function renderStorageInfo() {
+  const el = $("#storageInfo");
+  if (!el) return;
+  const where = Cloud.status === "cloud" || Cloud.status === "saving"
+    ? ["ok", "In deinem Claude-Konto", "Deine Daten liegen privat in deinem Konto. Nur du siehst sie – auf jedem Gerät, auf dem du diese Seite öffnest."]
+    : Cloud.status === "error"
+      ? ["bad", "Konto-Speicherung gestört", Cloud.error || "Änderungen werden vorerst nur in diesem Browser gesichert."]
+      : storageOK
+        ? ["warn", "Nur in diesem Browser", "Die Daten bleiben erhalten, solange du die Seite in diesem Browser öffnest und den Browserverlauf nicht löschst. Auf anderen Geräten oder in einer Vorschau-App sind sie nicht da."]
+        : ["bad", "Nirgends – Daten gehen verloren", "Diese Ansicht erlaubt kein Speichern (z.B. Vorschau in einer App oder privater Modus). Exportiere ein Backup, bevor du die Seite schliesst."];
+  el.className = `sync-status ${where[0] === "ok" ? "ok" : ""}`;
+  el.innerHTML = `<span class="dot" style="${where[0] === "bad" ? "background:var(--bad)" : where[0] === "warn" ? "background:var(--warn)" : ""}"></span><div><b>Gespeichert: ${esc(where[1])}</b><br><span class="muted small">${esc(where[2])}</span>
+    ${!IN_VIEWER && ONLINE_URL ? `<br><span class="small">Tipp: In der <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version</a> werden deine Daten in deinem Konto gespeichert. Übertrage sie mit Backup exportieren → dort importieren.</span>` : ""}</div>`;
+}
+
+// ---------- Eigener Bestätigungsdialog (confirm() ist in der Online-Ansicht gesperrt) ----------
+function askConfirm(message, okLabel, danger) {
+  return new Promise(resolve => {
+    const dlg = $("#confirmDlg");
+    $("#confirmText").textContent = message;
+    const ok = $("#confirmOk");
+    ok.textContent = okLabel || "OK";
+    ok.className = `btn ${danger ? "danger-solid" : ""}`;
+    dlg.hidden = false;
+    setTimeout(() => ok.focus(), 20);
+    const done = v => { dlg.hidden = true; ok.onclick = null; $("#confirmCancel").onclick = null; dlg.onclick = null; document.removeEventListener("keydown", onKey); resolve(v); };
+    const onKey = e => { if (e.key === "Escape") done(false); };
+    ok.onclick = () => done(true);
+    $("#confirmCancel").onclick = () => done(false);
+    dlg.onclick = e => { if (e.target === dlg) done(false); };
+    document.addEventListener("keydown", onKey);
+  });
+}
+
+// ---------- Dateien speichern ----------
+async function saveFile(name, text, type) {
+  if (IN_VIEWER) {
+    const downloads = await window.claude.use("downloads");
+    if (downloads) {
+      try { await downloads.save({ filename: name, data: text }); toast("Datei gespeichert"); }
+      catch (e) { if (e && e.code !== "declined") toast("Speichern nicht möglich: " + ((e && e.message) || "")); }
+      return;
+    }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function allHeroes() { return DEFAULT_HEROES.concat(state.customHeroes); }
 function heroByName(name) { return allHeroes().find(x => x.name === name); }
 function heroRole(name) { const h = heroByName(name); return h ? h.role : "?"; }
@@ -2391,8 +2997,8 @@ function renderLog() {
       <td style="white-space:nowrap"><button class="btn ghost small icon" data-edit="${m.id}" type="button" aria-label="Bearbeiten" title="Bearbeiten / Reflexion ergänzen">${icon("edit")}</button>
         <button class="btn danger small icon" data-del="${m.id}" type="button" aria-label="Löschen" title="Löschen">${icon("trash")}</button></td></tr>`).join("")}
     </tbody></table>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
-  $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
-    if (!confirm("Match löschen?")) return;
+  $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    if (!(await askConfirm("Dieses Match löschen?", "Löschen", true))) return;
     state.matches = state.matches.filter(m => m.id !== b.dataset.del);
     if (editingId === b.dataset.del) cancelEdit();
     save(); render();
@@ -2965,8 +3571,8 @@ function renderGoals() {
     const g = state.goals.find(x => x.id === b.dataset.done); g.done = !g.done; save(); renderGoals();
     if (g.done) toast("Ziel erreicht! 🎉");
   }));
-  $("#goalList").querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", () => {
-    if (!confirm("Ziel löschen?")) return;
+  $("#goalList").querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", async () => {
+    if (!(await askConfirm("Dieses Ziel löschen?", "Löschen", true))) return;
     state.goals = state.goals.filter(x => x.id !== b.dataset.rmg); save(); renderGoals();
   }));
 }
@@ -3036,6 +3642,8 @@ function syncCommand() {
   return `python rivals_sync.py "${name}"`;
 }
 function renderData() {
+  renderStorageInfo();
+  $("#scriptLinkWrap").hidden = IN_VIEWER;
   $("#syncPlayer").value = state.settings.playerName || "";
   $("#syncCmd").textContent = syncCommand();
   const s = state.sync, el = $("#syncStatus");
@@ -3052,6 +3660,7 @@ function renderData() {
 }
 $("#syncPlayer").addEventListener("input", e => { state.settings.playerName = e.target.value.trim(); save(); $("#syncCmd").textContent = syncCommand(); });
 $("#syncCmdCopy").addEventListener("click", () => copyText(syncCommand(), "Befehl kopiert!"));
+$("#copyScript").addEventListener("click", () => copyText($("#syncScriptSrc").textContent.replace(/^\n/, ""), "Skript kopiert – als rivals_sync.py speichern"));
 document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copyText(b.dataset.copy, "Befehl kopiert!")));
 
 const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "swapped", "mvp", "svp", "ts", "date"];
@@ -3100,17 +3709,11 @@ $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
 });
-function download(name, text, type) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type }));
-  a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-$("#exportBtn").addEventListener("click", () => download(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"));
+$("#exportBtn").addEventListener("click", () => saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"));
 $("#csvBtn").addEventListener("click", () => {
   const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next", "source", "extId"];
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
-  download(`rivals-matches-${today()}.csv`, [cols.join(","), ...state.matches.map(m => cols.map(c => cell(m[c])).join(","))].join("\n"), "text/csv");
+  saveFile(`rivals-matches-${today()}.csv`, [cols.join(","), ...state.matches.map(m => cols.map(c => cell(m[c])).join(","))].join("\n"), "text/csv");
 });
 $("#importFile").addEventListener("change", async e => {
   try {
@@ -3118,15 +3721,13 @@ $("#importFile").addEventListener("change", async e => {
     if (!data) return;
     if (data.format === "rivals-coach-sync") { const r = importSync(data); quiz = null; render(); syncToast(r); return; }
     if (!Array.isArray(data.matches)) throw new Error("Ungültige Datei");
-    if (!confirm(`${data.matches.length} Matches importieren? Aktuelle Daten werden ersetzt.`)) return;
-    localStorage.setItem(STORE_KEY, JSON.stringify(data));
-    state = loadState(); quiz = null; render(); toast("Backup importiert");
+    if (!(await askConfirm(`${data.matches.length} Matches aus dem Backup importieren? Deine aktuellen Daten werden dabei ersetzt.`, "Importieren", true))) return;
+    state = loadState(data); save(); quiz = null; render(); toast("Backup importiert");
   } catch (err) { toast("Import fehlgeschlagen: " + err.message); }
 });
-$("#resetBtn").addEventListener("click", () => {
-  if (!confirm("Wirklich ALLE Daten löschen? Das kann nicht rückgängig gemacht werden.")) return;
-  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
-  state = loadState(); quiz = null; render(); toast("Alle Daten gelöscht");
+$("#resetBtn").addEventListener("click", async () => {
+  if (!(await askConfirm("Wirklich alle Daten löschen? Matches, Ziele, Lektionen und Notizen sind danach weg – auch in deinem Konto.", "Alles löschen", true))) return;
+  state = loadState({}); save(); quiz = null; render(); toast("Alle Daten gelöscht");
 });
 
 // ---------- Tägliche Lektionen: Logik ----------
@@ -3591,7 +4192,10 @@ let resizeT = null;
 window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (currentTab() === "dashboard") renderDashboard(); }, 150); });
 let startTab = "dashboard";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "dashboard"; } catch (e) {}
+if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });
+setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");
+initCloud();
 </script>
 </body>
 </html>
