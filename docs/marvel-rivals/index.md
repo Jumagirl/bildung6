@@ -18,7 +18,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 |---|---|
 | **Tägliche Lektionen** | 35 Lektionen in 7 Modulen – jeden Tag eine: verstehen, Wissens-Check, üben, im Match anwenden, reflektieren; mit Wiederholungsfragen und Empfehlungen passend zu deinen Fehlern |
 | **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
-| **Match loggen** | Ergebnis, K/D/A, Map, Gegnerteam, Mitspieler, „Wer hat mir Probleme gemacht?“, Fehler und Stärken |
+| **Match loggen** | Ergebnis, K/D/A, Map, Datum, dein Team und das Gegnerteam, „Wer hat mir Probleme gemacht?“, Fehler und Stärken; dazu Coach-Hinweise, warum das Match gewonnen oder verloren gegangen sein könnte. Falsche Einträge (z.B. Sieg statt Niederlage) korrigierst du im Match-Verlauf per Klick |
 | **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
 | **Team & Counter** | Gegnerteam eintragen: Counter-Picks, Tipps „So spielst du dagegen“ für jeden Helden, Team-Aufstellungen (2-2-2, 1-3-2, 2-1-3, 3-1-2) mit Wann & Warum, Spielstile und aktuelle Meta-Picks |
 | **Counter-Training** | Quiz zum Lernen von Counters; Gegner, gegen die du oft spielst oder die du falsch beantwortest, kommen häufiger |

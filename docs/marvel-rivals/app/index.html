@@ -275,6 +275,11 @@ textarea { min-height: 76px; resize: vertical; }
 .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .pill.win { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); }
 .pill.loss { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.pill-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 999px; }
+.pill-btn:hover .pill, .pill-btn:focus-visible .pill { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hint-teams { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; font-size: .86rem; color: var(--text-2); }
+.hint-teams span { display: inline-flex; align-items: center; gap: 8px; }
+.hint-foot { margin-top: 10px; }
 .wr { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wr .arrow { font-size: .65rem; }
 .wr.good .arrow { color: var(--good); }
@@ -626,6 +631,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
           <option>Competitive</option><option>Quick Match</option><option>Arcade / Event</option><option>Custom / Training</option>
         </select>
       </label>
+      <label>Datum <input type="date" name="date" id="matchDate"></label>
       <label>Map <select name="map" id="mapSelect"></select></label>
       <label id="mapOtherWrap" hidden>Andere Map <input name="mapOther" id="mapOther" placeholder="Name der Map"></label>
       <label>Spieltyp
@@ -671,14 +677,20 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <button class="btn ghost small" type="button" id="takeTeams">Aus „Team &amp; Counter“ übernehmen</button>
     </div>
     <p class="lead">Optional, aber wertvoll: Daraus berechnet die App, gegen welche Helden du oft verlierst und welche Counter bei dir funktionieren.</p>
+    <h3>Mein Team</h3>
+    <p class="muted small">Dein Held steht oben bei „Mein Held“ – hier kommen deine Mitspieler dazu.</p>
+    <div class="grid-6" id="allySlots"></div>
     <h3>Gegnerteam</h3>
     <div class="grid-6" id="enemySlots"></div>
-    <h3>Meine Mitspieler</h3>
-    <div class="grid-6" id="allySlots"></div>
     <div class="grid mt">
       <label>Wer hat dir am meisten Probleme gemacht? <select name="nemesis" id="nemesisSelect"></select></label>
       <label>Während des Matches gewechselt? <select name="swapped"><option value="">Nein</option><option value="1">Ja</option></select></label>
     </div>
+  </div>
+
+  <div class="card" id="hintCard">
+    <div class="card-head"><h2 data-icon="ai" id="hintTitle">Warum Sieg oder Niederlage?</h2></div>
+    <div id="hintBody"></div>
   </div>
 
   <div class="card">
@@ -2998,14 +3010,14 @@ function renderLog() {
     ${rows.map(m => `<tr>
       <td class="small">${fmtDate(m.date)}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
       <td>${heroChip(m.hero)}</td>
-      <td>${resultPill(m.result)}</td>
+      <td><button class="pill-btn" type="button" data-flip="${m.id}" title="Ergebnis ändern (Sieg ↔ Niederlage)" aria-label="Ergebnis ändern, aktuell ${m.result === "W" ? "Sieg" : "Niederlage"}">${resultPill(m.result)}</button></td>
       <td class="num">${m.k}/${m.d}/${m.a}</td>
       <td class="small">${esc(m.map || m.type)}<br><span class="muted">${esc(m.mode)}</span></td>
       <td><span class="row" style="gap:3px;flex-wrap:nowrap">${m.enemies.map(e => `<span${e === m.nemesis ? ' style="outline:2px solid var(--bad);border-radius:50%"' : ""}>${av(e, "sm")}</span>`).join("") || '<span class="muted small">–</span>'}</span></td>
       <td class="small">${(m.mistakes || []).length ? esc(m.mistakes.slice(0, 2).join(", ")) + (m.mistakes.length > 2 ? " …" : "") : (m.notes ? esc(m.notes.slice(0, 40)) : '<span class="muted">offen</span>')}</td>
-      <td style="white-space:nowrap"><button class="btn ghost small icon" data-edit="${m.id}" type="button" aria-label="Bearbeiten" title="Bearbeiten / Reflexion ergänzen">${icon("edit")}</button>
+      <td style="white-space:nowrap"><button class="btn ghost small" data-edit="${m.id}" type="button" title="Alle Angaben ändern oder Reflexion ergänzen">${icon("edit")}Bearbeiten</button>
         <button class="btn danger small icon" data-del="${m.id}" type="button" aria-label="Löschen" title="Löschen">${icon("trash")}</button></td></tr>`).join("")}
-    </tbody></table>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
+    </tbody></table><p class="muted small mt">Falsch eingetragen? Tippe auf das Ergebnis, um Sieg und Niederlage zu tauschen, oder auf „Bearbeiten“ für alle Angaben (auch das Datum).</p>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
   $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
     if (!(await askConfirm("Dieses Match löschen?", "Löschen", true))) return;
     state.matches = state.matches.filter(m => m.id !== b.dataset.del);
@@ -3013,6 +3025,25 @@ function renderLog() {
     save(); render();
   }));
   $("#matchTable").querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => startEdit(b.dataset.edit)));
+  $("#matchTable").querySelectorAll("[data-flip]").forEach(b => b.addEventListener("click", async () => {
+    const m0 = state.matches.find(x => x.id === b.dataset.flip);
+    if (!m0) return;
+    const label = r => (r === "W" ? "Sieg" : "Niederlage");
+    const to = m0.result === "W" ? "L" : "W";
+    const msg = `Match vom ${fmtDate(m0.date)} (${m0.hero}): Ergebnis von ${label(m0.result)} auf ${label(to)} ändern?`
+      + (m0.extId ? " Hinweis: Dieses Match stammt von Rivals Data – beim nächsten Abgleich wird das Ergebnis von dort wieder übernommen." : "");
+    if (!(await askConfirm(msg, `Auf ${label(to)} ändern`))) return;
+    const m = state.matches.find(x => x.id === m0.id);
+    if (!m) return;
+    m.result = to; save();
+    if (editingId === m.id) $("#matchForm").result.value = to;
+    render(); renderMatchHints();
+    toast(`Ergebnis geändert: ${label(to)}`);
+  }));
+  const dt = $("#matchDate");
+  dt.max = today();
+  if (!dt.value) dt.value = today();
+  renderMatchHints();
 }
 function updateNemesis() {
   const cur = $("#nemesisSelect").value;
@@ -3045,11 +3076,13 @@ function clearForm() {
   const keep = { hero: f.hero.value, mode: f.mode.value, type: f.type.value };
   f.reset();
   f.hero.value = keep.hero; f.mode.value = keep.mode; f.type.value = keep.type;
+  f.date.value = today();
   setMapValue("");
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   setChips($("#mistakeChips"), []); setChips($("#goodChips"), []);
   updateNemesis();
   refreshPickers($("#matchForm"));
+  renderMatchHints();
 }
 function startEdit(id) {
   const m = state.matches.find(x => x.id === id);
@@ -3058,6 +3091,7 @@ function startEdit(id) {
   showTab("log");
   const f = $("#matchForm");
   f.hero.value = m.hero; f.mode.value = m.mode; f.type.value = m.type; setMapValue(m.map || "");
+  f.date.value = m.date || today();
   f.result.value = m.result; f.k.value = m.k; f.d.value = m.d; f.a.value = m.a;
   f.mood.value = String(m.mood || 3);
   f.dmg.value = m.dmg ?? ""; f.heal.value = m.heal ?? ""; f.block.value = m.block ?? "";
@@ -3068,6 +3102,7 @@ function startEdit(id) {
   setChips($("#mistakeChips"), m.mistakes || []); setChips($("#goodChips"), m.goods || []);
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
+  renderMatchHints();
   $("#editText").textContent = `Match vom ${fmtDate(m.date)} bearbeiten (${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"})`;
   $("#editBanner").classList.add("show");
   $("#saveBtn").lastChild.textContent = "Änderungen speichern";
@@ -3079,6 +3114,134 @@ function cancelEdit() {
   $("#saveBtn").lastChild.textContent = "Match speichern";
   clearForm();
 }
+
+// ---------- Match-Hinweise: Warum Sieg oder Niederlage? ----------
+function matchDraft() {
+  const f = $("#matchForm"), num = k => (f[k].value === "" ? null : Number(f[k].value));
+  const on = id => [...document.querySelectorAll(`#${id} .chip.on`)].map(c => c.dataset.v);
+  return {
+    hero: f.hero.value, result: f.result.value, k: num("k") || 0, d: num("d") || 0, a: num("a") || 0,
+    dmg: num("dmg"), heal: num("heal"), block: num("block"), type: f.type.value,
+    map: f.map.value === "__other" ? f.mapOther.value.trim() : f.map.value,
+    allies: slotValues("allySlots").filter(Boolean), enemies: slotValues("enemySlots").filter(Boolean),
+    mistakes: on("mistakeChips"), goods: on("goodChips")
+  };
+}
+const nameList = (list, max) => { const l = [...new Set(list)]; return esc(l.slice(0, max || 3).join(", ")) + (l.length > (max || 3) ? " …" : ""); };
+function matchHints(d, skipId) {
+  const lost = d.result === "L";
+  const neg = lost ? "bad" : "info";   // Probleme: bei einer Niederlage als Warnung, bei einem Sieg nur als Hinweis
+  const team = [d.hero, ...d.allies].filter(Boolean), enemies = d.enemies;
+  const hist = state.matches.filter(m => m.id !== skipId);
+  const comp = [], match = [], mine = [];
+
+  // 1) Aufstellung des eigenen Teams
+  if (team.length >= 4) {
+    const fm = formatOf(team), known = team.length === 6 ? FORMATS.find(x => x.id === fm.id) : null;
+    if (fm.s === 0) comp.push([neg, "<b>Kein Strategist im Team.</b> Ohne Heilung gehen längere Teamfights meistens verloren."]);
+    else if (fm.s === 1 && team.length >= 5) comp.push([neg, "<b>Nur ein Strategist.</b> Er wird schnell zum Fokusziel – fällt er, bricht die Heilung weg."]);
+    if (fm.v === 0) comp.push([neg, "<b>Kein Vanguard.</b> Niemand schafft Raum oder fängt Schaden ab."]);
+    if (fm.d >= 4) comp.push([neg, `<b>${fm.d} Duelists.</b> Viel Schaden, aber wenig Schutz und Heilung.`]);
+    if (known) {
+      if (known.id === "2-2-2") comp.push([lost ? "info" : "good", "<b>Standard-Aufstellung 2-2-2.</b> Die Rollenverteilung war solide – der Grund liegt eher woanders (Counter, Ult-Timing, Teamplay)."]);
+      else if (!(fm.s === 0 || fm.v === 0 || fm.d >= 4 || (fm.s === 1 && team.length >= 5))) comp.push([known.level === "Riskant" || known.level === "Nicht empfohlen" ? neg : "info", `<b>Aufstellung ${esc(known.id)} (${esc(known.level)}).</b> ${esc(known.why)}`]);
+    }
+  }
+  // 2) Aufstellungen im Vergleich + Counter nach Spielstil
+  if (enemies.length >= 4 && team.length >= 4) {
+    const cn = [];
+    COUNTER_RULES.forEach(r => {
+      const enT = enemies.filter(e => heroTags(e).includes(r.target)), ownAns = team.filter(h => r.by.some(b => heroTags(h).includes(b)));
+      if (enT.length >= 2 && !ownAns.length) cn.push([enT.length, neg, `Der Gegner hatte <b>${enT.length}× ${esc(r.target)}</b> (${nameList(enT)}), euer Team keine Antwort darauf (${esc(r.by.join(" / "))}). ${esc(r.why)}`]);
+      else if (enT.length >= 2 && ownAns.length >= 2) cn.push([enT.length, "good", `Gegen <b>${enT.length}× ${esc(r.target)}</b> beim Gegner hattet ihr <b>${esc(r.by.join(" / "))}</b> (${nameList(ownAns)}).`]);
+      const myT = team.filter(h => heroTags(h).includes(r.target)), enAns = enemies.filter(e => r.by.some(b => heroTags(e).includes(b)));
+      if (myT.length >= 2 && enAns.length >= 2) cn.push([myT.length, neg, `Euer Team spielte <b>${myT.length}× ${esc(r.target)}</b> (${nameList(myT)}) – der Gegner hatte dagegen ${nameList(enAns)} (${esc(r.by.join(" / "))}).`]);
+    });
+    cn.sort((a, b) => b[0] - a[0]).slice(0, 3).forEach(([, t, html]) => match.push([t, html]));
+    const threatened = team.filter(h => enemies.some(e => counterReasons(e, h).length));
+    const countering = enemies.filter(e => team.some(h => counterReasons(h, e).length));
+    if (threatened.length >= 3) match.push([neg, `<b>${threatened.length} eurer Helden</b> wurden vom Gegnerteam gekontert (${nameList(threatened, 4)}). Ein Heldenwechsel hätte sich gelohnt.`]);
+    if (countering.length >= 3) match.push(["good", `Euer Team konnte <b>${countering.length} Gegner</b> kontern (${nameList(countering, 4)}).`]);
+  }
+  // 3) Dein Held im Matchup
+  if (d.hero && enemies.length) {
+    const against = enemies.filter(e => counterReasons(e, d.hero).length), favored = enemies.filter(e => counterReasons(d.hero, e).length);
+    const explain = !match.length;   // Begründung nur, wenn sie nicht schon in den Spielstil-Hinweisen steht
+    if (against.length) match.push([neg, `<b>${esc(d.hero)}</b> wird von ${nameList(against)} gekontert.${explain ? " " + esc(counterReasons(against[0], d.hero)[0].why) : ""}`]);
+    if (favored.length) match.push(["good", `<b>${esc(d.hero)}</b> kontert ${nameList(favored)}.${explain ? " " + esc(counterReasons(d.hero, favored[0])[0].why) : ""}`]);
+  }
+  // 4) Ult-Konter im eigenen Team
+  const ultAns = [...new Set(enemies)].filter(e => ULTS[e]).map(e => [e, ULTS[e].by.filter(([h]) => team.includes(h))]).filter(x => x[1].length).slice(0, 2);
+  if (ultAns.length) match.push(["good", `<b>Ult-Konter im Team:</b> ${ultAns.map(([e, by]) => `${esc(by[0][0])} gegen ${esc(e)}${ULTS[e].name ? ` (${esc(ULTS[e].name)})` : ""}`).join(" · ")}`]);
+
+  // 5) Deine eigene Leistung und Bilanz
+  const avg = summary(hist);
+  // K/D/A bleibt 0/0/0, solange noch nichts eingetragen ist – dann keine Aussagen dazu
+  const hasKda = d.k + d.d + d.a > 0;
+  if (d.hero && hasKda && hist.length >= 5 && isFinite(avg.d)) {
+    if (d.d >= avg.d + 2) mine.push([neg, `<b>Viele Tode:</b> ${d.d} (dein Schnitt ${avg.d.toFixed(1)}). Jeder Tod heisst Zeit in Unterzahl für dein Team.`]);
+    else if (d.d <= avg.d - 2) mine.push(["good", `<b>Wenig Tode:</b> ${d.d} (dein Schnitt ${avg.d.toFixed(1)}).`]);
+    const kd = kda(d), ref = isFinite(avg.kda) ? avg.kda : 3;
+    if (lost && kd >= Math.max(3, ref * 1.3)) mine.push(["info", `<b>Niederlage trotz starker Einzelleistung</b> (KDA ${kd.toFixed(1)}, dein Schnitt ${ref.toFixed(1)}). Das spricht eher für Teamfaktoren – Aufstellung, Ult-Timing, Fokus – als für dein Spiel.`]);
+    if (!lost && d.result === "W" && kd < Math.max(1.2, ref * 0.6)) mine.push(["info", `<b>Sieg bei schwacher Einzelleistung</b> (KDA ${kd.toFixed(1)}, dein Schnitt ${ref.toFixed(1)}). Dein Team hat getragen – schau, was du besser machen kannst.`]);
+  }
+  [["dmg", "Schaden"], ["heal", "Heilung"], ["block", "Geblockt"]].forEach(([k, label]) => {
+    if (d[k] === null || !d.hero) return;
+    const same = hist.filter(m => m.hero === d.hero && m[k] !== null && m[k] !== undefined);
+    if (same.length < 3) return;
+    const mean = same.reduce((a, m) => a + m[k], 0) / same.length;
+    if (!mean) return;
+    const fmt = n => Math.round(n).toLocaleString("de-CH");
+    if (d[k] <= mean * 0.7) mine.push([neg, `<b>${label} unter deinem Schnitt</b> mit ${esc(d.hero)}: ${fmt(d[k])} statt Ø ${fmt(mean)}.`]);
+    else if (d[k] >= mean * 1.3) mine.push(["good", `<b>${label} über deinem Schnitt</b> mit ${esc(d.hero)}: ${fmt(d[k])} statt Ø ${fmt(mean)}.`]);
+  });
+  if (d.hero) {
+    const hs = summary(hist.filter(m => m.hero === d.hero));
+    if (hs.n >= 3 && hs.wr < 0.45) mine.push([neg, `Mit <b>${esc(d.hero)}</b> gewinnst du bisher nur ${pct(hs.wr)} (${plural(hs.n, "Match", "Matches")}).`]);
+    else if (hs.n >= 3 && hs.wr >= 0.6) mine.push(["good", `Mit <b>${esc(d.hero)}</b> läuft es bei dir gut: ${pct(hs.wr)} in ${plural(hs.n, "Match", "Matches")}.`]);
+  }
+  const vs = [...new Set(enemies)].map(e => [e, summary(hist.filter(m => m.enemies.includes(e)))]).filter(([, x]) => x.n >= 3);
+  const worst = vs.filter(([, x]) => x.wr < 0.4).sort((a, b) => a[1].wr - b[1].wr)[0], best = vs.filter(([, x]) => x.wr >= 0.65).sort((a, b) => b[1].wr - a[1].wr)[0];
+  if (worst) mine.push([neg, `Gegen <b>${esc(worst[0])}</b> gewinnst du bisher nur ${pct(worst[1].wr)} (${worst[1].n}×). ${counterTip(worst[0])}.`]);
+  if (best) mine.push(["good", `Gegen <b>${esc(best[0])}</b> läuft es bei dir: ${pct(best[1].wr)} (${best[1].n}×).`]);
+  if (d.map) {
+    const ms = summary(hist.filter(m => m.map === d.map));
+    if (ms.n >= 3 && ms.wr < 0.4) mine.push([neg, `Auf <b>${esc(d.map)}</b> gewinnst du bisher nur ${pct(ms.wr)} (${ms.n}×).`]);
+    else if (ms.n >= 3 && ms.wr >= 0.65) mine.push(["good", `Auf <b>${esc(d.map)}</b> läuft es bei dir: ${pct(ms.wr)} (${ms.n}×).`]);
+  }
+  if (d.mistakes.length) {
+    const drill = d.mistakes.find(x => DRILLS[x]);
+    mine.push(["info", `<b>Deine markierten Fehler:</b> ${esc(d.mistakes.join(", "))}.${drill ? ` Übung zu „${esc(drill)}“: ${esc(DRILLS[drill])}` : ""}`]);
+  }
+  const rank = t => (t === "bad" ? 0 : t === "info" ? 1 : 2);
+  const all = [...comp, ...match, ...mine];
+  // Niederlage: Probleme zuerst; Sieg: zuerst, was für euch sprach
+  all.sort((a, b) => (lost ? rank(a[0]) - rank(b[0]) : rank(b[0]) - rank(a[0])));
+  return { items: all.slice(0, 9), team, enemies };
+}
+function renderMatchHints() {
+  const body = $("#hintBody");
+  if (!body) return;
+  const d = matchDraft(), lost = d.result === "L";
+  $("#hintTitle").textContent = lost ? "Mögliche Gründe für die Niederlage" : "Mögliche Gründe für den Sieg";
+  if (!d.hero && !d.allies.length && !d.enemies.length) {
+    body.innerHTML = empty("Wähle deinen Helden und trag die Teams ein – dann zeigt dir der Coach mögliche Gründe für Sieg oder Niederlage.", "ai");
+    return;
+  }
+  const { items, team, enemies } = matchHints(d, editingId);
+  const teamLine = (label, list) => {
+    if (list.length < 2) return "";
+    const fm = formatOf(list);
+    return `<span>${label} ${roleDots(fm.v, fm.d, fm.s)} <b>${fm.id}</b>${list.length < 6 ? ` <span class="muted">(${list.length} von 6)</span>` : ""}</span>`;
+  };
+  const missing = team.length < 6 || enemies.length < 6;
+  body.innerHTML = `<div class="hint-teams">${teamLine("Euer Team", team)}${teamLine("Gegner", enemies)}</div>`
+    + (items.length ? notes(items) : `<p class="muted small">Noch nichts Auffälliges. Je mehr du einträgst (beide Teams, K/D/A, Map), desto genauer werden die Hinweise.</p>`)
+    + `<p class="muted small hint-foot">Automatisch aus Aufstellung, Counter-Regeln und deinen bisherigen Matches abgeleitet – das sind Hinweise, keine Gewissheit.${missing ? " Mit vollständigen Teams werden sie genauer." : ""}</p>`;
+}
+["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, renderMatchHints));
+["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
+$("#takeTeams").addEventListener("click", () => setTimeout(renderMatchHints, 0));
 $("#editCancel").addEventListener("click", cancelEdit);
 $("#mapSelect").addEventListener("change", e => {
   const v = e.target.value;
@@ -3101,7 +3264,7 @@ $("#matchForm").addEventListener("submit", e => {
   const f = new FormData(e.target);
   const num = k => { const v = f.get(k); return v === "" || v === null ? null : Number(v); };
   const fields = {
-    hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), map: f.get("map") === "__other" ? (f.get("mapOther") || "").trim() : (f.get("map") || ""), result: f.get("result"),
+    hero: f.get("hero"), mode: f.get("mode"), type: f.get("type"), date: f.get("date") || today(), map: f.get("map") === "__other" ? (f.get("mapOther") || "").trim() : (f.get("map") || ""), result: f.get("result"),
     k: num("k") || 0, d: num("d") || 0, a: num("a") || 0, dmg: num("dmg"), heal: num("heal"), block: num("block"),
     mood: num("mood"), notes: f.get("notes").trim(), next: f.get("next").trim(),
     enemies: slotValues("enemySlots").filter(Boolean), allies: slotValues("allySlots").filter(Boolean),
@@ -3112,12 +3275,17 @@ $("#matchForm").addEventListener("submit", e => {
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
   if (state.lessons.activeFocus && f.get("focusRating") !== null) fields.focus = { id: state.lessons.activeFocus, rating: Number(f.get("focusRating")) };
   if (editingId) {
-    Object.assign(state.matches.find(m => m.id === editingId), fields);
+    const target = state.matches.find(m => m.id === editingId);
+    Object.assign(target, fields);
+    // Uhrzeit nur behalten, solange sie zum Datum passt (sonst verfälscht sie die Tageszeit-Auswertung)
+    if (target.ts && new Date(target.ts).toISOString().slice(0, 10) !== fields.date) delete target.ts;
+    state.matches.sort((a, b) => matchTime(a) - matchTime(b));
     save(); cancelEdit(); render(); toast("Match aktualisiert");
     return;
   }
-  const m = Object.assign({ id: newId(), date: today(), ts: Date.now() }, fields);
-  state.matches.push(m); save();
+  const m = Object.assign({ id: newId(), ts: Date.now() }, fields);
+  if (m.date !== today()) delete m.ts;
+  state.matches.push(m); state.matches.sort((a, b) => matchTime(a) - matchTime(b)); save();
   clearForm(); $("#matchForm").hero.value = m.hero;
   render();
   // Direktes Feedback zum gerade geloggten Match
