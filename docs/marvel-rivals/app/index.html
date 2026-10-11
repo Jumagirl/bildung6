@@ -5080,6 +5080,7 @@ function wissenEntryHtml(w, L) {
   const lock = (label, minLvl) => `<div class="wk lock">🔒 <b>${esc(label)}</b> – wird ab Stufe ${minLvl} (${lvInfo(minLvl).name}) freigeschaltet.</div>`;
   const out = [P("", "Einfach gesagt", w.einfach)];
   if (WISSEN_FIG[w.id]) out.push(FIGS[WISSEN_FIG[w.id]]("teach"));
+  (WISSEN_FIG_EXTRA[w.id] || []).forEach(k => out.push(FIGS.modemap(k)));
   if (w.szene) out.push(`<div class="wk szene"><b>So sieht das im Match aus:</b> ${linkify(esc(w.szene), seen)}</div>`);
   if (w.begriffe && w.begriffe.length) out.push(`<div class="wk begr"><b>Begriffe in diesem Eintrag</b><dl>${w.begriffe.map(b => `<div><dt>${esc(b.term)}</dt><dd>${esc(b.def)}</dd></div>`).join("")}</dl></div>`);
   if (w.introList) out.push(`<ul class="wl">${w.introList.map(t => `<li>${linkify(esc(t), seen)}</li>`).join("")}</ul>`);
@@ -6534,12 +6535,90 @@ let lexGlossOpen = false;
 
 // Bilder in den Lektionen: „gl:…“ sind Begriffs-Bilder, alles andere die grossen Lernbilder
 const LESSON_FIG = { l02: ["gl:lines"], l07: ["gl:cover"], l08: ["gl:los", "gl:high"], l11: ["gl:engage", "fight"], l12: ["near"], l13: ["gl:focus"], l14: ["ults"], l15: ["pings"],
-  l16: ["modes"], l17: ["modes"], l18: ["modes"], l19: ["map"], l22: ["comp"], l23: ["swap"], l24: ["dive", "gl:peel"], l25: ["gl:poke", "gl:flank"], l30: ["pos"], l31: ["heal"], l32: ["tilt"], l33: ["review"] };
+  l16: ["modemap:dom"], l17: ["modemap:convoy"], l18: ["modemap:conv"], l19: ["map"], l22: ["comp"], l23: ["swap"], l24: ["dive", "gl:peel"], l25: ["gl:poke", "gl:flank"], l30: ["pos"], l31: ["heal"], l32: ["tilt"], l33: ["review"] };
+const WISSEN_FIG_EXTRA = { L22: ["dom", "convoy", "conv"] };
 const lessonFigsHtml = id => (LESSON_FIG[id] || []).map(k => {
+  if (k.startsWith("modemap:")) return FIGS.modemap(k.slice(8));
   if (!k.startsWith("gl:")) return FIGS[k] ? FIGS[k]("teach") : "";
   const g = GLOSSAR.find(x => x.fig === k.slice(3));
   return `<figure class="fig narrow"><div class="fig-head"><span>${esc(g ? g.term : "")}</span></div>${glossFig(k.slice(3))}${g ? `<figcaption>${esc(g.def)}</figcaption>` : ""}</figure>`;
 }).join("");
+
+
+// ---------- Skizzen pro Spielmodus (Schema von oben, keine echte Karte) ----------
+Object.assign(FIGS, {
+  modemap(kind) {
+    const zone = (x, y, w, h, t, tx) => `<rect class="d-zone-b" x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/>` + DG.lab(x + w / 2, y + h + 16, t, "middle");
+    const heal = (x, y) => `<circle class="d-b-good" cx="${x}" cy="${y}" r="13" opacity=".9"/>` + `<g transform="translate(${x} ${y}) scale(.6)">${DG.glyph.sup}</g>`;
+    let s = DG.floor(6, 6, 468, 288), legend, title, label;
+    if (kind === "convoy") {
+      title = "Convoy von oben: Aufbau und Heilplätze";
+      const road = "M56 152L160 152L200 108L290 108L330 156L424 156";
+      s += zone(12, 112, 38, 80, "Start", 0) + zone(430, 118, 38, 80, "Gegner", 0);
+      s += `<path class="d-road" d="${road}"/><path class="d-roadline" d="${road}"/>`;
+      s += `<path class="d-flag" d="M200 108v-20l14 6-14 6"/><path class="d-flag" d="M330 156v-20l14 6-14 6"/><path class="d-flag" d="M424 156v-22l16 7-16 7"/>`;
+      s += `<rect class="d-payload" x="64" y="143" width="26" height="18" rx="4"/>`;
+      s += DG.wall("M172 176V226") + DG.wall("M236 78V38");
+      s += `<rect class="d-plat" x="296" y="214" width="92" height="30" rx="8"/>` + DG.ico("eye", 342, 229, 18);
+      s += `<path class="d-flank" d="M426 112C380 30 250 20 150 78" marker-end="url(#dArB)"/><path class="d-flank" d="M426 206C380 266 250 276 150 226" marker-end="url(#dArB)"/>`;
+      s += DG.tk(126, 150, "tank", { r: 15 }) + DG.tk(108, 124, "dps", { r: 12 });
+      s += DG.tk(380, 140, "foe", { r: 12 }) + DG.tk(396, 172, "foe", { r: 12 });
+      s += heal(146, 204) + heal(214, 62);
+      s += DG.ar("M134 208 112 180", "d-move") + DG.ar("M202 68 152 112", "d-move");
+      s += DG.num(78, 126, 1) + DG.num(168, 238, 2) + DG.num(104, 214, 3) + DG.num(300, 256, 4) + DG.num(342, 200, 5);
+      label = "Schema eines Convoy-Modus von oben: Start links, Konvoi auf der Strecke mit Abschnitten, zwei Heilplätze hinter Wänden, Fluchtrouten zurück zum Start, rot gepunktet die Flankenrouten der Gegner und eine Höhe.";
+      legend = [
+        { k: "1", tone: "info", b: "Konvoi:", t: "Das Ziel des Angreifers. Er begleitet ihn Abschnitt für Abschnitt, der Verteidiger hält ihn auf. Die Fights wandern die Strecke entlang." },
+        { k: "2", tone: "good", b: "Heilplatz:", t: "Hinter einer Wand und mit Sicht auf deinen Tank. Such dir pro Abschnitt zwei davon." },
+        { k: "3", tone: "info", b: "Fluchtroute:", t: "Dein kürzester Weg zurück zu Deckung oder zum Team." },
+        { k: "4", tone: "bad", b: "Flanke der Gegner:", t: "Von hier kommen Gegner von der Seite oder von hinten." },
+        { k: "5", tone: "info", b: "Höhe:", t: "Von oben siehst du mehr. Merk dir, wo sie liegt und wie du hinkommst." }];
+    } else if (kind === "dom") {
+      title = "Domination von oben: Aufbau und Heilplätze";
+      s += zone(12, 112, 38, 80, "Dein Team", 0) + zone(430, 112, 38, 80, "Gegner", 0);
+      s += `<circle class="d-point" cx="240" cy="152" r="42"/>`;
+      s += DG.wall("M150 98H190V128") + DG.wall("M150 206H190V176");
+      s += `<rect class="d-plat" x="200" y="30" width="80" height="24" rx="8"/>` + DG.ico("eye", 240, 42, 18);
+      s += `<path class="d-flank" d="M426 112C380 40 150 30 90 96" marker-end="url(#dArB)"/><path class="d-flank" d="M426 194C380 266 150 276 90 208" marker-end="url(#dArB)"/>`;
+      s += DG.tk(206, 152, "tank", { r: 16 }) + DG.tk(226, 186, "dps", { r: 12 });
+      s += DG.tk(292, 140, "foe", { r: 13 }) + DG.tk(300, 170, "foe", { r: 12 });
+      s += heal(134, 118) + heal(134, 186);
+      s += DG.ar("M120 122 58 140") + DG.ar("M120 182 58 166");
+      s += DG.num(240, 100, 1) + DG.num(134, 90, 2) + DG.num(88, 132, 3) + DG.num(300, 252, 4) + DG.num(240, 74, 5);
+      label = "Schema eines Domination-Modus von oben: ein Punkt in der Mitte, links dein Team, rechts die Gegner, zwei Heilplätze hinter Wänden mit Fluchtweg zum Start, zwei gegnerische Flankenrouten und eine Höhe.";
+      legend = [
+        { k: "1", tone: "info", b: "Punkt:", t: "Hier kämpfen beide Teams. Gekämpft wird auf und um den Punkt." },
+        { k: "2", tone: "good", b: "Heilplatz:", t: "Hinter einer Wand mit Sicht auf den Tank am Punkt. Such dir zwei, damit du wechseln kannst." },
+        { k: "3", tone: "info", b: "Fluchtroute:", t: "Zurück zum Start oder zu Deckung, wenn dich jemand anspringt." },
+        { k: "4", tone: "bad", b: "Flanken der Gegner:", t: "Von oben und von unten kommen Gegner um den Punkt herum zu deiner Backline." },
+        { k: "5", tone: "info", b: "Höhe:", t: "Überblick über den Punkt, aber auch gut zu sehen." }];
+    } else {
+      title = "Convergence von oben: erst Punkt, dann Konvoi";
+      const road = "M178 152L270 152L306 116L370 116L400 156L440 156";
+      s += zone(12, 112, 38, 80, "Start", 0) + zone(432, 120, 36, 80, "Gegner", 0);
+      s += `<circle class="d-point" cx="108" cy="152" r="34"/>`;
+      s += `<path class="d-road" d="${road}"/><path class="d-roadline" d="${road}"/>`;
+      s += `<rect class="d-payload" x="164" y="143" width="26" height="18" rx="4"/><path class="d-flag" d="M440 156v-22l16 7-16 7"/>`;
+      s += DG.wall("M84 96H124V118") + DG.wall("M262 178V228");
+      s += `<rect class="d-plat" x="320" y="40" width="90" height="24" rx="8"/>` + DG.ico("eye", 365, 52, 18);
+      s += `<path class="d-flank" d="M428 120C380 40 250 30 130 84" marker-end="url(#dArB)"/><path class="d-flank" d="M428 206C380 270 250 270 130 220" marker-end="url(#dArB)"/>`;
+      s += DG.chip(60, 14, 108, "Phase 1: Punkt", "info") + DG.chip(264, 14, 124, "Phase 2: Konvoi", "good") + `<path d="M170 26H260" stroke="var(--muted)" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#dArA)"/>`;
+      s += DG.tk(122, 140, "tank", { r: 15 }) + DG.tk(94, 164, "dps", { r: 12 });
+      s += heal(74, 120) + heal(244, 202);
+      s += DG.ar("M62 126 52 146") + DG.ar("M232 206 160 190");
+      s += DG.num(108, 104, 1) + DG.num(230, 130, 2) + DG.num(54, 100, 3) + DG.num(258, 250, 4) + DG.num(365, 80, 5);
+      label = "Schema eines Convergence-Modus von oben: Erst wird links der Punkt erobert, danach wird der Konvoi nach rechts begleitet. Zwei Heilplätze hinter Wänden, Fluchtwege nach hinten, rot gepunktet die Flankenrouten und eine Höhe.";
+      legend = [
+        { k: "1", tone: "info", b: "Phase 1, Punkt:", t: "Der Angreifer erobert zuerst den Punkt." },
+        { k: "2", tone: "info", b: "Phase 2, Konvoi:", t: "Danach begleitet er das Fahrzeug die Strecke entlang. Die Fights wandern mit." },
+        { k: "3", tone: "good", b: "Heilplätze:", t: "Pro Phase hinter einer Wand, mit Sicht auf den Tank. Merk dir für beide Phasen je einen." },
+        { k: "4", tone: "bad", b: "Flanken der Gegner:", t: "Von der Seite oder von hinten, in beiden Phasen." },
+        { k: "5", tone: "info", b: "Höhe:", t: "Mehr Überblick, aber du bist dort auch gut zu sehen." }];
+    }
+    s += DG.lab(238, 292, "Schema des Modus, keine echte Karte. Jede Map sieht im Detail anders aus.", "middle");
+    return dgFigure({ title, tag: 1, svg: s, label, legend, h: 300 });
+  }
+});
 
 // ---------- Render ----------
 chipGroup($("#mistakeChips"), MISTAKES);
