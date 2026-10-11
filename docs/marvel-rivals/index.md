@@ -27,7 +27,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten & Sync** | Abgleich mit Rivals Data, Backup als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data (in der Online-Version per Knopf „Jetzt aktualisieren“), Backup als JSON, Export der Matches als CSV |
 
 !!! info "Wo werden deine Daten gespeichert?"
     - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
@@ -45,12 +45,19 @@ Statt jedes Match von Hand einzutragen, kannst du deine öffentlichen Matches vo
 [Rivals Data](https://rivalsdata.com) übernehmen. Rivals Data hat keine offizielle Schnittstelle und
 blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript die Daten ab:
 
+**In der Online-Version** genügt der Knopf **Jetzt aktualisieren** (Spielername eintragen). Er bittet Claude,
+den Abruf auszuführen und die Matches direkt in dein Konto einzutragen – das dauert meist 1–3 Minuten und
+klappt, solange die Claude-Sitzung läuft, in der die App gepflegt wird. Andernfalls geht es von Hand:
+
 1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`
 2. [rivals_sync.py](rivals_sync.py) herunterladen.
 3. Im selben Ordner ausführen: `python rivals_sync.py "DeinSpielername"`
 4. Die erzeugte Datei `rivals-sync.json` in der App unter **Daten & Sync** importieren.
 
 Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams.
+Rivals Data zeigt nur die letzten etwa 20 Matches und hinkt dem Spiel teils um Stunden hinterher – frische
+Matches trägst du am besten von Hand ein. Sie werden später mit dem Rivals-Data-Eintrag zusammengeführt,
+wenn Datum, Held, Ergebnis und K/D/A übereinstimmen.
 Bereits vorhandene Matches werden aktualisiert statt doppelt angelegt, und deine Notizen bleiben erhalten.
 Zusätzlich lädt das Skript deine Helden-Statistik aus dem Profil und die globale Tierlist. Damit
 vergleicht die App unter **Auswertung** deine Winrate pro Held mit dem Schnitt aller Spieler.

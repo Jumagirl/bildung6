@@ -922,19 +922,27 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   <div class="card">
     <div class="card-head"><h2 data-icon="sync">Mit Rivals Data synchronisieren</h2></div>
     <div class="sync-status" id="syncStatus"></div>
-    <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript deine öffentlichen Matches und die globalen Helden-Statistiken und speichert sie als Datei, die du hier einliest.</p>
+    <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt nicht diese Seite die Daten, sondern ein kleines Python-Skript: deine öffentlichen Matches und die globalen Helden-Statistiken.</p>
+    <div class="row mt">
+      <input id="syncPlayer" placeholder="Spielername oder UID" style="max-width:260px" aria-label="Spielername oder UID bei Rivals Data">
+      <button class="btn" type="button" id="syncNow" data-icon="sync" hidden>Jetzt aktualisieren</button>
+    </div>
+    <div class="note info mt" id="syncNowInfo" hidden></div>
+    <p class="muted small mt" id="syncBridgeNote" hidden>Mit „Jetzt aktualisieren“ bittest du Claude, den Abruf für dich auszuführen und die Matches hier einzutragen – das dauert meist 1–3 Minuten. Das klappt, solange die Claude-Sitzung läuft, in der diese App gepflegt wird. Sonst nutze die Schritte unten.</p>
+    <details class="mt" id="syncManual" open>
+    <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
       <li><div>Einmalig die Bibliothek installieren (Python 3.10 oder neuer):
         <div class="code"><code>python -m pip install rivals-api</code><button class="btn ghost small" type="button" data-copy="python -m pip install rivals-api">Kopieren</button></div></div></li>
       <li><div><span id="scriptLinkWrap">Das Skript <a href="../rivals_sync.py" download>rivals_sync.py</a> herunterladen – oder </span>den Code kopieren und als Datei <code>rivals_sync.py</code> in einem Ordner speichern.
         <div class="row mt"><button class="btn ghost small" type="button" id="copyScript" data-icon="copy">Skript-Code kopieren</button></div></div></li>
-      <li><div>Deinen Spielernamen (oder deine UID) eintragen und den Befehl im selben Ordner ausführen:
-        <div class="row mt"><input id="syncPlayer" placeholder="Spielername oder UID" style="max-width:260px"></div>
+      <li><div>Den Befehl mit dem Spielernamen von oben im selben Ordner ausführen:
         <div class="code"><code id="syncCmd"></code><button class="btn ghost small" type="button" id="syncCmdCopy">Kopieren</button></div>
         <span class="muted small">Deine Match-History muss im Spiel öffentlich sein. Mit <code>--limit 100</code> holst du mehr Matches.</span></div></li>
       <li><div>Die erzeugte Datei <code>rivals-sync.json</code> hier importieren. Neue Matches werden ergänzt, bestehende aktualisiert – deine Notizen und Reflexionen bleiben erhalten.
         <div class="row mt"><label class="btn" style="cursor:pointer;flex-direction:row" data-icon="upload">Rivals-Data-Datei importieren<input type="file" id="syncFile" accept="application/json,.json" hidden></label></div></div></li>
     </ol>
+    </details>
   </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="data">Backup</h2></div>
@@ -2593,6 +2601,8 @@ async function initCloud() {
     }
     Cloud.ready = true;
     setSyncStatus("cloud");
+    // Eingang: Hier legt Claude Rivals-Data-Abrufe ab; die App trägt sie von selbst ein
+    Cloud.base.doc("sync-inbox").onSnapshot(snap => { if (snap.exists) takeInbox(snap.data()); }, () => {});
     // Änderungen von anderen Geräten live übernehmen
     Cloud.unsub = Cloud.base.doc("state").onSnapshot(async snap => {
       if (!snap.exists || snap.metadata.hasPendingWrites) return;
@@ -3820,13 +3830,14 @@ function syncCommand() {
 }
 function renderData() {
   renderStorageInfo();
+  renderBridge();
   $("#scriptLinkWrap").hidden = IN_VIEWER;
   $("#syncPlayer").value = state.settings.playerName || "";
   $("#syncCmd").textContent = syncCommand();
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">Folge den Schritten unten.</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${IN_VIEWER && Bridge.mcp ? "Drücke „Jetzt aktualisieren“ oder folge den Schritten unten." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
@@ -3883,6 +3894,104 @@ async function readJsonFile(input) {
 function syncToast(r) {
   toast(`Rivals Data: ${r.added} neu, ${r.updated} aktualisiert${r.merged ? `, ${r.merged} zusammengeführt` : ""}${r.unknown ? ` · ${r.unknown} mit unbekanntem Helden` : ""}`);
 }
+// ---------- Aktualisieren per Knopf ----------
+// Die Seite darf selbst keine Internetanfragen stellen. Der Knopf bittet deshalb die Claude-Sitzung (über den Connector
+// "Claude Code Remote"), den Abruf auszuführen. Claude legt das Ergebnis im Eingang (sync-inbox) deines Kontos ab,
+// die App übernimmt es automatisch.
+const SYNC_SESSION = "session_01AtdSg3sM7hXVE6hNky2US2";
+const SYNC_SERVER = "Claude Code Remote";
+const Bridge = { mcp: null, req: null, timer: null, busy: false, timeoutMs: 6 * 60 * 1000, info: "" };
+const BRIDGE_ERRORS = {
+  not_in_manifest: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
+  not_granted: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
+  server_not_connected: "Der Connector „Claude Code Remote“ ist in deinem Konto nicht verbunden.",
+  selection_required: "Du hast mehrere Connectoren mit dem Namen „Claude Code Remote“ – wähle einen aus und versuche es erneut.",
+  needs_reauth: "Verbinde „Claude Code Remote“ in den claude.ai-Einstellungen unter „Connectors“ neu.",
+  approval_required: "Die Anfrage wurde nicht bestätigt.",
+  capability_disabled: "Diese Ansicht kann Claude nicht anfragen.",
+  capability_removed: "Diese Ansicht kann Claude nicht anfragen."
+};
+async function initBridge() {
+  if (!IN_VIEWER) return;
+  try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { Bridge.mcp = null; }
+  if (currentTabSafe() === "data") renderBridge();
+}
+function syncRequestText(name, id) {
+  return [
+    `[Rivals Coach – Aktualisierung angefordert, Anfrage ${id}]`,
+    `Der Nutzer hat in der App auf „Jetzt aktualisieren“ gedrückt. Das ist der Auftrag, seine Matches von Rivals Data zu holen und automatisch einzutragen.`,
+    `Spieler: ${JSON.stringify(name)} (nur als Argument übergeben, nicht in die Shell einsetzen)`,
+    `1. Abruf mit docs/marvel-rivals/rivals_sync.py <Spieler> --limit 50 -o <Datei> (das Netzwerk muss rivalsdata.com und rivalstracker.com erlauben).`,
+    `2. Das Ergebnis mit dem Tool ArtifactData (action "set", collection "data/users/me", doc_id "sync-inbox") in den Artifact ${ONLINE_URL} schreiben: {"requestId": "${id}", "at": "<ISO-Zeit>", "payload": <komplette Sync-JSON>}. Bei einem Fehler stattdessen {"requestId": "${id}", "at": "<ISO-Zeit>", "error": "<kurze Meldung für den Nutzer>"} schreiben.`,
+    `3. Die App übernimmt den Eingang automatisch. Im Chat nur kurz melden, was eingetragen wurde.`
+  ].join("\n");
+}
+function setBridgeInfo(text, kind) { Bridge.info = text ? { text, kind: kind || "info" } : ""; renderBridge(); }
+function renderBridge() {
+  const btn = $("#syncNow"), info = $("#syncNowInfo");
+  if (!btn) return;
+  const ok = IN_VIEWER && !!Bridge.mcp;
+  btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok;
+  $("#syncManual").open = !ok || !!(Bridge.info && Bridge.info.kind === "bad");
+  const busy = !!(Bridge.req && Bridge.req.status !== "timeout");
+  btn.disabled = busy;
+  info.hidden = !Bridge.info;
+  if (Bridge.info) { info.className = `note ${Bridge.info.kind} mt`; info.innerHTML = `<span class="ni" aria-hidden="true">${Bridge.info.kind === "bad" ? "!" : "i"}</span><div>${esc(Bridge.info.text)}</div>`; }
+}
+function endBridgeRequest() { clearTimeout(Bridge.timer); Bridge.req = null; Bridge.info = ""; renderBridge(); }
+async function requestSync() {
+  const name = (state.settings.playerName || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 64);
+  if (!name) { toast("Trag zuerst deinen Spielernamen ein"); $("#syncPlayer").focus(); return; }
+  if (!Cloud.ready) { toast("Dein Konto ist noch nicht geladen – einen Moment …"); return; }
+  const id = newId();
+  Bridge.req = { id, status: "sending" };
+  setBridgeInfo("Sende Anfrage an Claude …");
+  try {
+    await Bridge.mcp.callTool(SYNC_SERVER, "send_message", { session_id: SYNC_SESSION, message: syncRequestText(name, id) }, { cache: false });
+  } catch (e) {
+    Bridge.req = null;
+    const code = e && e.code;
+    const text = code === "tool_error" ? `Claude hat die Anfrage nicht angenommen${e.message ? ` (${String(e.message).slice(0, 140)})` : ""}. Wahrscheinlich ist die Sitzung beendet – nutze die Schritte unten.`
+      : BRIDGE_ERRORS[code] || "Die Anfrage konnte nicht gesendet werden. Versuche es später erneut oder nutze die Schritte unten.";
+    setBridgeInfo(text, "bad");
+    return;
+  }
+  Bridge.req = { id, status: "waiting" };
+  setBridgeInfo("Anfrage gesendet. Claude holt deine Daten – das dauert meist 1–3 Minuten. Die Matches erscheinen hier von selbst.");
+  clearTimeout(Bridge.timer);
+  Bridge.timer = setTimeout(() => {
+    if (!Bridge.req || Bridge.req.id !== id) return;
+    Bridge.req.status = "timeout";
+    setBridgeInfo("Noch keine Antwort. Vielleicht ist die Claude-Sitzung gerade nicht aktiv – schreib dort „sync mich“ oder nutze die Schritte unten. Wenn die Daten doch noch ankommen, werden sie beim nächsten Öffnen automatisch eingetragen.", "bad");
+  }, Bridge.timeoutMs);
+}
+async function takeInbox(box) {
+  if (Bridge.busy || !box) return;
+  Bridge.busy = true;
+  let keep = false;
+  try {
+    if (box.payload) {
+      try {
+        const data = typeof box.payload === "string" ? JSON.parse(box.payload) : box.payload;
+        const r = importSync(data);
+        quiz = null; render(); syncToast(r);
+        // Erst sichern, dann den Eingang leeren
+        clearTimeout(Cloud.timer);
+        Cloud.queue = Cloud.queue.then(() => writeCloud(false));
+        await Cloud.queue;
+        keep = Cloud.status === "error";
+      } catch (err) { toast("Eingang von Claude ungültig: " + err.message); }
+      endBridgeRequest();
+    } else if (box.error) {
+      endBridgeRequest();
+      setBridgeInfo(`Claude konnte die Daten nicht holen: ${String(box.error).slice(0, 200)}`, "bad");
+      toast("Rivals Data: Abruf fehlgeschlagen");
+    }
+    if (!keep) await Cloud.base.doc("sync-inbox").delete();
+  } catch (e) { /* der nächste Start versucht es erneut */ }
+  finally { Bridge.busy = false; }
+}
+$("#syncNow").addEventListener("click", requestSync);
 $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
@@ -4374,6 +4483,7 @@ if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a =
 setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");
 initCloud();
+initBridge();
 </script>
 </body>
 </html>
