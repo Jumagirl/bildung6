@@ -16,13 +16,14 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 | Bereich | Wofür |
 |---|---|
+| **Trainingsplan** | 56 Trainingstage in 5 Phasen mit Nachlesen, Start, Spielblöcken, Review und Notizen; Themen-Tracker mit Wiederholungstagen, Drills, Kennzahlen-Vergleich aus deinen Matches und ein Wochenpaket für den KI-Coach |
 | **Tägliche Lektionen** | 35 Lektionen in 7 Modulen – jeden Tag eine: verstehen, Wissens-Check, üben, im Match anwenden, reflektieren; mit Wiederholungsfragen und Empfehlungen passend zu deinen Fehlern |
 | **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
 | **Match loggen** | Ergebnis, K/D/A, Map, Datum, dein Team und das Gegnerteam, „Wer hat mir Probleme gemacht?“, Fehler und Stärken; dazu Coach-Hinweise, warum das Match gewonnen oder verloren gegangen sein könnte. Falsche Einträge (z.B. Sieg statt Niederlage) korrigierst du im Match-Verlauf per Klick |
 | **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
 | **Team & Counter** | Gegnerteam eintragen: Counter-Picks, Tipps „So spielst du dagegen“ für jeden Helden, Team-Aufstellungen (2-2-2, 1-3-2, 2-1-3, 3-1-2) mit Wann & Warum, Spielstile und aktuelle Meta-Picks |
-| **Counter-Training** | Quiz zum Lernen von Counters; Gegner, gegen die du oft spielst oder die du falsch beantwortest, kommen häufiger |
-| **Lexikon** | Ults & Konter (was jede Ult macht, wie man sie kontert und welche Helden sie konkret ausschalten) und ein Effekte-Lexikon (Betäubung, Blendung, Heilungsreduktion & Co.: Wirkung, Auslöser, Konter) |
+| **Quiz** | Counter-Training (Spielstile, Helden-Duelle, Ult-Konter) und Wissens-Check zu den 30 Support-Themen; falsch beantwortete Fragen kommen häufiger, die Schwierigkeit steigt mit deiner Lernstufe |
+| **Lexikon** | Support-Wissen (30 Einträge und Begriffe von A bis Z, nach Lernstufe freigeschaltet), Ults & Konter (was jede Ult macht, wie man sie kontert und welche Helden sie konkret ausschalten) und ein Effekte-Lexikon (Betäubung, Blendung, Heilungsreduktion & Co.: Wirkung, Auslöser, Konter) |
 | **Helden-Guide** | Alle 54 Helden (Stand Season 10, Oktober 2026): Grundregeln pro Rolle, Tipps, Spielstil-Tags, „Stark gegen / Gekontert von“, persönliche Matchup-Werte und Notizen |
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
@@ -38,6 +39,19 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
     Mit **Daten & Sync → Als JSON exportieren** erstellst du ein Backup, das du überall wieder importieren kannst –
     so überträgst du auch bisherige Daten in die Online-Version.
+
+## Lernstufen: von den Grundlagen zum Expertenwissen
+
+Der Rivals Coach steigert sich mit deinem Fortschritt in drei Stufen:
+
+| Stufe | Wann | Was du bekommst |
+|---|---|---|
+| **1 · Grundlagen** | Trainingstag 1–21, Lektionen Modul 1–2 | Kern und Schritte jedes Themas, Übungen, einfache Fragen, Counter nach Spielstil |
+| **2 · Aufbau** | Tag 22–35, Lektionen Modul 3–5 | dazu typische Fehler, Beispiele und Anwendungsfragen, Helden-Duelle im Counter-Quiz |
+| **3 · Experte** | ab Tag 36, Lektionen Modul 6–7 | dazu die Experten-Stufe jedes Themas, schwere Szenario-Fragen und Ult-Konter im Quiz |
+
+Es zählt immer die höhere Stufe aus Trainingsplan und Lektionen. Auf der Seite *Trainingsplan* kannst du die Stufe auch selbst festlegen.
+Das Wissen stammt aus dem Plan „Solo-Support auf Celestial“; die persönliche Ausgangslage bleibt privat in deinem Konto.
 
 ## Abgleich mit Rivals Data
 
