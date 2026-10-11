@@ -1469,6 +1469,7 @@ const MAPS = {
   "Empire of Eternal Night: Midtown": "Convoy",
   "Hellfire Gala: Arakko": "Convoy",
   "Museum of Contemplation": "Convoy",
+  "Thebes": "Convoy",
   "Yggsgard: Royal Palace": "Domination",
   "Intergalactic Empire of Wakanda: Birnin T'Challa": "Domination",
   "Hydra Charteris Base: Hell's Heaven": "Domination",
@@ -1484,6 +1485,14 @@ const MAPS = {
   "Alchemax Headquarters": "Doom Match",
   "Tokyo 2099: Ninomaru": "Conquest"
 };
+
+// Rivals Data schreibt Kartennamen teils anders (Grossschreibung, Zusatz nach dem Doppelpunkt) – auf die Namen der App abbilden
+const MAP_ALIASES = { "lower manhattan: manhattan": "Lower Manhattan", "museum of contemplation: museum": "Museum of Contemplation" };
+const MAP_CANON = Object.fromEntries(Object.keys(MAPS).map(k => [k.toLowerCase(), k]));
+function canonMap(name) {
+  const key = String(name || "").trim().toLowerCase();
+  return MAP_ALIASES[key] || MAP_CANON[key] || String(name || "").trim();
+}
 
 const MISTAKES = [
   "Zu weit vorne", "Allein geflankt", "Ult verschwendet", "Ohne Team reingegangen",
@@ -2432,7 +2441,7 @@ function loadState(raw) {
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
   st.customHeroes = st.customHeroes.filter(h => !builtIn.has(h.name.toLowerCase()));
   // Ältere Matches ohne Teams nachrüsten
-  st.matches.forEach(m => { m.enemies = m.enemies || []; m.allies = m.allies || []; m.map = m.map || ""; m.mistakes = m.mistakes || []; m.goods = m.goods || []; });
+  st.matches.forEach(m => { m.enemies = m.enemies || []; m.allies = m.allies || []; m.map = canonMap(m.map); m.mistakes = m.mistakes || []; m.goods = m.goods || []; });
   st.matches.sort((a, b) => matchTime(a) - matchTime(b));
   return st;
 }
@@ -3673,6 +3682,7 @@ function importSync(data) {
     if (!heroByName(r.hero)) unknown++;
     const syncFields = {};
     SYNC_FIELDS.forEach(k => { if (r[k] !== undefined && r[k] !== null && r[k] !== "") syncFields[k] = r[k]; });
+    if (syncFields.map) syncFields.map = canonMap(syncFields.map);
     if (Array.isArray(r.enemies) && r.enemies.length) syncFields.enemies = r.enemies;
     if (Array.isArray(r.allies) && r.allies.length) syncFields.allies = r.allies;
     const existing = byExt.get(r.extId);
