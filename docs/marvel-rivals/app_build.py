@@ -21,7 +21,9 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 HERE = Path(__file__).resolve().parent
 APP = HERE / "app" / "index.html"
@@ -102,6 +104,9 @@ def artifact(friends=False):
         print("Private Werte eingesetzt")
     elif not friends:
         print("Keine private.json: Online-Link und Sync-Helfer bleiben leer")
+    stamp = datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y, %H:%M")
+    s = s.replace('const BUILD_STAMP = ""; /* BUILD:STAMP */', f'const BUILD_STAMP = "{stamp}";')
+    print(f"Versionsstempel: {stamp}")
     out = OUT_FRIENDS if friends else OUT
     out.parent.mkdir(exist_ok=True)
     out.write_text(strip_wrapper(s), encoding="utf-8")

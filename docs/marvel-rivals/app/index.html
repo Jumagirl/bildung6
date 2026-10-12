@@ -131,6 +131,7 @@ nav.tabs button[aria-selected="true"] svg.i { stroke: var(--accent); }
 }
 .page-head h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.01em; }
 .page-head p { margin: 2px 0 0; color: var(--muted); }
+.page-head p.ver { font-size: .72rem; margin-top: 1px; opacity: .8; }
 main { max-width: 1180px; margin: 0 auto; padding: 12px 28px 48px; }
 section[hidden] { display: none; }
 
@@ -790,7 +791,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 
 <div class="content">
 <div class="page-head">
-  <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p></div>
+  <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p><p class="ver" id="buildStamp" hidden></p></div>
   <div class="head-actions"><button type="button" class="level-chip lv1" id="levelChip"><span class="dot"></span><span id="levelChipText"></span></button><span class="save-chip" id="saveChip" role="status"></span><button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button></div>
 </div>
 <main>
@@ -4421,6 +4422,7 @@ function syncToast(r) {
 // Die App liest dieses Protokoll über den Connector "Claude Code Remote" (list_events) und trägt die Matches ein.
 // Schreibrechte auf deine Daten braucht der Helfer dafür nicht.
 const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
+const BUILD_STAMP = ""; /* BUILD:STAMP */
 const SYNC_SERVER = "Claude Code Remote";
 const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "" };
 const BRIDGE_ERRORS = {
@@ -7102,6 +7104,7 @@ window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTi
 let startTab = "dashboard";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "dashboard"; } catch (e) {}
 if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });
+if (BUILD_STAMP) { const el = $("#buildStamp"); el.textContent = "Version vom " + BUILD_STAMP; el.hidden = false; }
 setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");
 initCloud();
