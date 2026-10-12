@@ -588,6 +588,14 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .mlen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 10px; }
 .mlen input { width: 4.8em; }
 .formhelp { margin: 8px 0 0; }
+.flexset { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 6px 0; }
+.flexset input[type=number] { width: 4.8em; }
+.flexset select { width: auto; max-width: 100%; min-width: 0; }
+.badge.ok { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+.herochips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.frole { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--grid); }
+.frole:first-child { border-top: 0; }
+.fr-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
 .daynav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .pstep { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--grid); }
 .pstep:last-child { border-bottom: 0; }
@@ -802,6 +810,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <div id="byRole"></div>
     </div>
   </div>
+  <div class="card" id="flexCard"></div>
   <div class="grid-2 mt">
     <div class="card">
       <div class="card-head"><h2 data-icon="heroes">Deine Helden</h2></div>
@@ -1801,7 +1810,8 @@ const MISTAKES = [
   "Zu weit vorne", "Allein geflankt", "Ult verschwendet", "Ohne Team reingegangen",
   "Fokus auf falsches Ziel", "Keine Deckung genutzt", "Heiler ignoriert", "Objective verlassen",
   "Schlechtes Zielen", "Zu spät gewechselt (Held)", "Tilt / Frust", "Kommunikation fehlte",
-  "Cooldowns falsch genutzt", "Nicht auf Minimap/Sound geachtet", "Gegner-Counter ignoriert"
+  "Cooldowns falsch genutzt", "Nicht auf Minimap/Sound geachtet", "Gegner-Counter ignoriert",
+  "Kein Raum gewonnen (Tank)", "Auf den Tank geschossen (DPS)"
 ];
 const GOODS = [
   "Gutes Ult-Timing", "Gute Positionierung", "Viele Picks", "Team gut unterstützt",
@@ -1823,6 +1833,8 @@ const DRILLS = {
   "Kommunikation fehlte": "Nutze Ping und Voice-Callouts: Gegner-Ults, Fokusziele und Positionen ansagen.",
   "Cooldowns falsch genutzt": "Schreibe für deinen Main 3 Situationen auf, in denen jede Fähigkeit genutzt werden soll.",
   "Nicht auf Minimap/Sound geachtet": "Spiele mit Kopfhörern und schaue alle 5–10 Sekunden auf die Teamübersicht.",
+  "Kein Raum gewonnen (Tank)": "Schau im Fight, ob die Gegner nach deinem Vorstoss weiter hinten stehen. Wenn nicht, hast du nur Schaden gefressen. Geh nur so weit vor, wie dein Support mitkommt (L20).",
+  "Auf den Tank geschossen (DPS)": "Schiess zuerst auf gegnerische Supports, angeschlagene Gegner und Flanker. Den Tank mit Schild nimmst du nicht zuerst (L21).",
   "Gegner-Counter ignoriert": "Mache täglich 10 Fragen im Counter-Training und schau dir bei der Heldenwahl das Gegnerteam an."
 };
 
@@ -2732,7 +2744,7 @@ function loadState(raw) {
   const st = Object.assign({
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
-    quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "", matchMin: null, matchMax: null },
+    quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "", matchMin: null, matchMax: null, flexMatches: 10, flexHeroes: 2, flexPlan: true, flexPick: {} },
     plan: { start: null, days: {}, topics: {}, level: 0 }
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
@@ -2744,7 +2756,8 @@ function loadState(raw) {
   const renameTag = tags => (tags || []).map(t => TAG_RENAMES[t] || t);
   Object.keys(st.heroTagOverrides).forEach(k => { st.heroTagOverrides[k] = renameTag(st.heroTagOverrides[k]); });
   st.customHeroes.forEach(h => { h.tags = renameTag(h.tags); });
-  st.settings = Object.assign({ playerName: "", matchMin: null, matchMax: null }, st.settings);
+  st.settings = Object.assign({ playerName: "", matchMin: null, matchMax: null, flexMatches: 10, flexHeroes: 2, flexPlan: true, flexPick: {} }, st.settings);
+  st.settings.flexPick = st.settings.flexPick || {};
   // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
   st.customHeroes = st.customHeroes.filter(h => !builtIn.has(h.name.toLowerCase()));
@@ -3031,6 +3044,79 @@ function groupMulti(list, keysFn) {
   list.forEach(x => [...new Set(keysFn(x))].forEach(k => { (out[k] = out[k] || []).push(x); }));
   return out;
 }
+// ---------- Rollen-Flex: in allen Rollen sicher, um im Notfall zu wechseln ----------
+const FLEX_ROLES = ["Vanguard", "Duelist"];
+const FLEX_HERO_MIN = 3;   // ab so vielen Matches zählt ein Held als „gekannt“
+const ROLE_SHORT = { Vanguard: "Tank", Duelist: "DPS", Strategist: "Support" };
+const FLEX_LESSON = { Vanguard: "L20", Duelist: "L21" };
+// Ziele pro Match: aus den Lektionen L20 und L21
+const FLEX_GOAL = {
+  Vanguard: "Geh nur so weit vor, wie dein Support mitkommt, und hilf Mitspielern, die ein Diver anspringt (L20).",
+  Duelist: "Such dir vor dem Fight dein Ziel: zuerst gegnerische Supports, angeschlagene Gegner und Flanker, nicht den Tank mit Schild. Steh seitlich mit Deckung (L21)."
+};
+function flexGoal() { return { n: Math.max(1, +state.settings.flexMatches || 10), h: Math.max(1, +state.settings.flexHeroes || 2) }; }
+function flexStats() {
+  const g = flexGoal(), byRole = group(state.matches, m => heroRole(m.hero));
+  return ["Strategist", ...FLEX_ROLES].map(r => {
+    const l = byRole[r] || [], sm = summary(l);
+    const heroes = Object.entries(group(l, m => m.hero)).map(([h, x]) => [h, x.length]).sort((a, b) => b[1] - a[1]);
+    const solid = heroes.filter(([, c]) => c >= FLEX_HERO_MIN).length;
+    const need = Math.max(0, g.n - sm.n), needH = Math.max(0, g.h - solid);
+    return { role: r, n: sm.n, wr: sm.wr, d: sm.d, d10: sm.d10, heroes, solid, need, needH, ready: need === 0 && needH === 0, pct: Math.min(1, sm.n / g.n) };
+  });
+}
+// Welche Flex-Rolle braucht gerade mehr Matches? Bei Gleichstand wechselt sie mit `seed` (z. B. Tag im Plan).
+function nextFlexRole(stats, seed) {
+  const open = stats.filter(x => FLEX_ROLES.includes(x.role) && !x.ready).sort((a, b) => a.pct - b.pct);
+  if (!open.length) return null;
+  return open.length > 1 && open[0].pct === open[1].pct ? open[(seed || 0) % 2] : open[0];
+}
+function flexPickOf(role) { return (state.settings.flexPick || {})[role] || ""; }
+function flexRoleDays() { return PLAN.days.filter(d => /Tank|DPS|Rolle/.test(d.title) && !/Test/.test(d.title)); }
+function renderFlex() {
+  const el = $("#flexCard");
+  if (!el) return;
+  const st = flexStats(), g = flexGoal(), nx = nextFlexRole(st, 0), f1 = v => (isFinite(v) ? v.toFixed(1) : "–");
+  const roleRows = st.map(x => `<div class="frole">
+    <div class="fr-top"><span>${roleChip(x.role, ROLE_SHORT[x.role])}</span>${x.ready ? '<span class="badge ok">bereit ✓</span>' : `<span class="small">noch ${x.need ? plural(x.need, "Match", "Matches") : ""}${x.need && x.needH ? " und " : ""}${x.needH ? `${plural(x.needH, "Held", "Helden")} mit mind. ${FLEX_HERO_MIN} Matches` : ""}</span>`}</div>
+    <div class="track ${x.role}"><span style="width:${x.pct * 100}%"></span></div>
+    <div class="small muted">${x.n >= g.n ? `${x.n} Matches (Marke ${g.n} erreicht)` : `${x.n} von ${g.n} Matches`}${x.n ? ` · ${pct(x.wr)} Winrate · ${isFinite(x.d10) ? `${f1(x.d10)} Tode / 10 Min` : `${f1(x.d)} Tode / Match`}` : ""}</div>
+    <div class="herochips">${x.heroes.slice(0, 4).map(([h, c]) => `<span>${heroChip(h)} <span class="muted small">${c}×</span></span>`).join("") || '<span class="muted small">noch kein Held</span>'}</div></div>`).join("");
+  const picks = FLEX_ROLES.map(r => {
+    const cnt = Object.fromEntries(st.find(x => x.role === r).heroes);
+    return `<label class="inline-label">Mein Flex-Held ${ROLE_SHORT[r]}
+      <select data-flexpick="${r}"><option value="">– noch offen –</option>${allHeroes().filter(h => h.role === r).sort((a, b) => a.name.localeCompare(b.name))
+        .map(h => `<option ${h.name === flexPickOf(r) ? "selected" : ""} value="${esc(h.name)}">${esc(h.name)}${cnt[h.name] ? ` (${cnt[h.name]}×)` : ""}</option>`).join("")}</select></label>`;
+  }).join("");
+  const days = flexRoleDays().map(d => `<button type="button" class="dchip" data-flexday="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("");
+  el.innerHTML = `<div class="card-head"><h2>${icon("team")}Alle Rollen: Flex-Training</h2><span class="muted small">Notfall-Wechsel auf Tank oder DPS</span></div>
+    <p class="lead">Du spielst Support. Damit du im Notfall Tank oder DPS übernehmen kannst, brauchst du in jeder Rolle ein paar Matches und Helden, die du kennst.</p>
+    <div class="froles">${roleRows}</div>
+    <div class="flexset mt">Deine Marke:
+      <label class="inline-label"><input type="number" min="1" max="99" data-flexset="flexMatches" value="${g.n}" aria-label="Matches pro Rolle"> Matches pro Rolle</label>
+      <label class="inline-label"><input type="number" min="1" max="9" data-flexset="flexHeroes" value="${g.h}" aria-label="Helden pro Rolle"> Helden mit je mind. ${FLEX_HERO_MIN} Matches</label></div>
+    <div class="flexset">${picks}</div>
+    <div class="notes mt">${nx
+      ? `<div class="note info"><span class="ni" aria-hidden="true">i</span><div><b>Nächster Schritt: ${ROLE_SHORT[nx.role]}.</b> Spiel ${nx.need ? `noch ${plural(nx.need, "Match", "Matches")}` : "weitere Matches"} ${flexPickOf(nx.role) ? `mit ${esc(flexPickOf(nx.role))}` : "mit einem Helden deiner Wahl"}, ungewertet (= ohne Rang-Druck), wie es dein Plan für Neues vorsieht. Ziel pro Match: ${esc(FLEX_GOAL[nx.role])}</div></div>`
+      : `<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Rollen sind bereit.</b> Spiel ab und zu ein Flex-Match, damit es nicht einrostet.</div></div>`}</div>
+    <div class="row mt"><button type="button" class="btn ghost small" data-flexgo="L20">L20 Tank-Grundlagen</button><button type="button" class="btn ghost small" data-flexgo="L21">L21 DPS-Grundlagen</button></div>
+    ${days ? `<p class="small muted" style="margin:10px 0 4px">Tage im Plan, die Tank oder DPS üben:</p><div class="dchips">${days}</div>` : ""}
+    <label class="inline-label mt"><input type="checkbox" data-flexset="flexPlan" ${state.settings.flexPlan !== false ? "checked" : ""}> Flex-Aufträge im Tagesplan anzeigen</label>`;
+}
+$("#flexCard").addEventListener("change", e => {
+  const t = e.target;
+  if (t.dataset.flexpick) { state.settings.flexPick = Object.assign({}, state.settings.flexPick, { [t.dataset.flexpick]: t.value }); }
+  else if (t.dataset.flexset === "flexPlan") state.settings.flexPlan = t.checked;
+  else if (t.dataset.flexset) { const v = Math.round(Number(t.value)); state.settings[t.dataset.flexset] = v > 0 ? v : (t.dataset.flexset === "flexMatches" ? 10 : 2); }
+  else return;
+  save(); renderFlex();
+});
+$("#flexCard").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.flexgo) openWissen(b.dataset.flexgo);
+  else if (b.dataset.flexday) openPlanDay(+b.dataset.flexday);
+});
 function summary(list) {
   const w = list.filter(m => m.result === "W").length;
   const avg = f => { const v = list.filter(m => m[f] !== null && m[f] !== undefined); return v.length ? v.reduce((s, m) => s + m[f], 0) / v.length : NaN; };
@@ -3242,6 +3328,8 @@ function renderDashboard() {
     const rs = summary(byRole[r] || []);
     return [roleChip(r, ROLE_DE[r]), rs.n ? rs.wr : 0, rs.n ? `${pct(rs.wr)} · ${plural(rs.n, "Match", "Matches")}` : "noch keine", r];
   })) : empty("Noch keine Matches.", "team");
+
+  renderFlex();
 
   // Helden
   const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
@@ -3560,6 +3648,10 @@ function matchHints(d, skipId) {
     if (d.ultHit === 0) mine.push([neg, d.ults === 1 ? "<b>Deine Ult hatte keine Wirkung.</b> Prüf im Review: zu früh, zu spät oder ohne Team gedrückt?" : `<b>Keine deiner ${d.ults} Ults hatte Wirkung.</b> Prüf im Review: zu früh, zu spät oder ohne Team gedrückt?`]);
     else if (d.ults >= 2 && r <= 0.34) mine.push([neg, `<b>Nur ${numDe(d.ultHit)} von ${d.ults} Ults hatten Wirkung.</b> Prüf im Review: zu früh, zu spät oder ohne Team gedrückt?`]);
     else if (d.ults >= 2 && r >= 0.75) mine.push(["good", `<b>${numDe(d.ultHit)} von ${d.ults} Ults hatten Wirkung.</b> Dein Ult-Timing hat gepasst.`]);
+  }
+  if (d.hero && FLEX_ROLES.includes(heroRole(d.hero))) {
+    const r = heroRole(d.hero), nr = hist.filter(m => heroRole(m.hero) === r).length + 1, g = flexGoal();
+    mine.push(["info", `<b>Flex-Match als ${ROLE_SHORT[r]}:</b> Das ist dein Match ${nr} von ${g.n} in dieser Rolle. Ziel: ${esc(FLEX_GOAL[r])}`]);
   }
   if (d.hero) {
     const hs = summary(hist.filter(m => m.hero === d.hero));
@@ -5162,6 +5254,12 @@ function planHomeHtml() {
         <li><b>Später wird kombiniert.</b> Ab Tag 7 mischen die Tage Themen, die du schon kennst, zum Beispiel „Heal und Ult + Schaden“. Dazu kommen Zwischentests.</li>
         <li><b>Aufgeschrieben ist gesichert.</b> Schreib am Tagesende zwei Sätze bei „Abschluss“. Am nächsten Tag stehen sie oben in der Karte, du musst sie nicht im Kopf behalten.</li>
       </ul></div>`
+    + `<div class="card"><div class="card-head"><h2>${icon("team")}Alle Rollen lernen</h2></div>
+      <p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, kommt in jedem Tagesplan ein kleiner Flex-Auftrag dazu (abschaltbar).</p>
+      <ul class="wl">${flexStats().filter(x => FLEX_ROLES.includes(x.role)).map(x => `<li><b>${ROLE_SHORT[x.role]}:</b> ${x.ready ? "bereit ✓" : `${x.n} von ${flexGoal().n} Matches`}${x.heroes.length ? `, gespielt: ${esc(x.heroes.slice(0, 3).map(([h, c]) => `${h} (${c}×)`).join(", "))}` : ""}</li>`).join("")}</ul>
+      <p class="small muted" style="margin:8px 0 4px">Tage, die Tank oder DPS üben:</p>
+      <div class="dchips">${flexRoleDays().map(d => `<button type="button" class="dchip" data-pact="day" data-n="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("")}</div>
+      <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div></div>`
     + `<div class="card"><div class="card-head"><h2>${icon("list")}Themen-Tracker</h2></div>
       <p class="lead">${esc(PLAN.session.repeat)} Tippe auf eine Zahl, um den Tag zu öffnen.</p><div class="table-wrap">${trackerHtml(cur)}</div></div>`
     + `<div class="card"><div class="card-head"><h2>${icon("training")}Trainingsbereich: die Drills</h2></div>
@@ -5249,6 +5347,10 @@ function focusCardHtml(n) {
   items.push(neu.length ? `<li><b>Neu heute:</b> ${names(neu)}. Das ist dein Lernthema für heute.</li>`
     : `<li><b>Heute gibt es nichts Neues.</b> Du kombinierst Themen, die du schon kennst.</li>`);
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
+  if (state.settings.flexPlan !== false && !/Test|Tank|DPS|Rolle/.test(PLAN.days[n - 1].title)) {
+    const nx = nextFlexRole(flexStats(), n);
+    if (nx) items.push(`<li><b>Flex-Auftrag:</b> Spiel ein Match als ${ROLE_SHORT[nx.role]}${flexPickOf(nx.role) ? ` mit ${esc(flexPickOf(nx.role))}` : ""}, ungewertet, am Ende deiner Session (Block 3 oder 4+). Ziel: ${esc(FLEX_GOAL[nx.role])}</li>`);
+  }
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
   return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
     <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
@@ -5328,6 +5430,7 @@ function weeklyPackageText() {
     `Letzte 7 Tage: ${plural(ms.length, "Match", "Matches")}${ms.length ? `, ${ms.filter(m => m.result === "W").length} Siege / ${ms.filter(m => m.result === "L").length} Niederlagen, Ø Tode ${s.d.toFixed(1)}, Ø KDA ${s.kda.toFixed(1)}` : ""}`,
     ...(s.timedN ? [`Pro 10 Minuten (${plural(s.timedN, "Match", "Matches")} mit Dauer): Heilung ${fmtNum(s.heal10)}, Schaden ${fmtNum(s.dmg10)}, Geblockt ${fmtNum(s.block10)}, Tode ${s.d10.toFixed(1)}`] : []),
     ...(s.ultN ? [`Ult-Wirkung: ${pct(s.ultPct)} (${numDe(s.ultHit)} von ${s.ultN} Ults)`] : []),
+    `Rollen-Flex: ${flexStats().map(x => `${ROLE_SHORT[x.role]} ${x.n}/${flexGoal().n}`).join(", ")}`,
     top ? `Häufigste markierte Fehler: ${top}` : "Keine Fehler markiert.",
     recent.length ? "Abgeschlossene Tage:" : "Keine Tage in den letzten 7 Tagen abgeschlossen.",
     ...recent.map(d => `- Tag ${d.n} (${d.title}) am ${dayGet(d.n).done}${dayGet(d.n).note ? `: ${dayGet(d.n).note}` : ""}`),
@@ -5338,6 +5441,7 @@ function planAction(act, b) {
   switch (act) {
     case "day": openPlanDay(+b.dataset.n); break;
     case "home": openPlanHome(); break;
+    case "tab": showTab(b.dataset.tab); window.scrollTo({ top: 0 }); break;
     case "wissen": openWissen(b.dataset.l); break;
     case "drill": openDrill(b.dataset.d); break;
     case "read": { const k = b.dataset.k; planUi.read.has(k) ? planUi.read.delete(k) : planUi.read.add(k); renderPlan(); break; }
