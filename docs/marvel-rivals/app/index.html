@@ -2771,7 +2771,7 @@ let state = loadState();
 // ---------- Speicherung: Konto (online) oder Browser (lokal) ----------
 // Online-Version: privat im Claude-Konto (db-Capability, data/users/<id>/...), auf allen Geräten gleich.
 // Lokale Datei: localStorage dieses Browsers. Fehlt beides, warnt die App deutlich.
-const ONLINE_URL = "https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw";
+const ONLINE_URL = ""; /* PRIVATE:ONLINE_URL */
 let storageOK = false;
 try { const k = STORE_KEY + "-probe"; localStorage.setItem(k, "1"); storageOK = localStorage.getItem(k) === "1"; localStorage.removeItem(k); } catch (e) { storageOK = false; }
 const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
@@ -4420,7 +4420,7 @@ function syncToast(r) {
 // 3 Stunden und per Knopf) holt die Matches von Rivals Data und schreibt sie als eine Zeile in sein Sitzungsprotokoll.
 // Die App liest dieses Protokoll über den Connector "Claude Code Remote" (list_events) und trägt die Matches ein.
 // Schreibrechte auf deine Daten braucht der Helfer dafür nicht.
-const SYNC_HELPER = "session_01QX4JGxVFdMgyi5aWKs97AQ";
+const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
 const SYNC_SERVER = "Claude Code Remote";
 const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "" };
 const BRIDGE_ERRORS = {
@@ -4434,7 +4434,7 @@ const BRIDGE_ERRORS = {
   capability_removed: "Diese Ansicht kann Claude nicht anfragen."
 };
 async function initBridge() {
-  if (!IN_VIEWER) return;
+  if (!IN_VIEWER || !SYNC_HELPER) return;
   try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { Bridge.mcp = null; }
   if (currentTabSafe() === "data") renderBridge();
   if (Bridge.mcp) { autoPull(); setInterval(() => { if (document.visibilityState === "visible") autoPull(); }, 20 * 60 * 1000); }

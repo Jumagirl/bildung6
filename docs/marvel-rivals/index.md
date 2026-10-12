@@ -86,6 +86,20 @@ vergleicht die App unter **Auswertung** deine Winrate pro Held mit dem Schnitt a
     die auf eine nicht dokumentierte Schnittstelle von Rivals Data zugreift. Diese kann sich jederzeit
     ändern. Deine Match-History muss im Spiel öffentlich sein.
 
+## App weitergeben
+
+Die App ist eine einzige HTML-Datei (`app/index.html`) ohne Server. Jede Person, die sie öffnet, hat ihre **eigenen**
+Daten im eigenen Browser (Matches, Plan, Notizen). Über *Daten & Sync → Als JSON exportieren* lässt sich alles als Datei sichern
+und auf einem anderen Gerät wieder einlesen (*Backup importieren*).
+
+- Die öffentliche Datei enthält keine persönlichen Werte: keinen Artifact-Link und keine Sync-Sitzung. Der automatische
+  Abgleich im Hintergrund ist deshalb nur in der privaten Version aktiv.
+- Freunde gleichen ihre Matches wie oben beschrieben mit dem Skript `rivals_sync.py` ab (Tab *Daten*).
+- `python3 app_build.py friends` baut eine weitergebbare Version (`artifact/rivals-coach-friends.html`) ohne Heldenbilder
+  und ohne private Werte. Die Heldenbilder gehören Marvel/NetEase und werden nicht weitergegeben; die App zeigt
+  dann Initialen mit Rollenring.
+- Deine privaten Werte (`private.json`) und die Bilder (`hero_img.json`) stehen in der `.gitignore` und landen nie im Repo.
+
 ## Tägliche Lektionen
 
 Der Kern der App ist ein Kurs mit **35 kurzen Lektionen** (je 8–15 Minuten), aufgeteilt in sieben Module:

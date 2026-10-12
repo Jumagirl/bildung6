@@ -6,9 +6,12 @@ Dieses Skript holt sie bei Bedarf aus dem Marvel-Rivals-Wiki (wiki.gg) und setzt
 Artifact-Datei ein. Ohne Bilder zeigt die App Initialen mit Rollenring.
 
   python3 app_build.py icons      # lädt die Heldenbilder nach hero_img.json (braucht Pillow)
-  python3 app_build.py artifact   # schreibt artifact/rivals-coach.html (mit Bildern, falls vorhanden)
+  python3 app_build.py artifact   # schreibt artifact/rivals-coach.html (mit Bildern und deinen privaten Werten)
+  python3 app_build.py friends    # schreibt artifact/rivals-coach-friends.html (ohne Bilder, ohne private Werte)
 
-Beide Ausgabedateien sind per .gitignore vom Repo ausgeschlossen.
+Die Ausgabedateien sind per .gitignore vom Repo ausgeschlossen. Private Werte (dein Artifact-Link, deine
+Sync-Sitzung) stehen in private.json, die ebenfalls nicht ins Repo kommt:
+  {"ONLINE_URL": "https://claude.ai/artifact/…", "SYNC_HELPER": "session_…"}
 """
 import base64
 import io
@@ -23,7 +26,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 APP = HERE / "app" / "index.html"
 IMG = HERE / "hero_img.json"
+PRIVATE = HERE / "private.json"
 OUT = HERE / "artifact" / "rivals-coach.html"
+OUT_FRIENDS = HERE / "artifact" / "rivals-coach-friends.html"
 API = "https://marvelrivals.wiki.gg/api.php"
 UA = {"User-Agent": "RivalsCoach/1.0 (persönliche Trainings-App; github.com/Jumagirl/bildung6)"}
 # Wiki-Dateinamen, die vom Muster „<Name> Icon.png“ abweichen
@@ -72,20 +77,35 @@ def icons():
     print(f"{len(out)} Bilder gespeichert, ohne Bild: {', '.join(missing) or '–'}")
 
 
-def artifact():
+def strip_wrapper(s):
+    a = s.index("<title>")
+    b = s.rindex("</script>") + len("</script>")
+    return s[a:b]
+
+
+def artifact(friends=False):
     s = APP.read_text(encoding="utf-8")
-    if IMG.exists():
+    if not friends and IMG.exists():
         imgs = json.loads(IMG.read_text(encoding="utf-8"))
         a, b = s.index("/* HERO-IMG:BEGIN */"), s.index("/* HERO-IMG:END */")
         s = s[:a] + "/* HERO-IMG:BEGIN */\nconst HERO_IMG = " + json.dumps(imgs, separators=(",", ":")) + ";\n" + s[b:]
         print(f"{len(imgs)} Heldenbilder eingesetzt")
     else:
-        print("Keine hero_img.json: Artifact ohne Heldenbilder (erst `icons` ausführen)")
-    a = s.index("<title>")
-    b = s.rindex("</script>") + len("</script>")
-    OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text(s[a:b], encoding="utf-8")
-    print(f"{OUT} geschrieben ({OUT.stat().st_size // 1024} KB)")
+        print("Ohne Heldenbilder" + ("" if friends else " (erst `icons` ausführen)"))
+    if not friends and PRIVATE.exists():
+        for key, value in json.loads(PRIVATE.read_text(encoding="utf-8")).items():
+            old = f'const {key} = ""; /* PRIVATE:{key} */'
+            if old not in s:
+                print(f"Platzhalter für {key} fehlt")
+                continue
+            s = s.replace(old, f"const {key} = {json.dumps(value)};")
+        print("Private Werte eingesetzt")
+    elif not friends:
+        print("Keine private.json: Online-Link und Sync-Helfer bleiben leer")
+    out = OUT_FRIENDS if friends else OUT
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(strip_wrapper(s), encoding="utf-8")
+    print(f"{out} geschrieben ({out.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
@@ -94,5 +114,7 @@ if __name__ == "__main__":
         icons()
     elif cmd == "artifact":
         artifact()
+    elif cmd == "friends":
+        artifact(friends=True)
     else:
         print(__doc__)
