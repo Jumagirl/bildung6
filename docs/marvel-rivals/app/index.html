@@ -2744,7 +2744,7 @@ const TITLES = {
 const STORE_KEY = "rivals-coach-v1";
 function matchTime(m) { return m.ts || Date.parse(`${m.date}T12:00:00`) || 0; }
 function loadState(raw) {
-  let s = raw === undefined ? null : raw;
+  let s = raw === undefined || raw === null ? null : plainJson(raw);   // eigene Kopie: Daten aus dem Konto können unveränderlich sein
   if (raw === undefined) { try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { s = null; } }
   const st = Object.assign({
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
@@ -2864,7 +2864,7 @@ async function readCloud(meta) {
   const matches = [];
   Cloud.lastJson = {};
   docs.forEach((d, i) => {
-    if (d.exists) { const body = d.data(); matches.push(...(body.matches || [])); Cloud.lastJson[i] = JSON.stringify({ i, matches: body.matches || [] }); }
+    if (d.exists) { const body = plainJson(d.data()); matches.push(...(body.matches || [])); Cloud.lastJson[i] = JSON.stringify({ i, matches: body.matches || [] }); }
   });
   Cloud.chunkCount = n;
   return Object.assign({}, plainJson(meta.state || {}), { matches, updatedAt: meta.updatedAt });
@@ -2901,7 +2901,14 @@ async function initCloud() {
         }
         applyRemote(remote, meta.rev);
         if (editedMeanwhile) { state.updatedAt = Date.now(); saveLocal(); await writeCloud(true); }
-      } else { await readCloud(meta); await writeCloud(true); }
+      } else {
+        // Dieser Browser ist neuer: Matches aus dem Konto ergänzen, nichts überschreiben
+        const remote = await readCloud(meta);
+        const ids = new Set(state.matches.map(m => m.id)), exts = new Set(state.matches.filter(m => m.extId).map(m => m.extId));
+        const extra = remote.matches.filter(m => !ids.has(m.id) && !(m.extId && exts.has(m.extId)));
+        if (extra.length) { state.matches.push(...extra); state.matches.sort((a, b) => matchTime(a) - matchTime(b)); }
+        await writeCloud(true);
+      }
     } else if (hasUserData(state)) {
       await writeCloud(true);
     }
@@ -2910,7 +2917,7 @@ async function initCloud() {
     // Eingang: Hier legt Claude Rivals-Data-Abrufe ab; die App trägt sie von selbst ein
     Cloud.base.doc("sync-inbox").onSnapshot(snap => { if (snap.exists) takeInbox(snap.data()); }, () => {});
     // Persönliche Ausgangslage zum Trainingsplan (nur im Konto, nicht im Quelltext)
-    Cloud.base.doc("plan-baseline").onSnapshot(snap => { PlanExtra = snap.exists ? snap.data() : null; if (currentTabSafe() === "plan") renderPlan(); }, () => {});
+    Cloud.base.doc("plan-baseline").onSnapshot(snap => { PlanExtra = snap.exists ? plainJson(snap.data()) : null; if (currentTabSafe() === "plan") renderPlan(); }, () => {});
     // Änderungen von anderen Geräten live übernehmen
     Cloud.unsub = Cloud.base.doc("state").onSnapshot(async snap => {
       if (!snap.exists || snap.metadata.hasPendingWrites) return;
