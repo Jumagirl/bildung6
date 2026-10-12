@@ -1168,6 +1168,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
     <div class="note info mt" id="syncNowInfo" hidden></div>
     <div class="note info mt" id="autoPullInfo" hidden></div>
+    <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
+    <pre class="prompt" id="diagOut" hidden></pre>
     <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data mehrmals täglich ab (etwa um 10, 14, 18 und 22 Uhr), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
@@ -4435,7 +4437,7 @@ function syncToast(r) {
 const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
 const BUILD_STAMP = ""; /* BUILD:STAMP */
 const SYNC_SERVER = "Claude Code Remote";
-const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "", auto: null, hidden: false };
+const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "", auto: null, hidden: false, diag: "" };
 const BRIDGE_ERRORS = {
   not_in_manifest: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
   not_granted: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
@@ -4550,6 +4552,22 @@ async function openPermissions() {
     if ((await p.state(name)) !== "denied") { if (!Bridge.mcp) { try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { /* weiter */ } } autoPull(true); }
   } catch (e) { toast("Öffne das Menü dieser Seite und dort „Permissions“ (Berechtigungen)."); }
 }
+async function diagnoseBridge() {
+  Bridge.diag = "Prüfe …"; renderAuto();
+  const lines = [];
+  if (!Bridge.mcp) lines.push("Keine Verbindung zu Claude in dieser Ansicht.");
+  else {
+    try {
+      const r = await Bridge.mcp.listTools();
+      (r.servers || []).forEach(sv => lines.push(`${sv.server}${sv.kind ? ` (${sv.kind})` : ""} · ${sv.authStatus} · ${(sv.tools || []).map(t => t.name).join(", ") || "keine Werkzeuge"}`));
+      if (!lines.length) lines.push("Für diese Seite ist kein Connector verfügbar.");
+    } catch (e) { lines.push(`Liste der Connectoren: ${(e && e.code) || "Fehler"} ${(e && e.message) || ""}`.trim()); }
+    for (const t of ["list_events", "send_message"]) {
+      try { await Bridge.mcp.describeTool(SYNC_SERVER, t); lines.push(`${t}: verfügbar`); } catch (e) { lines.push(`${t}: ${(e && e.code) || "Fehler"}`); }
+    }
+  }
+  Bridge.diag = lines.join("\n"); renderAuto();
+}
 // Sichtbarer Status des automatischen Abgleichs (Banner oben bei Problemen, Zeile im Tab „Daten & Sync“)
 function setAuto(a) { Bridge.auto = a ? Object.assign({ at: Date.now() }, a) : null; renderAuto(); }
 function renderAuto() {
@@ -4559,7 +4577,8 @@ function renderAuto() {
   const needPerm = !!a && (["not_in_manifest", "not_granted", "approval_required", "consent_required"].includes(a.code) || a.perm === "denied");
   banner.hidden = !bad || Bridge.hidden;
   if (bad) banner.innerHTML = `<b>Der automatische Abgleich deiner Matches funktioniert gerade nicht.</b> ${esc(a.text)}${a.detail ? ` <span class="small muted">(${esc(a.detail)})</span>` : ""}
-    <div class="row" style="margin-top:8px">${a.code === "blocked_by_policy" ? `<a class="btn small" href="https://claude.ai/customize/connectors" target="_blank" rel="noopener">Connector-Einstellungen öffnen</a>` : ""}${needPerm ? `<button class="btn small" type="button" data-bact="perm">Berechtigungen öffnen</button>` : ""}${a.state === "error" ? `<button class="btn small ghost" type="button" data-bact="retry">Erneut versuchen</button>` : ""}<button class="btn small ghost" type="button" data-bact="hide">Ausblenden</button></div>`;
+    <div class="row" style="margin-top:8px">${a.code === "blocked_by_policy" ? `<a class="btn small" href="https://claude.ai/customize/connectors" target="_blank" rel="noopener">Connector-Einstellungen öffnen</a>` : ""}${needPerm ? `<button class="btn small" type="button" data-bact="perm">Berechtigungen öffnen</button>` : ""}${a.state === "error" ? `<button class="btn small ghost" type="button" data-bact="retry">Erneut versuchen</button>` : ""}<button class="btn small ghost" type="button" data-bact="diag">Verbindung prüfen</button><button class="btn small ghost" type="button" data-bact="hide">Ausblenden</button></div>${Bridge.diag ? `<pre class="prompt" style="margin-top:10px">${esc(Bridge.diag)}</pre>` : ""}`;
+  const dg = $("#diagOut"); if (dg) { dg.hidden = !Bridge.diag; dg.textContent = Bridge.diag || ""; }
   line.hidden = !a || !Bridge.mcp && a.state !== "unavailable";
   if (!a) return;
   const t = { pulling: "Prüfe gerade, ob der Sync-Helfer neue Matches hat …",
@@ -4568,10 +4587,12 @@ function renderAuto() {
   line.className = `note ${a.state === "ok" ? "good" : a.state === "pulling" ? "info" : "bad"} mt`;
   line.innerHTML = `<span class="ni" aria-hidden="true">${a.state === "ok" ? "✓" : a.state === "pulling" ? "i" : "!"}</span><div>${esc(t)}</div>`;
 }
+$("#diagBtn").addEventListener("click", diagnoseBridge);
 $("#bridgeBanner").addEventListener("click", e => {
   const b = e.target.closest("[data-bact]"); if (!b) return;
   if (b.dataset.bact === "hide") { Bridge.hidden = true; renderAuto(); }
   else if (b.dataset.bact === "retry") autoPull(true);
+  else if (b.dataset.bact === "diag") diagnoseBridge();
   else if (b.dataset.bact === "perm") openPermissions();
 });
 function syncRequestText(id) {
@@ -4585,7 +4606,7 @@ function renderBridge() {
   const btn = $("#syncNow"), info = $("#syncNowInfo");
   if (!btn) return;
   const ok = IN_VIEWER && !!Bridge.mcp;
-  btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok;
+  btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok; $("#diagBtn").hidden = !IN_VIEWER || !SYNC_HELPER;
   $("#syncManual").open = !ok || !!(Bridge.info && Bridge.info.kind === "bad");
   const busy = !!(Bridge.req && Bridge.req.status !== "timeout");
   btn.disabled = busy;
@@ -4634,7 +4655,7 @@ async function takeInbox(box) {
   try {
     if (box.payload) {
       try {
-        const data = typeof box.payload === "string" ? JSON.parse(box.payload) : box.payload;
+        const data = typeof box.payload === "string" ? JSON.parse(box.payload) : plainJson(box.payload);
         const r = importSync(data);
         quiz = null; render(); syncToast(r);
         // Erst sichern, dann den Eingang leeren
