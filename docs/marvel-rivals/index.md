@@ -68,8 +68,9 @@ klappt, solange die Claude-Sitzung läuft, in der die App gepflegt wird. Andernf
 3. Im selben Ordner ausführen: `python rivals_sync.py "DeinSpielername"`
 4. Die erzeugte Datei `rivals-sync.json` in der App unter **Daten & Sync** importieren.
 
-Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams. Die Matchdauer übernimmt das
-Skript nur, wenn die Daten sie liefern (Feldnamen nicht überprüft); sonst trägst du die Dauer von Hand ein, damit die Werte pro 10 Minuten stimmen.
+Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams. Auch die Matchdauer kommt mit (damit rechnet die App Schaden, Heilung und Geblockt auf 10 Minuten um).
+Nicht importiert werden können eingesetzte Ults und Ult-Wirkung: Die liefert Rivals Data nicht, die trägst du von Hand ein.
+Neu importierte Matches erscheinen im Tab **Match loggen** unter „Neue Matches: Reflexion offen“, dort trägst du nur noch Fehler und Stärken ein.
 Rivals Data zeigt nur die letzten etwa 20 Matches und hinkt dem Spiel teils um Stunden hinterher – frische
 Matches trägst du am besten von Hand ein. Sie werden später mit dem Rivals-Data-Eintrag zusammengeführt,
 wenn Datum, Held, Ergebnis und K/D/A übereinstimmen.

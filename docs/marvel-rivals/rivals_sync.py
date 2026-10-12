@@ -150,27 +150,21 @@ def number(value: Any) -> int | None:
         return None
 
 
-DURATION_KEYS = ("match_play_duration", "match_duration", "play_duration", "game_duration", "duration")
+DURATION_SECONDS_KEYS = ("duration_seconds", "match_play_duration", "match_duration_seconds")
 
 
 def duration_minutes(*sources: Any) -> float | None:
-    """Matchdauer in Minuten, falls der Eintrag sie nennt (Sekunden oder Minuten, auch eine Ebene tiefer).
-
-    Die Feldnamen sind nicht überprüft. Findet das Skript keine Dauer, bleibt das Feld leer
-    und du trägst die Dauer in der App von Hand ein.
-    """
+    """Matchdauer in Minuten. Rivals Data liefert sie in den Match-Details als ``duration_seconds``."""
     for source in sources:
         if not isinstance(source, Mapping):
             continue
-        nested = [v for v in source.values() if isinstance(v, Mapping)]
-        for container in [source, *nested]:
-            for key in DURATION_KEYS:
-                try:
-                    value = float(container.get(key))
-                except (TypeError, ValueError):
-                    continue
-                if value > 0:
-                    return round(value / 60 if value >= 60 else value, 1)
+        for key in DURATION_SECONDS_KEYS:
+            try:
+                value = float(source.get(key))
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                return round(value / 60, 1)
     return None
 
 

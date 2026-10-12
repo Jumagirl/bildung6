@@ -580,9 +580,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .dchip:hover { border-color: var(--accent); }
 .dchip.done { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); border-color: transparent; }
 .dchip.cur { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
-.focus-card { border-left: 4px solid var(--accent); }
-.focus-card ul.wl { margin: 8px 0; }
-.focus-card .dchips { display: inline-flex; vertical-align: middle; margin-left: 4px; }
+.today-card { border-left: 4px solid var(--accent); }
+.today-card ul.wl { margin: 8px 0; }
+.today-card .dchips { display: inline-flex; vertical-align: middle; margin-left: 4px; }
+.orow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 0; border-top: 1px solid var(--grid); }
+.orow .sp { flex: 1 1 140px; min-width: 0; }
 .mlen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 10px; }
 .mlen input { width: 5.5em; }
 .formhelp { margin: 8px 0 0; }
@@ -831,6 +833,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <!-- LOG -->
 <section id="tab-log" hidden>
   <div class="edit-banner" id="editBanner"><span id="editText">Match bearbeiten</span><button class="btn ghost small" type="button" id="editCancel">Abbrechen</button></div>
+  <div class="card" id="openRefl" hidden></div>
   <form id="matchForm">
   <div class="card focus-card" id="focusCard" hidden></div>
   <div class="card">
@@ -881,7 +884,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <label>Geblockt <input type="number" name="block" min="0" step="any" placeholder="optional"></label>
     </div>
     <div class="grid mt">
-      <label>Dauer in Minuten <input type="number" name="dur" min="0" step="0.5" placeholder="z. B. 9"></label>
+      <label>Dauer in Minuten <input type="number" name="dur" min="0" step="any" placeholder="z. B. 9"></label>
       <label>Ults eingesetzt <input type="number" name="ults" min="0" step="1" placeholder="optional"></label>
       <label>Davon mit Wirkung <input type="number" name="ultHit" min="0" step="0.5" placeholder="teilweise = 0,5"></label>
     </div>
@@ -1350,27 +1353,21 @@ def number(value: Any) -> int | None:
         return None
 
 
-DURATION_KEYS = ("match_play_duration", "match_duration", "play_duration", "game_duration", "duration")
+DURATION_SECONDS_KEYS = ("duration_seconds", "match_play_duration", "match_duration_seconds")
 
 
 def duration_minutes(*sources: Any) -> float | None:
-    """Matchdauer in Minuten, falls der Eintrag sie nennt (Sekunden oder Minuten, auch eine Ebene tiefer).
-
-    Die Feldnamen sind nicht überprüft. Findet das Skript keine Dauer, bleibt das Feld leer
-    und du trägst die Dauer in der App von Hand ein.
-    """
+    """Matchdauer in Minuten. Rivals Data liefert sie in den Match-Details als ``duration_seconds``."""
     for source in sources:
         if not isinstance(source, Mapping):
             continue
-        nested = [v for v in source.values() if isinstance(v, Mapping)]
-        for container in [source, *nested]:
-            for key in DURATION_KEYS:
-                try:
-                    value = float(container.get(key))
-                except (TypeError, ValueError):
-                    continue
-                if value > 0:
-                    return round(value / 60 if value >= 60 else value, 1)
+        for key in DURATION_SECONDS_KEYS:
+            try:
+                value = float(source.get(key))
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                return round(value / 60, 1)
     return None
 
 
@@ -3191,6 +3188,8 @@ function renderDashboard() {
       ${lastNext ? `<p class="small">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
       ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
   }
+  const nOpen = state.matches.filter(isOpenRefl).length;
+  if (nOpen) card.insertAdjacentHTML("beforeend", `<p class="small" style="position:relative"><b>${plural(nOpen, "neues Match wartet", "neue Matches warten")} auf deine Reflexion.</b> <button class="btn small" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Fehler eintragen</button></p>`);
   card.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
 
   // Trend
@@ -3279,7 +3278,33 @@ function setChips(el, values) {
   el.querySelectorAll(".chip").forEach(c => { const on = values.includes(c.dataset.v); c.classList.toggle("on", on); c.setAttribute("aria-checked", on); });
 }
 function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)].map(s => s.value); }
+// Von Rivals Data geholte Matches der letzten 14 Tage, zu denen du noch keine Reflexion eingetragen hast
+const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !(m.mistakes || []).length && !(m.goods || []).length && !m.notes
+  && (m.mood === null || m.mood === undefined) && (m.date || "") >= new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+function renderOpenRefl() {
+  const el = $("#openRefl"), open = state.matches.filter(isOpenRefl).reverse();
+  el.hidden = !open.length;
+  if (!open.length) return;
+  el.innerHTML = `<div class="card-head"><h2>${icon("edit")}Neue Matches: Reflexion offen</h2><span class="badge">${open.length}</span></div>
+    <p class="lead">Diese Matches hat die App automatisch von Rivals Data geholt. Trag nur noch ein, was schiefgelaufen ist oder gut lief.</p>
+    ${open.slice(0, 6).map(m => `<div class="orow"><span>${resultPill(m.result)}</span><span>${heroChip(m.hero)}</span>
+      <span class="sp small">${fmtDate(m.date)} · ${m.k}/${m.d}/${m.a}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}${m.map ? ` · ${esc(m.map)}` : ""}</span>
+      <button class="btn small" type="button" data-oedit="${m.id}">Fehler eintragen</button>
+      <button class="btn ghost small" type="button" data-odone="${m.id}" title="Nichts Besonderes: aus der Liste nehmen">Nichts eintragen</button></div>`).join("")}
+    ${open.length > 6 ? `<div class="row mt"><span class="muted small">und ${open.length - 6} weitere</span><button class="btn ghost small" type="button" data-oall="1">Alle als erledigt markieren</button></div>` : ""}`;
+}
+$("#openRefl").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.oedit) startEdit(b.dataset.oedit);
+  else if (b.dataset.odone || b.dataset.oall) {
+    const ids = b.dataset.oall ? state.matches.filter(isOpenRefl).map(m => m.id) : [b.dataset.odone];
+    state.matches.forEach(m => { if (ids.includes(m.id)) m.reflDone = true; });
+    save(); render();
+  }
+});
 function renderLog() {
+  renderOpenRefl();
   renderFocusCard();
   const prev = $("#heroSelect").value || (state.matches.length ? state.matches[state.matches.length - 1].hero : "");
   $("#heroPickWrap").innerHTML = heroSelectHtml('name="hero" id="heroSelect"', prev, "– Held wählen –", "me");
@@ -5112,7 +5137,7 @@ function focusCardHtml(n) {
     : `<li><b>Heute gibt es nichts Neues.</b> Du kombinierst Themen, die du schon kennst.</li>`);
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
-  return `<div class="card focus-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
+  return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
     <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
     <ul class="wl">${items.join("")}</ul>
     ${prev ? `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Dein Abschluss von Tag ${prev[0]}:</b> „${esc(prev[1])}“ Das ist aufgeschrieben, du musst es nicht im Kopf behalten.</div></div>` : ""}
