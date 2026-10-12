@@ -155,6 +155,45 @@ section[hidden] { display: none; }
 .mobile-tools { display: none; position: absolute; right: 14px; top: 12px; gap: 4px; }
 .mobile-tools button { background: none; border: 0; color: var(--muted); padding: 6px; border-radius: 8px; cursor: pointer; }
 
+/* ---------- Bereiche, Unternavigation, untere Leiste ---------- */
+.subnav { display: flex; gap: 6px; flex-wrap: wrap; max-width: 1180px; margin: 0 auto; padding: 16px 28px 0; }
+.subnav button { border: 1px solid var(--border); background: var(--surface); color: var(--text-2); padding: 6px 14px; border-radius: 999px; font: inherit; font-size: .86rem; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
+.subnav button:hover { border-color: var(--accent); color: var(--text); }
+.subnav button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.bottombar { display: none; }
+@media (max-width: 900px) {
+  #areaNav { display: none; }
+  .subnav { padding: 10px 16px 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subnav button { white-space: nowrap; }
+  .bottombar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; gap: 2px; background: var(--surface); border-top: 1px solid var(--border); padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .bottombar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .68rem; padding: 6px 2px; border-radius: 10px; cursor: pointer; }
+  .bottombar button[aria-selected="true"] { color: var(--accent-strong); background: var(--accent-soft); font-weight: 700; }
+  .bottombar svg.i { width: 22px; height: 22px; }
+  main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+/* ---------- Suche ---------- */
+.sres { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.sres:hover, .sres.sel { background: var(--accent-soft); }
+.sres .sk { flex: none; min-width: 66px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent-strong); }
+.sres .st { min-width: 0; line-height: 1.3; }
+.sres .st b { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.sres .st span { display: block; font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+/* ---------- Heute ---------- */
+.todo { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--grid); }
+.todo:first-child { border-top: 0; }
+.todo .tn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .85rem; background: var(--surface-3); color: var(--text-2); }
+.todo.done .tn { background: var(--good); color: #fff; }
+.todo .tt { min-width: 0; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.todo .ts { font-size: .82rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.todo.done .tt { color: var(--text-2); }
+@media (max-width: 520px) { .todo { grid-template-columns: 34px minmax(0, 1fr); } .todo .ta { grid-column: 2; } }
+.areagrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.areacard { text-align: left; font: inherit; color: inherit; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, transform .1s; }
+.areacard:hover { border-color: var(--accent); transform: translateY(-1px); }
+.areacard b { display: flex; align-items: center; gap: 8px; }
+.areacard svg.i { color: var(--accent); }
+.areacard span.small { color: var(--muted); }
 /* ---------- Bausteine ---------- */
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
@@ -610,6 +649,18 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .pstep.done .ptxt, .pstep.done .pl { color: var(--muted); }
 .readbox { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; background: var(--surface-2); font-size: .9rem; line-height: 1.55; display: flex; flex-direction: column; gap: 8px; }
 .readbox > p { margin: 0; }
+.fold { border: 1px solid var(--border); border-radius: var(--radius, 16px); background: var(--surface); margin-bottom: 14px; }
+.fold > summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; gap: 10px; align-items: center; justify-content: space-between; border-radius: inherit; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fold > summary .ft { min-width: 0; flex: 1; }
+.fold > summary h2 { margin: 0; font-size: 1.05rem; }
+.fold > summary .fs { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; font-weight: 400; }
+.fold > summary .fr { display: flex; gap: 6px; align-items: center; flex: none; }
+.fold > summary .chev { width: 18px; height: 18px; flex: none; color: var(--muted); transition: transform .15s; }
+.fold[open] > summary .chev { transform: rotate(90deg); }
+.fold[open] > summary { border-bottom: 1px solid var(--grid); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.fold > .fbody { padding: 14px 18px 16px; }
 .wiss { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); margin-bottom: 10px; }
 .wiss > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
 .wiss > summary::-webkit-details-marker { display: none; }
@@ -772,21 +823,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div><b>Rivals Coach</b><span>Marvel Rivals Trainer</span></div>
     <div class="mobile-tools"><button type="button" class="theme-toggle" aria-label="Hell/Dunkel umschalten" data-icon="theme"></button></div>
   </div>
-  <nav class="tabs" role="tablist" aria-label="Bereiche">
-    <button role="tab" data-tab="dashboard" data-icon="dashboard" aria-selected="true">Dashboard</button>
-    <button role="tab" data-tab="lessons" data-icon="book">Lektionen</button>
-    <button role="tab" data-tab="plan" data-icon="target">Trainingsplan</button>
-    <button role="tab" data-tab="log" data-icon="log">Match loggen</button>
-    <button role="tab" data-tab="analysis" data-icon="analysis">Auswertung</button>
-    <button role="tab" data-tab="team" data-icon="team">Team &amp; Counter</button>
-    <button role="tab" data-tab="quiz" data-icon="quiz">Quiz</button>
-    <button role="tab" data-tab="lexicon" data-icon="zap">Lexikon</button>
-    <button role="tab" data-tab="heroes" data-icon="heroes">Helden-Guide</button>
-    <button role="tab" data-tab="training" data-icon="training">Training</button>
-    <button role="tab" data-tab="goals" data-icon="goals">Lernziele</button>
-    <button role="tab" data-tab="ai" data-icon="ai">KI-Coach</button>
-    <button role="tab" data-tab="data" data-icon="data">Daten &amp; Sync</button>
-  </nav>
+  <nav class="tabs" role="tablist" aria-label="Bereiche" id="areaNav"></nav>
   <div class="side-foot">
     <button type="button" class="theme-toggle" data-icon="theme">Hell / Dunkel</button>
     <a href="../" data-icon="back">Zur Lernseite</a>
@@ -794,18 +831,24 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 </aside>
 
 <div class="content">
+<div class="subnav" id="subNav" role="tablist" aria-label="Seiten" hidden></div>
 <div class="storage-banner bridge-banner" id="bridgeBanner" role="status" hidden></div>
 <div class="page-head">
-  <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p><p class="ver" id="buildStamp" hidden></p></div>
-  <div class="head-actions"><button type="button" class="level-chip lv1" id="levelChip"><span class="dot"></span><span id="levelChipText"></span></button><span class="save-chip" id="saveChip" role="status"></span><button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button></div>
+  <div><h1 id="pageTitle">Heute</h1><p id="pageSub"></p><p class="ver" id="buildStamp" hidden></p></div>
+  <div class="head-actions"><button type="button" class="level-chip lv1" id="levelChip"><span class="dot"></span><span id="levelChipText"></span></button><button type="button" class="btn ghost small" id="searchBtn" data-icon="search" aria-label="Suche öffnen" title="Suche (Taste / oder Strg+K)">Suche</button><span class="save-chip" id="saveChip" role="status"></span><button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button></div>
 </div>
 <main>
 <div class="storage-banner" id="storageBanner" role="alert" hidden></div>
+<!-- HEUTE -->
+<section id="tab-today" hidden><div id="todayBody"></div></section>
 <!-- DASHBOARD -->
 <section id="tab-dashboard">
   <div class="kpis" id="kpis"></div>
-  <div class="card" id="todayCard"></div>
-  <div class="card" id="pathCard"></div>
+  <div class="card" id="todayCard" hidden></div>
+  <div class="card" id="insightsCard">
+    <div class="card-head"><h2 data-icon="ai">Coach-Hinweise</h2><span class="muted small">das Wichtigste aus deinen Matches</span></div>
+    <div id="insights"></div>
+  </div>
   <div class="grid-2">
     <div class="card">
       <div class="card-head"><h2 data-icon="analysis">Winrate-Verlauf</h2><span class="muted small">letzte 30 Matches · gleitend über 5</span></div>
@@ -816,7 +859,6 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <div id="byRole"></div>
     </div>
   </div>
-  <div class="card" id="flexCard"></div>
   <div class="grid-2 mt">
     <div class="card">
       <div class="card-head"><h2 data-icon="heroes">Deine Helden</h2></div>
@@ -827,10 +869,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <div id="topMistakes"></div>
     </div>
   </div>
-  <div class="card mt">
-    <div class="card-head"><h2 data-icon="ai">Coach-Hinweise</h2></div>
-    <div id="insights"></div>
-  </div>
+  <details class="fold" id="flexCard" data-f="dash-flex"></details>
+  <details class="fold" id="pathCard" data-f="dash-path"></details>
 </section>
 
 <!-- TRAININGSPLAN -->
@@ -1202,6 +1242,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   </div>
 </section>
 </main>
+<nav class="bottombar" id="bottomNav" aria-label="Bereiche"></nav>
 </div>
 </div>
 <div class="picker-backdrop" id="picker" hidden>
@@ -1213,6 +1254,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
     <div class="picker-body" id="pickerBody"></div>
     <div class="picker-foot"><span class="muted small">Tipp: Anfangsbuchstaben tippen und Enter drücken.</span><button class="btn ghost small" type="button" id="pickerClear">Auswahl entfernen</button></div>
+  </div>
+</div>
+<div class="picker-backdrop" id="searchDlg" hidden>
+  <div class="picker" role="dialog" aria-modal="true" aria-label="Suche">
+    <div class="picker-head">
+      <div class="row between"><b>Suche</b><button class="btn ghost small icon" type="button" id="searchClose" aria-label="Schliessen" data-icon="x"></button></div>
+      <input id="searchInput" placeholder="Held, Lektion, Begriff, Tag, Seite …" autocomplete="off" aria-label="Suchbegriff">
+    </div>
+    <div class="picker-body" id="searchRes"></div>
+    <div class="picker-foot"><span class="muted small">Tipp: Taste / öffnet die Suche, Enter öffnet den ersten Treffer.</span></div>
   </div>
 </div>
 <div class="confirm-backdrop" id="confirmDlg" hidden>
@@ -2869,13 +2920,17 @@ const ICONS = {
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
   zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
   chevron: '<path d="m6 9 6 6 6-6"/>',
-  book: '<path d="M2 5a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/><path d="M22 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>'
+  book: '<path d="M2 5a2 2 0 0 1 2-2h6v18H4a2 2 0 0 1-2-2z"/><path d="M22 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>'
 };
 function icon(name) { return ICONS[name] ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>` : ""; }
 document.querySelectorAll("[data-icon]").forEach(el => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
 
 const TITLES = {
-  dashboard: ["Dashboard", "Dein Fortschritt auf einen Blick"],
+  today: ["Heute", "Dein Tag auf einen Blick: Lektion, Training, Ziel und Matches"],
+  dashboard: ["Überblick", "Dein Fortschritt auf einen Blick"],
   lessons: ["Tägliche Lektionen", "Jeden Tag ein Schritt: verstehen, üben, anwenden, reflektieren"],
   plan: ["Trainingsplan", "56 Tage vom Fundament zum Experten"],
   log: ["Match loggen", "Ergebnis, Teams und Reflexion festhalten"],
@@ -2889,6 +2944,37 @@ const TITLES = {
   ai: ["KI-Coach", "Deine Daten als Prompt für einen Chatbot"],
   data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"]
 };
+
+// ---------- Bereiche und Navigation ----------
+// Fünf Bereiche statt dreizehn Reiter. Jeder Bereich hat Unterseiten; die Seiten selbst (tab-…) bleiben unverändert.
+const AREAS = [
+  { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
+  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz und Lexikon", tabs: ["plan", "lessons", "quiz", "lexicon"] },
+  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten und auswerten", tabs: ["log", "analysis", "dashboard"] },
+  { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team und Counter", tabs: ["heroes", "team"] },
+  { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
+];
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
+const areaLast = {};
+function renderNav(name) {
+  const area = areaOf(name);
+  areaLast[area.id] = name;
+  const btn = a => `<button type="button" role="tab" data-area="${a.id}" aria-selected="${a.id === area.id}">${icon(a.icon)}<span>${a.label}</span></button>`;
+  $("#areaNav").innerHTML = AREAS.map(btn).join("");
+  $("#bottomNav").innerHTML = AREAS.map(btn).join("");
+  const sub = $("#subNav");
+  sub.hidden = area.tabs.length < 2;
+  sub.innerHTML = area.tabs.map(t => `<button type="button" role="tab" data-tab="${t}" aria-selected="${t === name}">${esc(NAV_LABEL[t] || TITLES[t][0])}</button>`).join("");
+  const on = sub.querySelector('[aria-selected="true"]');
+  if (on && on.scrollIntoView && sub.scrollWidth > sub.clientWidth) { try { sub.scrollLeft = Math.max(0, on.offsetLeft - 16); } catch (e) {} }
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-area]");
+  if (a) { const ar = AREAS.find(x => x.id === a.dataset.area); showTab(areaLast[ar.id] || ar.tabs[0]); window.scrollTo({ top: 0 }); return; }
+  const t = e.target.closest("#subNav [data-tab]");
+  if (t) { showTab(t.dataset.tab); window.scrollTo({ top: 0 }); }
+});
 
 // ---------- Speicher ----------
 const STORE_KEY = "rivals-coach-v1";
@@ -3282,8 +3368,7 @@ function renderFlex() {
         .map(h => `<option ${h.name === flexPickOf(r) ? "selected" : ""} value="${esc(h.name)}">${esc(h.name)}${cnt[h.name] ? ` (${cnt[h.name]}×)` : ""}</option>`).join("")}</select></label>`;
   }).join("");
   const days = flexRoleDays().map(d => `<button type="button" class="dchip" data-flexday="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("");
-  el.innerHTML = `<div class="card-head"><h2>${icon("team")}Alle Rollen: Flex-Training</h2><span class="muted small">Notfall-Wechsel auf Tank oder DPS</span></div>
-    <p class="lead">Du spielst Support. Damit du im Notfall Tank oder DPS übernehmen kannst, brauchst du in jeder Rolle ein paar Matches und Helden, die du kennst.</p>
+  foldFill(el, "Alle Rollen: Flex-Training", `<p class="lead">Du spielst Support. Damit du im Notfall Tank oder DPS übernehmen kannst, brauchst du in jeder Rolle ein paar Matches und Helden, die du kennst.</p>
     <div class="froles">${roleRows}</div>
     <div class="flexset mt">Deine Marke:
       <label class="inline-label"><input type="number" min="1" max="99" data-flexset="flexMatches" value="${g.n}" aria-label="Matches pro Rolle"> Matches pro Rolle</label>
@@ -3294,7 +3379,7 @@ function renderFlex() {
       : `<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Rollen sind bereit.</b> Spiel ab und zu ein Flex-Match, damit es nicht einrostet.</div></div>`}</div>
     <div class="row mt"><button type="button" class="btn ghost small" data-flexgo="L20">L20 Tank-Grundlagen</button><button type="button" class="btn ghost small" data-flexgo="L21">L21 DPS-Grundlagen</button></div>
     ${days ? `<p class="small muted" style="margin:10px 0 4px">Tage im Plan, die Tank oder DPS üben:</p><div class="dchips">${days}</div>` : ""}
-    <p class="small muted" style="margin:10px 0 0">Ob du an einem Tag zusätzlich Tank oder DPS lernst, entscheidest du im Tagesplan unter „Heute zählt nur das“.</p>`;
+    <p class="small muted" style="margin:10px 0 0">Ob du an einem Tag zusätzlich Tank oder DPS lernst, entscheidest du im Tagesplan unter „Heute zählt nur das“.</p>`, { icon: "team", sub: "Notfall-Wechsel auf Tank oder DPS" });
 }
 $("#flexCard").addEventListener("change", e => {
   const t = e.target;
@@ -3435,14 +3520,14 @@ function ring(ratio, label) {
 }
 
 // ---------- Tabs ----------
-document.querySelectorAll("nav.tabs button").forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
 function currentTab() { return document.querySelector("main > section:not([hidden])").id.replace("tab-", ""); }
 function showTab(name) {
-  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  if (!TITLES[name]) name = "today";
+  renderNav(name);
   document.querySelectorAll("main > section").forEach(s => { s.hidden = s.id !== "tab-" + name; });
   $("#pageTitle").textContent = TITLES[name][0];
   $("#pageSub").textContent = TITLES[name][1];
-  $("#quickLog").style.display = name === "log" ? "none" : "";
+  $("#quickLog").style.display = name === "log" || name === "today" ? "none" : "";
   try { localStorage.setItem(STORE_KEY + "-tab", name); } catch (e) {}
   render();
 }
@@ -3456,6 +3541,135 @@ document.querySelectorAll(".theme-toggle").forEach(b => b.addEventListener("clic
   try { localStorage.setItem(STORE_KEY + "-theme", next); } catch (e) {}
 }));
 try { const t = localStorage.getItem(STORE_KEY + "-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+// ---------- Suche über die ganze App ----------
+function openHeroSearch(name) { roleFilter = ""; $("#heroSearch").value = name; showTab("heroes"); window.scrollTo({ top: 0 }); }
+function openGlossary(term) { lexTab = "wissen"; $("#lexSearch").value = term; showTab("lexicon"); window.scrollTo({ top: 0 }); }
+function searchIndex() {
+  const idx = [];
+  AREAS.forEach(a => a.tabs.forEach(t => idx.push({ k: "Seite", t: NAV_LABEL[t] || TITLES[t][0], s: TITLES[t][1], q: `${NAV_LABEL[t] || ""} ${TITLES[t][1]} ${a.label}`, go: () => showTab(t) })));
+  allHeroes().forEach(h => idx.push({ k: "Held", t: h.name, s: `${ROLE_DE[h.role] || h.role}${heroAliases(h.name).length ? ` · auch: ${heroAliases(h.name).join(", ")}` : ""}`, q: `${h.name} ${heroAliases(h.name).join(" ")} ${h.role}`, go: () => openHeroSearch(h.name) }));
+  LESSONS.forEach(l => idx.push({ k: "Lektion", t: `Lektion ${lessonNo(l.id)}: ${l.title}`, s: l.goal, q: `${l.title} ${l.goal} lektion`, go: () => { lessonBack = null; openLessonId(l.id); } }));
+  WISSEN.forEach(w => idx.push({ k: "Lexikon", t: `${w.id} · ${w.title}`, s: String(w.einfach || "").slice(0, 120), q: `${w.id} ${w.title} ${w.einfach || ""}`, go: () => openWissen(w.id) }));
+  GLOSSAR.forEach(g => idx.push({ k: "Begriff", t: g.term, s: String(g.def || "").slice(0, 120), q: `${g.term} ${(g.keys || []).join(" ")} ${g.def || ""}`, go: () => openGlossary(g.term) }));
+  PLAN.days.forEach(d => idx.push({ k: "Plan", t: `Tag ${d.n}: ${d.title}`, s: modeText(d) || "Ausgangswerte", q: `tag ${d.n} ${d.title} plan`, go: () => openPlanDay(d.n) }));
+  if (typeof searchExtra === "function") searchExtra().forEach(x => idx.push(x));
+  return idx;
+}
+let searchHits = [], searchSel = 0, searchIdx = null;
+function runSearch() {
+  const q = normQ($("#searchInput").value), box = $("#searchRes");
+  if (!searchIdx) searchIdx = searchIndex().map(x => Object.assign(x, { n: normQ(x.t), nq: normQ(x.q) }));
+  if (!q) {
+    searchHits = searchIdx.filter(x => x.k === "Seite");
+    box.innerHTML = `<p class="muted small" style="margin:8px 10px">Schnellzugriff auf alle Seiten. Tippe, um Helden, Lektionen, Begriffe und Trainingstage zu suchen.</p>`;
+  } else {
+    const toks = q.split(" ").filter(Boolean);
+    searchHits = searchIdx.map(x => {
+      if (!toks.every(t => x.nq.includes(t))) return null;
+      const sc = (x.n === q ? 100 : 0) + (x.n.startsWith(q) ? 40 : 0) + (x.n.includes(q) ? 20 : 0) + toks.reduce((a, t) => a + (x.n.includes(t) ? 5 : 0), 0) + ({ Held: 3, Seite: 2, Lektion: 2, Lexikon: 1, Begriff: 1, Plan: 0 }[x.k] || 0);
+      return [x, sc];
+    }).filter(Boolean).sort((a, b) => b[1] - a[1]).slice(0, 40).map(x => x[0]);
+    box.innerHTML = "";
+  }
+  searchSel = 0;
+  box.insertAdjacentHTML("beforeend", searchHits.length ? searchHits.map((x, i) => `<button type="button" class="sres ${i === 0 ? "sel" : ""}" data-sr="${i}"><span class="sk">${esc(x.k)}</span><span class="st"><b>${esc(x.t)}</b><span>${esc(x.s || "")}</span></span></button>`).join("") : empty("Nichts gefunden. Versuch es mit einem kürzeren Begriff.", "list"));
+}
+function openSearch() {
+  searchIdx = null; $("#searchInput").value = ""; $("#searchDlg").hidden = false; document.body.style.overflow = "hidden"; runSearch();
+  setTimeout(() => $("#searchInput").focus(), 30);
+}
+function closeSearch() { $("#searchDlg").hidden = true; document.body.style.overflow = ""; }
+function pickSearch(i) { const h = searchHits[i]; if (!h) return; closeSearch(); h.go(); window.scrollTo({ top: 0 }); }
+$("#searchBtn").addEventListener("click", openSearch);
+$("#searchClose").addEventListener("click", closeSearch);
+$("#searchInput").addEventListener("input", runSearch);
+$("#searchInput").addEventListener("keydown", e => {
+  const items = [...$("#searchRes").querySelectorAll(".sres")];
+  if (e.key === "Enter") { e.preventDefault(); pickSearch(searchSel); }
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault(); if (!items.length) return;
+    searchSel = (searchSel + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items.forEach((x, i) => x.classList.toggle("sel", i === searchSel)); items[searchSel].scrollIntoView({ block: "nearest" });
+  }
+});
+$("#searchRes").addEventListener("click", e => { const b = e.target.closest("[data-sr]"); if (b) pickSearch(+b.dataset.sr); });
+$("#searchDlg").addEventListener("click", e => { if (e.target.id === "searchDlg") closeSearch(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("#searchDlg").hidden) { closeSearch(); return; }
+  const tag = (e.target && e.target.tagName) || "";
+  if ((e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !e.ctrlKey && !e.metaKey) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); if ($("#searchDlg").hidden) openSearch(); }
+});
+
+// ---------- Heute ----------
+// Eine Seite für den Tag: was als Nächstes dran ist, ohne dass du suchen musst.
+function renderToday() {
+  const el = $("#todayBody");
+  const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
+  const info = todayLessonInfo(), g = activeGoal(), openR = ms.filter(isOpenRefl).length, lessonsN = Object.keys(lessonsDone()).filter(id => lessonById(id)).length;
+  const dateTxt = new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" });
+  const items = [];
+  // 1) Lektion
+  if (info && info.lesson) {
+    const l = info.lesson, st = state.lessons.progress[l.id];
+    items.push({ done: false, t: `Lektion: ${esc(l.title)}`, s: `${info.why === "plan" ? `Tageslektion zu Tag ${info.day} · ` : ""}ca. ${l.minutes} Min.`,
+      a: `<button class="btn small" type="button" data-lesson="${l.id}"${info.why === "plan" ? ` data-from-day="${info.day}"` : ""}>${st ? "Fortsetzen" : "Starten"}</button>` });
+  } else items.push({ done: true, t: !info ? "Alle Lektionen geschafft" : info.why === "noLesson" ? "Heute keine neue Lektion" : "Lektion erledigt", s: info && info.why === "noLesson" ? "Testtag: zeig, was du schon kannst." : "Gut gemacht.", a: "" });
+  // 2) Training
+  const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy);
+  if (!started) items.push({ done: false, t: "Trainingsplan starten", s: "56 Tage vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
+  else if (cur > 56) items.push({ done: true, t: "Trainingsplan abgeschlossen", s: "Alle 56 Tage geschafft.", a: "" });
+  else if (trainedToday) items.push({ done: true, t: "Training heute erledigt", s: `Nächster Trainingstag: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Tag ${cur} ansehen</button>` });
+  else items.push({ done: false, t: `Training: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, s: `${esc(modeText(PLAN.days[cur - 1]) || "Ausgangswerte")} · ${blockText()}`, a: `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Tag öffnen</button>` });
+  // 3) Wochenziel
+  if (!g) items.push({ done: false, t: "Wochenziel setzen", s: "Ein Ziel pro Woche gibt dem Training Richtung. Die App stellt Lektionen und Aufgaben dazu zusammen.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
+  else if (!goalTopics(g).length) items.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
+  else {
+    const o = openTasks(g)[0];
+    items.push(o ? { done: false, t: `Wochenziel: ${esc(g.title)}`, s: `${o.kind}: ${esc(o.text)}`, a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }
+      : { done: true, t: `Wochenziel: ${esc(g.title)}`, s: "Alle Aufgaben dieser Woche sind erledigt.", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ansehen</button>` });
+  }
+  // 4) Spielen und festhalten
+  const w = tm.filter(m => m.result === "W").length;
+  if (openR) items.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Trag Fehler und Stärken ein, solange du dich erinnerst.", a: `<button class="btn small" type="button" data-go="log">Fehler eintragen</button>` });
+  else if (tm.length) items.push({ done: true, t: `${plural(tm.length, "Match", "Matches")} heute`, s: `${plural(w, "Sieg", "Siege")} · ${plural(tm.length - w, "Niederlage", "Niederlagen")} · Block: ${tm.length} von ${blockMatches()} Matches`, a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
+  else items.push({ done: false, t: "Spielen und festhalten", s: "Nach jedem Match 20 Sekunden fürs Log: Ergebnis, Held und ein Fehler.", a: `<button class="btn small" type="button" data-go="log">Match loggen</button>` });
+  const doneN = items.filter(x => x.done).length;
+  const hero = `<div class="card hero-banner lesson-hero"><div style="flex:1;min-width:240px"><div class="small" style="opacity:.85;position:relative">${esc(dateTxt)}</div>
+    <h2 style="font-size:1.35rem;margin-top:4px">${doneN === items.length ? "Alles erledigt für heute 🎉" : "Dein Tag in vier Schritten"}</h2>
+    <p>${started && cur <= 56 ? `Trainingsplan: Tag ${cur} von 56 · ` : ""}Stufe ${currentLevel()} · ${lessonsN} von ${LESSONS.length} Lektionen · 🔥 ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} Training in Folge</p></div>
+    <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>`;
+  const list = `<div class="card"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}<div class="ts">${x.s}</div></div><div class="ta">${x.a || ""}</div></div>`).join("")}</div>`;
+  // Fokus fürs nächste Match
+  const fl = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  const focus = fl ? `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Dein Fokus fürs nächste Match</h2><button class="linkbtn small" type="button" data-lesson="${fl.id}">Lektion ${lessonNo(fl.id)}</button></div>
+    <p style="margin:0;font-weight:600">${esc(fl.focus)}</p><p class="muted small" style="margin:6px 0 0">Bewerte beim Loggen, ob du ihn umgesetzt hast.</p></div>` : "";
+  // Hinweise
+  const news = [];
+  const missed = missedLessons();
+  if (missed.length) news.push(["info", `<b>${plural(missed.length, "Lektion", "Lektionen")} aus früheren Tagen offen:</b> ${missed.slice(0, 3).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">${esc(lessonById(m.id).title)} (Tag ${m.day})</button>`).join(", ")}`]);
+  if (g && g.due) { const left = Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(tdy + "T12:00:00")) / 864e5); if (left <= 2) news.push([left < 0 ? "bad" : "info", left < 0 ? `<b>Die Frist deines Ziels „${esc(g.title)}“ ist vorbei.</b> Schreib einen Rückblick und setz das nächste Ziel.` : `<b>Dein Ziel „${esc(g.title)}“ läuft ${left === 0 ? "heute" : left === 1 ? "morgen" : "in 2 Tagen"} ab.</b>`]); }
+  if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
+  const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2></div>${notes(news)}</div>` : "";
+  // Erste Schritte
+  const steps = [
+    ["Erstes Match eintragen oder abgleichen", ms.length > 0, `<button class="btn small" type="button" data-go="log">Match loggen</button> <button class="btn small ghost" type="button" data-go="data">Abgleichen</button>`],
+    ["Trainingsplan starten", started, `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>`],
+    ["Erste Lektion abschliessen", lessonsN > 0, `<button class="btn small" type="button" data-pact="tab" data-tab="lessons">Zu den Lektionen</button>`],
+    ["Wochenziel setzen", state.goals.length > 0, `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>`]
+  ];
+  const stepsDone = steps.filter(x => x[1]).length;
+  const first = stepsDone < steps.length && !(state.settings && state.settings.hideStart) ? `<div class="card"><div class="card-head"><h2>${icon("list")}Erste Schritte <span class="badge">${stepsDone}/${steps.length}</span></h2><button class="linkbtn small" type="button" data-today="hidestart">Ausblenden</button></div>
+    <p class="lead">So holst du das meiste aus dem Rivals Coach.</p>
+    ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
+  // Wegweiser
+  const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
+  el.innerHTML = hero + list + focus + newsCard + first + guide;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-today]");
+  if (b && b.dataset.today === "hidestart") { state.settings.hideStart = true; save(); renderToday(); }
+});
 
 // ---------- Dashboard ----------
 function renderDashboard() {
@@ -3489,6 +3703,7 @@ function renderDashboard() {
   const goal = activeGoal();
   const card = $("#todayCard");
   card.className = "card hero-banner";
+  card.hidden = !tm.length && !state.matches.some(isOpenRefl);
   if (!ms.length) {
     card.innerHTML = `<h2>Willkommen beim Rivals Coach!</h2><p>Logge dein erstes Match oder hol dir deine Matches automatisch von Rivals Data. Ab 5 Matches erkennt der Coach erste Muster.</p>
       <div class="row mt" style="position:relative"><button class="btn" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Erstes Match loggen</button>
@@ -5722,7 +5937,27 @@ const MODE_WORDS = { R: "Ranked", U: "Ungewertet", K: "Kommunikations-Tag", Cust
 const modeText = d => (d.mode || "").replace(/\b(R|U|K|Custom|solo)\b/g, t => MODE_WORDS[t]);
 
 // ---------- Trainingsplan ----------
-const planUi = { day: null, read: new Set(), drill: null };
+// Einklappbare Karten: Der Zustand bleibt gespeichert, auch wenn die Seite neu gezeichnet wird oder du die App neu öffnest.
+const UIFOLD = (() => { try { const o = JSON.parse(localStorage.getItem(STORE_KEY + "-folds") || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } })();
+const planUi = { day: null, read: new Set(), drill: null, fold: UIFOLD };
+function foldInner(title, body, o = {}) {
+  return `<summary><span class="ft"><h2>${o.icon ? icon(o.icon) : ""}${title}</h2>${o.sub ? `<span class="fs">${o.sub}</span>` : ""}</span><span class="fr">${o.right || ""}<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary><div class="fbody">${body}</div>`;
+}
+function foldHtml(key, title, body, o = {}) {
+  const open = key in UIFOLD ? UIFOLD[key] : !!o.open;
+  return `<details class="fold ${o.cls || ""}" data-f="${key}" ${open ? "open" : ""}>${foldInner(title, body, o)}</details>`;
+}
+// Für Karten, die schon im Seitengerüst stehen: Inhalt füllen, den Offen-Zustand nur beim ersten Mal setzen
+function foldFill(el, title, body, o = {}) {
+  el.innerHTML = foldInner(title, body, o);
+  if (!el.dataset.init) { el.dataset.init = "1"; const k = el.dataset.f; el.open = k in UIFOLD ? UIFOLD[k] : !!o.open; }
+}
+document.addEventListener("click", e => {
+  const sm = e.target.closest && e.target.closest(".fold > summary"); if (!sm) return;
+  const d = sm.parentElement; if (!d.dataset.f) return;
+  UIFOLD[d.dataset.f] = !d.open;
+  try { localStorage.setItem(STORE_KEY + "-folds", JSON.stringify(UIFOLD)); } catch (err) {}
+});
 let PlanExtra = null;   // persönliche Ausgangslage, von Claude im Konto abgelegt (plan-baseline)
 function openPlanHome() { planUi.day = null; showTab("plan"); window.scrollTo({ top: 0 }); }
 function openPlanDay(n) { planUi.day = Math.min(56, Math.max(1, n)); planUi.read = new Set(); showTab("plan"); window.scrollTo({ top: 0 }); }
@@ -5767,7 +6002,7 @@ function baselineHtml() {
     if (b.t === "list" && Array.isArray(b.items)) return `<ul class="wl">${b.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
     return `<p>${b.label ? `<b>${esc(b.label)}:</b> ` : ""}${esc(b.text || "")}</p>`;
   }).join("");
-  return `<div class="card pbase"><div class="card-head"><h2>${icon("target")}${esc(PlanExtra.title || "Deine Ausgangslage")}</h2><span class="badge">nur für dich gespeichert</span></div>${blocks}</div>`;
+  return foldHtml("base", esc(PlanExtra.title || "Deine Ausgangslage"), blocks, { icon: "target", cls: "pbase", right: '<span class="badge">nur für dich gespeichert</span>' });
 }
 function trackerHtml(cur) {
   const rows = PLAN.tracker.map(t => {
@@ -5843,36 +6078,35 @@ function planHomeHtml() {
   const phases = PLAN.phases.map(ph => {
     const ds = PLAN.days.filter(d => d.n >= ph.from && d.n <= ph.to);
     const pd = ds.filter(d => dayGet(d.n).done).length;
-    return `<div class="card"><div class="card-head"><div><h2>Phase ${ph.id}: ${esc(ph.name)}</h2><div class="muted small">Tag ${ph.from}–${ph.to} · ${esc(ph.focus)}</div></div><span class="row" style="gap:6px">${levelBadge(levelOfDay(ph.from))}<span class="badge">${pd}/${ds.length}</span></span></div>
-      ${ph.intro ? `<p class="lead">${esc(ph.intro)}</p>` : ""}
-      <div class="plan-grid">${ds.map(d => dayTile(d, cur)).join("")}</div></div>`;
+    const inPh = cur >= ph.from && cur <= ph.to;
+    return foldHtml("ph" + ph.id, `Phase ${ph.id}: ${esc(ph.name)}`,
+      `${ph.intro ? `<p class="lead">${esc(ph.intro)}</p>` : ""}<p class="muted small" style="margin:0 0 10px">${esc(ph.focus)}</p>
+      <div class="plan-grid">${ds.map(d => dayTile(d, cur)).join("")}</div>`,
+      { open: inPh || (!started && ph.id === PLAN.phases[0].id), sub: `Tag ${ph.from}–${ph.to}${inPh ? " · hier bist du" : ""}`, right: `${levelBadge(levelOfDay(ph.from))}<span class="badge">${pd}/${ds.length}</span>` });
   }).join("");
   const legend = `<p class="muted small" style="margin:0 0 12px">${esc(PLAN.legend.replace(/^📖[^.]*\.\s*/, ""))} ★ = Kennzahlen-Tag mit Vergleich deiner Werte.</p>`;
   return banner + path + legend + phases
-    + `<div class="card"><div class="card-head"><h2>${icon("book")}So bleibt alles hängen</h2></div>
-      <p class="lead">Du musst nicht alles auf einmal im Kopf haben. Der Plan baut sich langsam auf:</p>
+    + foldHtml("hang", "So bleibt alles hängen", `<p class="lead">Du musst nicht alles auf einmal im Kopf haben. Der Plan baut sich langsam auf:</p>
       <ul class="wl">
         <li><b>Wenig Neues pro Tag.</b> Pro Tag kommen höchstens zwei Themen dazu, an vielen Tagen gar keins.</li>
         <li><b>Alles kommt wieder.</b> Jedes Thema kehrt nach etwa 1, 3 und 7 Tagen zurück. Im Tagesplan steht unter „Heute zählt nur das“, was heute dran ist und wann der Rest wiederkommt.</li>
         <li><b>Später wird kombiniert.</b> Ab Tag 7 mischen die Tage Themen, die du schon kennst, zum Beispiel „Heal und Ult + Schaden“. Dazu kommen Zwischentests.</li>
         <li><b>Du bestimmst, wann es sitzt.</b> Am Tagesende bewertest du jedes Thema: „muss ich noch denken“, „klappt meistens“ oder „läuft von allein“. Was noch nicht von allein läuft, bekommt dein Mini-Ziel in Block 3.</li>
         <li><b>Aufgeschrieben ist gesichert.</b> Schreib am Tagesende zwei Sätze bei „Abschluss“. Am nächsten Tag stehen sie oben in der Karte, du musst sie nicht im Kopf behalten.</li>
-      </ul></div>`
-    + `<div class="card"><div class="card-head"><h2>${icon("team")}Alle Rollen lernen</h2></div>
-      <p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, entscheidest du jeden Tag selbst: zusätzlich Tank oder DPS lernen oder nur bei Support bleiben.</p>
+      </ul>`, { icon: "book", sub: "Warum der Plan klein anfängt und alles wiederkommt" })
+    + foldHtml("roles", "Alle Rollen lernen", `<p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, entscheidest du jeden Tag selbst: zusätzlich Tank oder DPS lernen oder nur bei Support bleiben.</p>
       <ul class="wl">${flexStats().filter(x => FLEX_ROLES.includes(x.role)).map(x => `<li><b>${ROLE_SHORT[x.role]}:</b> ${x.ready ? "bereit ✓" : `${x.n} von ${flexGoal().n} Matches`}${x.heroes.length ? `, gespielt: ${esc(x.heroes.slice(0, 3).map(([h, c]) => `${h} (${c}×)`).join(", "))}` : ""}</li>`).join("")}</ul>
       <p class="small muted" style="margin:8px 0 4px">Tage, die Tank oder DPS üben:</p>
       <div class="dchips">${flexRoleDays().map(d => `<button type="button" class="dchip" data-pact="day" data-n="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("")}</div>
-      <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div></div>`
-    + `<div class="card"><div class="card-head"><h2>${icon("list")}Themen-Tracker</h2></div>
-      <p class="lead">${esc(PLAN.session.repeat)} Tippe auf eine Zahl, um den Tag zu öffnen.</p><div class="table-wrap">${trackerHtml(cur)}</div></div>`
+      <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div>`, { icon: "team", sub: "Tank und DPS als Notfall-Rolle" })
+    + foldHtml("tracker", "Themen-Tracker", `<p class="lead">${esc(PLAN.session.repeat)} Tippe auf eine Zahl, um den Tag zu öffnen.</p><div class="table-wrap">${trackerHtml(cur)}</div>`, { icon: "list", sub: "Wann welches Thema neu ist und wiederkommt" })
     + `<div class="card"><div class="card-head"><h2>${icon("training")}Trainingsbereich: die Drills</h2></div>
       <p class="lead">${esc(PLAN.drills.intro)}</p>
       <details class="wiss" id="drillBox"><summary><span class="num">A–F</span><b>Alle sechs Drills anzeigen</b></summary><div class="wbody">
         ${PLAN.drills.list.map(drillHtml).join("")}
         <div class="table-wrap">${table(["Im Tagesplan steht", "Das machst du"], PLAN.drills.map.map(r => r.map(c => linkify(esc(c)))))}</div>
         <p style="margin:0">${esc(PLAN.drills.note)}</p></div></details></div>`
-    + `<div class="card"><div class="card-head"><h2>${icon("book")}Regeln für jede Session</h2></div>${rulesHtml()}</div>`
+    + foldHtml("rules", "Regeln für jede Session", rulesHtml(), { icon: "book", sub: "Die Spielregeln für dein Training" })
     + baselineHtml()
     + `<div class="card"><div class="card-head"><h2>${icon("ai")}Wochenpaket für Claude</h2></div>
       <p class="lead">${esc(PLAN.weekly)}</p>
@@ -6044,23 +6278,21 @@ function planDayHtml(n) {
     ${focusCardHtml(n)}
     ${dayLessonCardHtml(n)}
     ${goalDayCardHtml(n)}
-    <div class="card"><div class="card-head"><h2>${icon("book")}Nachlesen beim Start</h2></div>
-      <div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
+    ${foldHtml("d-read", "Nachlesen beim Start", `<div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
         ${d.d.map(x => `<button type="button" class="chip ${planUi.read.has("D:" + x) ? "on" : ""}" data-pact="read" data-k="D:${x}">Drill ${x}</button>`).join("")}</div>
       ${reads}
-      ${!readIds.length && !d.d.length ? '<p class="muted small">Heute gibt es nichts nachzulesen.</p>' : ""}</div>
+      ${!readIds.length && !d.d.length ? '<p class="muted small">Heute gibt es nichts nachzulesen.</p>' : ""}`, { icon: "book", open: planUi.read.size > 0, sub: readIds.length || d.d.length ? "Kurz-Wissen zum Thema von heute" : "Heute nichts" })}
     <div class="card"><div class="card-head"><h2>${icon("training")}Ablauf</h2><span class="muted small">${blockText()}</span></div>
       ${matchLenHtml()}
       <details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>
       ${d.steps.map(s => `<div class="pstep ${st.steps[s.key] ? "done" : ""}"><input type="checkbox" id="ps${s.key}" data-pstep="${s.key}" ${st.steps[s.key] ? "checked" : ""}>
         <label for="ps${s.key}" style="display:block;cursor:pointer"><div class="pl">${esc(s.label)}</div><div class="ptxt">${richLines(scaleMatchRefs(s.t), seenD)}</div></label></div>`).join("")}</div>
-    <div class="card"><div class="card-head"><h2>${icon("analysis")}Deine Matches an diesem Tag</h2><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
+    ${foldHtml("d-matches", "Deine Matches an diesem Tag", `<div class="row" style="margin-bottom:8px"><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
       ${dm.date ? (dm.ms.length ? `<p style="margin:0">${fmtDate(dm.date)}: <b>${plural(dm.ms.length, "Match", "Matches")}</b> · ${dm.ms.filter(m => m.result === "W").length} Siege, ${dm.ms.filter(m => m.result === "L").length} Niederlagen · Ø Tode ${ds.d.toFixed(1)} · Ø KDA ${ds.kda.toFixed(1)}${ds.ultN ? ` · Ult-Wirkung ${pct(ds.ultPct)}` : ""}</p>` : `<p class="muted small" style="margin:0">Für ${fmtDate(dm.date)} sind noch keine Matches geloggt.</p>`)
-        : '<p class="muted small" style="margin:0">Sobald du diesen Tag abgeschlossen hast, siehst du hier die Matches dieses Datums.</p>'}</div>
-    ${d.kennzahlen ? `<div class="card"><div class="card-head"><h2>${icon("analysis")}Kennzahlen-Vergleich</h2></div><p class="lead">Aus deinen geloggten Matches am jeweiligen Trainingstag. Solo und Stack trennst du in deinen Notizen.</p>${kpiCharts(n)}<div class="table-wrap">${kpiTable(n)}</div></div>` : ""}
-    <div class="card"><div class="card-head"><h2>${icon("quiz")}Wissens-Check</h2>${levelBadge(currentLevel())}</div>
-      <p class="lead">Teste dich zu den Themen von heute – ${qCount ? `bis zu fünf Fragen aus ${readIds.join(", ")}` : "für diesen Tag gibt es keine passenden Fragen"}. Die Schwierigkeit passt sich deiner Stufe an.</p>
-      <button class="btn" type="button" data-pact="check-day" data-n="${n}" ${qCount ? "" : "disabled"}>Tages-Check starten</button></div>
+        : '<p class="muted small" style="margin:0">Sobald du diesen Tag abgeschlossen hast, siehst du hier die Matches dieses Datums.</p>'}`, { icon: "analysis", open: dm.ms.length > 0, sub: dm.ms.length ? plural(dm.ms.length, "Match", "Matches") : "noch keine" })}
+    ${d.kennzahlen ? foldHtml("d-kpi", "Kennzahlen-Vergleich", `<p class="lead">Aus deinen geloggten Matches am jeweiligen Trainingstag. Solo und Stack trennst du in deinen Notizen.</p>${kpiCharts(n)}<div class="table-wrap">${kpiTable(n)}</div>`, { icon: "analysis", open: true, sub: "Deine Werte an den Kennzahlen-Tagen" }) : ""}
+    ${foldHtml("d-check", "Wissens-Check", `<p class="lead">Teste dich zu den Themen von heute – ${qCount ? `bis zu fünf Fragen aus ${readIds.join(", ")}` : "für diesen Tag gibt es keine passenden Fragen"}. Die Schwierigkeit passt sich deiner Stufe an.</p>
+      <button class="btn" type="button" data-pact="check-day" data-n="${n}" ${qCount ? "" : "disabled"}>Tages-Check starten</button>`, { icon: "quiz", sub: qCount ? "Bis zu fünf Fragen zu heute" : "Keine Fragen für diesen Tag", right: levelBadge(currentLevel()) })}
     <div class="card"><div class="card-head"><h2>${icon("edit")}Abschluss</h2></div>
       ${autoRateHtml(n)}
       <label class="mt">Zwei Sätze: Was lief gut? Was kommt morgen wieder?<textarea id="dayNote" data-n="${n}" placeholder="Deine Notiz …">${esc(st.note)}</textarea></label>
@@ -6312,11 +6544,11 @@ function renderPathCard() {
   const el = $("#pathCard");
   if (!el) return;
   const started = planStarted(), cur = planDay();
-  el.innerHTML = `<div class="card-head"><h2>${icon("target")}Dein Lernpfad</h2>${levelBadge(currentLevel())}</div>
-    ${stagesHtml(true)}
+  foldFill(el, "Dein Lernpfad", `${stagesHtml(true)}
     <div class="row mt"><button class="btn small" type="button" data-pact="home">Trainingsplan öffnen</button>
       ${started && cur <= 56 ? `<button class="btn ghost small" type="button" data-pact="day" data-n="${cur}">Heute: Tag ${cur}</button>` : ""}
-      <button class="btn ghost small" type="button" data-pact="check-all">Wissens-Check</button></div>`;
+      <button class="btn ghost small" type="button" data-pact="check-all">Wissens-Check</button></div>`,
+    { icon: "target", sub: "Von den Grundlagen zum Experten", right: levelBadge(currentLevel()) });
 }
 
 function relatedHtml(l) {
@@ -7714,19 +7946,19 @@ chipGroup($("#mistakeChips"), MISTAKES);
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
-  ({ dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
+  ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
      training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
 window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (currentTab() === "dashboard") renderDashboard(); }, 150); });
-let startTab = "dashboard";
-try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "dashboard"; } catch (e) {}
+let startTab = "today";
+try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "today"; } catch (e) {}
 if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });
 if (BUILD_STAMP) { const el = $("#buildStamp"); el.textContent = "Version vom " + BUILD_STAMP; el.hidden = false; }
 setSyncStatus(IN_VIEWER ? "init" : "local");
-showTab(document.getElementById("tab-" + startTab) ? startTab : "dashboard");
+showTab(document.getElementById("tab-" + startTab) ? startTab : "today");
 initCloud();
 initBridge();
 </script>
