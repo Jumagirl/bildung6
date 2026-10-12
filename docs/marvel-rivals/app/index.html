@@ -586,7 +586,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .orow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 0; border-top: 1px solid var(--grid); }
 .orow .sp { flex: 1 1 140px; min-width: 0; }
 .mlen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 10px; }
-.mlen input { width: 5.5em; }
+.mlen input { width: 4.8em; }
 .formhelp { margin: 8px 0 0; }
 .daynav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .pstep { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--grid); }
@@ -2694,7 +2694,7 @@ function loadState(raw) {
   const st = Object.assign({
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
-    quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "", matchMin: null },
+    quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, settings: { playerName: "", matchMin: null, matchMax: null },
     plan: { start: null, days: {}, topics: {}, level: 0 }
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
@@ -2706,7 +2706,7 @@ function loadState(raw) {
   const renameTag = tags => (tags || []).map(t => TAG_RENAMES[t] || t);
   Object.keys(st.heroTagOverrides).forEach(k => { st.heroTagOverrides[k] = renameTag(st.heroTagOverrides[k]); });
   st.customHeroes.forEach(h => { h.tags = renameTag(h.tags); });
-  st.settings = Object.assign({ playerName: "", matchMin: null }, st.settings);
+  st.settings = Object.assign({ playerName: "", matchMin: null, matchMax: null }, st.settings);
   // Eigene Helden, die inzwischen zum Standard gehören, nicht doppelt führen
   const builtIn = new Set(DEFAULT_HEROES.map(h => h.name.toLowerCase()));
   st.customHeroes = st.customHeroes.filter(h => !builtIn.has(h.name.toLowerCase()));
@@ -5067,26 +5067,29 @@ function planHomeHtml() {
       <div class="row"><button class="btn" type="button" data-pact="weekly">${icon("copy")}Wochenpaket kopieren</button>
       ${started ? `<button class="btn danger small" type="button" data-pact="reset">Plan zurücksetzen</button>` : ""}</div></div>`;
 }
-// Matchlänge: eigene Einstellung, sonst Schnitt der zuletzt geloggten Dauern, sonst die Annahme des Plans (3 Matches ≈ 1 Stunde)
+// Matchlänge: standardmässig 7 bis 12 Minuten (Quick Matches), in der Plan-Ansicht änderbar
+const MATCH_LEN_DEFAULT = [7, 12];
 function matchLenInfo() {
-  const man = +state.settings.matchMin > 0 ? +state.settings.matchMin : null;
+  const lo = +state.settings.matchMin > 0 ? +state.settings.matchMin : null, hi = +state.settings.matchMax > 0 ? +state.settings.matchMax : null;
+  let a = lo ?? hi ?? MATCH_LEN_DEFAULT[0], b = hi ?? lo ?? MATCH_LEN_DEFAULT[1];
+  if (a > b) [a, b] = [b, a];
   const timed = state.matches.filter(m => m.dur > 0).slice(-30);
-  const auto = timed.length >= 3 ? timed.reduce((s, m) => s + m.dur, 0) / timed.length : null;
-  if (man) return { min: man, src: "manual", auto, n: timed.length };
-  if (auto) return { min: auto, src: "auto", auto, n: timed.length };
-  return { min: 20, src: "default", auto, n: timed.length };
+  const avg = timed.length >= 3 ? timed.reduce((s, m) => s + m.dur, 0) / timed.length : null;
+  return { min: a, max: b, src: lo || hi ? "manual" : "default", avg, n: timed.length };
 }
 function blockLabel() {
-  const bm = Math.max(5, Math.round(matchLenInfo().min * 3 / 5) * 5);
-  return bm >= 60 ? `${numDe(+(bm / 60).toFixed(1))} Std.` : `${bm} Min`;
+  const mi = matchLenInfo(), f = x => Math.max(5, Math.round(x * 3 / 5) * 5);
+  const lo = f(mi.min), hi = f(mi.max), one = m => (m >= 60 ? `${numDe(+(m / 60).toFixed(1))} Std.` : `${m} Min`);
+  return lo === hi ? one(lo) : hi >= 60 || lo >= 60 ? `${one(lo)} bis ${one(hi)}` : `${lo}–${hi} Min`;
 }
 const blockText = () => `1 Block = 3 Matches ≈ ${blockLabel()}`;
 function matchLenHtml() {
-  const mi = matchLenInfo(), man = +state.settings.matchMin > 0 ? +state.settings.matchMin : "";
-  const hint = mi.src === "manual" ? "Von dir eingestellt."
-    : mi.src === "auto" ? `Gerade automatisch aus deinen letzten ${plural(mi.n, "Match", "Matches")} mit Dauer (Ø ${numDe(mi.min.toFixed(1))} Min).`
-      : "Noch nichts eingestellt. Der Plan rechnet mit 20 Minuten. Quick Matches sind kürzer: Trag deine Zeit ein oder logge die Dauer bei deinen Matches.";
-  return `<div class="mlen"><label class="inline-label">Ein Match dauert bei dir etwa <input type="number" id="matchMin" min="3" max="40" step="0.5" value="${man}" placeholder="${mi.src === "default" ? 20 : numDe(mi.min.toFixed(1))}"> Min</label>
+  const mi = matchLenInfo(), lo = +state.settings.matchMin > 0 ? +state.settings.matchMin : "", hi = +state.settings.matchMax > 0 ? +state.settings.matchMax : "";
+  const hint = (mi.src === "manual" ? "Von dir eingestellt." : `Standard: ${MATCH_LEN_DEFAULT[0]} bis ${MATCH_LEN_DEFAULT[1]} Minuten.`)
+    + (mi.avg ? ` Zum Vergleich: Deine geloggten Matches dauern im Schnitt ${numDe(mi.avg.toFixed(1))} Min.` : "");
+  return `<div class="mlen"><span class="inline-label">Ein Match dauert bei dir etwa
+    <input type="number" id="matchMin" min="1" max="60" step="0.5" value="${lo}" placeholder="${MATCH_LEN_DEFAULT[0]}" aria-label="Kürzeste Matchdauer in Minuten"> bis
+    <input type="number" id="matchMax" min="1" max="60" step="0.5" value="${hi}" placeholder="${MATCH_LEN_DEFAULT[1]}" aria-label="Längste Matchdauer in Minuten"> Min</span>
     <span class="muted small">${hint}</span></div>
     <p class="muted small" style="margin:0 0 8px">Der Plan zählt in Matches (M1, M2 …), nicht in Minuten. Bei kürzeren Matches spielst du pro Stunde mehr Matches, die Mini-Ziele pro Match bleiben gleich.</p>`;
 }
@@ -5252,8 +5255,14 @@ $("#planBody").addEventListener("change", e => {
   if (t.matches("[data-pstep]")) { const st = dayEnsure(planUi.day); st.steps[t.dataset.pstep] = t.checked; save(); renderPlan(); }
   else if (t.matches("[data-ptopic]")) { state.plan.topics[t.dataset.ptopic] = t.checked; save(); }
   else if (t.id === "planLevel") { state.plan.level = +t.value; save(); renderPlan(); renderLevelChip(); }
-  else if (t.id === "matchMin") { const v = Number(t.value); state.settings.matchMin = v > 0 ? Math.min(60, v) : null; save(); renderPlan(); }
+  else if (t.id === "matchMin" || t.id === "matchMax") {
+    const val = id => { const v = Number($("#" + id).value); return v > 0 ? Math.min(60, v) : null; };
+    state.settings.matchMin = val("matchMin"); state.settings.matchMax = val("matchMax"); save();
+    // Erst neu zeichnen, wenn der Fokus nicht ins andere Feld wandert
+    setTimeout(() => { const a = document.activeElement; if (!(a && a.closest && a.closest(".mlen"))) renderPlan(); }, 0);
+  }
 });
+$("#planBody").addEventListener("keydown", e => { if (e.key === "Enter" && (e.target.id === "matchMin" || e.target.id === "matchMax")) e.target.blur(); });
 let noteTimer = null;
 $("#planBody").addEventListener("input", e => {
   if (e.target.id !== "dayNote") return;
