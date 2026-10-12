@@ -22,6 +22,7 @@ Hinweise:
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
 from datetime import datetime, timezone
@@ -349,6 +350,36 @@ def sync(args: argparse.Namespace) -> dict:
     return result
 
 
+# ---------- Ausgabe für den automatischen Abgleich ----------
+
+CHAT_LIMIT = 24000  # Zeichen; längere Werkzeug-Ergebnisse werden abgeschnitten
+
+
+def b64url(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def chat_line(data: dict, request_id: str) -> str:
+    """Eine Zeile mit dem Ergebnis (nur Matches), die die App aus dem Sitzungsprotokoll liest.
+
+    Base64 (URL-sicher) übersteht jede Weitergabe unverändert. Passt es nicht in die Zeile,
+    fallen die ältesten Matches weg.
+    """
+    slim = {k: data[k] for k in ("format", "version", "source", "generated", "player", "warnings") if k in data}
+    slim["partial"] = True  # ohne Helden-Statistik und Tierlist: die App behält ihre bisherigen Werte
+    matches = list(data.get("matches", []))
+    while True:
+        slim["matches"] = matches
+        line = f"@@RIVALS-SYNC:BEGIN {request_id}@@ " + b64url(json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+        if len(line) <= CHAT_LIMIT or not matches:
+            return line
+        matches = sorted(matches, key=lambda m: m.get("ts") or 0, reverse=True)[:-1]
+
+
+def chat_error(message: str, request_id: str) -> str:
+    return f"@@RIVALS-SYNC:ERROR {request_id}@@ " + b64url(message.encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Rivals-Data-Sync für den Rivals Coach")
     parser.add_argument("player", help="Spielername oder numerische UID")
@@ -361,6 +392,7 @@ def main() -> int:
     parser.add_argument("--browser", action="store_true",
                         help='Browser-Fallback bei Cloudflare-Sperre (vorher: pip install "rivals-api[browser]")')
     parser.add_argument("-o", "--out", default="rivals-sync.json", help="Ausgabedatei")
+    parser.add_argument("--chat", metavar="ID", help="Zusätzlich das Ergebnis als eine Zeile ausgeben (für den automatischen Abgleich der App)")
     args = parser.parse_args()
 
     try:
@@ -370,23 +402,27 @@ def main() -> int:
         return 1
     from rivals_api import CloudflareError, PlayerNotFoundError, PrivacyError, RivalsDataError
 
+    def fail(console: str, short: str, *extra: str) -> int:
+        print(console)
+        for line in extra:
+            print(line)
+        if args.chat:
+            print(chat_error(short, args.chat))
+        return 1
+
     try:
         data = sync(args)
     except PlayerNotFoundError:
-        print(f"Spieler „{args.player}“ nicht gefunden. Tipp: Probiere deine numerische UID.")
-        return 1
+        return fail(f"Spieler „{args.player}“ nicht gefunden. Tipp: Probiere deine numerische UID.", "Spieler nicht gefunden")
     except PrivacyError:
-        print("Dein Profil oder deine Match-History ist privat. Stelle sie im Spiel auf öffentlich.")
-        return 1
+        return fail("Dein Profil oder deine Match-History ist privat. Stelle sie im Spiel auf öffentlich.", "Profil oder Match-History ist privat")
     except CloudflareError:
-        print('Cloudflare blockiert die Anfrage. Installiere  pip install "rivals-api[browser]"  '
-              "und starte das Skript mit --browser.")
-        return 1
+        return fail('Cloudflare blockiert die Anfrage. Installiere  pip install "rivals-api[browser]"  '
+                    "und starte das Skript mit --browser.", "Cloudflare blockiert die Anfrage")
     except RivalsDataError as exc:
-        print(f"Abruf fehlgeschlagen: {exc}")
-        print("Prüfe deine Internetverbindung und versuche es später erneut "
-              '(bei Cloudflare-Problemen: pip install "rivals-api[browser]" und --browser).')
-        return 1
+        return fail(f"Abruf fehlgeschlagen: {exc}", f"Abruf fehlgeschlagen: {exc}",
+                    "Prüfe deine Internetverbindung und versuche es später erneut "
+                    '(bei Cloudflare-Problemen: pip install "rivals-api[browser]" und --browser).')
 
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
@@ -395,6 +431,8 @@ def main() -> int:
     for warning in data["warnings"][:5]:
         print(f"  Hinweis: {warning}")
     print("Jetzt im Rivals Coach unter „Daten → Rivals Data importieren“ einlesen.")
+    if args.chat:
+        print(chat_line(data, args.chat))
     return 0
 
 
