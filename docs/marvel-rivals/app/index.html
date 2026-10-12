@@ -1154,7 +1154,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <button class="btn" type="button" id="syncNow" data-icon="sync" hidden>Jetzt aktualisieren</button>
     </div>
     <div class="note info mt" id="syncNowInfo" hidden></div>
-    <p class="muted small mt" id="syncBridgeNote" hidden>Mit „Jetzt aktualisieren“ bittest du Claude, den Abruf für dich auszuführen und die Matches hier einzutragen – das dauert meist 1–3 Minuten. Das klappt, solange die Claude-Sitzung läuft, in der diese App gepflegt wird. Sonst nutze die Schritte unten.</p>
+    <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data etwa alle 3 Stunden ab (08 bis 23 Uhr), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
@@ -1225,6 +1225,7 @@ Hinweise:
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
 from datetime import datetime, timezone
@@ -1552,6 +1553,36 @@ def sync(args: argparse.Namespace) -> dict:
     return result
 
 
+# ---------- Ausgabe für den automatischen Abgleich ----------
+
+CHAT_LIMIT = 24000  # Zeichen; längere Werkzeug-Ergebnisse werden abgeschnitten
+
+
+def b64url(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def chat_line(data: dict, request_id: str) -> str:
+    """Eine Zeile mit dem Ergebnis (nur Matches), die die App aus dem Sitzungsprotokoll liest.
+
+    Base64 (URL-sicher) übersteht jede Weitergabe unverändert. Passt es nicht in die Zeile,
+    fallen die ältesten Matches weg.
+    """
+    slim = {k: data[k] for k in ("format", "version", "source", "generated", "player", "warnings") if k in data}
+    slim["partial"] = True  # ohne Helden-Statistik und Tierlist: die App behält ihre bisherigen Werte
+    matches = list(data.get("matches", []))
+    while True:
+        slim["matches"] = matches
+        line = f"@@RIVALS-SYNC:BEGIN {request_id}@@ " + b64url(json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+        if len(line) <= CHAT_LIMIT or not matches:
+            return line
+        matches = sorted(matches, key=lambda m: m.get("ts") or 0, reverse=True)[:-1]
+
+
+def chat_error(message: str, request_id: str) -> str:
+    return f"@@RIVALS-SYNC:ERROR {request_id}@@ " + b64url(message.encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Rivals-Data-Sync für den Rivals Coach")
     parser.add_argument("player", help="Spielername oder numerische UID")
@@ -1564,6 +1595,7 @@ def main() -> int:
     parser.add_argument("--browser", action="store_true",
                         help='Browser-Fallback bei Cloudflare-Sperre (vorher: pip install "rivals-api[browser]")')
     parser.add_argument("-o", "--out", default="rivals-sync.json", help="Ausgabedatei")
+    parser.add_argument("--chat", metavar="ID", help="Zusätzlich das Ergebnis als eine Zeile ausgeben (für den automatischen Abgleich der App)")
     args = parser.parse_args()
 
     try:
@@ -1573,23 +1605,27 @@ def main() -> int:
         return 1
     from rivals_api import CloudflareError, PlayerNotFoundError, PrivacyError, RivalsDataError
 
+    def fail(console: str, short: str, *extra: str) -> int:
+        print(console)
+        for line in extra:
+            print(line)
+        if args.chat:
+            print(chat_error(short, args.chat))
+        return 1
+
     try:
         data = sync(args)
     except PlayerNotFoundError:
-        print(f"Spieler „{args.player}“ nicht gefunden. Tipp: Probiere deine numerische UID.")
-        return 1
+        return fail(f"Spieler „{args.player}“ nicht gefunden. Tipp: Probiere deine numerische UID.", "Spieler nicht gefunden")
     except PrivacyError:
-        print("Dein Profil oder deine Match-History ist privat. Stelle sie im Spiel auf öffentlich.")
-        return 1
+        return fail("Dein Profil oder deine Match-History ist privat. Stelle sie im Spiel auf öffentlich.", "Profil oder Match-History ist privat")
     except CloudflareError:
-        print('Cloudflare blockiert die Anfrage. Installiere  pip install "rivals-api[browser]"  '
-              "und starte das Skript mit --browser.")
-        return 1
+        return fail('Cloudflare blockiert die Anfrage. Installiere  pip install "rivals-api[browser]"  '
+                    "und starte das Skript mit --browser.", "Cloudflare blockiert die Anfrage")
     except RivalsDataError as exc:
-        print(f"Abruf fehlgeschlagen: {exc}")
-        print("Prüfe deine Internetverbindung und versuche es später erneut "
-              '(bei Cloudflare-Problemen: pip install "rivals-api[browser]" und --browser).')
-        return 1
+        return fail(f"Abruf fehlgeschlagen: {exc}", f"Abruf fehlgeschlagen: {exc}",
+                    "Prüfe deine Internetverbindung und versuche es später erneut "
+                    '(bei Cloudflare-Problemen: pip install "rivals-api[browser]" und --browser).')
 
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
@@ -1598,6 +1634,8 @@ def main() -> int:
     for warning in data["warnings"][:5]:
         print(f"  Hinweis: {warning}")
     print("Jetzt im Rivals Coach unter „Daten → Rivals Data importieren“ einlesen.")
+    if args.chat:
+        print(chat_line(data, args.chat))
     return 0
 
 
@@ -2946,6 +2984,7 @@ function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;
 function pct(n) { return isFinite(n) ? Math.round(n * 100) + " %" : "–"; }
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2800); }
 function today() { return new Date().toISOString().slice(0, 10); }
+function fmtDT(d) { const x = new Date(d); return isNaN(x) ? "" : x.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
 function fmtDate(d) { const x = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d || "") ? `${d}T12:00:00` : d); return isNaN(x) ? "" : x.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }); }
 function kda(m) { return (m.k + m.a) / Math.max(1, m.d); }
 function plural(n, one, many) { return `${n} ${n === 1 ? one : many}`; }
@@ -4226,13 +4265,13 @@ function renderData() {
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${IN_VIEWER && Bridge.mcp ? "Drücke „Jetzt aktualisieren“ oder folge den Schritten unten." : "Folge den Schritten unten."}</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
   el.className = "sync-status ok";
   el.innerHTML = `<span class="dot"></span><div><b>Synchronisiert${s.player && s.player.name ? ` als ${esc(s.player.name)}` : ""}</b><br>
-    <span class="muted small">Letzter Abgleich ${fmtDate(s.at)} · ${plural(n, "importiertes Match", "importierte Matches")} · ${plural((s.playerHeroes || []).length, "Helden-Statistik", "Helden-Statistiken")}${s.meta ? ` · globale Tierlist (${esc(s.meta.rank || "?")})` : ""}</span>
+    <span class="muted small">Letzter Abgleich ${fmtDT(s.at)} · ${plural(n, "importiertes Match", "importierte Matches")} · ${plural((s.playerHeroes || []).length, "Helden-Statistik", "Helden-Statistiken")}${s.meta ? ` · globale Tierlist (${esc(s.meta.rank || "?")})` : ""}</span>
     ${(s.warnings || []).length ? `<br><span class="small" style="color:var(--warn)">${plural(s.warnings.length, "Hinweis", "Hinweise")} beim Abruf: ${esc(s.warnings[0])}</span>` : ""}</div>`;
 }
 $("#syncPlayer").addEventListener("input", e => { state.settings.playerName = e.target.value.trim(); save(); $("#syncCmd").textContent = syncCommand(); });
@@ -4269,7 +4308,9 @@ function importSync(data) {
     added++;
   });
   state.matches.sort((a, b) => matchTime(a) - matchTime(b));
-  state.sync = { player: data.player || null, at: data.generated || new Date().toISOString(), playerHeroes: data.playerHeroes || [], meta: data.meta || null, warnings: data.warnings || [] };
+  const prev = state.sync || {};
+  state.sync = { player: data.player || prev.player || null, at: data.generated || new Date().toISOString(),
+    playerHeroes: data.playerHeroes || prev.playerHeroes || [], meta: data.meta || prev.meta || null, warnings: data.warnings || [], lastId: data._id || null };
   if (data.player && data.player.name && !state.settings.playerName) state.settings.playerName = data.player.name;
   save();
   return { added, updated, merged, unknown };
@@ -4283,13 +4324,14 @@ async function readJsonFile(input) {
 function syncToast(r) {
   toast(`Rivals Data: ${r.added} neu, ${r.updated} aktualisiert${r.merged ? `, ${r.merged} zusammengeführt` : ""}${r.unknown ? ` · ${r.unknown} mit unbekanntem Helden` : ""}`);
 }
-// ---------- Aktualisieren per Knopf ----------
-// Die Seite darf selbst keine Internetanfragen stellen. Der Knopf bittet deshalb die Claude-Sitzung (über den Connector
-// "Claude Code Remote"), den Abruf auszuführen. Claude legt das Ergebnis im Eingang (sync-inbox) deines Kontos ab,
-// die App übernimmt es automatisch.
-const SYNC_SESSION = "session_01AtdSg3sM7hXVE6hNky2US2";
+// ---------- Automatischer Abgleich über den Sync-Helfer ----------
+// Die Seite darf selbst keine Internetanfragen stellen. Ein Sync-Helfer (eigene Claude-Sitzung, per Zeitplan etwa alle
+// 3 Stunden und per Knopf) holt die Matches von Rivals Data und schreibt sie als eine Zeile in sein Sitzungsprotokoll.
+// Die App liest dieses Protokoll über den Connector "Claude Code Remote" (list_events) und trägt die Matches ein.
+// Schreibrechte auf deine Daten braucht der Helfer dafür nicht.
+const SYNC_HELPER = "session_01LD68VN726iboXHGSCKP1Ln";
 const SYNC_SERVER = "Claude Code Remote";
-const Bridge = { mcp: null, req: null, timer: null, busy: false, timeoutMs: 6 * 60 * 1000, info: "" };
+const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "" };
 const BRIDGE_ERRORS = {
   not_in_manifest: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
   not_granted: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
@@ -4304,15 +4346,75 @@ async function initBridge() {
   if (!IN_VIEWER) return;
   try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { Bridge.mcp = null; }
   if (currentTabSafe() === "data") renderBridge();
+  if (Bridge.mcp) { autoPull(); setInterval(() => { if (document.visibilityState === "visible") autoPull(); }, 20 * 60 * 1000); }
 }
-function syncRequestText(name, id) {
+// Marker des Helfers: @@RIVALS-SYNC:BEGIN <ID>@@ <Base64-URL der Sync-JSON> @@RIVALS-SYNC:END@@ (bzw. ERROR mit Meldung)
+const SYNC_MARK = /@@RIVALS-SYNC:(BEGIN|ERROR) ([A-Za-z0-9_.:-]+)@@ ([A-Za-z0-9_-]+) @@RIVALS-SYNC:END@@/g;
+function b64urlDecode(str) {
+  let b = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b.length % 4) b += "=";
+  return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0)));
+}
+function parseSyncMarkers(text) {
+  const out = [], seen = new Set();
+  String(text).replace(SYNC_MARK, (m, kind, id, b64) => {
+    const key = kind + id + b64.length;
+    if (seen.has(key)) return m;
+    seen.add(key);
+    try {
+      const raw = b64urlDecode(b64);
+      out.push(kind === "BEGIN" ? { kind: "ok", id, data: JSON.parse(raw) } : { kind: "error", id, message: raw });
+    } catch (e) { /* beschädigte Zeile überspringen */ }
+    return m;
+  });
+  return out;
+}
+const toolText = res => { const p = res && res.payload !== undefined ? res.payload : res; return typeof p === "string" ? p : JSON.stringify(p); };
+// Liest die neuesten Ergebnisse des Helfers (ältere zuerst); schaut bei Bedarf einige Seiten zurück
+async function fetchHelperResults() {
+  let before = null;
+  for (let page = 0; page < 4; page++) {
+    const args = { session_id: SYNC_HELPER, kinds: ["user"], limit: 40 };
+    if (before) args.before_id = before;
+    const text = toolText(await Bridge.mcp.callTool(SYNC_SERVER, "list_events", args, { cache: false }));
+    const marks = parseSyncMarkers(text);
+    if (marks.length) return marks;
+    const more = /has_more\\?"\s*:\s*true/.test(text), fid = /first_id\\?"\s*:\s*\\?"([0-9a-fA-F-]{16,})/.exec(text);
+    if (!more || !fid) break;
+    before = fid[1];
+  }
+  return [];
+}
+// Übernimmt ein Ergebnis des Helfers. silent: automatisch beim Öffnen, dann nur Meldung bei neuen Matches.
+async function applyHelperResult(r, silent) {
+  if (r.kind === "error") {
+    if (!silent) { setBridgeInfo(`Der Sync-Helfer konnte die Daten nicht holen: ${String(r.message).slice(0, 200)}`, "bad"); toast("Rivals Data: Abruf fehlgeschlagen"); }
+    return false;
+  }
+  const gen = Date.parse(r.data.generated || ""), last = state.sync ? Date.parse(state.sync.at || "") : NaN;
+  if (state.sync && state.sync.lastId === r.id) { if (!silent) toast("Deine Matches sind schon aktuell"); return false; }
+  if (silent && isFinite(gen) && isFinite(last) && gen <= last) return false;
+  r.data._id = r.id;
+  const res = importSync(r.data);
+  quiz = null; render();
+  if (!silent || res.added || res.merged) syncToast(res);
+  return true;
+}
+async function autoPull() {
+  if (!Bridge.mcp || Bridge.pulling) return;
+  Bridge.pulling = true;
+  try {
+    for (let i = 0; i < 40 && !Cloud.ready; i++) await new Promise(r => setTimeout(r, 500));
+    if (!Cloud.ready || Bridge.req) return;
+    const ok = (await fetchHelperResults()).filter(x => x.kind === "ok").sort((a, b) => Date.parse(a.data.generated) - Date.parse(b.data.generated)).pop();
+    if (ok) await applyHelperResult(ok, true);
+  } catch (e) { /* kein Zugriff oder Helfer nicht erreichbar: die App funktioniert auch so */ }
+  finally { Bridge.pulling = false; }
+}
+function syncRequestText(id) {
   return [
-    `[Rivals Coach – Aktualisierung angefordert, Anfrage ${id}]`,
-    `Der Nutzer hat in der App auf „Jetzt aktualisieren“ gedrückt. Das ist der Auftrag, seine Matches von Rivals Data zu holen und automatisch einzutragen.`,
-    `Spieler: ${JSON.stringify(name)} (nur als Argument übergeben, nicht in die Shell einsetzen)`,
-    `1. Abruf mit docs/marvel-rivals/rivals_sync.py <Spieler> --limit 50 -o <Datei> (das Netzwerk muss rivalsdata.com und rivalstracker.com erlauben).`,
-    `2. Das Ergebnis mit dem Tool ArtifactData (action "set", collection "data/users/me", doc_id "sync-inbox") in den Artifact ${ONLINE_URL} schreiben: {"requestId": "${id}", "at": "<ISO-Zeit>", "payload": <komplette Sync-JSON>}. Bei einem Fehler stattdessen {"requestId": "${id}", "at": "<ISO-Zeit>", "error": "<kurze Meldung für den Nutzer>"} schreiben.`,
-    `3. Die App übernimmt den Eingang automatisch. Im Chat nur kurz melden, was eingetragen wurde.`
+    `Lauf: Matches abgleichen. Anfrage ${id}.`,
+    `(Ausgelöst per Knopf „Jetzt aktualisieren“ in der App. Führe die Schritte aus deinem ersten Auftrag aus und nimm als Anfrage-ID genau ${id}.)`
   ].join("\n");
 }
 function setBridgeInfo(text, kind) { Bridge.info = text ? { text, kind: kind || "info" } : ""; renderBridge(); }
@@ -4329,30 +4431,38 @@ function renderBridge() {
 }
 function endBridgeRequest() { clearTimeout(Bridge.timer); Bridge.req = null; Bridge.info = ""; renderBridge(); }
 async function requestSync() {
-  const name = (state.settings.playerName || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 64);
-  if (!name) { toast("Trag zuerst deinen Spielernamen ein"); $("#syncPlayer").focus(); return; }
   if (!Cloud.ready) { toast("Dein Konto ist noch nicht geladen – einen Moment …"); return; }
   const id = newId();
   Bridge.req = { id, status: "sending" };
-  setBridgeInfo("Sende Anfrage an Claude …");
+  setBridgeInfo("Sende Anfrage an den Sync-Helfer …");
   try {
-    await Bridge.mcp.callTool(SYNC_SERVER, "send_message", { session_id: SYNC_SESSION, message: syncRequestText(name, id) }, { cache: false });
+    await Bridge.mcp.callTool(SYNC_SERVER, "send_message", { session_id: SYNC_HELPER, message: syncRequestText(id) }, { cache: false });
   } catch (e) {
     Bridge.req = null;
     const code = e && e.code;
-    const text = code === "tool_error" ? `Claude hat die Anfrage nicht angenommen${e.message ? ` (${String(e.message).slice(0, 140)})` : ""}. Wahrscheinlich ist die Sitzung beendet – nutze die Schritte unten.`
+    const text = code === "tool_error" ? `Der Sync-Helfer hat die Anfrage nicht angenommen${e.message ? ` (${String(e.message).slice(0, 140)})` : ""}. Wahrscheinlich ist die Sitzung beendet – nutze die Schritte unten.`
       : BRIDGE_ERRORS[code] || "Die Anfrage konnte nicht gesendet werden. Versuche es später erneut oder nutze die Schritte unten.";
     setBridgeInfo(text, "bad");
     return;
   }
   Bridge.req = { id, status: "waiting" };
-  setBridgeInfo("Anfrage gesendet. Claude holt deine Daten – das dauert meist 1–3 Minuten. Die Matches erscheinen hier von selbst.");
+  setBridgeInfo("Anfrage gesendet. Der Sync-Helfer holt deine Daten – das dauert meist 1–3 Minuten. Die Matches erscheinen hier von selbst.");
   clearTimeout(Bridge.timer);
-  Bridge.timer = setTimeout(() => {
+  const started = Date.now();
+  const poll = async () => {
     if (!Bridge.req || Bridge.req.id !== id) return;
-    Bridge.req.status = "timeout";
-    setBridgeInfo("Noch keine Antwort. Vielleicht ist die Claude-Sitzung gerade nicht aktiv – schreib dort „sync mich“ oder nutze die Schritte unten. Wenn die Daten doch noch ankommen, werden sie beim nächsten Öffnen automatisch eingetragen.", "bad");
-  }, Bridge.timeoutMs);
+    try {
+      const r = (await fetchHelperResults()).find(x => x.id === id);
+      if (r) { endBridgeRequest(); await applyHelperResult(r, false); return; }
+    } catch (e) { /* nächster Versuch */ }
+    if (Date.now() - started > Bridge.timeoutMs) {
+      Bridge.req.status = "timeout";
+      setBridgeInfo("Noch keine Antwort. Vielleicht läuft der Sync-Helfer gerade nicht – die Matches werden beim nächsten Öffnen automatisch eingetragen, sobald er sie geholt hat. Oder nutze die Schritte unten.", "bad");
+      return;
+    }
+    Bridge.timer = setTimeout(poll, Bridge.pollMs || 10000);
+  };
+  Bridge.timer = setTimeout(poll, Bridge.firstPollMs || 20000);
 }
 async function takeInbox(box) {
   if (Bridge.busy || !box) return;
