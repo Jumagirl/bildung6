@@ -3101,12 +3101,11 @@ function renderFlex() {
       : `<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Rollen sind bereit.</b> Spiel ab und zu ein Flex-Match, damit es nicht einrostet.</div></div>`}</div>
     <div class="row mt"><button type="button" class="btn ghost small" data-flexgo="L20">L20 Tank-Grundlagen</button><button type="button" class="btn ghost small" data-flexgo="L21">L21 DPS-Grundlagen</button></div>
     ${days ? `<p class="small muted" style="margin:10px 0 4px">Tage im Plan, die Tank oder DPS üben:</p><div class="dchips">${days}</div>` : ""}
-    <label class="inline-label mt"><input type="checkbox" data-flexset="flexPlan" ${state.settings.flexPlan !== false ? "checked" : ""}> Flex-Aufträge im Tagesplan anzeigen</label>`;
+    <p class="small muted" style="margin:10px 0 0">Ob du an einem Tag zusätzlich Tank oder DPS lernst, entscheidest du im Tagesplan unter „Heute zählt nur das“.</p>`;
 }
 $("#flexCard").addEventListener("change", e => {
   const t = e.target;
   if (t.dataset.flexpick) { state.settings.flexPick = Object.assign({}, state.settings.flexPick, { [t.dataset.flexpick]: t.value }); }
-  else if (t.dataset.flexset === "flexPlan") state.settings.flexPlan = t.checked;
   else if (t.dataset.flexset) { const v = Math.round(Number(t.value)); state.settings[t.dataset.flexset] = v > 0 ? v : (t.dataset.flexset === "flexMatches" ? 10 : 2); }
   else return;
   save(); renderFlex();
@@ -5257,7 +5256,7 @@ function planHomeHtml() {
         <li><b>Aufgeschrieben ist gesichert.</b> Schreib am Tagesende zwei Sätze bei „Abschluss“. Am nächsten Tag stehen sie oben in der Karte, du musst sie nicht im Kopf behalten.</li>
       </ul></div>`
     + `<div class="card"><div class="card-head"><h2>${icon("team")}Alle Rollen lernen</h2></div>
-      <p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, kommt in jedem Tagesplan ein kleiner Flex-Auftrag dazu (abschaltbar).</p>
+      <p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, entscheidest du jeden Tag selbst: zusätzlich Tank oder DPS lernen oder nur bei Support bleiben.</p>
       <ul class="wl">${flexStats().filter(x => FLEX_ROLES.includes(x.role)).map(x => `<li><b>${ROLE_SHORT[x.role]}:</b> ${x.ready ? "bereit ✓" : `${x.n} von ${flexGoal().n} Matches`}${x.heroes.length ? `, gespielt: ${esc(x.heroes.slice(0, 3).map(([h, c]) => `${h} (${c}×)`).join(", "))}` : ""}</li>`).join("")}</ul>
       <p class="small muted" style="margin:8px 0 4px">Tage, die Tank oder DPS üben:</p>
       <div class="dchips">${flexRoleDays().map(d => `<button type="button" class="dchip" data-pact="day" data-n="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("")}</div>
@@ -5356,6 +5355,20 @@ function kpiCharts(upTo) {
     + `${kpiBars("Winrate", "höher ist besser", rows.map(r => ({ label: r.label, v: r.wr })), v => Math.round(v) + " %")}`
     + (rows.some(r => r.ult !== null) ? kpiBars("Ult-Wirkung", "höher ist besser", rows.map(r => ({ label: r.label, v: r.ult })), v => Math.round(v) + " %") : "") + `</div>`;
 }
+// Jeden Tag selbst entscheiden: zusätzlich eine andere Rolle lernen oder bei Support bleiben
+function dayRoleHtml(n) {
+  const title = PLAN.days[n - 1].title;
+  if (/Test/.test(title)) return "";
+  if (/Tank|DPS|Rolle/.test(title)) return `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Heute übt der Plan eine andere Rolle als Support.</b> Sie steht in den Schritten unten. Bleibst du heute lieber bei Support, übst du das Thema des Tages mit deinem Support-Helden.</div></div>`;
+  const choice = dayGet(n).role || "", g = flexGoal(), nx = nextFlexRole(flexStats(), n);
+  const btn = (v, label) => `<button type="button" class="chip ${choice === v ? "on" : ""}" data-pact="dayrole" data-n="${n}" data-r="${v}">${label}</button>`;
+  const info = choice && choice !== "none"
+    ? `<span class="small"><b>Flex-Auftrag:</b> Spiel am Ende deiner Session so viele Matches als ${ROLE_SHORT[choice]}${flexPickOf(choice) ? ` mit ${esc(flexPickOf(choice))}` : ""}, wie du magst, ungewertet (= ohne Rang-Druck). Jedes Match zählt für deine Flex-Marke. Ziel: ${esc(FLEX_GOAL[choice])}</span>`
+    : choice === "none" ? '<span class="small muted">Heute bleibst du bei Support.</span>'
+      : `<span class="small muted">Du hast noch nicht gewählt. ${nx ? `Vorschlag: ${ROLE_SHORT[nx.role]} (${nx.n} von ${g.n} Matches).` : "Alle Rollen sind schon bereit."}</span>`;
+  return `<div class="field" style="margin:8px 0"><b>Willst du heute zusätzlich eine andere Rolle lernen?</b>
+    <div class="chips">${btn("none", "Nur Support")}${btn("Vanguard", "Zusätzlich Tank")}${btn("Duelist", "Zusätzlich DPS")}</div>${info}</div>`;
+}
 // Welche Lektionen gehören zu einem Thema des Trackers (alle Tage, an denen es neu ist)?
 function topicLessonIds(t) {
   const ids = [];
@@ -5381,16 +5394,13 @@ function focusCardHtml(n) {
   items.push(neu.length ? `<li><b>Neu heute:</b> ${names(neu)}. Das ist dein Lernthema für heute.</li>`
     : `<li><b>Heute gibt es nichts Neues.</b> Du kombinierst Themen, die du schon kennst.</li>`);
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
-  if (state.settings.flexPlan !== false && !/Test|Tank|DPS|Rolle/.test(PLAN.days[n - 1].title)) {
-    const nx = nextFlexRole(flexStats(), n);
-    if (nx) items.push(`<li><b>Flex-Auftrag:</b> Spiel ein Match als ${ROLE_SHORT[nx.role]}${flexPickOf(nx.role) ? ` mit ${esc(flexPickOf(nx.role))}` : ""}, ungewertet, am Ende deiner Session (Block 3 oder 4+). Ziel: ${esc(FLEX_GOAL[nx.role])}</li>`);
-  }
   const notYet = PLAN.tracker.filter(t => !t.neu.includes(n) && topicAuto(t) > 0 && topicAuto(t) < 3);
   if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Leg dein Mini-Ziel in Block 3 auf eins davon.</li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
   return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
     <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
     <ul class="wl">${items.join("")}</ul>
+    ${dayRoleHtml(n)}
     ${prev ? `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Dein Abschluss von Tag ${prev[0]}:</b> „${esc(prev[1])}“ Das ist aufgeschrieben, du musst es nicht im Kopf behalten.</div></div>` : ""}
     <p class="muted small" style="margin:0">Fällt dir beim Spielen etwas von gestern ein? Nicht jetzt klären. Schreib es unten bei „Abschluss“ auf, dann ist es sicher abgelegt.</p></div>`;
 }
@@ -5410,7 +5420,7 @@ function planDayHtml(n) {
       <div class="row"><button class="btn ghost small" type="button" data-pact="day" data-n="${n - 1}" ${n <= 1 ? "disabled" : ""}>‹ Tag ${n - 1}</button>
       <button class="btn ghost small" type="button" data-pact="day" data-n="${n + 1}" ${n >= 56 ? "disabled" : ""}>Tag ${n + 1} ›</button></div></div>
     <div class="card"><div class="card-head"><div><div class="muted small">Tag ${n} von 56 · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
-      <div class="row">${levelBadge(lv)}${d.mode ? `<span class="tag">${esc(modeText(d))}</span>` : ""}${d.kennzahlen ? '<span class="badge">★ Kennzahlen-Tag</span>' : ""}${st.done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ erledigt ${fmtDate(st.done)}</span>` : n === cur ? '<span class="badge">nächster Tag</span>' : ""}</div></div>
+      <div class="row">${levelBadge(lv)}${d.mode ? `<span class="tag">${esc(modeText(d))}</span>` : ""}${d.kennzahlen ? '<span class="badge">★ Kennzahlen-Tag</span>' : ""}${st.role && st.role !== "none" ? `<span class="tag">+ ${ROLE_SHORT[st.role]}</span>` : ""}${st.done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ erledigt ${fmtDate(st.done)}</span>` : n === cur ? '<span class="badge">nächster Tag</span>' : ""}</div></div>
       ${d.heute ? `<div class="heute"><b>Worum geht es heute?</b> ${linkify(esc(d.heute), seenD)}</div>` : ""}
       ${d.intro.map(t => `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div>${richLines(t, seenD)}</div></div>`).join("")}
     </div>
@@ -5478,6 +5488,7 @@ function planAction(act, b) {
   switch (act) {
     case "day": openPlanDay(+b.dataset.n); break;
     case "home": openPlanHome(); break;
+    case "dayrole": { const st = dayEnsure(+b.dataset.n); st.role = st.role === b.dataset.r ? "" : b.dataset.r; save(); renderPlan(); break; }
     case "auto": { const st = dayEnsure(+b.dataset.n), v = +b.dataset.v; st.auto = Object.assign({}, st.auto); if (st.auto[b.dataset.t] === v) delete st.auto[b.dataset.t]; else st.auto[b.dataset.t] = v; save(); renderPlan(); break; }
     case "tab": showTab(b.dataset.tab); window.scrollTo({ top: 0 }); break;
     case "wissen": openWissen(b.dataset.l); break;
