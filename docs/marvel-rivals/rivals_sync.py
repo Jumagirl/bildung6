@@ -150,6 +150,30 @@ def number(value: Any) -> int | None:
         return None
 
 
+DURATION_KEYS = ("match_play_duration", "match_duration", "play_duration", "game_duration", "duration")
+
+
+def duration_minutes(*sources: Any) -> float | None:
+    """Matchdauer in Minuten, falls der Eintrag sie nennt (Sekunden oder Minuten, auch eine Ebene tiefer).
+
+    Die Feldnamen sind nicht überprüft. Findet das Skript keine Dauer, bleibt das Feld leer
+    und du trägst die Dauer in der App von Hand ein.
+    """
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        nested = [v for v in source.values() if isinstance(v, Mapping)]
+        for container in [source, *nested]:
+            for key in DURATION_KEYS:
+                try:
+                    value = float(container.get(key))
+                except (TypeError, ValueError):
+                    continue
+                if value > 0:
+                    return round(value / 60 if value >= 60 else value, 1)
+    return None
+
+
 def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] | None) -> dict | None:
     """Wandelt einen History-Eintrag (+ optionale Details) ins Match-Format der App um."""
     match_id = row.get("match_uid")
@@ -175,6 +199,7 @@ def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] |
         "d": to_int(row.get("deaths")) or 0,
         "a": to_int(row.get("assists")) or 0,
         "dmg": None, "heal": None, "block": None,
+        "dur": duration_minutes(row, details),
         "mvp": bool(row.get("is_mvp")), "svp": bool(row.get("is_svp")),
         "enemies": [], "allies": [], "swapped": False,
     }

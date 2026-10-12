@@ -16,11 +16,11 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 | Bereich | Wofür |
 |---|---|
-| **Trainingsplan** | 56 Trainingstage in 5 Phasen mit Nachlesen, Start, Spielblöcken, Review und Notizen; Themen-Tracker mit Wiederholungstagen, Drills, Kennzahlen-Vergleich aus deinen Matches und ein Wochenpaket für den KI-Coach |
+| **Trainingsplan** | 56 Trainingstage in 5 Phasen mit Nachlesen, Start, Spielblöcken, Review und Notizen; Themen-Tracker mit Wiederholungstagen, Drills, Kennzahlen-Vergleich aus deinen Matches (mit Ult-Wirkung) und ein Wochenpaket für den KI-Coach. Jeder Tag hat die Karte „Heute zählt nur das“ (neues Thema, kurzer Auffrischen-Check, wann Früheres von selbst wiederkommt, dein Abschluss von gestern). Die Matchlänge stellst du selbst ein (oder die App nimmt den Schnitt deiner geloggten Dauern), die Zeitangabe pro Block rechnet sich danach aus |
 | **Tägliche Lektionen** | 35 Lektionen in 7 Modulen – jeden Tag eine: verstehen, Wissens-Check, üben, im Match anwenden, reflektieren; mit Wiederholungsfragen und Empfehlungen passend zu deinen Fehlern |
 | **Dashboard** | Winrate, KDA, Verlauf, heutige Session, Angstgegner und automatische Coach-Hinweise |
-| **Match loggen** | Ergebnis, K/D/A, Map, Datum, dein Team und das Gegnerteam, „Wer hat mir Probleme gemacht?“, Fehler und Stärken; dazu Coach-Hinweise, warum das Match gewonnen oder verloren gegangen sein könnte. Falsche Einträge (z.B. Sieg statt Niederlage) korrigierst du im Match-Verlauf per Klick |
-| **Auswertung** | Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
+| **Match loggen** | Ergebnis, K/D/A, Schaden, Heilung, Geblockt, Dauer, eingesetzte Ults und Ults mit Wirkung (teilweise zählt 0,5), Map, Datum, dein Team und das Gegnerteam, „Wer hat mir Probleme gemacht?“, Fehler und Stärken; dazu Coach-Hinweise, warum das Match gewonnen oder verloren gegangen sein könnte. Falsche Einträge (z.B. Sieg statt Niederlage) korrigierst du im Match-Verlauf per Klick |
+| **Auswertung** | Schaden, Heilung und Geblockt pro 10 Minuten (wie im Spiel, nach Held und Siege vs. Niederlagen) und Ult-Wirkung, Winrate gegen jeden Gegner-Helden mit Counter-Tipp, Mitspieler, gegnerische Team-Stile, Maps, Tageszeit, Matches am Stück, Siege vs. Niederlagen |
 | **Team & Counter** | Gegnerteam eintragen: Counter-Picks, Tipps „So spielst du dagegen“ für jeden Helden, Team-Aufstellungen (2-2-2, 1-3-2, 2-1-3, 3-1-2) mit Wann & Warum, Spielstile und aktuelle Meta-Picks |
 | **Quiz** | Counter-Training (Spielstile, Helden-Duelle, Ult-Konter) und Wissens-Check zu den 30 Support-Themen, mit 16 Bildfragen (Position wählen, Heilziel, Dive, Fluchtweg, Ult-Zeitpunkt, Kill-Feed lesen, Kartenposition, Vorhalten beim Heilen und mehr); falsch beantwortete Fragen kommen häufiger, die Schwierigkeit steigt mit deiner Lernstufe |
 | **Lexikon** | Support-Wissen (30 Einträge, zu jedem ein Lernbild: Hebel, Positionierung, Fluchtweg, Heal-Priorität, Ults, Dive, Kompositionen, Karten, Heal-Aim, Pings, Kill-Feed, Tilt und mehr, nach Lernstufe freigeschaltet; die Bilder passen sich Hell und Dunkel an). Jeder Eintrag erklärt zuerst einfach, zeigt dann eine Szene aus dem Match und die wichtigsten Begriffe. 75 Gamer-Begriffe (Peel, Dive, Poke, Cooldown …) sind im Text antippbar und erklären sich selbst, 14 davon mit Mini-Bild. Zu den Modi Domination, Convoy und Convergence gibt es Skizzen von oben (Schema mit Heilplätzen, Fluchtwegen, Flanken und Höhen, keine echten Karten), Ults & Konter (was jede Ult macht, wie man sie kontert und welche Helden sie konkret ausschalten) und ein Effekte-Lexikon (Betäubung, Blendung, Heilungsreduktion & Co.: Wirkung, Auslöser, Konter) |
@@ -68,7 +68,8 @@ klappt, solange die Claude-Sitzung läuft, in der die App gepflegt wird. Andernf
 3. Im selben Ordner ausführen: `python rivals_sync.py "DeinSpielername"`
 4. Die erzeugte Datei `rivals-sync.json` in der App unter **Daten & Sync** importieren.
 
-Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams.
+Importiert werden Held, Ergebnis, K/D/A, Map, Modus, Schaden, Heilung sowie die Helden beider Teams. Die Matchdauer übernimmt das
+Skript nur, wenn die Daten sie liefern (Feldnamen nicht überprüft); sonst trägst du die Dauer von Hand ein, damit die Werte pro 10 Minuten stimmen.
 Rivals Data zeigt nur die letzten etwa 20 Matches und hinkt dem Spiel teils um Stunden hinterher – frische
 Matches trägst du am besten von Hand ein. Sie werden später mit dem Rivals-Data-Eintrag zusammengeführt,
 wenn Datum, Held, Ergebnis und K/D/A übereinstimmen.
