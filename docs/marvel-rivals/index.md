@@ -95,8 +95,9 @@ und auf einem anderen Gerät wieder einlesen (*Backup importieren*).
 - Die öffentliche Datei enthält keine persönlichen Werte: keinen Artifact-Link und keine Sync-Sitzung. Der automatische
   Abgleich im Hintergrund ist deshalb nur in der privaten Version aktiv.
 - Freunde gleichen ihre Matches wie oben beschrieben mit dem Skript `rivals_sync.py` ab (Tab *Daten*).
-- `python3 app_build.py friends` baut eine weitergebbare Version (`artifact/rivals-coach-friends.html`) ohne Heldenbilder
-  und ohne private Werte. Die Heldenbilder gehören Marvel/NetEase und werden nicht weitergegeben; die App zeigt
+- `python3 app_build.py file` baut eine eigenständige Datei zum Verschicken (`artifact/rivals-coach-fuer-freunde.html`),
+  `python3 app_build.py friends` die gleiche Version für ein eigenes Artifact. Beide enthalten keine Heldenbilder
+  und keine privaten Werte. Die Heldenbilder gehören Marvel/NetEase und werden nicht weitergegeben; die App zeigt
   dann Initialen mit Rollenring.
 - Deine privaten Werte (`private.json`) und die Bilder (`hero_img.json`) stehen in der `.gitignore` und landen nie im Repo.
 

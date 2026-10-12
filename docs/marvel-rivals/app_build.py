@@ -8,6 +8,8 @@ Artifact-Datei ein. Ohne Bilder zeigt die App Initialen mit Rollenring.
   python3 app_build.py icons      # lädt die Heldenbilder nach hero_img.json (braucht Pillow)
   python3 app_build.py artifact   # schreibt artifact/rivals-coach.html (mit Bildern und deinen privaten Werten)
   python3 app_build.py friends    # schreibt artifact/rivals-coach-friends.html (ohne Bilder, ohne private Werte)
+  python3 app_build.py file       # schreibt artifact/rivals-coach-fuer-freunde.html: eigenständige Datei zum Weitergeben
+                                  # (vollständige Seite, ohne Bilder, ohne private Werte, läuft direkt im Browser)
 
 Die Ausgabedateien sind per .gitignore vom Repo ausgeschlossen. Private Werte (dein Artifact-Link, deine
 Sync-Sitzung) stehen in private.json, die ebenfalls nicht ins Repo kommt:
@@ -31,6 +33,7 @@ IMG = HERE / "hero_img.json"
 PRIVATE = HERE / "private.json"
 OUT = HERE / "artifact" / "rivals-coach.html"
 OUT_FRIENDS = HERE / "artifact" / "rivals-coach-friends.html"
+OUT_FILE = HERE / "artifact" / "rivals-coach-fuer-freunde.html"
 API = "https://marvelrivals.wiki.gg/api.php"
 UA = {"User-Agent": "RivalsCoach/1.0 (persönliche Trainings-App; github.com/Jumagirl/bildung6)"}
 # Wiki-Dateinamen, die vom Muster „<Name> Icon.png“ abweichen
@@ -85,7 +88,7 @@ def strip_wrapper(s):
     return s[a:b]
 
 
-def artifact(friends=False):
+def artifact(friends=False, standalone=False):
     s = APP.read_text(encoding="utf-8")
     if not friends and IMG.exists():
         imgs = json.loads(IMG.read_text(encoding="utf-8"))
@@ -107,9 +110,9 @@ def artifact(friends=False):
     stamp = datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y, %H:%M")
     s = s.replace('const BUILD_STAMP = ""; /* BUILD:STAMP */', f'const BUILD_STAMP = "{stamp}";')
     print(f"Versionsstempel: {stamp}")
-    out = OUT_FRIENDS if friends else OUT
+    out = OUT_FILE if standalone else OUT_FRIENDS if friends else OUT
     out.parent.mkdir(exist_ok=True)
-    out.write_text(strip_wrapper(s), encoding="utf-8")
+    out.write_text(s if standalone else strip_wrapper(s), encoding="utf-8")
     print(f"{out} geschrieben ({out.stat().st_size // 1024} KB)")
 
 
@@ -121,5 +124,7 @@ if __name__ == "__main__":
         artifact()
     elif cmd == "friends":
         artifact(friends=True)
+    elif cmd == "file":
+        artifact(friends=True, standalone=True)
     else:
         print(__doc__)
