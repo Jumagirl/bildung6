@@ -536,6 +536,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .save-chip.bad { color: var(--bad); }
 .storage-banner { padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; font-size: .9rem; background: color-mix(in srgb, var(--bad) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); }
 .storage-banner a { color: var(--accent-strong); font-weight: 600; }
+.bridge-banner { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, transparent); width: calc(100% - 32px); max-width: 1124px; margin: 12px auto 0; margin-bottom: 0; }
+@media (min-width: 901px) { .bridge-banner { width: calc(100% - 56px); } }
 .confirm-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(8, 10, 18, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .confirm-box { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 24px 64px rgba(0, 0, 0, .35); display: flex; flex-direction: column; gap: 14px; }
 .confirm-box p { margin: 0; font-size: .95rem; }
@@ -790,6 +792,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 </aside>
 
 <div class="content">
+<div class="storage-banner bridge-banner" id="bridgeBanner" role="status" hidden></div>
 <div class="page-head">
   <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub"></p><p class="ver" id="buildStamp" hidden></p></div>
   <div class="head-actions"><button type="button" class="level-chip lv1" id="levelChip"><span class="dot"></span><span id="levelChipText"></span></button><span class="save-chip" id="saveChip" role="status"></span><button class="btn" type="button" id="quickLog" data-icon="log">Match loggen</button></div>
@@ -1164,6 +1167,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <button class="btn" type="button" id="syncNow" data-icon="sync" hidden>Jetzt aktualisieren</button>
     </div>
     <div class="note info mt" id="syncNowInfo" hidden></div>
+    <div class="note info mt" id="autoPullInfo" hidden></div>
     <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data mehrmals täglich ab (etwa um 10, 14, 18 und 22 Uhr), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
@@ -4424,7 +4428,7 @@ function syncToast(r) {
 const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
 const BUILD_STAMP = ""; /* BUILD:STAMP */
 const SYNC_SERVER = "Claude Code Remote";
-const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "" };
+const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "", auto: null, hidden: false };
 const BRIDGE_ERRORS = {
   not_in_manifest: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
   not_granted: "Der Zugriff auf „Claude Code Remote“ ist für diese Seite nicht erlaubt. Erlaube ihn im Menü der Seite unter „Permissions“ und versuche es erneut.",
@@ -4432,14 +4436,22 @@ const BRIDGE_ERRORS = {
   selection_required: "Du hast mehrere Connectoren mit dem Namen „Claude Code Remote“ – wähle einen aus und versuche es erneut.",
   needs_reauth: "Verbinde „Claude Code Remote“ in den claude.ai-Einstellungen unter „Connectors“ neu.",
   approval_required: "Die Anfrage wurde nicht bestätigt.",
+  server_unavailable: "Claude ist gerade nicht erreichbar. Die App versucht es später erneut.",
+  upstream_error: "Claude hat gerade nicht geantwortet. Die App versucht es später erneut.",
+  tool_error: "Der Verlauf des Sync-Helfers konnte nicht gelesen werden. Wahrscheinlich ist seine Sitzung beendet.",
   capability_disabled: "Diese Ansicht kann Claude nicht anfragen.",
   capability_removed: "Diese Ansicht kann Claude nicht anfragen."
 };
 async function initBridge() {
   if (!IN_VIEWER || !SYNC_HELPER) return;
   try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { Bridge.mcp = null; }
+  if (!Bridge.mcp) {
+    setAuto({ state: "unavailable", text: "In dieser Ansicht ist die Verbindung zu Claude nicht verfügbar (zum Beispiel in einer App oder Vorschau). Öffne den Link in einem Browser auf claude.ai, oder trage Matches von Hand ein." });
+    if (currentTabSafe() === "data") renderBridge();
+    return;
+  }
   if (currentTabSafe() === "data") renderBridge();
-  if (Bridge.mcp) { autoPull(); setInterval(() => { if (document.visibilityState === "visible") autoPull(); }, 20 * 60 * 1000); }
+  autoPull(); setInterval(() => { if (document.visibilityState === "visible") autoPull(); }, 20 * 60 * 1000);
 }
 // Marker des Helfers: @@RIVALS-SYNC:BEGIN <ID>@@ <Base64-URL der Sync-JSON> @@RIVALS-SYNC:END@@ (bzw. ERROR mit Meldung)
 const SYNC_MARK = /@@RIVALS-SYNC:(BEGIN|ERROR) ([A-Za-z0-9_.:-]+)@@ ([A-Za-z0-9_-]+) @@RIVALS-SYNC:END@@/g;
@@ -4466,8 +4478,8 @@ const toolText = res => { const p = res && res.payload !== undefined ? res.paylo
 // Liest die neuesten Ergebnisse des Helfers (ältere zuerst); schaut bei Bedarf einige Seiten zurück
 async function fetchHelperResults() {
   let before = null;
-  for (let page = 0; page < 4; page++) {
-    const args = { session_id: SYNC_HELPER, kinds: ["user"], limit: 40 };
+  for (let page = 0; page < 3; page++) {
+    const args = { session_id: SYNC_HELPER, kinds: ["user"], limit: 100 };
     if (before) args.before_id = before;
     const text = toolText(await Bridge.mcp.callTool(SYNC_SERVER, "list_events", args, { cache: false }));
     const marks = parseSyncMarkers(text);
@@ -4493,17 +4505,67 @@ async function applyHelperResult(r, silent) {
   if (!silent || res.added || res.merged) syncToast(res);
   return true;
 }
-async function autoPull() {
+async function autoPull(retried) {
   if (!Bridge.mcp || Bridge.pulling) return;
   Bridge.pulling = true;
+  setAuto({ state: "pulling" });
   try {
     for (let i = 0; i < 40 && !Cloud.ready; i++) await new Promise(r => setTimeout(r, 500));
-    if (!Cloud.ready || Bridge.req) return;
-    const ok = (await fetchHelperResults()).filter(x => x.kind === "ok").sort((a, b) => Date.parse(a.data.generated) - Date.parse(b.data.generated)).pop();
-    if (ok) await applyHelperResult(ok, true);
-  } catch (e) { /* kein Zugriff oder Helfer nicht erreichbar: die App funktioniert auch so */ }
+    if (!Cloud.ready) { setAuto({ state: "error", code: "cloud", text: "Dein Konto ist noch nicht geladen. Lade die Seite neu." }); return; }
+    if (Bridge.req) { setAuto(null); return; }
+    const all = await fetchHelperResults();
+    const ok = all.filter(x => x.kind === "ok").sort((a, b) => Date.parse(a.data.generated) - Date.parse(b.data.generated)).pop();
+    if (!ok) {
+      const err = all.filter(x => x.kind === "error").pop();
+      setAuto({ state: "none", text: err ? `Der Sync-Helfer meldet: ${String(err.message).slice(0, 160)}` : "Der Sync-Helfer hat noch kein Ergebnis geliefert. Er läuft um 10, 14, 18 und 22 Uhr." });
+      return;
+    }
+    const applied = await applyHelperResult(ok, true);
+    setAuto({ state: "ok", gen: ok.data.generated, applied });
+  } catch (e) {
+    const code = e && e.code;
+    const perm = await permState();
+    setAuto({ state: "error", code, perm, text: BRIDGE_ERRORS[code] || `Die Verbindung zum Sync-Helfer hat nicht geklappt${code ? ` (${code})` : ""}.`, detail: String((e && e.message) || "").slice(0, 160) });
+    if (e && e.retryable && !retried) setTimeout(() => autoPull(true), Math.min(60000, Math.max(5000, e.retryAfterMs || 15000)));
+  }
   finally { Bridge.pulling = false; }
 }
+async function permState() {
+  try { const p = await window.claude.use("permissions"); return p ? await p.state("mcp:" + SYNC_SERVER) : "unknown"; } catch (e) { return "unknown"; }
+}
+async function openPermissions() {
+  try {
+    const p = await window.claude.use("permissions");
+    if (!p) throw new Error("none");
+    const name = "mcp:" + SYNC_SERVER;
+    if ((await p.state(name)) === "prompt") await p.request([name]); else await p.manage();
+    if ((await p.state(name)) !== "denied") { if (!Bridge.mcp) { try { Bridge.mcp = await window.claude.use("mcp"); } catch (e) { /* weiter */ } } autoPull(true); }
+  } catch (e) { toast("Öffne das Menü dieser Seite und dort „Permissions“ (Berechtigungen)."); }
+}
+// Sichtbarer Status des automatischen Abgleichs (Banner oben bei Problemen, Zeile im Tab „Daten & Sync“)
+function setAuto(a) { Bridge.auto = a ? Object.assign({ at: Date.now() }, a) : null; renderAuto(); }
+function renderAuto() {
+  const a = Bridge.auto, banner = $("#bridgeBanner"), line = $("#autoPullInfo");
+  if (!banner || !line) return;
+  const bad = !!a && (a.state === "error" || a.state === "unavailable");
+  const needPerm = !!a && (["not_in_manifest", "not_granted", "approval_required", "consent_required"].includes(a.code) || a.perm === "denied");
+  banner.hidden = !bad || Bridge.hidden;
+  if (bad) banner.innerHTML = `<b>Der automatische Abgleich deiner Matches funktioniert gerade nicht.</b> ${esc(a.text)}${a.detail ? ` <span class="small muted">(${esc(a.detail)})</span>` : ""}
+    <div class="row" style="margin-top:8px">${needPerm ? `<button class="btn small" type="button" data-bact="perm">Berechtigungen öffnen</button>` : ""}${a.state === "error" ? `<button class="btn small ghost" type="button" data-bact="retry">Erneut versuchen</button>` : ""}<button class="btn small ghost" type="button" data-bact="hide">Ausblenden</button></div>`;
+  line.hidden = !a || !Bridge.mcp && a.state !== "unavailable";
+  if (!a) return;
+  const t = { pulling: "Prüfe gerade, ob der Sync-Helfer neue Matches hat …",
+    ok: `Letzter automatischer Abruf: ${fmtDT(a.at)}. Stand des Sync-Helfers: ${fmtDT(a.gen)}.`,
+    none: a.text, error: a.text, unavailable: a.text }[a.state] || "";
+  line.className = `note ${a.state === "ok" ? "good" : a.state === "pulling" ? "info" : "bad"} mt`;
+  line.innerHTML = `<span class="ni" aria-hidden="true">${a.state === "ok" ? "✓" : a.state === "pulling" ? "i" : "!"}</span><div>${esc(t)}</div>`;
+}
+$("#bridgeBanner").addEventListener("click", e => {
+  const b = e.target.closest("[data-bact]"); if (!b) return;
+  if (b.dataset.bact === "hide") { Bridge.hidden = true; renderAuto(); }
+  else if (b.dataset.bact === "retry") autoPull(true);
+  else if (b.dataset.bact === "perm") openPermissions();
+});
 function syncRequestText(id) {
   return [
     `Lauf: Matches abgleichen. Anfrage ${id}.`,

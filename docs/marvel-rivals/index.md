@@ -64,6 +64,8 @@ blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skri
 mehrmals täglich (etwa um 10, 14, 18 und 22 Uhr) auf und legt das Ergebnis in seinem Sitzungsprotokoll ab. Die App liest es beim Öffnen und
 alle 20 Minuten, solange sie offen ist, und trägt neue Matches ein. Der Knopf **Jetzt aktualisieren** löst den
 Abgleich sofort aus (meist 1–3 Minuten). Der Helfer schreibt nichts in deine App-Daten, das Schreiben bleibt bei der App.
+Klappt der automatische Abgleich nicht (zum Beispiel weil die Verbindung zu Claude für die Seite nicht erlaubt ist), zeigt die App
+oben einen Hinweis mit dem Grund und einen Knopf **Berechtigungen öffnen**. Unter **Daten & Sync** steht immer, wann zuletzt abgerufen wurde.
 Andernfalls geht es von Hand:
 
 1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`
