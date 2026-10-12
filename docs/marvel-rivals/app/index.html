@@ -584,6 +584,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .dchip.done { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); border-color: transparent; }
 .dchip.cur { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
 .today-card { border-left: 4px solid var(--accent); }
+.gtrain { margin: 14px 0 4px; padding: 4px 0 0; border-top: 1px solid var(--grid); }
+.gtrain h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .today-card ul.wl { margin: 8px 0; }
 .today-card .dchips { display: inline-flex; vertical-align: middle; margin-left: 4px; }
 .orow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 0; border-top: 1px solid var(--grid); }
@@ -1115,15 +1117,17 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <section id="tab-goals" hidden>
   <div class="card hero-banner">
     <h2>Planen · Durchführen · Reflektieren</h2>
-    <p>Wie beim selbständigen Lernen: Setze dir ein konkretes Ziel, übe gezielt und schau danach, was funktioniert hat. Formuliere SMART, z.B. „Diese Woche als Luna Snow max. 6 Tode pro Match“ oder „Gegen Hela 5 Matches mit einem Diver spielen“.</p>
+    <p>Wie beim selbständigen Lernen: Setze dir ein konkretes Ziel, übe gezielt und schau danach, was funktioniert hat. Schreib dein Wochenziel in eigenen Worten, zum Beispiel „Weniger sterben“ oder „Besser heilen“. Die App erkennt das Thema, wählt passende Lektionen aus und stellt Aufgaben für die Woche zusammen. Auch Trainingsplan und Dashboard richten sich danach aus.</p>
   </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="goals">Neues Ziel</h2></div>
+    <div id="goalSuggest"></div>
     <form id="goalForm" class="grid">
-      <label>Ziel <input name="title" required placeholder="Was willst du erreichen?"></label>
-      <label>Messbar durch <input name="metric" placeholder="z.B. Ø Deaths ≤ 6"></label>
+      <label>Ziel <input name="title" required placeholder="z.B. Weniger sterben"></label>
+      <label>Messbar durch <input name="metric" placeholder="leer lassen: die App schlägt etwas vor"></label>
       <label>Bis wann <input type="date" name="due"></label>
       <div class="row" style="align-items:flex-end"><button class="btn" type="submit">Ziel anlegen</button></div>
+      <div id="goalDetect" class="small" style="grid-column:1/-1"></div>
     </form>
   </div>
   <div id="goalList"></div>
@@ -3482,7 +3486,7 @@ function renderDashboard() {
 
   // Heutige Session / Begrüssung
   const tm = ms.filter(m => m.date === today());
-  const goal = state.goals.filter(g => !g.done).slice(-1)[0];
+  const goal = activeGoal();
   const card = $("#todayCard");
   card.className = "card hero-banner";
   if (!ms.length) {
@@ -3491,7 +3495,7 @@ function renderDashboard() {
       <button class="btn ghost" type="button" data-go="data" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Rivals Data synchronisieren</button>
       <button class="btn ghost" type="button" data-go="lessons" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Lektion 1 starten</button></div>`;
   } else if (!tm.length) {
-    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
+    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}${(() => { const o = openTasks(goal).filter(t => t.id !== "review")[0]; return o ? `<br><span class="small">Heute dazu: ${esc(o.text)}</span>` : ""; })()}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
   } else {
     const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
     card.innerHTML = `<h2>Heutige Session</h2>
@@ -4435,11 +4439,17 @@ function renderTraining() {
   $("#streakInfo").textContent = `${done.filter(d => state.routine.includes(d)).length}/${state.routine.length} heute · 🔥 ${s} Tag${s === 1 ? "" : "e"}`;
   const drills = mistakeCounts(state.matches.slice(-20)).slice(0, 3).map(([m, c]) => {
     const l = lessonForMistake(m);
-    return ["info", `<b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}${l ? `<br><button class="linkbtn small" type="button" data-lesson="${l.id}">📘 Passende Lektion: ${esc(l.title)}</button>` : ""}`];
+    const tp = GOAL_TOPICS.find(x => x.mistakes.includes(m));
+    return ["info", `<b>${esc(m)}</b> (${c}×)<br>${esc(DRILLS[m] || "")}${l ? `<br><button class="linkbtn small" type="button" data-lesson="${l.id}">📘 Passende Lektion: ${esc(l.title)}</button>` : ""}${tp ? `<br><button class="linkbtn small" type="button" data-gsug="${tp.id}">🎯 Als Wochenziel setzen</button>` : ""}`];
   });
   const badEnemy = enemyStats(state.matches.slice(-40)).filter(x => x[1].n >= 3).sort((a, b) => a[1].wr - b[1].wr)[0];
   if (badEnemy && badEnemy[1].wr < 0.5) {
     drills.push(["bad", `<b>Matchup: ${esc(badEnemy[0])}</b> (${pct(badEnemy[1].wr)} Winrate)<br>Lies im Helden-Guide, wer ${esc(badEnemy[0])} kontert, und spiele diese Woche 3 Quick Matches mit einem dieser Helden. ${counterTip(badEnemy[0])}.`]);
+  }
+  const ag = activeGoal();
+  if (ag && goalTopics(ag).length) {
+    const ot = openTasks(ag).filter(t => t.id !== "review").slice(0, 3), l = goalLessons(ag).find(x => !lessonsDone()[x.id]);
+    drills.unshift(["good", `<b>Dein Wochenziel: ${esc(ag.title)}</b>${ot.length ? `<ul class="wl" style="margin:6px 0">${ot.map(t => `<li><b>${t.kind}:</b> ${esc(t.text)}</li>`).join("")}</ul>` : "<br>Alle Aufgaben sind erledigt."}${l ? `<button class="linkbtn small" type="button" data-lesson="${l.id}">📘 Passende Lektion: ${esc(l.title)}</button> · ` : ""}<button class="linkbtn small" type="button" data-pact="tab" data-tab="goals">Alle Aufgaben</button>`]);
   }
   $("#drills").innerHTML = notes(drills) || empty("Sobald du Fehler und Gegner in Matches erfasst, erscheinen hier passende Übungen.", "target");
 }
@@ -4462,13 +4472,235 @@ $("#timerBtn").addEventListener("click", () => {
   }, 250);
 });
 
+// ---------- Wochenziele steuern das Training ----------
+// Du schreibst dein Ziel in eigenen Worten. Die App erkennt das Thema (über Schlüsselwörter), wählt passende Lektionen aus und
+// stellt Aufgaben aus den Übungen der Lektionen zusammen. Erkanntes Thema, Aufgaben und Fortschritt kannst du jederzeit von Hand ändern.
+const GOAL_TOPICS = [
+  { id: "survive", name: "Überleben & Positionierung", title: "Weniger sterben", short: "Ø Tode pro Match sinkt", metric: "survive",
+    kw: ["sterb", "tod", "tode", "uberleb", "death", "position", "deckung", "cover", "zu weit vorne", "gierig"],
+    mistakes: ["Zu weit vorne", "Allein geflankt", "Keine Deckung genutzt"], lessons: ["l06", "l07", "l08", "l10"],
+    measure: "Zähle nach jedem Match deine Tode und schreib auf, wo du gestorben bist: Position, Fluchtweg, gegnerische Ult, zu gierig oder vom Team getrennt." },
+  { id: "heal", name: "Heilen & Heal-Priorität", title: "Meine Heilung verbessern", short: "Heilung pro 10 Minuten steigt", metric: "heal",
+    kw: ["heil", "heal"], mistakes: [], lessons: ["l30", "l31"],
+    measure: "Trag bei jedem Match die Dauer und deine Heilung ein. Dann siehst du deine Heilung pro 10 Minuten." },
+  { id: "ult", name: "Ults", title: "Meine Ults besser nutzen", short: "Ult-Wirkung steigt", metric: "ult",
+    kw: ["ult"], mistakes: ["Ult verschwendet"], lessons: ["l14", "l31"],
+    measure: "Notiere bei jeder Ult, ob sie etwas gebracht hat. Beim Loggen trägst du Ults und Ult-Wirkung ein." },
+  { id: "fight", name: "Teamfights & Fokus", title: "Fights gemeinsam und mit Fokus spielen", short: "Match-Fokus wird umgesetzt", metric: null,
+    kw: ["teamfight", "fight", "kampf", "zusammen", "fokus", "focus", "zielpriorit", "aggro"], mistakes: ["Fokus auf falsches Ziel", "Ohne Team reingegangen"], lessons: ["l11", "l12", "l13"],
+    measure: "Sag vor dem Fight kurz an, wen ihr fokussiert, und notiere, ob das Team mitgemacht hat." },
+  { id: "aim", name: "Zielen & Mechanik", title: "Besser zielen", short: "Treffsicherer im Fight", metric: null,
+    kw: ["zielen", "aim", "treff", "genau", "flick", "tracking", "mechanik"], mistakes: ["Schlechtes Zielen"], lessons: ["l04", "l05"],
+    measure: "Mach vor jeder Session 10 Minuten Aim-Warmup im Practice Range: erst Tracking auf bewegliche Bots, dann Flicks." },
+  { id: "comm", name: "Kommunikation", title: "Mehr und klarer kommunizieren", short: "Mindestens drei Calls oder Pings pro Match", metric: null,
+    kw: ["kommuni", "ping", "voice", "ansage", "call", "absprache", "sprech", "chat"], mistakes: ["Kommunikation fehlte"], lessons: ["l15", "l37"],
+    measure: "Zähle in jedem Match deine Pings und Calls. Ziel: mindestens drei, kurz und konkret (wer, wo, was)." },
+  { id: "counter", name: "Counter & Heldenwahl", title: "Bessere Heldenwahl gegen die Gegner", short: "Gegen Problem-Gegner steigt die Winrate", metric: null,
+    kw: ["counter", "swap", "wechsel", "heldenwahl", "pick", "gegner", "komposition", "matchup"], mistakes: ["Gegner-Counter ignoriert", "Zu spät gewechselt (Held)"], lessons: ["l21", "l22", "l23"],
+    measure: "Trag in jedem Match das Gegnerteam ein und prüfe vor der Heldenwahl im Tab „Team & Counter“, ob ein Counter dabei ist." },
+  { id: "maps", name: "Maps & Modi", title: "Maps und Objectives besser spielen", short: "Weniger Punkte und Konvois verschenkt", metric: null,
+    kw: ["map", "karte", "objective", "domination", "convoy", "convergence", "overtime", "punkt", "modus", "modi"], mistakes: ["Objective verlassen", "Nicht auf Minimap/Sound geachtet"], lessons: ["l16", "l17", "l18", "l19", "l20", "l09"],
+    measure: "Notiere nach jedem Match die Map und was dort gut oder schlecht lief." },
+  { id: "dive", name: "Gegen Dive spielen", title: "Gegen Dive besser verteidigen", short: "Dive überleben", metric: null,
+    kw: ["dive", "backline", "peel", "anspring", "flanker"], mistakes: [], lessons: ["l24", "l25", "l30"],
+    measure: "Heb deine Fluchtfähigkeit für Diver auf und notiere, ob du einen Dive überlebt hast." },
+  { id: "tank", name: "Tank lernen", title: "Tank spielen lernen", short: "Matches als Tank", metric: "tank",
+    kw: ["tank", "vanguard", "alle rollen", "allen rollen", "flex"], mistakes: ["Kein Raum gewonnen (Tank)"], lessons: ["l26", "l27", "l02"],
+    measure: "Spiel Matches als Tank, am besten ungewertet, und achte darauf, ob die Gegner nach deinem Vorstoss weiter hinten stehen." },
+  { id: "dps", name: "DPS lernen", title: "DPS spielen lernen", short: "Matches als DPS", metric: "dps",
+    kw: ["dps", "duelist", "damage", "schaden", "alle rollen", "allen rollen", "flex"], mistakes: ["Auf den Tank geschossen (DPS)"], lessons: ["l28", "l29", "l13"],
+    measure: "Spiel Matches als DPS, am besten ungewertet, und schiess zuerst auf gegnerische Supports, angeschlagene Gegner und Flanker." },
+  { id: "mental", name: "Ruhe & Tilt", title: "Ruhig bleiben, auch nach Niederlagen", short: "Weniger Tilt nach Niederlagen", metric: null,
+    kw: ["tilt", "frust", "arger", "ruhig", "mental", "wut", "nerven", "stress", "gelassen"], mistakes: ["Tilt / Frust"], lessons: ["l32", "l34"],
+    measure: "Nach 2 Niederlagen in Folge machst du 5 Minuten Pause. Danach liest du dein Ziel neu." },
+  { id: "review", name: "Replay & Review", title: "Replays auswerten", short: "Todesursachen sind bekannt", metric: null,
+    kw: ["review", "replay", "vod", "analys", "reflex"], mistakes: [], lessons: ["l33", "l01"],
+    measure: "Schau ein Replay (5 Minuten) an und schreib auf, woran du gestorben bist: Position, Fluchtweg, Ult, zu gierig oder vom Team getrennt." },
+  { id: "moves", name: "Cooldowns & Bewegung", title: "Cooldowns und Bewegung besser nutzen", short: "Fähigkeiten zur richtigen Zeit", metric: null,
+    kw: ["cooldown", "bewegung", "movement", "ausweich", "escape", "fluchtweg"], mistakes: ["Cooldowns falsch genutzt"], lessons: ["l05", "l27"],
+    measure: "Schreib für deinen Main drei Situationen auf, in denen du jede Fähigkeit nutzt, und prüfe sie im Match." },
+  { id: "pool", name: "Hero-Pool & Meta", title: "Meinen Hero-Pool festigen", short: "Wenige Helden sicher spielen", metric: null,
+    kw: ["pool", "main", "meta", "neuer held", "patch"], mistakes: [], lessons: ["l03", "l35"],
+    measure: "Spiel diese Woche nur wenige Helden aus deinem Pool und schreib pro Held eine Erkenntnis auf." },
+  { id: "stamina", name: "Ausdauer in langen Sessions", title: "Auch in langen Sessions konzentriert bleiben", short: "Gleichbleibende Leistung", metric: null,
+    kw: ["ausdauer", "pause", "mude", "konzentriert", "konzentration", "lange session"], mistakes: [], lessons: ["l34"],
+    measure: "Mach in langen Sessions regelmässig kurze Pausen und notiere, wann deine Leistung nachlässt." },
+  { id: "solo", name: "Solo-Queue & Führung", title: "In der Solo-Queue führen", short: "Mitspieler folgen deinen Ansagen", metric: null,
+    kw: ["solo", "anfuhr", "fuhrung", "mitspieler", "team lesen"], mistakes: [], lessons: ["l37", "l15"],
+    measure: "Beobachte in den ersten zwei Fights, wer vorne spielt und wer oft stirbt. Danach gibst du pro Fight einen kurzen Satz an." },
+  { id: "comeback", name: "Comeback-Spiel", title: "Rückstände drehen", short: "Rückstand ruhig aufholen", metric: null,
+    kw: ["comeback", "ruckstand", "aufholen", "drehen"], mistakes: [], lessons: ["l38"],
+    measure: "Zähle im Rückstand, wie viele Ults beim entscheidenden Fight bereit sind und ob alle leben." },
+  { id: "teamup", name: "Team-Ups", title: "Team-Ups nutzen", short: "Ein Team-Up pro Match", metric: null,
+    kw: ["team up", "teamup"], mistakes: [], lessons: ["l36"],
+    measure: "Setze das Team-Up im Match mindestens einmal bewusst ein und sag es vorher an." }
+];
+const topicById = id => GOAL_TOPICS.find(t => t.id === id);
+// Erkennt bis zu zwei Themen im Text (Schlüsselwörter am Wortanfang)
+function detectTopics(text) {
+  const n = normQ(text);
+  return GOAL_TOPICS.map((t, i) => ({ id: t.id, i, score: t.kw.filter(k => new RegExp("(^| )" + k).test(n)).length })).filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score || a.i - b.i).slice(0, 2).map(x => x.id);
+}
+function goalTopics(g) { return (Array.isArray(g.topics) ? g.topics : detectTopics(`${g.title} ${g.metric || ""}`)).map(topicById).filter(Boolean); }
+function goalCreated(g) {
+  if (g.created) return g.created;
+  const t = parseInt(String(g.id).slice(0, 8), 36);
+  return t > 1.6e12 && t < 4e12 ? new Date(t).toISOString().slice(0, 10) : today();
+}
+function addDays(date, n) { const d = new Date(date + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+// Offene Ziele: aktuelle zuerst (nach Frist), abgelaufene danach. Das erste bestimmt das Training.
+function openGoals() {
+  return state.goals.map((g, i) => [g, i]).filter(([g]) => !g.done)
+    .sort((a, b) => ((a[0].due && a[0].due < today()) - (b[0].due && b[0].due < today())) || (a[0].due || "9999").localeCompare(b[0].due || "9999") || b[1] - a[1]).map(x => x[0]);
+}
+const activeGoal = () => openGoals()[0] || null;
+function goalLessonIds(g) {
+  const ids = [];
+  goalTopics(g).forEach(t => t.lessons.forEach(id => { if (lessonById(id) && !ids.includes(id)) ids.push(id); }));
+  return ids;
+}
+// Bis zu drei offene Lektionen, dazu eine erledigte zum Wiederholen
+function goalLessons(g) {
+  const done = lessonsDone(), ids = goalLessonIds(g);
+  return ids.filter(id => !done[id]).slice(0, 3).concat(ids.filter(id => done[id]).slice(0, 1)).map(lessonById);
+}
+function goalTasks(g) {
+  const out = [], done = lessonsDone();
+  goalTopics(g).forEach(t => {
+    const m = t.mistakes.find(x => DRILLS[x]);
+    if (m) out.push({ id: `${t.id}:drill`, kind: "Übung", text: DRILLS[m] });
+    const ls = t.lessons.map(lessonById).filter(Boolean), l = ls.find(x => !done[x.id]) || ls[0];
+    if (l) out.push({ id: `${t.id}:focus`, kind: "Match-Fokus", text: l.focus, lesson: l.id });
+    out.push({ id: `${t.id}:measure`, kind: "Messen", text: t.measure });
+  });
+  if (out.length) out.push({ id: "review", kind: "Rückblick", text: "Schreib am Ende der Woche zwei Sätze auf: Was hat funktioniert? Was machst du nächste Woche anders?" });
+  return out;
+}
+const taskDone = (g, id) => !!(g.tasksDone && g.tasksDone[id]);
+const openTasks = g => goalTasks(g).filter(t => !taskDone(g, t.id));
+// So siehst du, ob es klappt: Zahlen seit Beginn des Ziels, verglichen mit den 20 Matches davor
+function goalProgress(g) {
+  const since = goalCreated(g), after = state.matches.filter(m => m.date >= since), before = state.matches.filter(m => m.date < since).slice(-20);
+  const sa = summary(after), sb = summary(before), rows = [];
+  const cmp = (label, now, prev, fmt, lowerBetter) => {
+    let trend = "";
+    if (isFinite(now) && isFinite(prev)) { const d = now - prev, eps = Math.abs(prev) * 0.02 + 0.01; trend = Math.abs(d) < eps ? "gleich" : (d < 0) === lowerBetter ? "besser" : "schlechter"; }
+    rows.push(`<li><b>${esc(label)}:</b> ${isFinite(now) ? fmt(now) : "–"}${isFinite(prev) ? ` (davor ${fmt(prev)}${trend ? `, ${trend}` : ""})` : " (noch kein Vergleich)"}</li>`);
+  };
+  rows.push(`<li><b>Matches seit ${fmtDate(since)}:</b> ${after.length}</li>`);
+  goalTopics(g).forEach(t => {
+    if (t.metric === "survive" && sa.n) {
+      cmp("Ø Tode pro Match", sa.d, sb.d, v => numDe(v.toFixed(1)), true);
+      if (sa.timedN >= 3) cmp("Tode pro 10 Minuten", sa.d10, sb.d10, v => numDe(v.toFixed(1)), true);
+    } else if (t.metric === "heal") {
+      if (sa.timedN >= 3) cmp("Heilung pro 10 Minuten", sa.heal10, sb.heal10, fmtNum, false);
+      else rows.push("<li><b>Heilung pro 10 Minuten:</b> Trag bei den Matches die Dauer ein, dann erscheint sie hier.</li>");
+    } else if (t.metric === "ult") {
+      if (sa.ultN >= 3) cmp("Ult-Wirkung", sa.ultPct, sb.ultPct, pct, false);
+      else rows.push("<li><b>Ult-Wirkung:</b> Trag beim Loggen Ults und Wirkung ein, dann erscheint sie hier.</li>");
+    } else if (t.metric === "tank" || t.metric === "dps") {
+      const f = flexStats().find(x => x.role === (t.metric === "tank" ? "Vanguard" : "Duelist"));
+      if (f) rows.push(`<li><b>Matches als ${t.metric === "tank" ? "Tank" : "DPS"}:</b> ${f.n} von ${flexGoal().n}${f.ready ? " · bereit ✓" : ""}</li>`);
+    }
+  });
+  const fs = goalLessonIds(g).map(focusStats), fn = fs.reduce((x, y) => x + y.n, 0);
+  if (fn) rows.push(`<li><b>Match-Fokus umgesetzt:</b> ${fs.reduce((x, y) => x + y.yes, 0)} von ${fn} bewerteten Matches</li>`);
+  return `<ul class="wl">${rows.join("")}</ul>`;
+}
+function goalTopicChips(g, open) {
+  const ids = goalTopics(g).map(t => t.id);
+  return `<details class="mt" ${open ? "open" : ""}><summary>Thema ändern</summary><div class="chips mt">${GOAL_TOPICS.map(t => `<span class="chip ${ids.includes(t.id) ? "on" : ""}" data-gtopic="${g.id}" data-t="${t.id}">${esc(t.name)}</span>`).join("")}</div>
+    <p class="muted small" style="margin:6px 0 0">Wähle ein bis drei Themen. Lektionen und Aufgaben passen sich an.</p></details>`;
+}
+function goalTrainingHtml(g) {
+  const ts = goalTopics(g);
+  if (!ts.length) return `<div class="gtrain"><div class="note info"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Ziel habe ich kein Thema erkannt. Wähle ein oder zwei Themen, dann stelle ich Lektionen und Aufgaben dazu zusammen.</div></div>${goalTopicChips(g, true)}</div>`;
+  const done = lessonsDone(), ids = goalLessonIds(g), dn = ids.filter(id => done[id]).length, tasks = goalTasks(g), td = tasks.filter(t => taskDone(g, t.id)).length;
+  const seen = new Set();
+  const rate = g.rate || 0;
+  return `<div class="gtrain">
+    <div class="small" style="margin-bottom:6px"><b>Erkannte Themen:</b> ${ts.map(t => `<span class="badge">${esc(t.name)}</span>`).join(" ")}</div>
+    <h3>Lektionen zum Ziel <span class="badge">${dn}/${ids.length}</span></h3>
+    ${goalLessons(g).map(l => { const d = done[l.id], st = state.lessons.progress[l.id]; return `<div class="orow"><div class="sp"><b>${d ? "✓ " : ""}Lektion ${lessonNo(l.id)}: ${esc(l.title)}</b><div class="small muted">ca. ${l.minutes} Min.${d ? " · erledigt, zum Wiederholen" : ""}</div></div>
+      <button type="button" class="btn small ${d ? "ghost" : ""}" data-lesson="${l.id}">${d ? "Wiederholen" : st ? "Fortsetzen" : "Starten"}</button></div>`; }).join("")}
+    <h3>Aufgaben für diese Woche <span class="badge">${td}/${tasks.length}</span></h3>
+    ${tasks.map((t, i) => `<div class="check ${taskDone(g, t.id) ? "done" : ""}"><input type="checkbox" id="gt${g.id}${i}" data-gtask="${g.id}" data-t="${esc(t.id)}" ${taskDone(g, t.id) ? "checked" : ""}>
+      <label for="gt${g.id}${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem"><span style="display:block"><b class="small">${t.kind}:</b> ${linkify(esc(t.text), seen)}</span></label></div>`).join("")}
+    <h3>So siehst du, ob es klappt</h3>${goalProgress(g)}
+    <div class="field mt">Wie sitzt es? <span class="muted small">Dein Ziel: Es läuft nebenbei, ohne dass du nachdenken musst.</span>
+      <div class="chips">${[1, 2, 3].map(v => `<button type="button" class="chip ${rate === v ? "on" : ""}" data-grate="${g.id}" data-v="${v}">${AUTO_LABEL[v]}</button>`).join("")}</div></div>
+    ${goalTopicChips(g, false)}</div>`;
+}
+// Karte im Trainingstag: Das Wochenziel gibt dem Tag einen Schwerpunkt
+function goalDayCardHtml(n) {
+  const g = activeGoal();
+  if (!g) return "";
+  const ts = goalTopics(g), open = openTasks(g).filter(t => t.id !== "review"), first = open[0] || openTasks(g)[0];
+  const focus = goalTasks(g).find(t => t.kind === "Match-Fokus"), inDay = dayLessons(n);
+  const l = goalLessons(g).find(x => !lessonsDone()[x.id] && !inDay.includes(x.id));
+  return `<div class="card today-card"><div class="card-head"><h2>${icon("goals")}Dein Wochenziel</h2><span class="badge">${g.due ? "bis " + fmtDate(g.due) : "ohne Frist"}</span></div>
+    <p style="margin:0 0 8px"><b>${esc(g.title)}</b>${ts.length ? ` · ${ts.map(t => esc(t.name)).join(", ")}` : ""}</p>
+    ${ts.length ? `<ul class="wl">${first ? `<li><b>Heute zum Ziel:</b> ${linkify(esc(first.text), new Set())} <button type="button" class="btn small ghost" data-gdone="${g.id}" data-t="${esc(first.id)}">Erledigt</button></li>` : "<li>Alle Aufgaben zum Ziel sind erledigt.</li>"}
+      ${focus ? `<li><b>Dein Mini-Ziel für Block 3:</b> ${esc(focus.text)}</li>` : ""}
+      ${l ? `<li><b>Passende Lektion:</b> ${esc(l.title)} <button type="button" class="btn small" data-lesson="${l.id}" data-from-day="${n}">Starten</button></li>` : ""}</ul>`
+      : `<p class="muted small">Zu diesem Ziel ist noch kein Thema gewählt. Wähle es im Tab Lernziele.</p>`}
+    <div class="row"><button type="button" class="btn ghost small" data-pact="tab" data-tab="goals">Alle Aufgaben und Fortschritt</button></div></div>`;
+}
+// Vorschläge aus den eigenen Matches: häufigste Fehler, Problem-Gegner, Rollen-Flex
+function goalSuggestions() {
+  const out = [], used = new Set(openGoals().flatMap(g => goalTopics(g).map(t => t.id)));
+  const add = (t, why) => { if (t && !used.has(t.id) && !out.some(o => o.t.id === t.id)) out.push({ t, why }); };
+  mistakeCounts(state.matches.slice(-20)).slice(0, 4).forEach(([m, c]) => add(GOAL_TOPICS.find(x => x.mistakes.includes(m)), `${m}, ${c}× in den letzten 20 Matches`));
+  const bad = enemyStats(state.matches.slice(-40)).filter(x => x[1].n >= 3 && x[1].wr < 0.5).sort((a, b) => a[1].wr - b[1].wr)[0];
+  if (bad) add(topicById("counter"), `Gegen ${bad[0]} nur ${pct(bad[1].wr)} Siege`);
+  flexStats().filter(x => FLEX_ROLES.includes(x.role) && !x.ready).forEach(x => add(topicById(x.role === "Vanguard" ? "tank" : "dps"), `${x.n} von ${flexGoal().n} Matches als ${ROLE_SHORT[x.role]}`));
+  return out.slice(0, 3);
+}
+function createGoal(title, metric, due, topics) {
+  const ids = Array.isArray(topics) ? topics : detectTopics(`${title} ${metric || ""}`), t0 = topicById(ids[0]);
+  const g = { id: newId(), title, metric: metric || (t0 ? t0.short : ""), metricAuto: !metric && !!t0, due: due || addDays(today(), 6), done: false, topics: ids, created: today(), tasksDone: {} };
+  state.goals.push(g); save();
+  return g;
+}
+function prefillGoal(topicId) {
+  const t = topicById(topicId), f = $("#goalForm");
+  if (!t || !f) return;
+  showTab("goals"); window.scrollTo({ top: 0 });
+  f.elements.title.value = t.title; f.elements.metric.value = "";
+  if (!f.elements.due.value) f.elements.due.value = addDays(today(), 6);
+  renderGoalDetect(); f.elements.title.focus();
+  toast("Vorschlag eingetragen. Passe ihn an und tippe auf „Ziel anlegen“.");
+}
+function renderGoalSuggest() {
+  const el = $("#goalSuggest"), sg = goalSuggestions();
+  el.innerHTML = sg.length ? `<div class="field" style="margin-bottom:12px">Vorschläge aus deinen Matches <span class="muted small">Tippe auf einen Vorschlag, er landet im Formular.</span>
+    <div class="chips">${sg.map(x => `<span class="chip" data-gsug="${x.t.id}" title="${esc(x.why)}">${esc(x.t.title)} <span class="muted small">· ${esc(x.why)}</span></span>`).join("")}</div></div>` : "";
+}
+function renderGoalDetect() {
+  const el = $("#goalDetect"), f = $("#goalForm");
+  if (!el || !f) return;
+  const text = `${f.elements.title.value} ${f.elements.metric.value}`.trim();
+  if (!text) { el.innerHTML = '<span class="muted">Schreib dein Ziel in eigenen Worten. Die App erkennt das Thema und stellt dazu Lektionen und Aufgaben zusammen.</span>'; return; }
+  const ts = detectTopics(text).map(topicById);
+  el.innerHTML = ts.length ? `Erkannt: ${ts.map(t => `<span class="badge">${esc(t.name)}</span>`).join(" ")}` : '<span class="muted">Noch kein Thema erkannt. Nach dem Anlegen wählst du es unter dem Ziel aus.</span>';
+}
+
 // ---------- Lernziele ----------
 function renderGoals() {
-  $("#goalList").innerHTML = state.goals.length ? state.goals.slice().reverse().map(g => `<div class="card">
+  const f = $("#goalForm");
+  if (f && !f.elements.due.value) f.elements.due.value = addDays(today(), 6);
+  renderGoalSuggest(); renderGoalDetect();
+  const open = openGoals(), closed = state.goals.filter(g => g.done).reverse(), ag = open[0];
+  $("#goalList").innerHTML = state.goals.length ? open.concat(closed).map(g => {
+    const late = !g.done && g.due && g.due < today();
+    return `<div class="card">
       <div class="card-head">
         <h2>${g.done ? "✅" : "🎯"} ${esc(g.title)}</h2>
-        <span class="muted small">${g.due ? "bis " + fmtDate(g.due) : ""}</span></div>
-      ${g.metric ? `<p class="lead">Messbar durch: ${esc(g.metric)}</p>` : ""}
+        <span class="row" style="gap:6px">${!g.done && g === ag ? '<span class="badge">steuert dein Training</span>' : ""}${late ? '<span class="badge" style="background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--text)">Frist vorbei</span>' : ""}<span class="muted small">${g.due ? "bis " + fmtDate(g.due) : ""}</span></span></div>
+      ${g.metric ? `<p class="lead">Messbar durch: ${esc(g.metric)}${g.metricAuto ? " (Vorschlag der App)" : ""}</p>` : ""}
+      ${late ? `<div class="note info" style="margin-bottom:8px"><span class="ni" aria-hidden="true">i</span><div>Die Frist ist um. Hat es geklappt? Schau auf deine Zahlen, schreib einen Rückblick und markiere das Ziel als erreicht. Danach legst du das nächste an.</div></div>` : ""}
+      ${g.done ? "" : goalTrainingHtml(g)}
       <div class="grid-2">
         <label>Durchführen – was übe ich konkret? <textarea data-g="${g.id}" data-f="plan">${esc(g.plan || "")}</textarea></label>
         <label>Reflektieren – was hat funktioniert, was nicht? <textarea data-g="${g.id}" data-f="reflection">${esc(g.reflection || "")}</textarea></label>
@@ -4476,26 +4708,55 @@ function renderGoals() {
       <div class="row mt">
         <button class="btn small ${g.done ? "ghost" : ""}" type="button" data-done="${g.id}">${g.done ? "Wieder öffnen" : "Als erreicht markieren"}</button>
         <button class="btn danger small" type="button" data-rmg="${g.id}">Löschen</button>
-      </div></div>`).join("")
+      </div></div>`;
+  }).join("")
     : `<div class="card">${empty("Noch keine Ziele. Starte mit einem kleinen, konkreten Ziel für diese Woche.", "goals")}</div>`;
   $("#goalList").querySelectorAll("textarea[data-g]").forEach(t => t.addEventListener("change", () => {
     const g = state.goals.find(x => x.id === t.dataset.g); g[t.dataset.f] = t.value; save(); toast("Gespeichert");
   }));
   $("#goalList").querySelectorAll("[data-done]").forEach(b => b.addEventListener("click", () => {
-    const g = state.goals.find(x => x.id === b.dataset.done); g.done = !g.done; save(); renderGoals();
+    const g = state.goals.find(x => x.id === b.dataset.done); g.done = !g.done; save(); render();
     if (g.done) toast("Ziel erreicht! 🎉");
   }));
   $("#goalList").querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", async () => {
     if (!(await askConfirm("Dieses Ziel löschen?", "Löschen", true))) return;
-    state.goals = state.goals.filter(x => x.id !== b.dataset.rmg); save(); renderGoals();
+    state.goals = state.goals.filter(x => x.id !== b.dataset.rmg); save(); render();
   }));
 }
+// Themen, Aufgaben und Selbsteinschätzung der Ziele (überall in der App)
+document.addEventListener("click", e => {
+  const sug = e.target.closest("[data-gsug]");
+  if (sug) { prefillGoal(sug.dataset.gsug); return; }
+  const tp = e.target.closest("[data-gtopic]");
+  if (tp) {
+    const g = state.goals.find(x => x.id === tp.dataset.gtopic); if (!g) return;
+    const cur = goalTopics(g).map(t => t.id), id = tp.dataset.t;
+    if (cur.includes(id)) cur.splice(cur.indexOf(id), 1); else if (cur.length >= 3) { toast("Höchstens drei Themen pro Ziel"); return; } else cur.push(id);
+    g.topics = cur; save(); render();
+    const d = [...document.querySelectorAll("[data-gtopic]")].find(x => x.dataset.gtopic === g.id); if (d && d.closest("details")) d.closest("details").open = true;
+    return;
+  }
+  const rt = e.target.closest("[data-grate]");
+  if (rt) { const g = state.goals.find(x => x.id === rt.dataset.grate); if (!g) return; g.rate = g.rate === +rt.dataset.v ? 0 : +rt.dataset.v; save(); render(); return; }
+  const dn = e.target.closest("[data-gdone]");
+  if (dn) { const g = state.goals.find(x => x.id === dn.dataset.gdone); if (!g) return; g.tasksDone = Object.assign({}, g.tasksDone, { [dn.dataset.t]: true }); save(); render(); toast("Aufgabe erledigt ✓"); }
+});
+document.addEventListener("change", e => {
+  const t = e.target.closest && e.target.closest("[data-gtask]");
+  if (!t) return;
+  const g = state.goals.find(x => x.id === t.dataset.gtask); if (!g) return;
+  g.tasksDone = Object.assign({}, g.tasksDone); if (t.checked) g.tasksDone[t.dataset.t] = true; else delete g.tasksDone[t.dataset.t];
+  save(); render();
+});
 $("#goalForm").addEventListener("submit", e => {
   e.preventDefault();
   const f = new FormData(e.target);
-  state.goals.push({ id: newId(), title: f.get("title").trim(), metric: f.get("metric").trim(), due: f.get("due"), done: false });
-  save(); e.target.reset(); renderGoals();
+  const g = createGoal(f.get("title").trim(), f.get("metric").trim(), f.get("due"));
+  const ts = goalTopics(g);
+  e.target.reset(); render();
+  toast(ts.length ? `Ziel angelegt. Erkannt: ${ts.map(t => t.name).join(", ")}. Lektionen und Aufgaben stehen darunter.` : "Ziel angelegt. Wähle unter dem Ziel das passende Thema.");
 });
+$("#goalForm").addEventListener("input", renderGoalDetect);
 
 // ---------- KI-Coach ----------
 function buildPrompt() {
@@ -4530,7 +4791,7 @@ function buildPrompt() {
   const lessonFocus = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
   if (lessonFocus) lines.push("", "## Mein aktueller Trainingsfokus", `- Lektion „${lessonFocus.title}“ (${Object.keys(state.lessons.done).length}/${LESSONS.length} Lektionen abgeschlossen)`, `- Fokus: ${lessonFocus.focus}`);
   const openGoals = state.goals.filter(g => !g.done);
-  if (openGoals.length) lines.push("", "## Meine aktuellen Lernziele", ...openGoals.map(g => `- ${g.title}${g.metric ? ` (${g.metric})` : ""}`));
+  if (openGoals.length) lines.push("", "## Meine aktuellen Lernziele", ...openGoals.map(g => `- ${g.title}${g.metric ? ` (${g.metric})` : ""}${goalTopics(g).length ? ` [Themen: ${goalTopics(g).map(t => t.name).join(", ")}]` : ""}`));
   lines.push("", "## Meine Frage");
   const top = heroes[0] ? heroes[0][0] : "meinem Main";
   lines.push({
@@ -5106,6 +5367,8 @@ function renderLessons() {
   }
   const extras = [];
   if (planStarted() && info && info.why !== "course") extras.push(["info", `Die Lektionen folgen deinem Trainingsplan: Jeder Tag hat seine Lektion, so lernst du jedes Thema zuerst und übst es danach.${missed.length ? `<br><b>Noch offen aus früheren Tagen:</b> ${missed.slice(0, 5).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">Lektion ${lessonNo(m.id)} (Tag ${m.day})</button>`).join(", ")}` : ""}`]);
+  const gg = activeGoal(), gl = gg ? goalLessons(gg).filter(x => !done[x.id]) : [];
+  if (gg && gl.length) extras.push(["good", `<b>Für dein Wochenziel „${esc(gg.title)}“:</b> ${gl.map(x => `<button class="linkbtn" type="button" data-lesson="${x.id}">Lektion ${lessonNo(x.id)} – ${esc(x.title)}</button>`).join(", ")}`]);
   if (rec) extras.push(["info", `${esc(rec.reason)}: <button class="linkbtn" type="button" data-lesson="${rec.lesson.id}">Lektion ${lessonNo(rec.lesson.id)} – ${esc(rec.lesson.title)}</button>`]);
   const af = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
   if (af) {
@@ -5780,6 +6043,7 @@ function planDayHtml(n) {
     </div>
     ${focusCardHtml(n)}
     ${dayLessonCardHtml(n)}
+    ${goalDayCardHtml(n)}
     <div class="card"><div class="card-head"><h2>${icon("book")}Nachlesen beim Start</h2></div>
       <div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
         ${d.d.map(x => `<button type="button" class="chip ${planUi.read.has("D:" + x) ? "on" : ""}" data-pact="read" data-k="D:${x}">Drill ${x}</button>`).join("")}</div>
@@ -5833,6 +6097,7 @@ function weeklyPackageText() {
     `Letzte 7 Tage: ${plural(ms.length, "Match", "Matches")}${ms.length ? `, ${ms.filter(m => m.result === "W").length} Siege / ${ms.filter(m => m.result === "L").length} Niederlagen, Ø Tode ${s.d.toFixed(1)}, Ø KDA ${s.kda.toFixed(1)}` : ""}`,
     ...(s.timedN ? [`Pro 10 Minuten (${plural(s.timedN, "Match", "Matches")} mit Dauer): Heilung ${fmtNum(s.heal10)}, Schaden ${fmtNum(s.dmg10)}, Geblockt ${fmtNum(s.block10)}, Tode ${s.d10.toFixed(1)}`] : []),
     ...(s.ultN ? [`Ult-Wirkung: ${pct(s.ultPct)} (${numDe(s.ultHit)} von ${s.ultN} Ults)`] : []),
+    ...(() => { const g = activeGoal(); if (!g) return []; const ts = goalTopics(g), t = goalTasks(g); return [`Wochenziel: ${g.title}${ts.length ? ` (Themen: ${ts.map(x => x.name).join(", ")})` : ""}${g.due ? `, bis ${g.due}` : ""} · Aufgaben ${t.filter(x => taskDone(g, x.id)).length}/${t.length} erledigt${g.rate ? ` · Selbsteinschätzung: ${AUTO_LABEL[g.rate]}` : ""}`]; })(),
     `Lektionen: ${Object.keys(lessonsDone()).filter(id => lessonById(id)).length} von ${LESSONS.length} erledigt${missedLessons().length ? `, zum Plan noch offen: ${missedLessons().slice(0, 5).map(m => `${lessonById(m.id).title} (Tag ${m.day})`).join(", ")}` : ""}`,
     `Rollen-Flex: ${flexStats().map(x => `${ROLE_SHORT[x.role]} ${x.n}/${flexGoal().n}`).join(", ")}`,
     top ? `Häufigste markierte Fehler: ${top}` : "Keine Fehler markiert.",
