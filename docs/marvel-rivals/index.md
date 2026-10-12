@@ -28,7 +28,7 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | SMARTe Ziele nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches etwa alle 3 Stunden, die App übernimmt sie beim Öffnen (oder sofort per Knopf „Jetzt aktualisieren“); Backup als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches mehrmals täglich, die App übernimmt sie beim Öffnen (oder sofort per Knopf „Jetzt aktualisieren“); Backup als JSON, Export der Matches als CSV |
 
 !!! info "Wo werden deine Daten gespeichert?"
     - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
@@ -60,7 +60,7 @@ Statt jedes Match von Hand einzutragen, kannst du deine öffentlichen Matches vo
 blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript die Daten ab:
 
 **In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine eigene Claude-Sitzung) ruft das Skript
-etwa alle 3 Stunden auf und legt das Ergebnis in seinem Sitzungsprotokoll ab. Die App liest es beim Öffnen und
+mehrmals täglich (etwa um 10, 14, 18 und 22 Uhr) auf und legt das Ergebnis in seinem Sitzungsprotokoll ab. Die App liest es beim Öffnen und
 alle 20 Minuten, solange sie offen ist, und trägt neue Matches ein. Der Knopf **Jetzt aktualisieren** löst den
 Abgleich sofort aus (meist 1–3 Minuten). Der Helfer schreibt nichts in deine App-Daten, das Schreiben bleibt bei der App.
 Andernfalls geht es von Hand:
