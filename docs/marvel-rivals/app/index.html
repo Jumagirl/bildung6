@@ -4443,6 +4443,7 @@ const BRIDGE_ERRORS = {
   selection_required: "Du hast mehrere Connectoren mit dem Namen „Claude Code Remote“ – wähle einen aus und versuche es erneut.",
   needs_reauth: "Verbinde „Claude Code Remote“ in den claude.ai-Einstellungen unter „Connectors“ neu.",
   approval_required: "Die Anfrage wurde nicht bestätigt.",
+  blocked_by_policy: "Der Connector „Claude Code Remote“ hat die Werkzeuge „list_events“ und „send_message“ für diese Seite gesperrt. Öffne die Connector-Einstellungen, tippe auf „Claude Code Remote“ und erlaube bei den Tool-Berechtigungen „list_events“ und „send_message“. Wird das nicht angeboten, hat deine Organisation sie gesperrt.",
   server_unavailable: "Claude ist gerade nicht erreichbar. Die App versucht es später erneut.",
   upstream_error: "Claude hat gerade nicht geantwortet. Die App versucht es später erneut.",
   tool_error: "Der Verlauf des Sync-Helfers konnte nicht gelesen werden. Wahrscheinlich ist seine Sitzung beendet.",
@@ -4558,7 +4559,7 @@ function renderAuto() {
   const needPerm = !!a && (["not_in_manifest", "not_granted", "approval_required", "consent_required"].includes(a.code) || a.perm === "denied");
   banner.hidden = !bad || Bridge.hidden;
   if (bad) banner.innerHTML = `<b>Der automatische Abgleich deiner Matches funktioniert gerade nicht.</b> ${esc(a.text)}${a.detail ? ` <span class="small muted">(${esc(a.detail)})</span>` : ""}
-    <div class="row" style="margin-top:8px">${needPerm ? `<button class="btn small" type="button" data-bact="perm">Berechtigungen öffnen</button>` : ""}${a.state === "error" ? `<button class="btn small ghost" type="button" data-bact="retry">Erneut versuchen</button>` : ""}<button class="btn small ghost" type="button" data-bact="hide">Ausblenden</button></div>`;
+    <div class="row" style="margin-top:8px">${a.code === "blocked_by_policy" ? `<a class="btn small" href="https://claude.ai/customize/connectors" target="_blank" rel="noopener">Connector-Einstellungen öffnen</a>` : ""}${needPerm ? `<button class="btn small" type="button" data-bact="perm">Berechtigungen öffnen</button>` : ""}${a.state === "error" ? `<button class="btn small ghost" type="button" data-bact="retry">Erneut versuchen</button>` : ""}<button class="btn small ghost" type="button" data-bact="hide">Ausblenden</button></div>`;
   line.hidden = !a || !Bridge.mcp && a.state !== "unavailable";
   if (!a) return;
   const t = { pulling: "Prüfe gerade, ob der Sync-Helfer neue Matches hat …",
