@@ -4002,6 +4002,7 @@ function renderToday() {
   const missed = missedLessons();
   if (missed.length) news.push(["info", `<b>${plural(missed.length, "Lektion", "Lektionen")} aus früheren Tagen offen:</b> ${missed.slice(0, 3).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">${esc(lessonById(m.id).title)} (Tag ${m.day})</button>`).join(", ")}`]);
   if (g && g.due) { const left = Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(tdy + "T12:00:00")) / 864e5); if (left <= 2) news.push([left < 0 ? "bad" : "info", left < 0 ? `<b>Die Frist deines Ziels „${esc(g.title)}“ ist vorbei.</b> Schreib einen Rückblick und setz das nächste Ziel.` : `<b>Dein Ziel „${esc(g.title)}“ läuft ${left === 0 ? "heute" : left === 1 ? "morgen" : "in 2 Tagen"} ab.</b>`]); }
+  if (IN_VIEWER && SYNC_HELPER && Bridge.auto && Bridge.auto.state === "none") news.push(["info", `<b>Automatischer Abgleich:</b> ${esc(Bridge.auto.text)}`]);
   const dueN = dueQs(false).length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
@@ -5669,7 +5670,14 @@ async function initBridge() {
   autoPull(); setInterval(() => { if (document.visibilityState === "visible") autoPull(); }, 20 * 60 * 1000);
 }
 // Marker des Helfers: @@RIVALS-SYNC:BEGIN <ID>@@ <Base64-URL der Sync-JSON> @@RIVALS-SYNC:END@@ (bzw. ERROR mit Meldung)
-const SYNC_MARK = /@@RIVALS-SYNC:(BEGIN|ERROR) ([A-Za-z0-9_.:-]+)@@ ([A-Za-z0-9_-]+) @@RIVALS-SYNC:END@@/g;
+// BEGINZ: dasselbe, aber mit gzip komprimiert (viel kürzer, schont Verbindung und Sitzungsprotokoll)
+const SYNC_MARK = /@@RIVALS-SYNC:(BEGINZ|BEGIN|ERROR) ([A-Za-z0-9_.:-]+)@@ ([A-Za-z0-9_-]+) @@RIVALS-SYNC:END@@/g;
+async function gunzipB64(str) {
+  let b = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b.length % 4) b += "=";
+  const bytes = Uint8Array.from(atob(b), c => c.charCodeAt(0));
+  return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
 function b64urlDecode(str) {
   let b = str.replace(/-/g, "+").replace(/_/g, "/");
   while (b.length % 4) b += "=";
@@ -5682,6 +5690,7 @@ function parseSyncMarkers(text) {
     if (seen.has(key)) return m;
     seen.add(key);
     try {
+      if (kind === "BEGINZ") { out.push({ kind: "okz", id, b64 }); return m; }
       const raw = b64urlDecode(b64);
       out.push(kind === "BEGIN" ? { kind: "ok", id, data: JSON.parse(raw) } : { kind: "error", id, message: raw });
     } catch (e) { /* beschädigte Zeile überspringen */ }
@@ -5690,15 +5699,21 @@ function parseSyncMarkers(text) {
   return out;
 }
 const toolText = res => { const p = res && res.payload !== undefined ? res.payload : res; return typeof p === "string" ? p : JSON.stringify(p); };
-// Liest die neuesten Ergebnisse des Helfers (ältere zuerst); schaut bei Bedarf einige Seiten zurück
+// Liest die neuesten Ergebnisse des Helfers. Kleine Seiten (wenige Ereignisse pro Anfrage), die von neu nach alt gelesen werden:
+// So bleibt jede Antwort klein, auch wenn der Helfer schon viele Läufe im Protokoll hat.
 async function fetchHelperResults() {
   let before = null;
-  for (let page = 0; page < 3; page++) {
-    const args = { session_id: SYNC_HELPER, kinds: ["user"], limit: 100 };
+  for (let page = 0; page < 25; page++) {
+    const args = { session_id: SYNC_HELPER, kinds: ["user"], limit: 12 };
     if (before) args.before_id = before;
     const text = toolText(await Bridge.mcp.callTool(SYNC_SERVER, "list_events", args, { cache: false }));
     const marks = parseSyncMarkers(text);
-    if (marks.length) return marks;
+    for (const mk of marks) {
+      if (mk.kind !== "okz") continue;
+      try { mk.data = JSON.parse(await gunzipB64(mk.b64)); mk.kind = "ok"; delete mk.b64; } catch (e) { mk.kind = "bad"; }
+    }
+    const good = marks.filter(x => x.kind !== "bad");
+    if (good.length) return good;
     const more = /has_more\\?"\s*:\s*true/.test(text), fid = /first_id\\?"\s*:\s*\\?"([0-9a-fA-F-]{16,})/.exec(text);
     if (!more || !fid) break;
     before = fid[1];
@@ -5740,7 +5755,7 @@ async function autoPull(retried) {
   } catch (e) {
     const code = e && e.code;
     const perm = await permState();
-    setAuto({ state: "error", code, perm, text: BRIDGE_ERRORS[code] || `Die Verbindung zum Sync-Helfer hat nicht geklappt${code ? ` (${code})` : ""}.`, detail: String((e && e.message) || "").slice(0, 160) });
+    setAuto({ state: "error", code, perm, text: BRIDGE_ERRORS[code] || `Die Verbindung zum Sync-Helfer hat nicht geklappt${code ? ` (${code})` : ""}.`, detail: [code ? `Code: ${code}` : "", String((e && e.message) || "")].filter(Boolean).join(" · ").slice(0, 200) });
     if (e && e.retryable && !retried) setTimeout(() => autoPull(true), Math.min(60000, Math.max(5000, e.retryAfterMs || 15000)));
   }
   finally { Bridge.pulling = false; }
@@ -5774,7 +5789,7 @@ async function diagnoseBridge() {
   Bridge.diag = lines.join("\n"); renderAuto();
 }
 // Sichtbarer Status des automatischen Abgleichs (Banner oben bei Problemen, Zeile im Tab „Daten & Sync“)
-function setAuto(a) { Bridge.auto = a ? Object.assign({ at: Date.now() }, a) : null; renderAuto(); }
+function setAuto(a) { Bridge.auto = a ? Object.assign({ at: Date.now() }, a) : null; renderAuto(); if (currentTabSafe() === "today" && typeof renderToday === "function") renderToday(); }
 function renderAuto() {
   const a = Bridge.auto, banner = $("#bridgeBanner"), line = $("#autoPullInfo");
   if (!banner || !line) return;
