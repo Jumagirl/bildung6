@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import gzip
 import json
 import sys
 from datetime import datetime, timezone
@@ -370,7 +371,9 @@ def chat_line(data: dict, request_id: str) -> str:
     matches = list(data.get("matches", []))
     while True:
         slim["matches"] = matches
-        line = f"@@RIVALS-SYNC:BEGIN {request_id}@@ " + b64url(json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+        raw = json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        # BEGINZ = gzip + Base64: etwa fünfmal kürzer, schont das Sitzungsprotokoll des Helfers und die Verbindung der App
+        line = f"@@RIVALS-SYNC:BEGINZ {request_id}@@ " + b64url(gzip.compress(raw, 9, mtime=0)) + " @@RIVALS-SYNC:END@@"
         if len(line) <= CHAT_LIMIT or not matches:
             return line
         matches = sorted(matches, key=lambda m: m.get("ts") or 0, reverse=True)[:-1]
