@@ -362,6 +362,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 
 /* Hinweise */
 .notes { display: flex; flex-direction: column; gap: 8px; }
+.autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; }
+.autotag.ok { color: var(--good-text); border-color: var(--good); }
 .note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .9rem; }
 .note .ni { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; margin-top: 1px; }
 .note.good .ni { background: var(--good); }
@@ -3073,6 +3075,7 @@ function loadState(raw) {
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
   st.quiz = Object.assign({ asked: 0, correct: 0, wrong: {} }, st.quiz);
+  st.act = Object.assign({}, st.act);   // beantwortete Quizfragen pro Tag, damit die App Aufgaben selbst abhaken kann
   st.quiz.k = Object.assign({ asked: 0, correct: 0, wrong: {}, seen: {} }, st.quiz.k);
   st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
   // Umbenannte Tags in gespeicherten Daten: Flieger → Flyer, AntiFlieger → AntiFlyer
@@ -3137,6 +3140,10 @@ function saveLocal() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
 }
 function save() {
+  saveCore();
+  autoSync();
+}
+function saveCore() {
   state.updatedAt = Date.now();
   saveLocal();
   if (Cloud.ready) scheduleCloud();
@@ -4990,6 +4997,7 @@ function answerQuiz(choice) {
   if (quiz.answered) return;
   quiz.answered = choice;
   state.quiz.asked++;
+  actInc("quiz");
   if (choice === quiz.right) {
     state.quiz.correct++;
     if (state.quiz.wrong[quiz.subject]) state.quiz.wrong[quiz.subject]--;
@@ -5155,7 +5163,7 @@ function renderTraining() {
   const done = state.routineDone[today()] || [];
   $("#routine").innerHTML = state.routine.map((r, i) => `<div class="check ${done.includes(r) ? "done" : ""}">
       <input type="checkbox" id="rt${i}" ${done.includes(r) ? "checked" : ""}>
-      <label for="rt${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${esc(r)}</label>
+      <label for="rt${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${esc(r)}</label>${autoTagHtml(autoEval(r, { from: today(), to: today() }), done.includes(r))}
       <button class="btn danger small icon" type="button" data-rmr="${i}" aria-label="Entfernen">${icon("x")}</button></div>`).join("");
   $("#routine").querySelectorAll("input[type=checkbox]").forEach((c, i) => c.addEventListener("change", () => {
     const item = state.routine[i];
@@ -5948,7 +5956,7 @@ function lessonProgress(id) {
       const pick = weightedPick(pool, weight);
       review.push(pick); pool.splice(pool.indexOf(pick), 1);
     }
-    p[id] = { step: 0, answers: {}, practice: [], reflection: "", review };
+    p[id] = { step: 0, answers: {}, practice: [], reflection: "", review, t0: today() };
   }
   return p[id];
 }
@@ -5997,7 +6005,8 @@ function renderLessonView() {
     }).join("") + `<p class="muted small">${answered}/${qs.length} beantwortet</p>`;
   } else if (p.step === 2) {
     body = `<p class="lead" style="margin-top:0">Übe das im Practice Range, in einem Custom Game oder in deinen nächsten Matches. Hake ab, was du gemacht hast.</p>
-      ${l.practice.map((t, i) => `<div class="check ${p.practice[i] ? "done" : ""}"><input type="checkbox" id="lp${i}" data-pi="${i}" ${p.practice[i] ? "checked" : ""}><label for="lp${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${t}</label></div>`).join("")}
+      ${l.practice.map((t, i) => `<div class="check ${p.practice[i] ? "done" : ""}"><input type="checkbox" id="lp${i}" data-pi="${i}" ${p.practice[i] ? "checked" : ""}><label for="lp${i}" class="txt" style="font-weight:400;color:inherit;font-size:.92rem">${t}</label>${autoTagHtml(autoEval(t, { from: p.t0 || today() }), !!p.practice[i])}</div>`).join("")}
+      ${l.practice.some(t => autoEval(t, { from: p.t0 || today() })) ? '<p class="muted small" style="margin:6px 0 0">Aufgaben mit dem Vermerk „automatisch“ erkennt die App selbst, sobald du sie erledigt hast. Ein Häkchen, das du selbst setzt oder wegnimmst, bleibt so.</p>' : ""}
       <div class="row mt"><button class="btn ghost small" type="button" data-go="training">${icon("clock")}Aufwärm-Timer</button><button class="btn ghost small" type="button" data-go="goals">${icon("goals")}Lernziel anlegen</button></div>`;
   } else if (p.step === 3) {
     const fs = focusStats(l.id);
@@ -6903,9 +6912,126 @@ function mini3Html(n) {
 }
 function stepHtml(n, s, seen, o = {}) {
   const st = dayGet(n), done = o.carry ? !!o.carry.done : !!st.steps[s.key];
+  const auto = autoTagHtml(o.carry ? autoStepEval(o.carry.to, s, carryFor(o.carry.to).findIndex(x => x.id === o.carry.id)) : autoStepEval(n, s, -1), done);
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${auto}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+}
+
+
+// ---------- Aufgaben automatisch abhaken ----------
+// Die App erkennt, was du schon getan hast (Quizfragen beantwortet, Matches gespielt, Ziele angelegt …), und hakt die passende Aufgabe selbst ab.
+// Ein Häkchen, das du selbst setzt oder wegnimmst, bleibt immer so: Automatisch gesetzt werden nur Aufgaben, die noch nie angefasst wurden.
+var autoBusy = false;
+function actInc(kind) {
+  const d = today(), a = state.act || (state.act = {});
+  a[d] = a[d] || {}; a[d][kind] = (a[d][kind] || 0) + 1;
+  const keys = Object.keys(a);
+  if (keys.length > 150) keys.sort().slice(0, keys.length - 150).forEach(k => delete a[k]);
+}
+const actSum = (kind, from, to) => Object.keys(state.act || {}).reduce((n, d) => d >= from && (!to || d <= to) ? n + ((state.act[d] || {})[kind] || 0) : n, 0);
+const autoMatches = c => state.matches.filter(m => m.date >= c.from && (!c.to || m.date <= c.to));
+const autoMatchType = m => m.type || MAPS[canonMap(m.map)] || "";
+const autoGoalsSince = c => state.goals.filter(g => (g.created || "") >= c.from && (!c.to || (g.created || "") <= c.to)).length;
+function autoRes(cur, goal, one, many, wait) { return { cur: Math.min(cur, goal), goal, done: cur >= goal, unit: goal === 1 ? one : many, wait: wait || "" }; }
+// Erkennt anhand des Aufgabentexts, ob die App die Aufgabe prüfen kann. c = { from, to } als Datum.
+function autoEval(text, c) {
+  const t = String(text || "").replace(/&amp;/g, "&");
+  let m;
+  if ((m = /\b(\d+) (?:Quizfragen|Fragen)\b/.exec(t))) {
+    const counter = /Counter-Training/.test(t);
+    return autoRes(actSum("quiz", c.from, c.to) + (counter ? 0 : actSum("know", c.from, c.to)), +m[1], "Frage", "Fragen");
+  }
+  if (/Spiele je ein Quick Match pro Rolle/.test(t)) {
+    const roles = new Set(autoMatches(c).map(x => roleOfHero(x.hero)).filter(Boolean));
+    return autoRes(roles.size, 3, "Rolle", "Rollen");
+  }
+  if ((m = /Spiele ein (Domination|Convoy|Convergence)-Match/.exec(t))) return autoRes(autoMatches(c).filter(x => autoMatchType(x) === m[1]).length, 1, "Match", "Matches", `wartet auf ein ${m[1]}-Match`);
+  if ((m = /Spiele ein Match als (Vanguard|Duelist|Strategist)/.exec(t))) return autoRes(autoMatches(c).filter(x => roleOfHero(x.hero) === m[1]).length, 1, "Match", "Matches", `wartet auf ein Match als ${m[1]}`);
+  if (/^Spiele ein Match\b/.test(t)) return autoRes(autoMatches(c).length, 1, "Match", "Matches", "wartet auf ein geloggtes Match");
+  if (/Logge dein nächstes Match vollständig/.test(t)) return autoRes(autoMatches(c).filter(x => (x.enemies || []).length && ((x.mistakes || []).length || deathTotal(x.deathCauses))).length, 1, "Match", "Matches", "wartet auf ein Match mit Gegnerteam und Fehler");
+  if (/Trag im nächsten Match das Gegnerteam/.test(t)) return autoRes(autoMatches(c).filter(x => (x.enemies || []).length).length, 1, "Match", "Matches", "wartet auf ein Match mit Gegnerteam");
+  if ((m = /^Lege\b.*?\b(ein|zwei)\b.*?(?:Ziel|Lernziele)/.exec(t))) return autoRes(autoGoalsSince(c), m[1] === "zwei" ? 2 : 1, "Ziel", "Ziele");
+  if (/(?:als|in einem) Lernziel|als Ziel in den Tab|Prozess-Ziel/.test(t)) return autoRes(autoGoalsSince(c), 1, "Ziel", "Ziele");
+  if (/Lernziel.*festlegen/.test(t)) return autoRes(openGoals().length, 1, "Ziel", "Ziele", "wartet auf ein offenes Lernziel");
+  if (/Wähle deinen Main und zwei Ausweichhelden/.test(t)) return autoRes(poolHeroes().length, 3, "Held", "Helden");
+  if (/Notizfeld des Matches/.test(t)) return autoRes(autoMatches(c).filter(x => (x.notes || "").trim()).length, 1, "Match", "Matches", "wartet auf ein Match mit Notiz");
+  if (/ob deine Ults gut getimt waren/.test(t)) return autoRes(autoMatches(c).filter(x => x.ults > 0 && x.ultHit !== null && x.ultHit !== undefined).length, 1, "Match", "Matches", "wartet auf ein Match mit Ult-Wirkung");
+  if (/Nach jeder Niederlage einen Fehler notieren/.test(t)) {
+    const l = autoMatches(c).filter(x => x.result === "L");
+    return l.length ? autoRes(l.filter(x => (x.mistakes || []).length || deathTotal(x.deathCauses)).length, l.length, "Niederlage", "Niederlagen") : { cur: 0, goal: 0, done: false, wait: "heute noch keine Niederlage" };
+  }
+  return null;
+}
+function autoTagHtml(r, checked) {
+  if (!r || (checked && !r.done)) return "";
+  return `<span class="autotag ${r.done ? "ok" : ""}" title="Die App erkennt das selbst. Du kannst trotzdem jederzeit selbst abhaken oder das Häkchen wegnehmen.">${r.done ? "automatisch erkannt ✓" : esc("automatisch: " + (r.wait || `${r.cur} von ${r.goal} ${r.unit}`))}</span>`;
+}
+// Plan: Block-Schritte zählen Matches des Tages, Schritte mit Eintragsfeldern zählen ausgefüllte Felder
+const blockStepKeys = d => d.steps.filter(x => BLOCK_KEYS.includes(x.key)).map(x => x.key);
+function stepFieldKeys(n, s) {
+  return scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean).map((t, i) => WRITE_RE.test(t) ? s.key + ":" + i : null).filter(Boolean);
+}
+function autoStepEval(n, s, carryIdx) {
+  if (!planStarted() || !(n >= 1 && n <= 56) || n !== planDay()) return null;
+  const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
+  const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
+  if (idx >= 0) {
+    const B = blockMatches(), ms = state.matches.filter(m => m.date === today()).length;
+    return autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches heute`);
+  }
+  const keys = stepFieldKeys(n, s), f = st.fields || {};
+  if (keys.length) return autoRes(keys.filter(k => (f[k] || "").trim()).length, keys.length, "Eintrag", "Einträge");
+  return null;
+}
+function autoSync() {
+  if (autoBusy || typeof state === "undefined" || !state || !state.lessons) return;
+  autoBusy = true;
+  const hits = [];
+  try {
+    // Lektionen: Übungsaufgaben, gezählt ab dem Tag, an dem du die Lektion geöffnet hast
+    const prog = state.lessons.progress || {}, done = lessonsDone();
+    Object.keys(prog).forEach(id => {
+      const l = lessonById(id), p = prog[id];
+      if (!l || !p || done[id]) return;
+      if (!p.t0) p.t0 = today();
+      p.practice = p.practice || [];
+      l.practice.forEach((t, i) => {
+        if (p.practice[i] !== null && p.practice[i] !== undefined) return;
+        const r = autoEval(t, { from: p.t0 });
+        if (r && r.done) { p.practice[i] = true; hits.push(t); }
+      });
+    });
+    // Tägliche Routine im Tab Training
+    const td = today(), rd = new Set(state.routineDone[td] || []);
+    (state.routine || []).forEach(item => {
+      if (rd.has(item)) return;
+      const r = autoEval(item, { from: td, to: td });
+      if (r && r.done) { rd.add(item); hits.push(item); }
+    });
+    if (rd.size !== (state.routineDone[td] || []).length) state.routineDone[td] = [...rd];
+    // Trainingsplan: heutiger Tag
+    const n = planDay();
+    if (planStarted() && n <= 56) {
+      const d = PLAN.days[n - 1];
+      d.steps.forEach(s => {
+        const cur = dayGet(n).steps[s.key];
+        if (cur !== undefined && cur !== null) return;
+        const r = autoStepEval(n, s, -1);
+        if (r && r.done) { dayEnsure(n).steps[s.key] = true; hits.push(s.label.replace(/\s*\(.*\)/, "")); }
+      });
+      carryFor(n).forEach((c, i) => {
+        if (c.done || c.auto === false) return;
+        const s = PLAN.days[c.from - 1].steps.find(x => x.key === c.key), r = s && autoStepEval(n, s, i);
+        if (r && r.done) { c.done = today(); hits.push(`${s.label.replace(/\s*\(.*\)/, "")} von Tag ${c.from}`); }
+      });
+    }
+  } catch (e) { console.error("autoSync", e); }
+  autoBusy = false;
+  if (hits.length) {
+    saveCore();
+    toast(`Automatisch abgehakt: ${hits[0].length > 60 ? hits[0].slice(0, 57) + " …" : hits[0]}${hits.length > 1 ? ` und ${hits.length - 1} weitere` : ""} ✓`);
+  }
 }
 
 // ---------- Offene Blöcke nachholen ----------
@@ -7183,6 +7309,7 @@ function answerKnow(oi) {
   kq.answered = oi;
   const q = kq.q, k = state.quiz.k, ok = oi === q.a;
   k.asked++; k.seen[q.id] = (k.seen[q.id] || 0) + 1;
+  actInc("know");
   if (ok) { k.correct++; if (k.wrong[q.id]) k.wrong[q.id]--; if (kqSession) kqSession.correct++; }
   else k.wrong[q.id] = (k.wrong[q.id] || 0) + 1;
   save();
