@@ -669,6 +669,13 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .trend { font-weight: 800; margin-left: 2px; }
 .trend.up { color: var(--good-text); }
 .trend.down { color: var(--bad); }
+.pstep .pbody { min-width: 0; }
+.pstep label.pl { display: block; cursor: pointer; }
+.pstep input.pfield { width: 100%; height: auto; margin-top: 6px; }
+.pfield { width: 100%; font: inherit; font-size: .88rem; padding: 7px 9px; margin-top: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); resize: vertical; min-height: 0; }
+.pfield:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mini3 { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); }
+.pstep.carry { background: var(--accent-soft); border-radius: 10px; padding-left: 10px; padding-right: 10px; }
 .deathgrid { display: flex; flex-wrap: wrap; gap: 8px; }
 .dwrap { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
 .dwrap.on { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
@@ -3399,16 +3406,21 @@ function groupMulti(list, keysFn) {
 const FLEX_ROLES = ["Vanguard", "Duelist"];
 const FLEX_HERO_MIN = 3;   // ab so vielen Matches zählt ein Held als „gekannt“
 const ROLE_SHORT = { Vanguard: "Tank", Duelist: "DPS", Strategist: "Support" };
-const FLEX_LESSON = { Vanguard: "L20", Duelist: "L21" };
+const FLEX_LESSON = { Vanguard: "L20", Duelist: "L21", Strategist: "L1" };
 // Ziele pro Match: aus den Lektionen L20 und L21
 const FLEX_GOAL = {
   Vanguard: "Geh nur so weit vor, wie dein Support mitkommt, und hilf Mitspielern, die ein Diver anspringt (L20).",
-  Duelist: "Such dir vor dem Fight dein Ziel: zuerst gegnerische Supports, angeschlagene Gegner und Flanker, nicht den Tank mit Schild. Steh seitlich mit Deckung (L21)."
+  Duelist: "Such dir vor dem Fight dein Ziel: zuerst gegnerische Supports, angeschlagene Gegner und Flanker, nicht den Tank mit Schild. Steh seitlich mit Deckung (L21).",
+  Strategist: "Heile zuerst, wer noch zu retten ist, bleib nah bei deinem Tank und halte eine Fluchtfähigkeit bereit (L1)."
 };
+// Hauptrolle und Pool (einstellbar im Trainingsplan); die beiden anderen Rollen sind die Notfall-Rollen (Flex)
+const myRole = () => ["Strategist", "Vanguard", "Duelist"].includes(state.settings.mainRole) ? state.settings.mainRole : "Strategist";
+const flexNames = () => FLEX_ROLES.map(r => ROLE_SHORT[r]).join(" oder ");
+function syncFlexRoles() { const o = ["Vanguard", "Duelist", "Strategist"].filter(r => r !== myRole()); FLEX_ROLES.splice(0, FLEX_ROLES.length, ...o); }
 function flexGoal() { return { n: Math.max(1, +state.settings.flexMatches || 10), h: Math.max(1, +state.settings.flexHeroes || 2) }; }
 function flexStats() {
   const g = flexGoal(), byRole = group(state.matches, m => heroRole(m.hero));
-  return ["Strategist", ...FLEX_ROLES].map(r => {
+  return [myRole(), ...FLEX_ROLES].map(r => {
     const l = byRole[r] || [], sm = summary(l);
     const heroes = Object.entries(group(l, m => m.hero)).map(([h, x]) => [h, x.length]).sort((a, b) => b[1] - a[1]);
     const solid = heroes.filter(([, c]) => c >= FLEX_HERO_MIN).length;
@@ -3440,7 +3452,7 @@ function renderFlex() {
         .map(h => `<option ${h.name === flexPickOf(r) ? "selected" : ""} value="${esc(h.name)}">${esc(h.name)}${cnt[h.name] ? ` (${cnt[h.name]}×)` : ""}</option>`).join("")}</select></label>`;
   }).join("");
   const days = flexRoleDays().map(d => `<button type="button" class="dchip" data-flexday="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("");
-  foldFill(el, "Alle Rollen: Flex-Training", `<p class="lead">Du spielst Support. Damit du im Notfall Tank oder DPS übernehmen kannst, brauchst du in jeder Rolle ein paar Matches und Helden, die du kennst.</p>
+  foldFill(el, "Alle Rollen: Flex-Training", `<p class="lead">Du spielst ${ROLE_SHORT[myRole()]}. Damit du im Notfall ${flexNames()} übernehmen kannst, brauchst du in jeder Rolle ein paar Matches und Helden, die du kennst.</p>
     <div class="froles">${roleRows}</div>
     <div class="flexset mt">Deine Marke:
       <label class="inline-label"><input type="number" min="1" max="99" data-flexset="flexMatches" value="${g.n}" aria-label="Matches pro Rolle"> Matches pro Rolle</label>
@@ -3450,8 +3462,8 @@ function renderFlex() {
       ? `<div class="note info"><span class="ni" aria-hidden="true">i</span><div><b>Nächster Schritt: ${ROLE_SHORT[nx.role]}.</b> Spiel ${nx.need ? `noch ${plural(nx.need, "Match", "Matches")}` : "weitere Matches"} ${flexPickOf(nx.role) ? `mit ${esc(flexPickOf(nx.role))}` : "mit einem Helden deiner Wahl"}, ungewertet (= ohne Rang-Druck), wie es dein Plan für Neues vorsieht. Ziel pro Match: ${esc(FLEX_GOAL[nx.role])}</div></div>`
       : `<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Rollen sind bereit.</b> Spiel ab und zu ein Flex-Match, damit es nicht einrostet.</div></div>`}</div>
     <div class="row mt"><button type="button" class="btn ghost small" data-flexgo="L20">L20 Tank-Grundlagen</button><button type="button" class="btn ghost small" data-flexgo="L21">L21 DPS-Grundlagen</button></div>
-    ${days ? `<p class="small muted" style="margin:10px 0 4px">Tage im Plan, die Tank oder DPS üben:</p><div class="dchips">${days}</div>` : ""}
-    <p class="small muted" style="margin:10px 0 0">Ob du an einem Tag zusätzlich Tank oder DPS lernst, entscheidest du im Tagesplan unter „Heute zählt nur das“.</p>`, { icon: "team", sub: "Notfall-Wechsel auf Tank oder DPS" });
+    ${days ? `<p class="small muted" style="margin:10px 0 4px">Tage im Plan, die ${flexNames()} üben:</p><div class="dchips">${days}</div>` : ""}
+    <p class="small muted" style="margin:10px 0 0">Ob du an einem Tag zusätzlich ${flexNames()} lernst, entscheidest du im Tagesplan unter „Heute zählt nur das“.</p>`, { icon: "team", sub: `Notfall-Wechsel auf ${flexNames()}` });
 }
 $("#flexCard").addEventListener("change", e => {
   const t = e.target;
@@ -3912,7 +3924,7 @@ function renderToday() {
   if (!started) items.push({ done: false, t: "Trainingsplan starten", s: "56 Tage vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
   else if (cur > 56) items.push({ done: true, t: "Trainingsplan abgeschlossen", s: "Alle 56 Tage geschafft.", a: "" });
   else if (trainedToday) items.push({ done: true, t: "Training heute erledigt", s: `Nächster Trainingstag: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Tag ${cur} ansehen</button>` });
-  else items.push({ done: false, t: `Training: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, s: `${esc(modeText(PLAN.days[cur - 1]) || "Ausgangswerte")} · ${blockText()}`, a: `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Tag öffnen</button>` });
+  else items.push({ done: false, t: `Training: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, s: `${esc(modeText(PLAN.days[cur - 1]) || "Ausgangswerte")} · ${blockText()}${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Tag öffnen</button>` });
   // 3) Wochenziel
   if (!g) items.push({ done: false, t: "Wochenziel setzen", s: "Ein Ziel pro Woche gibt dem Training Richtung. Die App stellt Lektionen und Aufgaben dazu zusammen.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
   else if (!goalTopics(g).length) items.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
@@ -4103,6 +4115,21 @@ function deathMistake(label) {
   return null;
 }
 const deathTotal = o => Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0);
+// Die fünf Hauptgruppen des Plans (Position, Fluchtweg/Cooldown, Gegnerische Ult, Zu gierig, Vom Team getrennt)
+const DEATH_CAT = {
+  "Position": ["Von Diver oder Flanker erwischt", "Ohne Deckung gestanden", "Aus der Distanz getroffen (Poke, Scharfschütze)", "Keine Deckung genutzt", "Von mehreren Gegnern fokussiert, nicht zurückgezogen"],
+  "Fluchtweg/Cooldown": ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Schutz (Schild) zu früh weg oder falsch genutzt"],
+  "Gegnerische Ult": ["Gegner-Ult getroffen"],
+  "Zu gierig": ["Zu weit vorne beim Heilen", "Zu weit vorgelaufen", "Zu weit vorne", "Mit wenig Leben weiter gekämpft", "Auf ein falsches Ziel gestürmt"],
+  "Vom Team getrennt": ["Allein gestanden, Team zu weit weg", "Allein geflankt", "Ohne Support oder Team vorne", "Ohne Team reingegangen"]
+};
+const deathCat = l => Object.keys(DEATH_CAT).find(c => DEATH_CAT[c].includes(l)) || "Sonstiges";
+function deathMainCat(list) {
+  const c = {};
+  list.forEach(m => Object.entries(m.deathCauses || {}).forEach(([l, n]) => { const k = deathCat(l); c[k] = (c[k] || 0) + (+n || 0); }));
+  const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+  return top ? `${top[0]} (${top[1]}×)` : "";
+}
 function heroMistakeOptions(hero) {
   const p = typeof PROF !== "undefined" ? PROF[hero] : null;
   if (!p) return [];
@@ -5312,7 +5339,7 @@ function goalDayCardHtml(n) {
   return `<div class="card today-card"><div class="card-head"><h2>${icon("goals")}Dein Wochenziel</h2><span class="badge">${g.due ? "bis " + fmtDate(g.due) : "ohne Frist"}</span></div>
     <p style="margin:0 0 8px"><b>${esc(g.title)}</b>${ts.length ? ` · ${ts.map(t => esc(t.name)).join(", ")}` : ""}</p>
     ${ts.length ? `<ul class="wl">${first ? `<li><b>Heute zum Ziel:</b> ${linkify(esc(first.text), new Set())} <button type="button" class="btn small ghost" data-gdone="${g.id}" data-t="${esc(first.id)}">Erledigt</button></li>` : "<li>Alle Aufgaben zum Ziel sind erledigt.</li>"}
-      ${focus ? `<li><b>Dein Mini-Ziel für Block 3:</b> ${esc(focus.text)}</li>` : ""}
+      ${focus ? `<li><b>Mögliches Mini-Ziel für Block 3:</b> ${esc(focus.text)} (Auswahl unter Block 3)</li>` : ""}
       ${l ? `<li><b>Passende Lektion:</b> ${esc(l.title)} <button type="button" class="btn small" data-lesson="${l.id}" data-from-day="${n}">Starten</button></li>` : ""}</ul>`
       : `<p class="muted small">Zu diesem Ziel ist noch kein Thema gewählt. Wähle es im Tab Lernziele.</p>`}
     <div class="row"><button type="button" class="btn ghost small" data-pact="tab" data-tab="goals">Alle Aufgaben und Fortschritt</button></div></div>`;
@@ -5324,7 +5351,7 @@ function goalSuggestions() {
   mistakeCounts(state.matches.slice(-20)).slice(0, 4).forEach(([m, c]) => add(GOAL_TOPICS.find(x => x.mistakes.includes(m)), `${m}, ${c}× in den letzten 20 Matches`));
   const bad = enemyStats(state.matches.slice(-40)).filter(x => x[1].n >= 3 && x[1].wr < 0.5).sort((a, b) => a[1].wr - b[1].wr)[0];
   if (bad) add(topicById("counter"), `Gegen ${bad[0]} nur ${pct(bad[1].wr)} Siege`);
-  flexStats().filter(x => FLEX_ROLES.includes(x.role) && !x.ready).forEach(x => add(topicById(x.role === "Vanguard" ? "tank" : "dps"), `${x.n} von ${flexGoal().n} Matches als ${ROLE_SHORT[x.role]}`));
+  flexStats().filter(x => FLEX_ROLES.includes(x.role) && !x.ready).forEach(x => add(topicById(x.role === "Vanguard" ? "tank" : x.role === "Duelist" ? "dps" : "heal"), `${x.n} von ${flexGoal().n} Matches als ${ROLE_SHORT[x.role]}`));
   return out.slice(0, 3);
 }
 function createGoal(title, metric, due, topics) {
@@ -5834,6 +5861,7 @@ function lessonNo(id) { return LESSONS.findIndex(l => l.id === id) + 1; }
 function moduleById(id) { return LESSON_MODULES.find(m => m.id === id); }
 function lessonsDone() { return state.lessons.done; }
 function mainRole() {
+  if (["Strategist", "Vanguard", "Duelist"].includes(state.settings.mainRole)) return state.settings.mainRole;   // gewählte Hauptrolle hat Vorrang
   const recent = state.matches.slice(-50);
   if (recent.length < 5) return null;
   const c = group(recent, m => heroRole(m.hero));
@@ -6531,6 +6559,7 @@ function planHomeHtml() {
       <div class="lesson-stats"><div>${ring(dn / 56, `${dn}/56`)}<span>Tage</span></div></div></div>`;
   }
   const lvAuto = autoLevel();
+  const poolCard = poolCardHtml() + carryOverflowHtml();
   const path = `<div class="card"><div class="card-head"><h2>${icon("target")}Dein Lernpfad</h2>${levelBadge(L)}</div>
     <p class="lead">Am Anfang lernst du die Grundlagen, am Ende Expertenwissen – und wirst danach abgefragt. Deine Stufe wächst mit den Trainingstagen und den Lektionen (die höhere der beiden zählt).</p>
     ${stagesHtml(false)}
@@ -6547,7 +6576,7 @@ function planHomeHtml() {
       { open: inPh || (!started && ph.id === PLAN.phases[0].id), sub: `Tag ${ph.from}–${ph.to}${inPh ? " · hier bist du" : ""}`, right: `${levelBadge(levelOfDay(ph.from))}<span class="badge">${pd}/${ds.length}</span>` });
   }).join("");
   const legend = `<p class="muted small" style="margin:0 0 12px">${esc(PLAN.legend.replace(/^📖[^.]*\.\s*/, ""))} ★ = Kennzahlen-Tag mit Vergleich deiner Werte.</p>`;
-  return banner + path + legend + phases
+  return banner + poolCard + path + legend + phases
     + foldHtml("hang", "So bleibt alles hängen", `<p class="lead">Du musst nicht alles auf einmal im Kopf haben. Der Plan baut sich langsam auf:</p>
       <ul class="wl">
         <li><b>Wenig Neues pro Tag.</b> Pro Tag kommen höchstens zwei Themen dazu, an vielen Tagen gar keins.</li>
@@ -6556,11 +6585,11 @@ function planHomeHtml() {
         <li><b>Du bestimmst, wann es sitzt.</b> Am Tagesende bewertest du jedes Thema: „muss ich noch denken“, „klappt meistens“ oder „läuft von allein“. Was noch nicht von allein läuft, bekommt dein Mini-Ziel in Block 3.</li>
         <li><b>Aufgeschrieben ist gesichert.</b> Schreib am Tagesende zwei Sätze bei „Abschluss“. Am nächsten Tag stehen sie oben in der Karte, du musst sie nicht im Kopf behalten.</li>
       </ul>`, { icon: "book", sub: "Warum der Plan klein anfängt und alles wiederkommt" })
-    + foldHtml("roles", "Alle Rollen lernen", `<p class="lead">Dein Plan hat den Schwerpunkt Support, übt aber auch Tank und DPS. Damit du im Notfall wechseln kannst, entscheidest du jeden Tag selbst: zusätzlich Tank oder DPS lernen oder nur bei Support bleiben.</p>
+    + foldHtml("roles", "Alle Rollen lernen", `<p class="lead">Dein Plan hat den Schwerpunkt ${ROLE_SHORT[myRole()]}, übt aber auch ${FLEX_ROLES.map(r => ROLE_SHORT[r]).join(" und ")}. Damit du im Notfall wechseln kannst, entscheidest du jeden Tag selbst: zusätzlich ${flexNames()} lernen oder nur bei ${ROLE_SHORT[myRole()]} bleiben.</p>
       <ul class="wl">${flexStats().filter(x => FLEX_ROLES.includes(x.role)).map(x => `<li><b>${ROLE_SHORT[x.role]}:</b> ${x.ready ? "bereit ✓" : `${x.n} von ${flexGoal().n} Matches`}${x.heroes.length ? `, gespielt: ${esc(x.heroes.slice(0, 3).map(([h, c]) => `${h} (${c}×)`).join(", "))}` : ""}</li>`).join("")}</ul>
-      <p class="small muted" style="margin:8px 0 4px">Tage, die Tank oder DPS üben:</p>
+      <p class="small muted" style="margin:8px 0 4px">Tage, die ${flexNames()} üben:</p>
       <div class="dchips">${flexRoleDays().map(d => `<button type="button" class="dchip" data-pact="day" data-n="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("")}</div>
-      <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div>`, { icon: "team", sub: "Tank und DPS als Notfall-Rolle" })
+      <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div>`, { icon: "team", sub: `${FLEX_ROLES.map(r => ROLE_SHORT[r]).join(" und ")} als Notfall-Rolle` })
     + foldHtml("tracker", "Themen-Tracker", `<p class="lead">${esc(PLAN.session.repeat)} Tippe auf eine Zahl, um den Tag zu öffnen.</p><div class="table-wrap">${trackerHtml(cur)}</div>`, { icon: "list", sub: "Wann welches Thema neu ist und wiederkommt" })
     + `<div class="card"><div class="card-head"><h2>${icon("training")}Trainingsbereich: die Drills</h2></div>
       <p class="lead">${esc(PLAN.drills.intro)}</p>
@@ -6640,9 +6669,9 @@ function dayMatches(n) {
 function kpiTable(upTo) {
   const rows = PLAN.days.filter(d => d.n <= upTo && (d.kennzahlen || d.n === 1)).map(d => {
     const { date, ms } = dayMatches(d.n), s = summary(ms);
-    return [`Tag ${d.n}${d.n === 1 ? " (Baseline)" : ""}`, date ? fmtDate(date) : "–", ms.length || "–", ms.length ? pct(s.wr) : "–", ms.length ? s.d.toFixed(1) : "–", s.ultN ? pct(s.ultPct) : "–", ms.length ? s.kda.toFixed(1) : "–"];
+    return [`Tag ${d.n}${d.n === 1 ? " (Baseline)" : ""}`, date ? fmtDate(date) : "–", ms.length || "–", ms.length ? pct(s.wr) : "–", ms.length ? s.d.toFixed(1) : "–", s.ultN ? pct(s.ultPct) : "–", ms.length ? s.kda.toFixed(1) : "–", deathMainCat(ms) || "–"];
   });
-  return table(["Tag", "Datum", "#Matches", "#Winrate", "#Ø Tode", "#Ult-Wirkung", "#Ø KDA"], rows);
+  return table(["Tag", "Datum", "#Matches", "#Winrate", "#Ø Tode", "#Ult-Wirkung", "#Ø KDA", "Hauptkategorie"], rows);
 }
 function kpiCharts(upTo) {
   const rows = PLAN.days.filter(d => d.n <= upTo && (d.kennzahlen || d.n === 1)).map(d => {
@@ -6658,15 +6687,15 @@ function kpiCharts(upTo) {
 function dayRoleHtml(n) {
   const title = PLAN.days[n - 1].title;
   if (/Test/.test(title)) return "";
-  if (/Tank|DPS|Rolle/.test(title)) return `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Heute übt der Plan eine andere Rolle als Support.</b> Sie steht in den Schritten unten. Bleibst du heute lieber bei Support, übst du das Thema des Tages mit deinem Support-Helden.</div></div>`;
+  if (/Tank|DPS|Rolle/.test(title)) return `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Heute übt der Plan eine andere Rolle als ${ROLE_SHORT[myRole()]}.</b> Sie steht in den Schritten unten. Bleibst du heute lieber bei ${ROLE_SHORT[myRole()]}, übst du das Thema des Tages mit deinem ${ROLE_SHORT[myRole()]}-Helden.</div></div>`;
   const choice = dayGet(n).role || "", g = flexGoal(), nx = nextFlexRole(flexStats(), n);
   const btn = (v, label) => `<button type="button" class="chip ${choice === v ? "on" : ""}" data-pact="dayrole" data-n="${n}" data-r="${v}">${label}</button>`;
   const info = choice && choice !== "none"
     ? `<span class="small"><b>Flex-Auftrag:</b> Spiel am Ende deiner Session so viele Matches als ${ROLE_SHORT[choice]}${flexPickOf(choice) ? ` mit ${esc(flexPickOf(choice))}` : ""}, wie du magst, ungewertet (= ohne Rang-Druck). Jedes Match zählt für deine Flex-Marke. Ziel: ${esc(FLEX_GOAL[choice])}</span>`
-    : choice === "none" ? '<span class="small muted">Heute bleibst du bei Support.</span>'
+    : choice === "none" ? `<span class="small muted">Heute bleibst du bei ${ROLE_SHORT[myRole()]}.</span>`
       : `<span class="small muted">Du hast noch nicht gewählt. ${nx ? `Vorschlag: ${ROLE_SHORT[nx.role]} (${nx.n} von ${g.n} Matches).` : "Alle Rollen sind schon bereit."}</span>`;
   return `<div class="field" style="margin:8px 0"><b>Willst du heute zusätzlich eine andere Rolle lernen?</b>
-    <div class="chips">${btn("none", "Nur Support")}${btn("Vanguard", "Zusätzlich Tank")}${btn("Duelist", "Zusätzlich DPS")}</div>${info}</div>`;
+    <div class="chips">${btn("none", "Nur " + ROLE_SHORT[myRole()])}${FLEX_ROLES.map(r => btn(r, "Zusätzlich " + ROLE_SHORT[r])).join("")}</div>${info}</div>`;
 }
 // Welche Lektionen gehören zu einem Thema des Trackers (alle Tage, an denen es neu ist)?
 function topicLessonIds(t) {
@@ -6694,7 +6723,7 @@ function focusCardHtml(n) {
     : `<li><b>Heute gibt es nichts Neues.</b> Du kombinierst Themen, die du schon kennst.</li>`);
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
   const notYet = PLAN.tracker.filter(t => !t.neu.includes(n) && topicAuto(t) > 0 && topicAuto(t) < 3);
-  if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Leg dein Mini-Ziel in Block 3 auf eins davon.</li>`);
+  if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Wähle eins davon unter Block 3 als dein Mini-Ziel.</li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
   return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
     <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
@@ -6740,6 +6769,7 @@ function planDayHtml(n) {
     ${focusCardHtml(n)}
     ${dayLessonCardHtml(n)}
     ${goalDayCardHtml(n)}
+    ${carryCardHtml(n)}
     ${foldHtml("d-read", "Nachlesen beim Start", `<div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
         ${d.d.map(x => `<button type="button" class="chip ${planUi.read.has("D:" + x) ? "on" : ""}" data-pact="read" data-k="D:${x}">Drill ${x}</button>`).join("")}</div>
       ${reads}
@@ -6747,8 +6777,7 @@ function planDayHtml(n) {
     <div class="card"><div class="card-head"><h2>${icon("training")}Ablauf</h2><span class="muted small">${blockText()}</span></div>
       ${matchLenHtml()}
       <details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>
-      ${d.steps.map(s => `<div class="pstep ${st.steps[s.key] ? "done" : ""}"><input type="checkbox" id="ps${s.key}" data-pstep="${s.key}" ${st.steps[s.key] ? "checked" : ""}>
-        <label for="ps${s.key}" style="display:block;cursor:pointer"><div class="pl">${esc(s.label)}</div><div class="ptxt">${richLines(scaleMatchRefs(s.t), seenD)}</div></label></div>`).join("")}</div>
+      ${d.steps.map(s => stepHtml(n, s, seenD)).join("")}</div>
     ${foldHtml("d-matches", "Deine Matches an diesem Tag", `<div class="row" style="margin-bottom:8px"><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
       ${dm.date ? (dm.ms.length ? `<p style="margin:0">${fmtDate(dm.date)}: <b>${plural(dm.ms.length, "Match", "Matches")}</b> · ${dm.ms.filter(m => m.result === "W").length} Siege, ${dm.ms.filter(m => m.result === "L").length} Niederlagen · Ø Tode ${ds.d.toFixed(1)} · Ø KDA ${ds.kda.toFixed(1)}${ds.ultN ? ` · Ult-Wirkung ${pct(ds.ultPct)}` : ""}</p>` : `<p class="muted small" style="margin:0">Für ${fmtDate(dm.date)} sind noch keine Matches geloggt.</p>`)
         : '<p class="muted small" style="margin:0">Sobald du diesen Tag abgeschlossen hast, siehst du hier die Matches dieses Datums.</p>'}`, { icon: "analysis", open: dm.ms.length > 0, sub: dm.ms.length ? plural(dm.ms.length, "Match", "Matches") : "noch keine" })}
@@ -6761,6 +6790,126 @@ function planDayHtml(n) {
       <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${n < 56 ? `<button class="btn" type="button" data-pact="day" data-n="${n + 1}">Weiter zu Tag ${n + 1} →</button>` : ""}`
         : `<button class="btn" type="button" data-pact="complete" data-n="${n}">${icon("check")}Tag ${n} abschliessen</button>`}</div></div>`;
 }
+
+// ---------- Eigener Pool: Heldennamen im Plan ----------
+const PLAN_HEROES = ["Cloak & Dagger", "Jubilee", "Gambit", "Rocket Raccoon", "Invisible Woman", "Luna Snow", "White Fox"];
+const poolHeroes = () => [...new Set((state.settings.pool || []).filter(h => h && heroByName(h)))];
+let PLAN_BASE = null, planSig = "";
+const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function planHeroMap() {
+  const pool = poolHeroes();
+  if (!pool.length) return null;
+  const m = {};
+  PLAN_HEROES.forEach((h, i) => { m[h] = pool[i] || "ein Held aus deinem Pool"; });
+  m.Cloak = m.Dagger = m["Cloak & Dagger"]; m.Rocket = m["Rocket Raccoon"];
+  return m;
+}
+function planTx(t, m) {
+  let out = String(t);
+  if (m) {
+    const tokens = [];
+    ["Cloak & Dagger", "Rocket Raccoon", "Invisible Woman", "Luna Snow", "White Fox", "Jubilee", "Gambit", "Cloak", "Dagger", "Rocket"].forEach(k => {
+      out = out.replace(new RegExp("(^|[^\\p{L}])" + reEsc(k) + "(?![\\p{L}])", "gu"), (all, pre) => pre + "\u0001" + tokens.push(m[k]) + "\u0002");
+    });
+    out = out.replace(/\u0001(\d+)\u0002/g, (all, i) => tokens[i - 1]);
+  }
+  // Die Strichliste des Plans ersetzt der Todesursachen-Tracker in „Match loggen“
+  return out.replace(/\(= bei jedem Tod (?:sofort )?ein Strich bei der Todesursache\)/g, "(= in „Match loggen“ tippst du bei jedem Tod auf die Ursache)")
+    .replace(/Bei jedem Tod machst du sofort einen Strich in die Strichliste \(= eine Liste der Todesursachen\): Position · Fluchtweg\/Cooldown · Gegnerische Ult · Zu gierig · Vom Team getrennt\./, "Tippe in „Match loggen“ bei jedem Tod auf die Ursache. Die Hauptgruppen des Plans sind Position, Fluchtweg/Cooldown, Gegnerische Ult, Zu gierig und Vom Team getrennt.")
+    .replace(/Strichliste/g, "Todesursachen-Tracker").replace(/die Todesursachen-Tracker/g, "den Todesursachen-Tracker").replace(/in deiner Todesursachen-Tracker/g, "in deinem Todesursachen-Tracker").replace(/in den Todesursachen-Tracker/g, "in den Todesursachen-Tracker");
+}
+function applyPoolToPlan() {
+  const sig = JSON.stringify([poolHeroes(), myRole()]);
+  if (PLAN_BASE && sig === planSig) return;
+  if (!PLAN_BASE) PLAN_BASE = JSON.parse(JSON.stringify({ days: PLAN.days, phases: PLAN.phases, tracker: PLAN.tracker.map(t => t.topic) }));
+  planSig = sig;
+  const m = planHeroMap(), tx = t => planTx(t, m);
+  PLAN.days.forEach((d, i) => {
+    const b = PLAN_BASE.days[i];
+    d.title = tx(b.title); if (b.heute) d.heute = tx(b.heute);
+    d.intro = (b.intro || []).map(tx);
+    d.steps.forEach((st, j) => { st.t = tx(b.steps[j].t); });
+  });
+  PLAN.phases.forEach((ph, i) => { const b = PLAN_BASE.phases[i]; ph.focus = tx(b.focus); if (b.intro) ph.intro = tx(b.intro); });
+  PLAN.tracker.forEach((t, i) => { t.topic = tx(PLAN_BASE.tracker[i]); });
+  syncFlexRoles();
+}
+function poolCardHtml() {
+  const main = myRole(), pool = poolHeroes();
+  const heroes = allHeroes().filter(h => h.role === main).sort((a, b) => a.name.localeCompare(b.name));
+  const slots = [0, 1, 2, 3, 4].map(i => `<label class="inline-label">Held ${i + 1}<select data-poolslot="${i}"><option value="">– offen –</option>${heroes.map(h => `<option value="${esc(h.name)}" ${pool[i] === h.name ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></label>`).join("");
+  return foldHtml("pool", "Dein Pool und deine Hauptrolle", `<p class="lead">Wähle deine Hauptrolle und bis zu fünf Helden, die du regelmässig spielst. Die Heldentage im Plan (Tag 22 bis 32) und die Beispiele im Text nennen dann deine Helden. Die beiden anderen Rollen übst du als Notfall-Rolle (Flex).</p>
+    <div class="row" style="gap:6px;margin-bottom:10px"><b class="small">Hauptrolle:</b>${["Strategist", "Vanguard", "Duelist"].map(r => `<button type="button" class="chip ${main === r ? "on" : ""}" data-pact="mainrole" data-r="${r}">${ROLE_SHORT[r]}</button>`).join("")}</div>
+    <div class="flexset">${slots}</div>
+    <p class="small muted" style="margin:10px 0 0">${pool.length ? `Der Plan nennt jetzt: ${esc(pool.join(", "))}.` : "Noch kein Pool gewählt: Der Plan zeigt seine Beispiel-Helden (Cloak &amp; Dagger, Jubilee, Gambit …)."}${main !== "Strategist" ? " Der Plan ist für Support geschrieben. Die Grundlagen gelten für jede Rolle, bei Heil-Themen denk dir deine Rolle dazu." : ""}</p>`,
+    { icon: "heroes", open: !pool.length, sub: pool.length ? `${ROLE_SHORT[main]}: ${esc(pool.join(", "))}` : "Noch nicht gewählt" });
+}
+
+// ---------- Eintragsfelder in den Blöcken und Mini-Ziel für Block 3 ----------
+const WRITE_RE = /(schreib|notier|aufschreib|standardzeile|trag\b[^.]*\bein\b|halte[^.]*fest)/i;
+function stepBodyHtml(n, s, seen) {
+  const lines = scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean), fields = dayGet(n).fields || {};
+  const item = (t, i) => `${linkify(esc(t), seen)}${WRITE_RE.test(t) ? `<textarea class="pfield" rows="2" data-pf="${n}|${s.key}|${i}" placeholder="Hier eintragen …" aria-label="Dein Eintrag zu dieser Aufgabe">${esc(fields[s.key + ":" + i] || "")}</textarea>` : ""}`;
+  return lines.length <= 1 ? `<div>${item(lines[0] || "", 0)}</div>` : `<ul class="wl">${lines.map((t, i) => `<li>${item(t, i)}</li>`).join("")}</ul>`;
+}
+function mini3Options(n) {
+  const opts = [{ k: "plan", t: "Vorschlag des Plans", txt: "Spiel den Block so, wie es im Plan steht." }];
+  PLAN.tracker.filter(t => !t.neu.includes(n) && topicAuto(t) > 0 && topicAuto(t) < 3).slice(0, 3).forEach(t =>
+    opts.push({ k: "t" + t.id, t: t.topic, txt: `Achte in jedem Match mindestens einmal bewusst auf „${t.topic}“ und halte danach in einem Satz fest, wie es geklappt hat.` }));
+  const g = activeGoal(), f = g && goalTasks(g).find(t => t.kind === "Match-Fokus");
+  if (f) opts.push({ k: "goal", t: "Wochenziel", txt: f.text });
+  opts.push({ k: "own", t: "Eigenes Mini-Ziel", txt: "" });
+  return opts;
+}
+function mini3Html(n) {
+  const st = dayGet(n), m3 = st.mini3 || {}, opts = mini3Options(n), sel = opts.find(o => o.k === m3.k) || opts[0];
+  return `<div class="mini3"><b class="small">Dein Mini-Ziel für Block 3</b>
+    <div class="chips" style="margin:6px 0">${opts.map(o => `<button type="button" class="chip ${o.k === sel.k ? "on" : ""}" data-pact="mini3" data-n="${n}" data-k="${esc(o.k)}">${esc(o.t)}</button>`).join("")}</div>
+    ${sel.k === "own" ? `<input type="text" class="pfield" data-mini3-own="${n}" value="${esc(m3.text || "")}" placeholder="Eine Sache, auf die du in Block 3 achtest …" aria-label="Eigenes Mini-Ziel">` : `<p class="small muted" style="margin:0">${esc(sel.txt)}</p>`}</div>`;
+}
+function stepHtml(n, s, seen, o = {}) {
+  const st = dayGet(n), done = o.carry ? !!o.carry.done : !!st.steps[s.key];
+  const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
+  return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""}>
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+}
+
+// ---------- Offene Blöcke nachholen ----------
+const BLOCK_KEYS = ["b1", "b2", "b3"];
+const planCarry = () => state.plan.carry || (state.plan.carry = []);
+const carryFor = n => planCarry().filter(c => c.to === n && !c.done);
+// Beim Abschluss eines Tages: nicht geschaffte Blöcke gehen nicht verloren, sie wandern (höchstens einer pro Tag) in die nächsten Tage
+function scheduleCarry(n) {
+  const d = PLAN.days[n - 1], st = dayGet(n);
+  state.plan.carry = planCarry().filter(c => !(c.from === n && !c.done && st.steps[c.key]));
+  const list = state.plan.carry, moved = [];
+  list.filter(c => c.to === n && !c.done).forEach(c => { c.to = -1; });
+  d.steps.filter(x => BLOCK_KEYS.includes(x.key) && !st.steps[x.key]).forEach(x => {
+    if (!list.some(c => c.from === n && c.key === x.key && !c.done)) list.push({ id: `${n}-${x.key}-${list.length}`, from: n, key: x.key, to: -1, done: null });
+  });
+  const load = day => list.filter(c => c.to === day && !c.done).length;
+  list.filter(c => c.to === -1).forEach(c => {
+    let day = n + 1;
+    while (day <= 56 && (dayGet(day).done || load(day) >= 1)) day++;
+    c.to = day <= 56 ? day : 0; moved.push(c);
+  });
+  return moved;
+}
+function carryStepHtml(c) {
+  const src = PLAN.days[c.from - 1], s = src.steps.find(x => x.key === c.key);
+  return s ? stepHtml(c.from, s, new Set(), { carry: c, label: `${s.label.replace(/\s*\(.*\)/, "")} von Tag ${c.from}: ${src.title}` }) : "";
+}
+function carryCardHtml(n) {
+  const items = carryFor(n);
+  if (!items.length) return "";
+  return foldHtml("d-carry", "Nachholen", items.map(carryStepHtml).join(""), { icon: "clock", open: true, sub: `${plural(items.length, "Block", "Blöcke")} aus früheren Tagen, automatisch eingeplant`, right: `<span class="badge">${items.length}</span>` });
+}
+function carryOverflowHtml() {
+  const items = planCarry().filter(c => c.to === 0 && !c.done);
+  if (!items.length) return "";
+  return foldHtml("carry-over", "Noch offene Blöcke", `<p class="lead">Diese Blöcke fanden in den 56 Tagen keinen Platz mehr. Hol sie nach, wann du magst.</p>${items.map(carryStepHtml).join("")}`, { icon: "clock", open: true, sub: `${plural(items.length, "Block", "Blöcke")}, der Plan ist damit länger als 56 Tage`, right: `<span class="badge">${items.length}</span>` });
+}
+
 function startPlan() {
   const date = ($("#planStartDate") && $("#planStartDate").value) || today();
   state.plan.start = date;
@@ -6774,10 +6923,12 @@ function completeDay(n) {
   const t = $("#dayNote"); if (t) st.note = t.value.trim();
   st.done = today();
   if (!state.plan.start) state.plan.start = today();
+  const moved = scheduleCarry(n);
   save();
   const after = currentLevel();
   const openL = dayLessons(n).slice(0, 1).filter(id => !lessonsDone()[id]).map(id => lessonById(id).title)[0];
-  toast(after > before ? `Stufe ${after} erreicht: ${lvInfo(after).name}! 🎉` : n < 56 ? `Tag ${n} geschafft! 🎉${openL ? ` Die Lektion „${openL}“ ist noch offen.` : ""}` : "Plan abgeschlossen! 🏆");
+  const mvTxt = moved.length ? ` ${plural(moved.length, "offener Block wurde", "offene Blöcke wurden")} ${moved.every(c => c.to > 0) ? "auf " + [...new Set(moved.map(c => "Tag " + c.to))].join(", ") + " verschoben" : "zum Nachholen eingeplant"}.` : "";
+  toast((after > before ? `Stufe ${after} erreicht: ${lvInfo(after).name}! 🎉` : n < 56 ? `Tag ${n} geschafft! 🎉${openL ? ` Die Lektion „${openL}“ ist noch offen.` : ""}` : "Plan abgeschlossen! 🏆") + mvTxt);
   renderPlan(); renderLevelChip();
 }
 function weeklyPackageText() {
@@ -6805,6 +6956,8 @@ function planAction(act, b) {
   switch (act) {
     case "day": openPlanDay(+b.dataset.n); break;
     case "home": openPlanHome(); break;
+    case "mini3": { const st = dayEnsure(+b.dataset.n); st.mini3 = Object.assign({}, st.mini3, { k: b.dataset.k }); save(); renderPlan(); break; }
+    case "mainrole": { UIFOLD.pool = true; state.settings.mainRole = b.dataset.r; state.settings.pool = poolHeroes().filter(h => heroRole(h) === b.dataset.r); save(); applyPoolToPlan(); renderPlan(); renderLevelChip(); break; }
     case "dayrole": { const st = dayEnsure(+b.dataset.n); st.role = st.role === b.dataset.r ? "" : b.dataset.r; save(); renderPlan(); break; }
     case "auto": { const st = dayEnsure(+b.dataset.n), v = +b.dataset.v; st.auto = Object.assign({}, st.auto); if (st.auto[b.dataset.t] === v) delete st.auto[b.dataset.t]; else st.auto[b.dataset.t] = v; save(); renderPlan(); break; }
     case "tab": showTab(b.dataset.tab); window.scrollTo({ top: 0 }); break;
@@ -6833,6 +6986,9 @@ document.addEventListener("click", e => {
 $("#planBody").addEventListener("change", e => {
   const t = e.target;
   if (t.matches("[data-pstep]")) { const st = dayEnsure(planUi.day); st.steps[t.dataset.pstep] = t.checked; save(); renderPlan(); }
+  else if (t.matches("[data-pcarry]")) { const c = planCarry().find(x => x.id === t.dataset.pcarry); if (c) { c.done = t.checked ? today() : null; save(); renderPlan(); } }
+  else if (t.matches("[data-poolslot]")) { UIFOLD.pool = true; state.settings.pool = [...document.querySelectorAll("#planBody [data-poolslot]")].map(x => x.value).filter(Boolean); state.settings.pool = [...new Set(state.settings.pool)]; save(); applyPoolToPlan(); renderPlan(); }
+  else if (t.matches("[data-pf],[data-mini3-own]")) { flushPf(t); }
   else if (t.matches("[data-ptopic]")) { state.plan.topics[t.dataset.ptopic] = t.checked; save(); }
   else if (t.id === "planLevel") { state.plan.level = +t.value; save(); renderPlan(); renderLevelChip(); }
   else if (t.id === "blockMin") { const v = Number(t.value); state.settings.blockMin = v >= 15 ? Math.min(120, v) : 60; save(); renderPlan(); }
@@ -6844,8 +7000,21 @@ $("#planBody").addEventListener("change", e => {
   }
 });
 $("#planBody").addEventListener("keydown", e => { if (e.key === "Enter" && (e.target.id === "matchMin" || e.target.id === "matchMax" || e.target.id === "blockMin")) e.target.blur(); });
-let noteTimer = null;
+let noteTimer = null, pfTimer = null;
+function flushPf(t) {
+  if (t.matches("[data-pf]")) { const [n, key, i] = t.dataset.pf.split("|"), st = dayEnsure(+n); st.fields = Object.assign({}, st.fields, { [key + ":" + i]: t.value }); }
+  else if (t.matches("[data-mini3-own]")) { const st = dayEnsure(+t.dataset.mini3Own); st.mini3 = Object.assign({}, st.mini3, { k: "own", text: t.value }); }
+  else return;
+  clearTimeout(pfTimer); save();
+}
 $("#planBody").addEventListener("input", e => {
+  if (e.target.matches && e.target.matches("[data-pf],[data-mini3-own]")) {
+    const t = e.target;
+    if (t.matches("[data-pf]")) { const [n, key, i] = t.dataset.pf.split("|"), st = dayEnsure(+n); st.fields = Object.assign({}, st.fields, { [key + ":" + i]: t.value }); }
+    else { const st = dayEnsure(+t.dataset.mini3Own); st.mini3 = Object.assign({}, st.mini3, { k: "own", text: t.value }); }
+    clearTimeout(pfTimer); pfTimer = setTimeout(save, 600);
+    return;
+  }
   if (e.target.id !== "dayNote") return;
   const n = +e.target.dataset.n, v = e.target.value;
   clearTimeout(noteTimer);
@@ -8409,6 +8578,7 @@ renderMistakeChips([], ""); renderDeathBox();
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
+  applyPoolToPlan();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
      training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups })[currentTab()]();
