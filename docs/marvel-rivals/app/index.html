@@ -669,6 +669,15 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .trend { font-weight: 800; margin-left: 2px; }
 .trend.up { color: var(--good-text); }
 .trend.down { color: var(--bad); }
+.deathgrid { display: flex; flex-wrap: wrap; gap: 8px; }
+.dwrap { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.dwrap.on { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+.dbtn { border: 0; background: none; color: var(--text); font: inherit; font-size: .88rem; padding: 8px 12px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; text-align: left; }
+.dbtn:hover { background: var(--surface-2); }
+.dcount { min-width: 1.4em; text-align: center; border-radius: 999px; background: var(--bad); color: #fff; font-size: .75rem; padding: 1px 6px; }
+.dcount:empty { display: none; }
+.ddec { border: 0; border-left: 1px solid var(--border); background: none; color: var(--muted); padding: 0 11px; cursor: pointer; font-size: 1.1rem; }
+.ddec:hover { background: var(--surface-2); color: var(--text); }
 .fold { border: 1px solid var(--border); border-radius: var(--radius, 16px); background: var(--surface); margin-bottom: 14px; }
 .fold > summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; gap: 10px; align-items: center; justify-content: space-between; border-radius: inherit; }
 .fold > summary::-webkit-details-marker { display: none; }
@@ -889,6 +898,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <div id="topMistakes"></div>
     </div>
   </div>
+  <div class="card" id="deathDashCard"><div class="card-head"><h2 data-icon="target">Woran du stirbst</h2><span class="muted small">letzte 20 Matches</span></div><div id="deathDash"></div></div>
   <details class="fold" id="flexCard" data-f="dash-flex"></details>
   <details class="fold" id="pathCard" data-f="dash-path"></details>
 </section>
@@ -990,7 +1000,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 
   <div class="card">
     <div class="card-head"><h2 data-icon="goals">Reflexion</h2></div>
+    <h3>Woran bist du gestorben?</h3>
+    <p class="muted small" style="margin:0 0 8px">Tipp bei jedem Tod auf die Ursache, auch mehrmals. Die App wertet das aus und passt Übungen und Lektionen an.</p>
+    <div id="deathBox"></div>
     <h3>Was lief schief?</h3>
+    <p class="muted small" style="margin:0 0 8px" id="mistakeHint"></p>
     <div class="chips" id="mistakeChips"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
@@ -1025,6 +1039,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
   </div>
   <div class="kpis" id="aKpis"></div>
+  <div class="card"><div class="card-head"><h2 data-icon="target">Woran du stirbst</h2><span class="muted small">aus deinen erfassten Todesursachen</span></div><div id="deathCard"></div></div>
   <div class="card">
     <div class="card-head"><h2 data-icon="clock">Pro 10 Minuten</h2></div>
     <p class="lead">Wie im Spiel: Schaden, Heilung und Geblockt hochgerechnet auf 10 Minuten. So zählen kurze Quick Matches und lange Matches gleich fair. Ult-Wirkung ist der Anteil deiner Ults mit Wirkung (teilweise zählt halb).</p>
@@ -1059,6 +1074,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 
 <!-- TEAM & COUNTER -->
 <section id="tab-team" hidden>
+  <div class="card" id="curMatchCard">
+    <div class="card-head"><h2 data-icon="log">Aktuelles Match</h2>
+      <label class="inline-label">Quelle <select id="teamSource"></select></label></div>
+    <div id="curMatch"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="team">Mein Team</h2><button class="btn ghost small" type="button" id="teamClear">Leeren</button></div>
+    <div class="grid-6" id="teamSlots"></div>
+    <div id="teamFeedback" class="mt"></div>
+  </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="target">Gegnerteam</h2><button class="btn ghost small" type="button" id="enemyClear">Leeren</button></div>
     <p class="lead">Trag während der Heldenauswahl ein, was die Gegner spielen – du bekommst sofort Counter-Vorschläge.</p>
@@ -1074,11 +1099,6 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       </div>
     </div>
     <div id="picks"></div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h2 data-icon="team">Mein Team</h2><button class="btn ghost small" type="button" id="teamClear">Leeren</button></div>
-    <div class="grid-6" id="teamSlots"></div>
-    <div id="teamFeedback" class="mt"></div>
   </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="team">Team-Aufstellungen</h2><span class="muted small">Vanguard – Duelist – Strategist</span></div>
@@ -1897,6 +1917,27 @@ const MISTAKES = [
   "Cooldowns falsch genutzt", "Nicht auf Minimap/Sound geachtet", "Gegner-Counter ignoriert",
   "Kein Raum gewonnen (Tank)", "Auf den Tank geschossen (DPS)"
 ];
+// Neue Fehler-Marken (passend zu Rolle und Heldenwahl)
+["Dive nicht abgewehrt", "Gegner-Ult nicht beachtet", "Falsche Heilpriorität", "Heilung verpasst", "Schild falsch genutzt", "Backline nicht geschützt"].forEach(x => MISTAKES.push(x));
+const MISTAKE_COMMON = ["Ult verschwendet", "Fokus auf falsches Ziel", "Keine Deckung genutzt", "Ohne Team reingegangen", "Objective verlassen", "Zu spät gewechselt (Held)",
+  "Gegner-Counter ignoriert", "Gegner-Ult nicht beachtet", "Cooldowns falsch genutzt", "Kommunikation fehlte", "Nicht auf Minimap/Sound geachtet", "Schlechtes Zielen", "Tilt / Frust"];
+const MISTAKE_BY_ROLE = {
+  Strategist: ["Zu weit vorne", "Falsche Heilpriorität", "Heilung verpasst", "Dive nicht abgewehrt"],
+  Vanguard: ["Zu weit vorne", "Kein Raum gewonnen (Tank)", "Schild falsch genutzt", "Backline nicht geschützt", "Heiler ignoriert"],
+  Duelist: ["Zu weit vorne", "Allein geflankt", "Auf den Tank geschossen (DPS)", "Heiler ignoriert", "Dive nicht abgewehrt"]
+};
+// Todesursachen: [Text, passende Fehler-Marke für Übungen und Lektionen]
+const DEATH_BY_ROLE = {
+  Strategist: [["Zu weit vorne beim Heilen", "Zu weit vorne"], ["Von Diver oder Flanker erwischt", "Dive nicht abgewehrt"], ["Gegner-Ult getroffen", "Gegner-Ult nicht beachtet"],
+    ["Ohne Deckung gestanden", "Keine Deckung genutzt"], ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Cooldowns falsch genutzt"], ["Allein gestanden, Team zu weit weg", "Allein geflankt"],
+    ["Aus der Distanz getroffen (Poke, Scharfschütze)", "Keine Deckung genutzt"], ["Mit wenig Leben weiter gekämpft", null]],
+  Vanguard: [["Zu weit vorgelaufen", "Zu weit vorne"], ["Ohne Support oder Team vorne", "Ohne Team reingegangen"], ["Schutz (Schild) zu früh weg oder falsch genutzt", "Schild falsch genutzt"],
+    ["Gegner-Ult getroffen", "Gegner-Ult nicht beachtet"], ["Von mehreren Gegnern fokussiert, nicht zurückgezogen", null], ["Gegen einen Counter-Helden kaum eine Chance", "Gegner-Counter ignoriert"],
+    ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Cooldowns falsch genutzt"], ["Aus dem Objective gedrängt", "Objective verlassen"]],
+  Duelist: [["Allein geflankt", "Allein geflankt"], ["Zu weit vorne", "Zu weit vorne"], ["Ohne Team reingegangen", "Ohne Team reingegangen"], ["Gegner-Ult getroffen", "Gegner-Ult nicht beachtet"],
+    ["Von Diver oder Flanker erwischt", "Dive nicht abgewehrt"], ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Cooldowns falsch genutzt"], ["Keine Deckung genutzt", "Keine Deckung genutzt"],
+    ["Auf ein falsches Ziel gestürmt", "Fokus auf falsches Ziel"]]
+};
 const GOODS = [
   "Gutes Ult-Timing", "Gute Positionierung", "Viele Picks", "Team gut unterstützt",
   "Ruhig geblieben", "Gute Calls", "Objective gespielt", "Cooldowns gut genutzt", "Richtig gecountert"
@@ -1919,7 +1960,13 @@ const DRILLS = {
   "Nicht auf Minimap/Sound geachtet": "Spiele mit Kopfhörern und schaue alle 5–10 Sekunden auf die Teamübersicht.",
   "Kein Raum gewonnen (Tank)": "Schau im Fight, ob die Gegner nach deinem Vorstoss weiter hinten stehen. Wenn nicht, hast du nur Schaden gefressen. Geh nur so weit vor, wie dein Support mitkommt (L20).",
   "Auf den Tank geschossen (DPS)": "Schiess zuerst auf gegnerische Supports, angeschlagene Gegner und Flanker. Den Tank mit Schild nimmst du nicht zuerst (L21).",
-  "Gegner-Counter ignoriert": "Mache täglich 10 Fragen im Counter-Training und schau dir bei der Heldenwahl das Gegnerteam an."
+  "Gegner-Counter ignoriert": "Mache täglich 10 Fragen im Counter-Training und schau dir bei der Heldenwahl das Gegnerteam an.",
+  "Dive nicht abgewehrt": "Such dir vor jedem Fight einen Platz, an dem du Diver sofort siehst, und halte eine Fluchtfähigkeit oder einen Schutz bereit. Lies dazu Lektion „Gegen Dive spielen“.",
+  "Gegner-Ult nicht beachtet": "Schau nach jedem Fight, welche Gegner-Ults schon weg sind, und sag sie an. Bei Ult-Ansagen aus dem Bereich laufen oder Deckung suchen.",
+  "Falsche Heilpriorität": "Heile zuerst, wer kurz vor dem Tod steht und noch zu retten ist, dann den Tank, dann den Rest. Schau im Lexikon unter Heal-Priorität nach.",
+  "Heilung verpasst": "Schau alle paar Sekunden auf die Lebensbalken deines Teams, nicht nur auf deinen Fadenkreuz-Bereich. Frag dich nach jedem Tod im Team: Hätte ich ihn sehen können?",
+  "Schild falsch genutzt": "Heb dein Schild oder deinen Schutz für Ults und Spezialangriffe auf und senke ihn, wenn niemand mehr in der Nähe schiesst.",
+  "Backline nicht geschützt": "Behalte nach jedem Vorstoss im Blick, wo deine Supports stehen, und zieh dich zurück, sobald Diver auf sie zielen."
 };
 
 const DEFAULT_ROUTINE = [
@@ -2170,7 +2217,7 @@ const LESSONS = [
     ],
     reflect: "Auf welche Ziele hast du heute zu viel Schaden verschwendet?" },
 
-  { id: "l14", module: "m3", title: "Ult-Ökonomie", minutes: 10, mistakes: ["Ult verschwendet"],
+  { id: "l14", module: "m3", title: "Ult-Ökonomie", minutes: 10, mistakes: ["Ult verschwendet", "Gegner-Ult nicht beachtet"],
     goal: "Du setzt deine Ult gezielt ein und behältst die Ults der Gegner im Blick.",
     theory: [
       "Ults laden sich im Match auf. Eine Ult ist ein wertvoller Rohstoff – sie sollte einen Fight entscheiden, nicht einen einzelnen Gegner ausschalten, der ohnehin fast tot ist.",
@@ -2342,7 +2389,7 @@ const LESSONS = [
     ],
     reflect: "Gab es heute einen Moment, in dem ein Wechsel geholfen hätte?" },
 
-  { id: "l24", module: "m5", title: "Gegen Dive spielen", minutes: 10, mistakes: ["Heiler ignoriert", "Zu weit vorne"],
+  { id: "l24", module: "m5", title: "Gegen Dive spielen", minutes: 10, mistakes: ["Heiler ignoriert", "Zu weit vorne", "Dive nicht abgewehrt"],
     goal: "Du überlebst gegnerische Dives und bestrafst sie.",
     theory: [
       "Dive-Helden springen auf eure verletzlichsten Spieler – meist die Strategists.",
@@ -3441,7 +3488,7 @@ function summary(list) {
 const numDe = v => String(v).replace(".", ",");
 function mistakeCounts(list) {
   const c = {};
-  list.forEach(m => (m.mistakes || []).forEach(x => { c[x] = (c[x] || 0) + 1; }));
+  list.forEach(m => matchMistakes(m).forEach(x => { c[x] = (c[x] || 0) + 1; }));
   return Object.entries(c).sort((a, b) => b[1] - a[1]);
 }
 function table(headers, rows, emptyText) {
@@ -3995,6 +4042,7 @@ function renderDashboard() {
   $("#topMistakes").innerHTML = bars(mc.slice(0, 6).map(([m, c]) => [esc(m), c / max, `${c}×`]),
     { empty: "Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster." });
 
+  $("#deathDash").innerHTML = deathCardHtml(ms.slice(-20), true);
   $("#insights").innerHTML = notes(insights()) || empty("Noch keine Hinweise.", "ai");
 }
 
@@ -4032,6 +4080,8 @@ function insights() {
   if (tilt >= 3) out.push(["bad", `Tilt taucht ${tilt}× in den letzten 20 Matches auf. Setze dir ein Limit, z.B. Pause nach 2 Niederlagen in Folge.`]);
   const lowMood = ms.slice(-10).filter(m => m.mood && m.mood <= 2).length;
   if (lowMood >= 5) out.push(["info", "Viele deiner letzten Matches hast du als frustrierend bewertet. Spass ist wichtig – spiele zwischendurch einfach mal locker."]);
+  const dst = deathStats(ms.slice(-20));
+  if (dst.total >= 5) { const t = dst.causes[0]; out.push(["info", `<b>Du stirbst am häufigsten so:</b> „${esc(t[0])}“ (${t[1]} von ${dst.total} erfassten Toden in den letzten 20 Matches). ${DRILLS[deathMistake(t[0])] ? esc(DRILLS[deathMistake(t[0])]) : "Achte im nächsten Match gezielt darauf."}`]); }
   const top = mistakeCounts(ms.slice(-20))[0];
   if (top) out.push(["info", `Dein häufigster Fehler ist „${esc(top[0])}“. Übung dazu: ${esc(DRILLS[top[0]] || "Achte im nächsten Match bewusst darauf.")}`]);
   const fl = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
@@ -4041,6 +4091,79 @@ function insights() {
   const withEnemies = ms.filter(m => m.enemies.length).length;
   if (withEnemies < ms.length / 2) out.push(["info", `Nur ${withEnemies} von ${ms.length} Matches haben Gegnerinfos. Trag das Gegnerteam ein (oder synchronisiere mit Rivals Data), damit die Counter-Auswertung funktioniert.`]);
   return out;
+}
+
+
+// ---------- Todesursachen und Fehler passend zu Rolle und Held ----------
+let deathState = {};   // Ursache -> Anzahl, für das Match im Formular
+const roleOfHero = h => { const r = h ? heroRole(h) : "?"; return r === "?" ? "" : r; };
+function deathOptions(hero) { return DEATH_BY_ROLE[roleOfHero(hero) || "Strategist"].concat([["Sonstiges", null]]); }
+function deathMistake(label) {
+  for (const role in DEATH_BY_ROLE) for (const [l, m] of DEATH_BY_ROLE[role]) if (l === label) return m;
+  return null;
+}
+const deathTotal = o => Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0);
+function heroMistakeOptions(hero) {
+  const p = typeof PROF !== "undefined" ? PROF[hero] : null;
+  if (!p) return [];
+  return p.kit.filter(k => /Fähigkeit|Sekundär/.test(k.typ)).slice(0, 3).map(k => `${k.n} falsch genutzt`).concat(`${p.ult.n} falsch eingesetzt`);
+}
+function mistakeOptions(hero) {
+  return [...new Set([...(MISTAKE_BY_ROLE[roleOfHero(hero)] || ["Zu weit vorne", "Allein geflankt", "Heiler ignoriert"]), ...MISTAKE_COMMON, ...heroMistakeOptions(hero)])];
+}
+function mistakeBase(t) {
+  if (MISTAKES.includes(t)) return t;
+  if (/ falsch genutzt$/.test(t)) return "Cooldowns falsch genutzt";
+  if (/ falsch eingesetzt$/.test(t)) return "Ult verschwendet";
+  return t;
+}
+// Alle Fehler eines Matches: markierte Fehler plus Fehler, die aus den Todesursachen folgen
+function matchMistakes(m) {
+  const set = new Set((m.mistakes || []).map(mistakeBase));
+  Object.entries(m.deathCauses || {}).forEach(([l, n]) => { const t = deathMistake(l); if (t && n > 0) set.add(t); });
+  return [...set];
+}
+function deathStats(list) {
+  const c = {}; let total = 0, matches = 0;
+  list.forEach(m => { const n = deathTotal(m.deathCauses); if (!n) return; matches++; total += n; Object.entries(m.deathCauses).forEach(([l, v]) => { c[l] = (c[l] || 0) + (+v || 0); }); });
+  const deaths = list.filter(m => deathTotal(m.deathCauses)).reduce((a, m) => a + (+m.d || 0), 0);
+  return { causes: Object.entries(c).sort((a, b) => b[1] - a[1]), total, matches, deaths };
+}
+function renderMistakeChips(selected, hero) {
+  const sel = selected || [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v);
+  const h = hero !== undefined ? hero : ($("#heroSelect") ? $("#heroSelect").value : "");
+  const opts = mistakeOptions(h), list = [...opts, ...sel.filter(x => !opts.includes(x))];
+  chipGroup($("#mistakeChips"), list); setChips($("#mistakeChips"), sel);
+  const r = roleOfHero(h);
+  $("#mistakeHint").textContent = h ? `Die Auswahl passt zu ${r ? ROLE_DE[r] : "deinem Helden"}${h ? " und " + h : ""}.` : "Wähle oben deinen Helden, dann passt die App die Auswahl an Rolle und Held an.";
+}
+function renderDeathBox() {
+  const el = $("#deathBox");
+  if (!el) return;
+  const hero = $("#heroSelect") ? $("#heroSelect").value : "";
+  const labels = deathOptions(hero).map(o => o[0]), extra = Object.keys(deathState).filter(l => !labels.includes(l));
+  const total = deathTotal(deathState), d = Number($("#matchForm").d.value) || 0;
+  el.innerHTML = `<div class="deathgrid">${labels.concat(extra).map(l => { const n = deathState[l] || 0;
+    return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-death="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-death-dec="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; }).join("")}</div>
+    <p class="muted small" style="margin:8px 0 0">${total ? `${plural(total, "Tod", "Tode")} erfasst${d ? ` von ${d} laut K/D/A` : ""}.` : "Noch keine Tode erfasst."}${total && total < d ? ` ${d - total} offen: Du kannst sie später beim Bearbeiten nachtragen.` : ""}</p>`;
+}
+$("#deathBox").addEventListener("click", e => {
+  const b = e.target.closest("[data-death],[data-death-dec]");
+  if (!b) return;
+  const inc = b.dataset.death, dec = b.dataset.deathDec;
+  if (inc) deathState[inc] = (deathState[inc] || 0) + 1;
+  else if (dec && deathState[dec]) { deathState[dec]--; if (deathState[dec] <= 0) delete deathState[dec]; }
+  const f = $("#matchForm"), total = deathTotal(deathState);
+  if (inc && total > (Number(f.d.value) || 0)) f.d.value = total;   // mehr erfasste Tode als im K/D/A: Wert anheben
+  renderDeathBox(); renderMatchHints();
+});
+function deathCardHtml(list, compact) {
+  const st = deathStats(list);
+  if (!st.total) return `<p class="muted small" style="margin:0">Noch keine Todesursachen erfasst. Tippe beim Loggen (oder später bei „Bearbeiten“) bei jedem Tod auf die Ursache, auch mehrmals.</p>`;
+  const max = st.causes[0][1], top = st.causes[0], mt = deathMistake(top[0]), les = mt ? lessonForMistake(mt) : null;
+  const rows = st.causes.slice(0, compact ? 4 : 8).map(([l, n]) => [esc(l), n / max, `${n}× · ${Math.round(n / st.total * 100)} %`]);
+  return `<p class="muted small" style="margin:0 0 8px">${plural(st.matches, "Match", "Matches")}, ${plural(st.total, "Tod", "Tode")} erfasst (Ø ${(st.total / st.matches).toFixed(1).replace(".", ",")} pro Match).</p>${bars(rows)}
+    <div class="note info" style="margin:10px 0 0"><span class="ni" aria-hidden="true">i</span><div><b>Dein grösster Hebel:</b> „${esc(top[0])}“ (${top[1]}× von ${st.total}).${mt && DRILLS[mt] ? ` Übung: ${esc(DRILLS[mt])}` : ""}${les ? ` <button class="linkbtn" type="button" data-lesson="${les.id}">📘 ${esc(les.title)}</button>` : ""}</div></div>`;
 }
 
 // ---------- Match loggen ----------
@@ -4058,7 +4181,7 @@ function setChips(el, values) {
 }
 function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)].map(s => s.value); }
 // Von Rivals Data geholte Matches der letzten 14 Tage, zu denen du noch keine Reflexion eingetragen hast
-const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !(m.mistakes || []).length && !(m.goods || []).length && !m.notes
+const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !(m.mistakes || []).length && !deathTotal(m.deathCauses) && !(m.goods || []).length && !m.notes
   && (m.mood === null || m.mood === undefined) && (m.date || "") >= new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
 function renderOpenRefl() {
   const el = $("#openRefl"), open = state.matches.filter(isOpenRefl).reverse();
@@ -4093,6 +4216,7 @@ function renderLog() {
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
+  renderMistakeChips(); renderDeathBox();
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -4104,7 +4228,7 @@ function renderLog() {
       <td class="num">${m.k}/${m.d}/${m.a}${matchExtra(m)}</td>
       <td class="small">${esc(m.map || m.type)}<br><span class="muted">${esc(m.mode)}</span></td>
       <td><span class="row" style="gap:3px;flex-wrap:nowrap">${m.enemies.map(e => `<span${e === m.nemesis ? ' style="outline:2px solid var(--bad);border-radius:50%"' : ""}>${av(e, "sm")}</span>`).join("") || '<span class="muted small">–</span>'}</span></td>
-      <td class="small">${(m.mistakes || []).length ? esc(m.mistakes.slice(0, 2).join(", ")) + (m.mistakes.length > 2 ? " …" : "") : (m.notes ? esc(m.notes.slice(0, 40)) : '<span class="muted">offen</span>')}</td>
+      <td class="small">${(m.mistakes || []).length ? esc(m.mistakes.slice(0, 2).join(", ")) + (m.mistakes.length > 2 ? " …" : "") : (m.notes ? esc(m.notes.slice(0, 40)) : (deathTotal(m.deathCauses) ? "" : '<span class="muted">offen</span>'))}${deathTotal(m.deathCauses) ? `<br><span class="muted">${plural(deathTotal(m.deathCauses), "Tod", "Tode")} erfasst</span>` : ""}</td>
       <td style="white-space:nowrap"><button class="btn ghost small" data-edit="${m.id}" type="button" title="Alle Angaben ändern oder Reflexion ergänzen">${icon("edit")}Bearbeiten</button>
         <button class="btn danger small icon" data-del="${m.id}" type="button" aria-label="Löschen" title="Löschen">${icon("trash")}</button></td></tr>`).join("")}
     </tbody></table><p class="muted small mt">Falsch eingetragen? Tippe auf das Ergebnis, um Sieg und Niederlage zu tauschen, oder auf „Bearbeiten“ für alle Angaben (auch das Datum).</p>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
@@ -4169,7 +4293,9 @@ function clearForm() {
   f.date.value = today();
   setMapValue("");
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
-  setChips($("#mistakeChips"), []); setChips($("#goodChips"), []);
+  deathState = {};
+  renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []);
+  renderDeathBox();
   updateNemesis();
   refreshPickers($("#matchForm"));
   renderMatchHints();
@@ -4196,7 +4322,9 @@ function startEdit(id) {
   document.querySelectorAll("#enemySlots select").forEach((s, i) => { s.value = m.enemies[i] || ""; });
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
   updateNemesis(); f.nemesis.value = m.nemesis || "";
-  setChips($("#mistakeChips"), m.mistakes || []); setChips($("#goodChips"), m.goods || []);
+  deathState = Object.assign({}, m.deathCauses || {});
+  renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []);
+  renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
   renderMatchHints();
@@ -4221,7 +4349,7 @@ function matchDraft() {
     dmg: num("dmg"), heal: num("heal"), block: num("block"), dur: num("dur"), ults: num("ults"), ultHit: num("ultHit"), type: f.type.value,
     map: f.map.value === "__other" ? f.mapOther.value.trim() : f.map.value,
     allies: slotValues("allySlots").filter(Boolean), enemies: slotValues("enemySlots").filter(Boolean),
-    mistakes: on("mistakeChips"), goods: on("goodChips")
+    mistakes: on("mistakeChips"), goods: on("goodChips"), deathCauses: Object.assign({}, deathState)
   };
 }
 const nameList = (list, max) => { const l = [...new Set(list)]; return esc(l.slice(0, max || 3).join(", ")) + (l.length > (max || 3) ? " …" : ""); };
@@ -4329,6 +4457,32 @@ function matchHints(d, skipId) {
   all.sort((a, b) => (lost ? rank(a[0]) - rank(b[0]) : rank(b[0]) - rank(a[0])));
   return { items: all.slice(0, 9), team, enemies };
 }
+
+// Verbesserungsvorschläge: Was wäre noch besser gewesen? (auch nach einem Sieg)
+function matchBetter(d, skipId) {
+  const out = [], enemies = d.enemies, team = [d.hero, ...d.allies].filter(Boolean);
+  const score = h => enemies.reduce((a, e) => a + (counterReasons(h, e).length ? 1 : 0) - (counterReasons(e, h).length ? 1 : 0), 0);
+  const better = (hero, taken) => { const role = heroRole(hero), cur = score(hero);
+    return allHeroes().map(h => h.name).filter(n => n !== hero && heroRole(n) === role && !taken.includes(n)).map(n => [n, score(n)]).filter(([, sc]) => sc > cur).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(x => x[0]); };
+  if (enemies.length >= 3 && d.hero) {
+    const alts = better(d.hero, team);
+    if (alts.length) out.push(["info", `<b>Dein Held:</b> Gegen dieses Gegnerteam hätten ${nameList(alts)} noch besser gepasst als ${esc(d.hero)} (nach den Spielstil-Regeln). Probier sie aus, wenn du sie sicher spielst.`]);
+    else if (score(d.hero) > 0) out.push(["good", `<b>Dein Held:</b> ${esc(d.hero)} war gegen dieses Gegnerteam eine gute Wahl.`]);
+    d.allies.filter(a => enemies.some(e => counterReasons(e, a).length)).slice(0, 2).forEach(a => {
+      const alts2 = better(a, team);
+      if (alts2.length) out.push(["info", `<b>Im Team:</b> ${esc(a)} wurde gekontert. Besser gewesen wären ${nameList(alts2)}. Sag das nächstes Mal in der Heldenwahl an.`]);
+    });
+  }
+  if (d.hero && d.allies.length >= 3) {
+    const tu = tuOf(d.hero).own.find(t => t.helden.some(h => h.rolle === "Partner" && d.allies.some(a => tuName(a) === h.name)));
+    if (tu) out.push(["good", `<b>Team-Up:</b> Dein Partner für „${esc(tu.name)}“ war im Team. Hast du es genutzt?`]);
+    else if (tuOf(d.hero).own.length) { const t0 = tuOf(d.hero).own[0]; out.push(["info", `<b>Team-Up:</b> Mit ${esc(t0.helden.filter(h => h.rolle === "Partner").map(h => h.name).join(" oder "))} im Team wäre „${esc(t0.name)}“ stärker gewesen.`]); }
+  }
+  const dcs = Object.entries(d.deathCauses || {}).sort((a, b) => b[1] - a[1])[0];
+  if (dcs) { const mt = deathMistake(dcs[0]); out.push(["info", `<b>Deine Tode:</b> Am häufigsten „${esc(dcs[0])}“ (${dcs[1]}×).${mt && DRILLS[mt] ? " " + esc(DRILLS[mt]) : ""}`]); }
+  else if (d.d >= 3) out.push(["info", `<b>Deine Tode:</b> Trag oben ein, woran du gestorben bist. Dann sagt dir die App, wo du am meisten gewinnen kannst.`]);
+  return out;
+}
 function renderMatchHints() {
   const body = $("#hintBody");
   if (!body) return;
@@ -4347,9 +4501,14 @@ function renderMatchHints() {
   const missing = team.length < 6 || enemies.length < 6;
   body.innerHTML = `<div class="hint-teams">${teamLine("Euer Team", team)}${teamLine("Gegner", enemies)}</div>`
     + (items.length ? notes(items) : `<p class="muted small">Noch nichts Auffälliges. Je mehr du einträgst (beide Teams, K/D/A, Map), desto genauer werden die Hinweise.</p>`)
+    + (() => { const bt = matchBetter(d, editingId); return bt.length ? `<h3 style="margin:14px 0 6px;font-size:.95rem">${lost ? "Was du nächstes Mal anders machen kannst" : "Auch beim Sieg: Was wäre noch besser gewesen?"}</h3>${notes(bt)}` : (lost ? "" : `<p class="muted small">Trag beide Teams ein, dann zeigt dir die App auch nach einem Sieg, welche Helden noch besser gepasst hätten.</p>`); })()
     + `<p class="muted small hint-foot">Automatisch aus Aufstellung, Counter-Regeln und deinen bisherigen Matches abgeleitet – das sind Hinweise, keine Gewissheit.${missing ? " Mit vollständigen Teams werden sie genauer." : ""}</p>`;
 }
-["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, renderMatchHints));
+["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, e => {
+  if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); }
+  else if (e.target && e.target.name === "d") renderDeathBox();
+  renderMatchHints();
+}));
 ["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
 $("#takeTeams").addEventListener("click", () => setTimeout(renderMatchHints, 0));
 $("#editCancel").addEventListener("click", cancelEdit);
@@ -4360,10 +4519,12 @@ $("#mapSelect").addEventListener("change", e => {
   if (MAPS[v]) $("#matchForm").type.value = MAPS[v];
 });
 $("#takeTeams").addEventListener("click", () => {
+  const TD = teamData();
   let me = $("#heroSelect").value;
-  if (!me && state.team[0]) { me = state.team[0]; $("#heroSelect").value = me; }
-  const mates = state.team.filter(h => h && h !== me);
-  document.querySelectorAll("#enemySlots select").forEach((s, i) => { s.value = state.enemyTeam[i] || ""; });
+  if (!me && TD.team[0]) { me = TD.team[0]; $("#heroSelect").value = me; }
+  const mates = TD.team.filter(h => h && h !== me);
+  document.querySelectorAll("#enemySlots select").forEach(sel => { /* wird unten gesetzt */ });
+  document.querySelectorAll("#enemySlots select").forEach((s, i) => { s.value = TD.enemy[i] || ""; });
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = mates[i] || ""; });
   updateNemesis();
   refreshPickers($("#matchForm"));
@@ -4381,7 +4542,8 @@ $("#matchForm").addEventListener("submit", e => {
     enemies: slotValues("enemySlots").filter(Boolean), allies: slotValues("allySlots").filter(Boolean),
     nemesis: f.get("nemesis") || "", swapped: !!f.get("swapped"),
     mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
-    goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v)
+    goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v),
+    deathCauses: Object.assign({}, deathState)
   };
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
   if (fields.dur !== null && !(fields.dur > 0)) fields.dur = null;
@@ -4470,6 +4632,7 @@ function renderAnalysis() {
     ["Mit Gegnerinfos", ms.filter(m => m.enemies.length).length]
   ].map(([l, v, sub]) => `<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div>`).join("");
 
+  $("#deathCard").innerHTML = deathCardHtml(ms);
   // Pro 10 Minuten nach Held: Werte aus Matches mit Dauer, Ult-Wirkung aus Matches mit Ults
   const per10Rows = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(([, x]) => x.timedN || x.ultN)
     .sort((a, b) => b[1].n - a[1].n).map(([h, x]) => [heroChip(h), x.timedN || "–", x.timedN ? numDe(x.dur.toFixed(1)) : "–",
@@ -4546,13 +4709,59 @@ function renderAnalysis() {
 }
 
 // ---------- Team & Counter ----------
-function renderTeam() {
-  $("#teamEnemySlots").innerHTML = state.enemyTeam.map((h, i) => heroSelectHtml(`data-eslot="${i}" aria-label="Gegner ${i + 1}"`, h, `Gegner ${i + 1}`, "enemy")).join("");
-  $("#teamSlots").innerHTML = state.team.map((h, i) => heroSelectHtml(`data-slot="${i}" aria-label="${i === 0 ? "Ich" : "Mitspieler " + i}"`, h, i === 0 ? "Ich" : `Mitspieler ${i}`, i === 0 ? "me" : "ally")).join("");
-  $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.enemyTeam[+s.dataset.eslot] = s.value; save(); renderTeam(); }));
-  $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { state.team[+s.dataset.slot] = s.value; save(); renderTeam(); }));
 
-  const enemies = state.enemyTeam.filter(Boolean);
+// ---------- Team & Counter: Teams aus dem aktuellen Match ----------
+const teamUi = { src: "auto" };   // auto = Formular oder letztes Match, manual = eigene Eingabe, sonst die ID eines Matches
+function currentMatchInfo() {
+  if (teamUi.src === "manual") return null;
+  if (teamUi.src !== "auto") {
+    const m = state.matches.find(x => x.id === teamUi.src);
+    return m ? { kind: "saved", d: m, label: `Match vom ${fmtDate(m.date)}` } : null;
+  }
+  const dr = matchDraft();
+  if (dr.allies.length || dr.enemies.length) return { kind: "draft", d: dr, label: "Match im Formular (noch nicht gespeichert)" };
+  const last = state.matches.slice().reverse().find(m => (m.enemies || []).length || (m.allies || []).length);
+  return last ? { kind: "saved", d: last, label: `Zuletzt gespieltes Match vom ${fmtDate(last.date)}` } : null;
+}
+function teamData() {
+  const c = currentMatchInfo(), pad = a => [...a, "", "", "", "", "", ""].slice(0, 6);
+  if (!c) return { team: state.team, enemy: state.enemyTeam, auto: false, info: null };
+  return { team: pad([c.d.hero, ...(c.d.allies || [])].filter(Boolean)), enemy: pad(c.d.enemies || []), auto: true, info: c };
+}
+// Wer im Auto-Modus etwas ändert, arbeitet danach mit einer eigenen Kopie
+function teamEnsureManual(TD) {
+  if (!TD.auto) return;
+  state.team = TD.team.slice(); state.enemyTeam = TD.enemy.slice(); teamUi.src = "manual";
+  toast("Eigene Eingabe: Deine Änderungen werden gespeichert");
+}
+function curMatchHtml(TD) {
+  const c = TD.info;
+  if (!c) return `<p class="lead" style="margin:0">Hier erscheint automatisch das Match aus „Match loggen“ oder dein zuletzt gespieltes Match, mit seinen Teams und den Stellen, an denen Probleme entstanden sind. Gerade ist kein Match mit Teams vorhanden. Du kannst unten deine eigenen Teams eintragen.</p>`;
+  const d = c.d, hints = matchHints(d, c.kind === "saved" ? d.id : null), tone = t => t;
+  const probs = hints.items.filter(x => x[0] !== "good"), goods = hints.items.filter(x => x[0] === "good"), better = matchBetter(d, c.kind === "saved" ? d.id : null);
+  return `<p style="margin:0 0 10px"><span class="muted small">${esc(c.label)}</span><br>${d.hero ? heroChip(d.hero) : ""} ${d.result ? resultPill(d.result) : ""} <span class="muted small">${d.map ? esc(d.map) + " · " : ""}${d.k + d.d + d.a > 0 ? `${d.k}/${d.d}/${d.a}` : ""}</span></p>
+    ${probs.length ? `<h3 style="margin:8px 0 6px;font-size:.95rem">Wo Probleme entstehen oder entstanden sind</h3>${notes(probs.slice(0, 6).map(x => [tone(x[0]), x[1]]))}` : `<p class="muted small">Noch keine Probleme erkannt. Trag beide Teams ein, dann werte ich Aufstellung und Counter aus.</p>`}
+    ${goods.length ? `<h3 style="margin:12px 0 6px;font-size:.95rem">Das lief gut für euer Team</h3>${notes(goods.slice(0, 3))}` : ""}
+    ${better.length ? `<h3 style="margin:12px 0 6px;font-size:.95rem">Was besser gewesen wäre</h3>${notes(better)}` : ""}`;
+}
+function renderTeamSource(TD) {
+  const sel = $("#teamSource");
+  const recent = state.matches.slice().reverse().filter(m => (m.enemies || []).length || (m.allies || []).length).slice(0, 12);
+  sel.innerHTML = `<option value="auto">Automatisch (Formular oder letztes Match)</option><option value="manual">Eigene Eingabe</option>`
+    + (recent.length ? `<optgroup label="Ältere Matches">${recent.map(m => `<option value="${esc(m.id)}">${esc(fmtDate(m.date))} · ${esc(m.hero)} · ${m.result === "W" ? "Sieg" : "Niederlage"}</option>`).join("")}</optgroup>` : "");
+  sel.value = [...sel.options].some(o => o.value === teamUi.src) ? teamUi.src : "auto";
+}
+$("#teamSource").addEventListener("change", e => { teamUi.src = e.target.value; renderTeam(); });
+function renderTeam() {
+  const TD = teamData();
+  renderTeamSource(TD);
+  $("#curMatch").innerHTML = curMatchHtml(TD);
+  $("#teamEnemySlots").innerHTML = TD.enemy.map((h, i) => heroSelectHtml(`data-eslot="${i}" aria-label="Gegner ${i + 1}"`, h, `Gegner ${i + 1}`, "enemy")).join("");
+  $("#teamSlots").innerHTML = TD.team.map((h, i) => heroSelectHtml(`data-slot="${i}" aria-label="${i === 0 ? "Ich" : "Mitspieler " + i}"`, h, i === 0 ? "Ich" : `Mitspieler ${i}`, i === 0 ? "me" : "ally")).join("");
+  $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { teamEnsureManual(TD); state.enemyTeam[+s.dataset.eslot] = s.value; save(); renderTeam(); }));
+  $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { teamEnsureManual(TD); state.team[+s.dataset.slot] = s.value; save(); renderTeam(); }));
+
+  const enemies = TD.enemy.filter(Boolean);
   const ea = [];
   if (enemies.length) {
     const tagCount = {};
@@ -4566,7 +4775,7 @@ function renderTeam() {
       if (state.counterNotes[e]) ea.push(["good", `Deine Notiz zu <b>${esc(e)}</b>: ${esc(state.counterNotes[e])}`]);
     });
   }
-  const myTeam = new Set(state.team.filter(Boolean));
+  const myTeam = new Set(TD.team.filter(Boolean));
   const ultAnswers = [...new Set(enemies)].filter(e => ULTS[e]).map(e => [e, ULTS[e].by.filter(([h]) => myTeam.has(h))]).filter(x => x[1].length);
   if (ultAnswers.length) ea.push(["good", `<b>Ult-Konter in eurem Team:</b> <ul style="margin:4px 0 0;padding-left:18px">${ultAnswers.map(([e, by]) => `<li><b>${esc(by[0][0])}</b> gegen ${esc(e)} – ${esc(ultName(ULTS[e]))}: ${esc(by[0][1])}</li>`).join("")}</ul>`]);
   if (enemies.length === 6) {
@@ -4575,11 +4784,11 @@ function renderTeam() {
   }
   $("#enemyAnalysis").innerHTML = notes(ea) + (enemies.length
     ? `<h3>So spielst du gegen ihr Team</h3><div class="cp-list">${[...new Set(enemies)].map(counterplayHtml).join("")}</div>` : "");
-  renderFormats(state.team.filter(Boolean), enemies);
+  renderFormats(TD.team.filter(Boolean), enemies);
 
   const roleF = $("#pickRole").value, poolOnly = $("#pickPool").checked;
   const played = new Set(state.matches.map(m => m.hero));
-  const mates = state.team.slice(1).filter(Boolean);
+  const mates = TD.team.slice(1).filter(Boolean);
   const cnt = { Vanguard: 0, Duelist: 0, Strategist: 0 };
   mates.forEach(h => { const r = heroRole(h); if (cnt[r] !== undefined) cnt[r]++; });
   const minRole = Math.min(cnt.Vanguard, cnt.Duelist, cnt.Strategist);
@@ -4616,7 +4825,7 @@ function renderTeam() {
       </div>`).join("") : empty("Keine passenden Helden – Filter anpassen.", "target");
   }
 
-  const picked = state.team.filter(Boolean);
+  const picked = TD.team.filter(Boolean);
   const all = { Vanguard: 0, Duelist: 0, Strategist: 0 };
   picked.forEach(h => { const r = heroRole(h); if (all[r] !== undefined) all[r]++; });
   if (!picked.length) { $("#teamFeedback").innerHTML = empty("Wähle Helden aus, um die Rollenverteilung zu prüfen.", "team"); return; }
@@ -4640,8 +4849,8 @@ function renderTeam() {
   }
   $("#teamFeedback").innerHTML = notes(out);
 }
-$("#teamClear").addEventListener("click", () => { state.team = ["", "", "", "", "", ""]; save(); renderTeam(); });
-$("#enemyClear").addEventListener("click", () => { state.enemyTeam = ["", "", "", "", "", ""]; save(); renderTeam(); });
+$("#teamClear").addEventListener("click", () => { teamUi.src = "manual"; state.team = ["", "", "", "", "", ""]; save(); renderTeam(); });
+$("#enemyClear").addEventListener("click", () => { teamUi.src = "manual"; state.enemyTeam = ["", "", "", "", "", ""]; save(); renderTeam(); });
 $("#pickRole").addEventListener("change", renderTeam);
 $("#pickPool").addEventListener("change", renderTeam);
 
@@ -4942,10 +5151,10 @@ const GOAL_TOPICS = [
     mistakes: ["Zu weit vorne", "Allein geflankt", "Keine Deckung genutzt"], lessons: ["l06", "l07", "l08", "l10"],
     measure: "Zähle nach jedem Match deine Tode und schreib auf, wo du gestorben bist: Position, Fluchtweg, gegnerische Ult, zu gierig oder vom Team getrennt." },
   { id: "heal", name: "Heilen & Heal-Priorität", title: "Meine Heilung verbessern", short: "Heilung pro 10 Minuten steigt", metric: "heal",
-    kw: ["heil", "heal"], mistakes: [], lessons: ["l30", "l31"],
+    kw: ["heil", "heal"], mistakes: ["Falsche Heilpriorität", "Heilung verpasst"], lessons: ["l30", "l31"],
     measure: "Trag bei jedem Match die Dauer und deine Heilung ein. Dann siehst du deine Heilung pro 10 Minuten." },
   { id: "ult", name: "Ults", title: "Meine Ults besser nutzen", short: "Ult-Wirkung steigt", metric: "ult",
-    kw: ["ult"], mistakes: ["Ult verschwendet"], lessons: ["l14", "l31"],
+    kw: ["ult"], mistakes: ["Ult verschwendet", "Gegner-Ult nicht beachtet"], lessons: ["l14", "l31"],
     measure: "Notiere bei jeder Ult, ob sie etwas gebracht hat. Beim Loggen trägst du Ults und Ult-Wirkung ein." },
   { id: "fight", name: "Teamfights & Fokus", title: "Fights gemeinsam und mit Fokus spielen", short: "Match-Fokus wird umgesetzt", metric: null,
     kw: ["teamfight", "fight", "kampf", "zusammen", "fokus", "focus", "zielpriorit", "aggro"], mistakes: ["Fokus auf falsches Ziel", "Ohne Team reingegangen"], lessons: ["l11", "l12", "l13"],
@@ -4963,10 +5172,10 @@ const GOAL_TOPICS = [
     kw: ["map", "karte", "objective", "domination", "convoy", "convergence", "overtime", "punkt", "modus", "modi"], mistakes: ["Objective verlassen", "Nicht auf Minimap/Sound geachtet"], lessons: ["l16", "l17", "l18", "l19", "l20", "l09"],
     measure: "Notiere nach jedem Match die Map und was dort gut oder schlecht lief." },
   { id: "dive", name: "Gegen Dive spielen", title: "Gegen Dive besser verteidigen", short: "Dive überleben", metric: null,
-    kw: ["dive", "backline", "peel", "anspring", "flanker"], mistakes: [], lessons: ["l24", "l25", "l30"],
+    kw: ["dive", "backline", "peel", "anspring", "flanker"], mistakes: ["Dive nicht abgewehrt"], lessons: ["l24", "l25", "l30"],
     measure: "Heb deine Fluchtfähigkeit für Diver auf und notiere, ob du einen Dive überlebt hast." },
   { id: "tank", name: "Tank lernen", title: "Tank spielen lernen", short: "Matches als Tank", metric: "tank",
-    kw: ["tank", "vanguard", "alle rollen", "allen rollen", "flex"], mistakes: ["Kein Raum gewonnen (Tank)"], lessons: ["l26", "l27", "l02"],
+    kw: ["tank", "vanguard", "alle rollen", "allen rollen", "flex"], mistakes: ["Kein Raum gewonnen (Tank)", "Schild falsch genutzt", "Backline nicht geschützt"], lessons: ["l26", "l27", "l02"],
     measure: "Spiel Matches als Tank, am besten ungewertet, und achte darauf, ob die Gegner nach deinem Vorstoss weiter hinten stehen." },
   { id: "dps", name: "DPS lernen", title: "DPS spielen lernen", short: "Matches als DPS", metric: "dps",
     kw: ["dps", "duelist", "damage", "schaden", "alle rollen", "allen rollen", "flex"], mistakes: ["Auf den Tank geschossen (DPS)"], lessons: ["l28", "l29", "l13"],
@@ -6049,7 +6258,7 @@ function ultName(u) { return u.name || "Ult"; }
 function ultCounterHtml(hero, compact) {
   const u = ULTS[hero];
   if (!u) return "";
-  const mine = new Set(state.team.filter(Boolean));
+  const mine = new Set(teamData().team.filter(Boolean));
   const by = u.by.map(([h, how]) => ({ h, how, mine: mine.has(h) }));
   const ours = by.filter(x => x.mine);
   return `<div class="ult-box">
@@ -6065,7 +6274,7 @@ function renderLexicon() {
   $("#lexTabs").querySelectorAll("[data-lex]").forEach(c => c.addEventListener("click", () => { lexTab = c.dataset.lex; renderLexicon(); }));
   const q = $("#lexSearch").value.trim().toLowerCase();
   const enemyOnly = $("#lexEnemy").checked;
-  const enemies = new Set(state.enemyTeam.filter(Boolean));
+  const enemies = new Set(teamData().enemy.filter(Boolean));
   $("#lexEnemyWrap").hidden = lexTab !== "ults";
   $("#lexSearch").placeholder = lexTab === "wissen" ? "Wissen durchsuchen …" : lexTab === "rules" ? "Regel suchen …" : lexTab === "ults" ? "Held oder Ult suchen …" : "Effekt suchen …";
   if (lexTab === "wissen") { renderWissen(q); return; }
@@ -6586,6 +6795,7 @@ function weeklyPackageText() {
     `Lektionen: ${Object.keys(lessonsDone()).filter(id => lessonById(id)).length} von ${LESSONS.length} erledigt${missedLessons().length ? `, zum Plan noch offen: ${missedLessons().slice(0, 5).map(m => `${lessonById(m.id).title} (Tag ${m.day})`).join(", ")}` : ""}`,
     `Rollen-Flex: ${flexStats().map(x => `${ROLE_SHORT[x.role]} ${x.n}/${flexGoal().n}`).join(", ")}`,
     top ? `Häufigste markierte Fehler: ${top}` : "Keine Fehler markiert.",
+    ...(() => { const st = deathStats(ms); return st.total ? [`Todesursachen (${plural(st.total, "Tod", "Tode")} erfasst): ${st.causes.slice(0, 4).map(([l, n]) => `${l} (${n}×)`).join(", ")}`] : []; })(),
     recent.length ? "Abgeschlossene Tage:" : "Keine Tage in den letzten 7 Tagen abgeschlossen.",
     ...recent.map(d => `- Tag ${d.n} (${d.title}) am ${dayGet(d.n).done}${dayGet(d.n).note ? `: ${dayGet(d.n).note}` : ""}`),
     "", "Bitte passe den Plan an, wenn sich meine Schwächen verschoben haben."
@@ -8195,7 +8405,7 @@ Object.assign(FIGS, {
 });
 
 // ---------- Render ----------
-chipGroup($("#mistakeChips"), MISTAKES);
+renderMistakeChips([], ""); renderDeathBox();
 chipGroup($("#goodChips"), GOODS);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
