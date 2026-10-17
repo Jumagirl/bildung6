@@ -41,3 +41,7 @@ Sie entstehen aus den eingebetteten, geprüften Daten (`PROF`, `MAPINFO`, `TU`) 
 
 ## Schreibregeln
 Deutsch, Schweizer Schreibung (immer «ss», nie «ß»), Du-Form, kurze Sätze, Fachwörter beim ersten Mal erklären, Namen von Helden, Fähigkeiten und Karten englisch wie im Spiel.
+
+## Helden-Bootcamp
+Tab «Helden-Bootcamp» (Bereich Lernen), Code im Abschnitt «Helden-Bootcamp: ein Kurs pro Held» in `index.html` (`BOOT_STATIONS`, `bootPick`, `bootStart`, `bootFinish`, `bootReadHtml`). Pro Held sieben Stationen; in Station 1 bis 5 gilt immer: erst eine eigene Antwort aufschreiben (Textfeld, leer lassen erlaubt), dann Quellen aufdecken, dann abfragen, wobei die Texte beim Abfragen verdeckt sind. Station 6: Steckbrief und Wenn-dann-Mini-Ziel aus dem Kopf. Station 7: Test (bestanden ab 80 %) und Praxis-Auftrag, der sich aus den Matches selbst abhakt. Alle Antworten laufen über `knowRecord` (Wiederholungs-Fächer, Sicherheit, `actInc("know")`). Fortschritt liegt in `state.boot[held]`.
+Regeln: Inhalte und Fragen nur aus `PROF`/`TU`, keine erfundenen Spielfakten. Neue Fragetypen (`inn`: Fähigkeit aus der Beschreibung erkennen, `staerke`) liefern immer vier verschiedene Optionen, Erklärung mit Quelle; bei `inn` kommt der Name der Fähigkeit nicht im Fragetext vor und keine falsche Option steht in der Beschreibung. Tests: `t68.js` (alle Fragen gültig), `t70.js` (Bootcamp).

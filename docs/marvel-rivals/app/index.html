@@ -366,6 +366,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .swaphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .swaprow ul { margin: 4px 0 0; padding-left: 18px; }
 .swapsteps { margin: 0 0 8px; padding-left: 20px; }
+.bootgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.bootcard { display: flex; gap: 10px; align-items: center; text-align: left; font: inherit; color: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; min-width: 0; }
+.bootcard:hover { border-color: var(--accent); }
+.bootcard .bi { min-width: 0; flex: 1; }
+.bootdots { display: flex; gap: 3px; margin: 4px 0; }
+.bootdots i { width: 14px; height: 5px; border-radius: 3px; background: var(--surface-3); }
+.bootdots i.on { background: var(--good); }
+.bootsteps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.bootask textarea, #bootStation textarea { width: 100%; box-sizing: border-box; }
+.bootread { margin-top: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.bootcmp { display: grid; gap: 8px 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .fold.nugfold { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); margin: 10px 0; }
 .nug-q { margin: 0 0 8px; font-weight: 600; }
 .nug-tag { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -1174,6 +1185,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <!-- HEROES -->
 <section id="tab-teamups" hidden><div id="tuBody"></div></section>
 <section id="tab-meta" hidden><div id="metaBody"></div></section>
+<section id="tab-bootcamp" hidden><div id="bootBody"></div></section>
 <section id="tab-heroes" hidden>
   <div class="card">
     <div class="row between">
@@ -3048,19 +3060,20 @@ const TITLES = {
   ai: ["KI-Coach", "Deine Daten als Prompt für einen Chatbot"],
   data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"],
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
-  teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"]
+  teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
+  bootcamp: ["Helden-Bootcamp", "Pro Held ein Kurs: erst aus dem Kopf antworten, dann die Quellen, dann abgefragt werden"]
 };
 
 // ---------- Bereiche und Navigation ----------
 // Fünf Bereiche statt dreizehn Reiter. Jeder Bereich hat Unterseiten; die Seiten selbst (tab-…) bleiben unverändert.
 const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
-  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz und Lexikon", tabs: ["plan", "lessons", "quiz", "lexicon"] },
+  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "lexicon"] },
   { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten und auswerten", tabs: ["log", "analysis", "dashboard"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team, Counter und Meta", tabs: ["heroes", "team", "teamups", "meta"] },
   { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
 ];
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -3096,6 +3109,7 @@ function loadState(raw) {
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
   st.quiz = Object.assign({ asked: 0, correct: 0, wrong: {} }, st.quiz);
+  st.boot = Object.assign({}, st.boot);   // Helden-Bootcamp: Fortschritt, eigene Antworten und Test pro Held
   st.act = Object.assign({}, st.act);   // beantwortete Quizfragen pro Tag, damit die App Aufgaben selbst abhaken kann
   st.quiz.k = Object.assign({ asked: 0, correct: 0, wrong: {}, seen: {}, box: {}, cal: {} }, st.quiz.k);
   st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
@@ -3127,7 +3141,7 @@ const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
 const Cloud = { db: null, base: null, ready: false, status: "init", rev: null, lastJson: {}, chunkCount: 0, timer: null, queue: Promise.resolve(), unsub: null, error: "" };
 const CHUNK_BYTES = 180000; // Sicherheitsabstand zur Dokumentgrenze von 256 KiB
 function plainJson(x) { return JSON.parse(JSON.stringify(x)); }
-function hasUserData(s) { return s.matches.length || s.goals.length || Object.keys(s.lessons.done).length || Object.keys(s.heroNotes).length || s.sync || s.plan.start || Object.keys(s.plan.days).length; }
+function hasUserData(s) { return s.matches.length || s.goals.length || Object.keys(s.lessons.done).length || Object.keys(s.heroNotes).length || Object.keys(s.boot || {}).length || s.sync || s.plan.start || Object.keys(s.plan.days).length; }
 
 function setSyncStatus(status, error) {
   Cloud.status = status; Cloud.error = error || "";
@@ -5105,6 +5119,7 @@ function renderHeroes() {
       <div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div>
       <div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>
       ${heroTeamupsHtml(h.name)}
+      ${PROF[h.name] ? `<div class="row" style="margin:6px 0"><button type="button" class="btn ghost small" data-bootopen="${esc(h.name)}">${bootPassed(h.name) ? "Bootcamp auffrischen" : bootGet(h.name) ? "Bootcamp fortsetzen" : "Bootcamp für " + esc(h.name)}</button></div>` : ""}
       ${ULTS[h.name] ? `<details class="cp"><summary><span class="cp-name"><b>Ult: ${esc(ultName(ULTS[h.name]))}</b></span></summary><div class="cp-body" style="padding-left:14px">${ultCounterHtml(h.name)}</div></details>` : ""}
       ${(COUNTERPLAY[h.name] || []).length ? `<details class="cp"><summary><span class="cp-name"><b>So spielst du gegen ${esc(h.name)}</b></span></summary><div class="cp-body" style="padding-left:14px"><ul>${COUNTERPLAY[h.name].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div></details>` : ""}
       ${pc.length ? `<div class="vs-line"><span class="lbl">Bei dir klappt dagegen</span>${pc.slice(0, 3).map(([n, x]) => `${esc(n)} (${pct(x.wr)})`).join(", ")}</div>` : ""}
@@ -7241,6 +7256,15 @@ function hqOpts(correct, pool) {
   const opts = shuffle([correct, ...wrong]);
   return { opts, a: opts.indexOf(correct) };
 }
+// Fähigkeit innerhalb eines Helden erkennen: Antwortmöglichkeiten sind die anderen Fähigkeiten desselben Helden (ohne Namen, die in der Beschreibung stehen)
+function hqInn(h, k) {
+  const x = PROF[h], d = String(k.d || "").toLowerCase();
+  if (!k.d || d.includes(k.n.toLowerCase())) return null;
+  const pool = [...new Set(x.kit.map(z => z.n).concat([x.ult.n]).filter(n => n !== k.n && !d.includes(n.toLowerCase())))];
+  if (pool.length < 3 || x.kit.some(z => z !== k && z.d === k.d)) return null;
+  return pool;
+}
+const hqCut = t => { t = String(t); if (t.length <= 260) return t; const f = (/^(.+?[.!?])(\s|$)/.exec(t) || [])[1]; return f && f.length <= 260 ? f : t.slice(0, 257).replace(/\s+\S*$/, "") + "…"; };
 let HQ_IDS = null;
 function hqIds() {
   if (HQ_IDS) return HQ_IDS;
@@ -7255,6 +7279,8 @@ function hqIds() {
     if ((x.uk || []).some(k => heroByName(k.held))) ids.push(`konter|${h}`);
     if ((x.ue || []).some(t => /^Typischer Fehler:/.test(t))) ids.push(`fehler|${h}`);
     if ((x.schwaechen || []).length && (x.staerken || []).length >= 3) ids.push(`schw|${h}`);
+    if ((x.staerken || []).length && (x.schwaechen || []).length >= 3) ids.push(`staerke|${h}`);
+    x.kit.forEach(k => { if (hqInn(h, k)) ids.push(`inn|${h}|${k.n}`); });
   });
   heroes.filter(hqBase).forEach(S => { if (heroRole(S) === "Strategist" && heroes.some(e => e !== S && hqUk(e, S).length)) ids.push(`lage|${S}`); });
   Object.keys(MAPINFO).forEach(m => {
@@ -7295,6 +7321,14 @@ function hqGen(id) {
     if (type === "schw") {
       const x = PROF[a], correct = hqRand(x.schwaechen);
       return mk(`Welche Aussage beschreibt eine Schwäche von ${a}?`, hqOpts(correct, x.staerken), `Schwächen von ${a}:\n${x.schwaechen.join("\n")}\nStärken: ${x.staerken.join(" · ")}\n${hqSrc(x.stand)}`, { topic: "Stärken und Schwächen", hero: a });
+    }
+    if (type === "inn") {
+      const x = PROF[a], k = x.kit.find(z => z.n === b);
+      return mk(`Welche Fähigkeit von ${a} passt zu dieser Beschreibung? «${hqCut(k.d)}»`, hqOpts(k.n, hqInn(a, k)), `${k.n} (${k.typ}): ${k.d}\n${hqSrc(x.stand)}`, { topic: "Fähigkeiten", hero: a });
+    }
+    if (type === "staerke") {
+      const x = PROF[a];
+      return mk(`Welche Aussage beschreibt laut Profil eine Stärke von ${a}?`, hqOpts(hqRand(x.staerken), x.schwaechen), `Stärken von ${a}:\n${x.staerken.join("\n")}\nSchwächen: ${x.schwaechen.join(" · ")}\n${hqSrc(x.stand)}`, { topic: "Stärken und Schwächen", hero: a });
     }
     if (type === "lage") {
       const counters = heroes.filter(e => e !== a && hqUk(e, a).length), others = heroes.filter(e => e !== a && !(PROF[e].uk || []).some(k => k.held === a));
@@ -7439,6 +7473,262 @@ function renderTeamRead(TD) {
     <div><h3 style="margin:0 0 6px;font-size:.95rem">Gegnerteam</h3>${teamReadHtml(TD.enemy, false)}</div></div>`;
   $("#swapBox").innerHTML = swapHtml(TD);
 }
+
+// ---------- Helden-Bootcamp: ein Kurs pro Held ----------
+// Jede Station folgt demselben Ablauf: erst selbst aus dem Kopf antworten, dann die Quellen ansehen, dann abgefragt werden.
+// Alle Inhalte stammen aus den geprüften Heldenprofilen (PROF), die Fragen erzeugt hqGen. Nichts ist von Hand erfunden.
+const BOOT_PASS = 0.8, BOOT_PRAXIS = 3, BOOT_TEST_MAX = 10;
+const BOOT_TYPES = ["inn", "abil", "ult", "konter", "fehler", "schw", "staerke", "lage", "tu"];
+const BOOT_TOPIC_ST = { "Fähigkeiten": 2, "Ult-Namen": 3, "Typische Fehler": 3, "Ult-Konter": 3, "Team-Ups": 4, "Lage lesen": 4, "Stärken und Schwächen": 5 };
+const BOOT_STATIONS = [
+  { n: 1, title: "Vorwissen", min: 3, types: null, qn: 3, ask: h => `Was weisst du schon über ${h}? Schreib in ein bis zwei Sätzen auf: Wofür ist ${h} gut, und was macht ${h} das Leben schwer? Raten ist erlaubt.` },
+  { n: 2, title: "Fähigkeiten", min: 5, types: ["inn", "abil"], qn: 3, ask: h => `Welche Fähigkeiten von ${h} kennst du? Zähl sie auf und schreib dazu, wofür du sie brauchst.` },
+  { n: 3, title: "Die Ult", min: 5, types: ["ult", "fehler", "konter"], qn: 3, ask: h => `Wann würdest du die Ult von ${h} zünden, und wann lieber nicht? Schreib deine Regel auf.` },
+  { n: 4, title: "Gegner und Team", min: 5, types: ["tu", "konter", "lage"], qn: 3, ask: h => `Wer macht ${h} das Leben schwer, und mit wem passt ${h} gut zusammen?` },
+  { n: 5, title: "Stärken und Fehler", min: 5, types: ["schw", "staerke", "fehler"], qn: 3, ask: h => `Welchen Fehler machst du mit ${h} am ehesten, oder was könnte schiefgehen?` },
+  { n: 6, title: "Mein Steckbrief", min: 5 },
+  { n: 7, title: "Abschlusstest", min: 5 }
+];
+const BOOT_CARD = [
+  ["k1", "Meine Rolle im Team (ein Satz)"],
+  ["k2", "Meine zwei wichtigsten Stärken"],
+  ["k3", "Wann ich die Ult zünde"],
+  ["k4", "Wovor ich mich hüte (Gegner oder Fehler)"]
+];
+let bootUi = { hero: "", st: 0, q: "", role: "", pool: false, sess: null, shown: {}, cmp: {} };
+let BOOT_TUH = null;
+const BOOT_CACHE = {};
+const bootTypeOf = id => id.split("|")[0];
+function bootTuHero(id) {
+  if (!BOOT_TUH) { BOOT_TUH = {}; TU.teamups.forEach(t => { const u = t.helden.filter(x => x.rolle === "Nutzer" && heroByName(x.name))[0]; if (u) BOOT_TUH["tu|" + t.name] = u.name; }); }
+  return BOOT_TUH[id] || "";
+}
+function bootPool(h) {
+  return BOOT_CACHE[h] || (BOOT_CACHE[h] = hqIds().filter(id => { const t = bootTypeOf(id); return t === "tu" ? bootTuHero(id) === h : BOOT_TYPES.includes(t) && id.split("|")[1] === h; }));
+}
+const bootHeroes = () => Object.keys(PROF).filter(h => heroByName(h) && bootPool(h).length >= 5);
+function bootPick(h, types, n) {
+  const pool = bootPool(h), lists = (types || shuffle(BOOT_TYPES.slice())).map(t => shuffle(pool.filter(id => bootTypeOf(id) === t))), out = [];
+  while (out.length < n && lists.some(l => l.length)) lists.forEach(l => { if (out.length < n && l.length) out.push(l.shift()); });
+  return out;
+}
+const bootGet = h => (state.boot || {})[h] || null;
+function bootOf(h) {
+  state.boot = state.boot || {};
+  return state.boot[h] || (state.boot[h] = { st: {}, free: {}, card: {}, test: null, since: today() });
+}
+const bootStDone = (h, n) => { const b = bootGet(h); return !!b && (n === 7 ? !!(b.test && b.test.passed) : !!b.st["s" + n]); };
+const bootDoneN = h => [1, 2, 3, 4, 5, 6, 7].filter(n => bootStDone(h, n)).length;
+const bootPassed = h => bootStDone(h, 7);
+const bootDue = h => bootPool(h).filter(id => isDue("H:" + id));
+const bootMatches = h => { const b = bootGet(h); return state.matches.filter(m => m.hero === h && b && m.date >= b.since); };
+const bootNextSt = h => [1, 2, 3, 4, 5, 6, 7].find(n => !bootStDone(h, n)) || 7;
+
+// Quiz in der Station
+function bootStart(kind, h, ids, extra) {
+  const qs = ids.map(hqGen).filter(Boolean);
+  if (!qs.length) { toast("Dazu gibt es noch keine Fragen"); return; }
+  bootUi.sess = Object.assign({ kind, h, qs, i: 0, correct: 0, ans: null, conf: null, order: knowOrder(qs[0]), wrong: [], done: false }, extra || {});
+  renderBootcamp();
+}
+function bootAnswer(oi) {
+  const s = bootUi.sess;
+  if (!s || s.ans !== null) return;
+  const q = s.qs[s.i], ok = oi === q.a;
+  s.ans = oi; knowRecord(q, ok, s.conf);
+  if (ok) s.correct++; else s.wrong.push({ q: q.q, right: q.opts[q.a], topic: q.topic || "" });
+  save(); renderBootcamp();
+}
+function bootNext() {
+  const s = bootUi.sess;
+  if (!s || s.ans === null) return;
+  if (s.i + 1 < s.qs.length) { s.i++; s.ans = null; s.conf = null; s.order = knowOrder(s.qs[s.i]); }
+  else bootFinish(s);
+  renderBootcamp();
+}
+function bootFinish(s) {
+  s.done = true;
+  const b = bootOf(s.h), n = s.qs.length;
+  b.last = today();
+  if (s.kind === "station") b.st["s" + s.station] = { d: today(), sc: `${s.correct}/${n}` };
+  if (s.kind === "test") {
+    const t = b.test || (b.test = { tries: 0, best: 0, bestN: 0, passed: null });
+    t.tries++; t.last = today(); t.lastSc = `${s.correct}/${n}`;
+    if (s.correct / n >= t.best / (t.bestN || 1)) { t.best = s.correct; t.bestN = n; }
+    s.passed = s.correct / n >= BOOT_PASS;
+    if (s.passed && !t.passed) t.passed = today();
+  }
+  save();
+}
+
+// Inhalte der Stationen (nur Daten aus dem Heldenprofil)
+const bootList = a => `<ul class="wl">${a.map(t => `<li>${t}</li>`).join("")}</ul>`;
+function bootReadHtml(h, n) {
+  const x = PROF[h], e = esc;
+  if (n === 1) return `<p style="margin:0 0 6px"><b>Rolle im Team:</b> ${e(x.spielstil)}</p>
+    <div class="grid-2" style="gap:8px 18px"><div><b class="small">Stärken</b>${bootList(x.staerken.map(e))}</div><div><b class="small">Schwächen</b>${bootList(x.schwaechen.map(e))}</div></div>`;
+  if (n === 2) return `<p style="margin:0 0 6px"><b>Rolle im Team:</b> ${e(x.spielstil)}</p>
+    ${bootList(x.kit.map(k => `<b>${e(k.n)}</b> <span class="muted small">${e(k.typ)}</span><br>${e(k.d)}`))}
+    <p class="small muted" style="margin:6px 0 0">Die Ult (${e(x.ult.n)}) kommt in Station 3.</p>`;
+  if (n === 3) {
+    const kon = (x.uk || []).map(k => `<b>${e(k.held)}</b>: ${e(k.was)} <span class="muted small">${e(k.art)}</span><br>${e(k.wie)}`);
+    return `<p style="margin:0 0 6px"><b>${e(x.ult.n)}:</b> ${e(x.ult.d)}</p>
+      <b class="small">Perfekt einsetzen</b>${bootList((x.ue || []).map(e))}
+      ${(x.ul || []).length ? `<p class="small"><b>Lieber nicht:</b> ${x.ul.map(e).join(" ")}</p>` : ""}
+      ${kon.length ? `<b class="small">Wer die Ult kontern kann (laut Quellen)</b>${bootList(kon)}` : ""}
+      ${(x.uu || []).length ? `<details class="cp"><summary><span class="cp-name small muted">Was bei dieser Ult nicht sicher belegt ist</span></summary><div class="cp-body" style="padding-left:14px"><ul class="small muted">${x.uu.map(t => `<li>${e(t)}</li>`).join("")}</ul></div></details>` : ""}`;
+  }
+  if (n === 4) {
+    const tu = tuOf(h), rel = (x.aenderungen || []).filter(a => /^S10/.test(a.wann));
+    const mine = state.matches.filter(m => m.hero === h && (m.enemies || []).length), hard = mine.length >= 3 ? enemyStats(mine).filter(z => z[1].n >= 2).sort((a, b) => a[1].wr - b[1].wr).slice(0, 3) : [];
+    return `<b class="small">Wer ${e(h)} das Leben schwer macht</b>${bootList(x.counter.map(c => `<b>${e(c.held)}</b>: ${e(c.warum)}`))}
+      <b class="small">Mit wem ${e(h)} gut zusammenspielt</b>${bootList(x.synergie.map(c => `<b>${e(c.held)}</b>: ${e(c.warum)}`))}
+      ${tu.own.length || tu.partner.length ? `<b class="small">Team-Ups</b>${bootList(tu.own.map(t => `<b>${e(t.name)}</b> mit ${e(t.helden.filter(z => z.rolle === "Partner").map(z => z.name).join(", "))}: ${e(tuFirst(t.wirkung))}`).concat(tu.partner.map(t => `Du bist Partner bei <b>${e(t.name)}</b> (${e(t.helden.filter(z => z.rolle === "Nutzer").map(z => z.name).join(", "))})`)))}` : ""}
+      ${rel.length ? `<b class="small">Änderungen seit Season 10</b>${bootList(rel.map(a => `<b>${e(a.wann)}:</b> ${e(a.text)}`))}` : ""}
+      ${hard.length ? `<p class="small"><b>Deine Zahlen mit ${e(h)}:</b> Am schwersten waren bisher ${hard.map(z => `${e(z[0])} (${pct(z[1].wr)} Siege in ${z[1].n} Matches)`).join(", ")}.</p>` : ""}`;
+  }
+  if (n === 5) {
+    const err = (x.ue || []).find(t => /^Typischer Fehler:/.test(t)), mm = mistakeCounts(state.matches.filter(m => m.hero === h)).slice(0, 3);
+    return `<b class="small">Schwächen</b>${bootList(x.schwaechen.map(e))}
+      ${err ? `<p class="small"><b>Typischer Fehler bei der Ult:</b> ${e(err.replace(/^Typischer Fehler:\s*/, ""))}</p>` : ""}
+      <b class="small">Tipps</b>${bootList(x.tipps.map(e))}
+      ${x.support_hinweis ? `<p class="small"><b>Als Support:</b> ${e(x.support_hinweis)}</p>` : ""}
+      ${mm.length ? `<p class="small"><b>Deine häufigsten Fehler mit ${e(h)}:</b> ${mm.map(z => `${e(z[0])} (${z[1]}×)`).join(", ")}</p>` : ""}`;
+  }
+  return "";
+}
+
+// HTML
+const bootQuizHtml = s => {
+  const q = s.qs[s.i], head = s.kind === "test" ? "Abschlusstest" : s.kind === "refresh" ? "Auffrischen" : `Station ${s.station}: ${BOOT_STATIONS[s.station - 1].title}`;
+  const ok = s.ans === q.a;
+  return `<div class="qmeta"><span class="tag">${esc(head)}</span><span class="badge">Frage ${s.i + 1} von ${s.qs.length}</span></div>
+    <div class="kn-q">${esc(q.q)}</div>
+    ${s.ans === null ? `<div class="conf"><span class="muted small">Wie sicher bist du?</span>${CONF.map(([k, t]) => `<button type="button" class="chip ${s.conf === k ? "on" : ""}" data-bconf="${k}">${t}</button>`).join("")}</div>` : ""}
+    <div class="kn-opts">${s.order.map(oi => `<button type="button" data-bo="${oi}" ${s.ans !== null ? "disabled" : ""} class="${s.ans !== null ? (oi === q.a ? "right" : oi === s.ans ? "wrong" : "") : ""}">${esc(q.opts[oi])}</button>`).join("")}</div>
+    ${s.ans !== null ? `<div class="mt">${notes([[ok ? "good" : "bad", `<b>${ok ? "Richtig!" : "Leider falsch."}</b>${whyHtml(q.why, new Set())}`]])}
+      ${calHint(s.conf, ok) ? `<p class="small calhint">${calHint(s.conf, ok)}</p>` : ""}
+      <div class="row mt"><button type="button" class="btn" data-bnext>${s.i + 1 >= s.qs.length ? "Auswertung" : "Nächste Frage →"}</button></div></div>` : ""}`;
+};
+function bootResultHtml(s) {
+  const n = s.qs.length, stNext = s.kind === "station" && s.station < 7 ? s.station + 1 : 0;
+  const weak = [...new Set(s.wrong.map(w => BOOT_TOPIC_ST[w.topic]).filter(Boolean))];
+  const title = s.kind === "test" ? (s.passed ? "Bootcamp bestanden!" : "Noch nicht bestanden") : `${s.correct} von ${n} richtig`;
+  return `<div class="kn-q">${esc(title)}</div>
+    <p style="margin:0 0 8px">${s.correct} von ${n} richtig${s.kind === "test" ? `. Zum Bestehen brauchst du ${Math.ceil(BOOT_PASS * n)}.` : "."} Falsch beantwortete Fragen kommen morgen wieder, richtig beantwortete nach 1, 2, 4, 8 … Tagen (Wiederholen mit wachsendem Abstand).</p>
+    ${s.wrong.length ? `<p class="small" style="margin:0 0 4px"><b>Das war falsch:</b></p><ul class="small">${s.wrong.map(w => `<li>${esc(w.q)}<br><span class="muted">Richtig: ${esc(w.right)}</span></li>`).join("")}</ul>` : ""}
+    ${s.kind === "test" && !s.passed && weak.length ? `<p class="small">Schau dir diese Stationen nochmal an: ${weak.map(n2 => `<button type="button" class="linkbtn" data-bstep="${n2}">${n2} ${esc(BOOT_STATIONS[n2 - 1].title)}</button>`).join(" · ")}</p>` : ""}
+    <div class="row mt">${stNext ? `<button type="button" class="btn" data-bstep="${stNext}">Weiter: ${esc(BOOT_STATIONS[stNext - 1].title)}</button>` : ""}
+      ${s.kind === "test" ? `<button type="button" class="btn ${s.passed ? "ghost" : ""}" data-btest>Test nochmal</button>` : ""}
+      <button type="button" class="btn ghost" data-bclose>Schliessen</button></div>`;
+}
+function bootCardHtml(h) {
+  const b = bootGet(h) || { card: {}, free: {}, st: {} }, x = PROF[h], e = esc, cmp = bootUi.cmp[h];
+  const field = ([k, label]) => `<label class="mt">${e(label)}<textarea data-bcard="${k}" rows="2">${e(b.card[k] || "")}</textarea></label>`;
+  const src = { k1: e(x.spielstil), k2: x.staerken.map(e).join("<br>"), k3: (x.ue || []).slice(0, 2).map(e).join("<br>"), k4: `${x.counter.map(c => e(c.held)).join(", ")}<br>${e(x.schwaechen[0] || "")}` };
+  return `<p class="lead" style="margin:0 0 4px">Schreib deinen Steckbrief aus dem Kopf, ohne die anderen Stationen anzusehen. Danach vergleichst du mit den Quellen.</p>
+    ${BOOT_CARD.map(field).join("")}
+    <label class="mt">Mein Mini-Ziel für die nächsten ${BOOT_PRAXIS} Matches mit ${e(h)} (Wenn …, dann …)<textarea data-bcard="plan" rows="2" placeholder="Wenn ein Diver auf mich springt, dann …">${e(b.card.plan || "")}</textarea></label>
+    <details class="cp mt"><summary><span class="cp-name small">Ideen aus den Tipps</span></summary><div class="cp-body" style="padding-left:14px">${bootList(x.tipps.map(e))}</div></details>
+    <div class="row mt"><button type="button" class="btn" data-bcmp>Mit den Quellen vergleichen</button></div>
+    ${cmp ? `<div class="bootcmp mt">${BOOT_CARD.map(([k, label]) => `<div class="swaprow"><b class="small">${e(label)}</b><p class="small" style="margin:4px 0"><span class="muted">Du:</span> ${e(b.card[k] || "–")}</p><p class="small" style="margin:0"><span class="muted">Laut Quellen:</span> ${src[k]}</p></div>`).join("")}</div>
+      <p class="small muted">Stimmt dein Steckbrief nicht überall mit den Quellen überein, ist das normal. Ergänze, was dir fehlt, und schau die Station nochmal an.</p>` : ""}
+    ${bootStDone(h, 6) ? `<p class="small" style="margin:8px 0 0"><span class="badge ok">Station geschafft</span> ${b.st.s6.d ? esc(fmtDate(b.st.s6.d)) : ""}</p>` : ""}`;
+}
+function bootTestHtml(h) {
+  const b = bootGet(h), t = b && b.test, ids = bootPick(h, null, BOOT_TEST_MAX), n = ids.length, m = bootMatches(h);
+  return `<p class="lead" style="margin:0 0 6px">${n} Fragen ohne Hilfe, mindestens ${Math.ceil(BOOT_PASS * n)} richtig. Du schätzt vor jeder Antwort, wie sicher du bist. Du kannst den Test beliebig oft wiederholen, die Fragen mischen sich neu.</p>
+    ${t ? `<p class="small" style="margin:0 0 8px">Bester Versuch ${esc(`${t.best}/${t.bestN}`)}, ${t.tries} ${t.tries === 1 ? "Versuch" : "Versuche"}${t.passed ? `, bestanden am ${esc(fmtDate(t.passed))}` : ""}.</p>` : ""}
+    <div class="row"><button type="button" class="btn" data-btest ${n < 5 ? "disabled" : ""}>${t ? "Test nochmal" : "Test starten"}</button></div>
+    ${t && t.passed ? `<div class="swaprow mt"><b>Praxis: ${BOOT_PRAXIS} Matches mit ${esc(h)}</b> ${m.length >= BOOT_PRAXIS ? '<span class="badge ok">automatisch erkannt ✓</span>' : ""}
+      <p class="small" style="margin:4px 0 0">${Math.min(m.length, BOOT_PRAXIS)} von ${BOOT_PRAXIS}. Die App zählt Matches, die du seit dem Start des Bootcamps mit ${esc(h)} loggst. Spiel mit dem Mini-Ziel aus Station 6${b.card && b.card.plan ? `: <i>${esc(b.card.plan)}</i>` : ""}.</p></div>` : ""}`;
+}
+function bootStationHtml(h, n) {
+  const S = BOOT_STATIONS[n - 1], b = bootGet(h), done = bootStDone(h, n), head = `<h3 style="margin:0 0 4px">Station ${n}: ${esc(S.title)} <span class="muted small">ca. ${S.min} Min</span></h3>`;
+  if (n === 6) return head + bootCardHtml(h);
+  if (n === 7) return head + bootTestHtml(h);
+  const key = h + ":" + n, shown = !!bootUi.shown[key] || done, ids = bootPick(h, S.types, S.qn);
+  return `${head}<div class="bootask"><b class="small">1. Erst du</b><p style="margin:2px 0 4px">${esc(S.ask(h))}</p>
+      <textarea data-bfree="a${n}" rows="3" placeholder="Deine Antwort (leer lassen ist erlaubt)">${esc((b && b.free["a" + n]) || "")}</textarea></div>
+    <div class="mt"><b class="small">2. Dann die Quellen</b>${shown ? `<div class="bootread">${bootReadHtml(h, n)}</div>` : `<div class="row" style="margin-top:4px"><button type="button" class="btn ${done ? "ghost" : ""}" data-bshow="${n}">Antwort mit den Quellen vergleichen</button></div>`}</div>
+    ${shown ? `<div class="mt"><b class="small">3. Dann abgefragt</b><div class="row" style="margin-top:4px"><button type="button" class="btn ${done ? "ghost" : ""}" data-bq="${n}" ${ids.length ? "" : "disabled"}>${done ? "Nochmal abfragen" : `${plural(ids.length, "Frage", "Fragen")} beantworten`}</button>
+      ${done ? `<span class="badge ok">geschafft${b.st["s" + n].sc ? " (" + esc(b.st["s" + n].sc) + ")" : ""}</span>` : ""}
+      ${n < 7 ? `<button type="button" class="btn ghost" data-bstep="${n + 1}">Weiter zu Station ${n + 1}</button>` : ""}</div>
+      <p class="small muted" style="margin:6px 0 0">Beim Abfragen sind die Texte oben verdeckt: Du holst die Antwort aus dem Kopf, danach siehst du die Erklärung.</p></div>` : ""}`;
+}
+function bootHeroHtml(h) {
+  const x = PROF[h], b = bootGet(h), n = bootUi.st || bootNextSt(h), due = bootDue(h), s = bootUi.sess && bootUi.sess.h === h ? bootUi.sess : null;
+  const steps = BOOT_STATIONS.map(S => `<button type="button" class="chip ${S.n === n ? "on" : ""}" data-bstep="${S.n}" aria-label="Station ${S.n}: ${esc(S.title)}${bootStDone(h, S.n) ? ", geschafft" : ""}">${bootStDone(h, S.n) ? "✓ " : ""}${S.n} ${esc(S.title)}</button>`).join("");
+  return `<div class="card"><div class="row between"><button type="button" class="btn ghost small" data-bback>← Alle Helden</button><span class="muted small">Stand der Daten: ${esc(fmtDate(x.stand))}</span></div>
+      <div class="row" style="margin-top:10px;gap:10px">${av(h, "lg")}<div><h2 style="margin:0">${esc(h)}</h2>${roleChip(heroRole(h), ROLE_DE[heroRole(h)])}${bootPassed(h) ? ' <span class="badge ok">Bootcamp bestanden</span>' : ""}</div></div>
+      <div class="bootsteps">${steps}</div>
+      ${due.length ? `<div class="row" style="margin-top:10px"><span class="small">${plural(due.length, "Frage", "Fragen")} zu ${esc(h)} ${due.length === 1 ? "ist" : "sind"} zur Wiederholung fällig.</span><button type="button" class="btn small" data-brefresh>Auffrischen</button></div>` : ""}</div>
+    <div class="card" id="bootStation">${s ? (s.done ? bootResultHtml(s) : bootQuizHtml(s)) : bootStationHtml(h, n)}</div>`;
+}
+function bootCardsHtml() {
+  const q = bootUi.q, names = bootHeroes().filter(h => (!bootUi.role || heroRole(h) === bootUi.role) && (!bootUi.pool || poolHeroes().includes(h)) && (!q || heroHit(heroByName(h), q)));
+  const pool = poolHeroes();
+  names.sort((a, b) => (pool.includes(b) ? 1 : 0) - (pool.includes(a) ? 1 : 0) || (bootGet(b) ? 1 : 0) - (bootGet(a) ? 1 : 0) || a.localeCompare(b));
+  if (!names.length) return empty("Kein Held gefunden.", "heroes");
+  return `<div class="bootgrid">${names.map(h => {
+    const d = bootDoneN(h), due = bootDue(h).length;
+    return `<button type="button" class="bootcard" data-bhero="${esc(h)}">${av(h, "lg")}<span class="bi"><b>${esc(h)}</b><span class="small muted" style="display:block">${esc(ROLE_DE[heroRole(h)] || "")}${pool.includes(h) ? " · dein Pool" : ""}</span>
+      <span class="bootdots" aria-hidden="true">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${bootStDone(h, i) ? "on" : ""}"></i>`).join("")}</span>
+      <span class="small ${bootPassed(h) ? "" : "muted"}" style="display:block">${bootPassed(h) ? "✓ bestanden" : d ? `${d} von 7 Stationen` : "noch nicht gestartet"}${due ? ` · ${due} fällig` : ""}</span></span></button>`;
+  }).join("")}</div>`;
+}
+function bootRenderList() { const el = $("#bootList"); if (el) el.innerHTML = bootCardsHtml(); }
+function bootOverviewHtml() {
+  const all = bootHeroes(), passed = all.filter(bootPassed).length, going = all.filter(h => bootGet(h) && !bootPassed(h)).sort((a, b) => (bootGet(b).last || bootGet(b).since).localeCompare(bootGet(a).last || bootGet(a).since));
+  const due = all.reduce((n, h) => n + bootDue(h).length, 0), pool = poolHeroes().filter(h => all.includes(h) && !bootPassed(h) && !going.includes(h));
+  const chip = (k, v, label) => `<button type="button" class="chip ${bootUi[k] === v ? "on" : ""}" data-bflt="${k}" data-v="${esc(v)}">${esc(label)}</button>`;
+  return `<div class="card hero-banner"><div style="position:relative"><div class="small" style="opacity:.85">${passed} von ${all.length} Helden bestanden${due ? ` · ${plural(due, "Frage", "Fragen")} zur Wiederholung fällig` : ""}</div>
+      <h2 style="margin-top:4px">Helden-Bootcamp</h2>
+      <p>Pro Held ein Kurs mit 7 Stationen, zusammen etwa 30 Minuten, verteilt auf so viele Sitzungen, wie du magst. Zuerst holst du selbst etwas aus dem Kopf, dann siehst du die Quellen, dann wirst du abgefragt. Am Ende steht ein Test mit bis zu ${BOOT_TEST_MAX} Fragen und ein Praxis-Auftrag.</p></div></div>
+    ${going.length || pool.length ? `<div class="card"><div class="card-head"><h2>${icon("target")}Weitermachen</h2></div><div class="row" style="gap:8px">${going.slice(0, 3).map(h => `<button type="button" class="btn small" data-bhero="${esc(h)}">${esc(h)} (${bootDoneN(h)} von 7)</button>`).join("")}${pool.slice(0, 3).map(h => `<button type="button" class="btn ghost small" data-bhero="${esc(h)}">${esc(h)} starten</button>`).join("")}</div></div>` : ""}
+    <div class="card"><div class="row"><input id="bootSearch" placeholder="Helden suchen…" value="${esc(bootUi.q)}" style="max-width:240px"><div class="chips">${chip("role", "", "Alle Rollen")}${ROLES.map(r => chip("role", r, ROLE_DE[r])).join("")}<button type="button" class="chip ${bootUi.pool ? "on" : ""}" data-bflt="pool" data-v="1">Nur mein Pool</button></div></div></div>
+    <div id="bootList"></div>
+    ${foldHtml("boot-why", "Warum so gelernt wird", `<ul class="wl"><li><b>Erst selbst antworten:</b> Etwas aus dem Kopf zu holen, bringt in Studien aus Schule und Labor mehr als Nachlesen. Auch ein falscher Versuch hilft, wenn danach die richtige Antwort kommt.</li><li><b>Wiederholen mit Abstand:</b> Die Fragen kommen nach 1, 2, 4, 8, 16 und 32 Tagen wieder. Falsche kommen morgen.</li><li><b>Sicherheit einschätzen:</b> So merkst du, wo du dich überschätzt.</li><li><b>Steckbrief und Wenn-dann-Ziel:</b> Selbst aufschreiben und ein konkretes Ziel fürs nächste Match setzen.</li></ul><p class="small muted">Diese Studien stammen nicht aus Videospielen. Dass es bei Marvel Rivals genauso hilft, ist plausibel, aber nicht bewiesen. Alle Inhalte stammen aus den geprüften Heldenprofilen (Guides und Patch-Notes, Stand pro Held angegeben); wo etwas nicht sicher belegt ist, steht das dabei.</p>`, { icon: "book", sub: "Die Methoden hinter dem Bootcamp" })}`;
+}
+function renderBootcamp() {
+  const el = $("#bootBody");
+  if (bootUi.hero && !PROF[bootUi.hero]) bootUi.hero = "";
+  el.innerHTML = bootUi.hero ? bootHeroHtml(bootUi.hero) : bootOverviewHtml();
+  if (!bootUi.hero) bootRenderList();
+}
+function openBootcamp(h) {
+  Object.assign(bootUi, { hero: PROF[h] ? h : "", st: 0, sess: null });
+  showTab("bootcamp"); window.scrollTo({ top: 0 });
+}
+$("#bootBody").addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  const h = bootUi.hero;
+  if (t.dataset.bhero !== undefined) { Object.assign(bootUi, { hero: t.dataset.bhero, st: 0, sess: null }); renderBootcamp(); window.scrollTo({ top: 0 }); }
+  else if (t.hasAttribute("data-bback")) { Object.assign(bootUi, { hero: "", sess: null }); renderBootcamp(); }
+  else if (t.dataset.bstep !== undefined) { bootUi.st = +t.dataset.bstep; bootUi.sess = null; renderBootcamp(); }
+  else if (t.dataset.bflt !== undefined) { const k = t.dataset.bflt; if (k === "pool") bootUi.pool = !bootUi.pool; else bootUi.role = t.dataset.v; renderBootcamp(); }
+  else if (t.dataset.bshow !== undefined) { bootUi.shown[h + ":" + t.dataset.bshow] = true; renderBootcamp(); }
+  else if (t.dataset.bq !== undefined) { const n = +t.dataset.bq; bootStart("station", h, bootPick(h, BOOT_STATIONS[n - 1].types, BOOT_STATIONS[n - 1].qn), { station: n }); }
+  else if (t.hasAttribute("data-btest")) bootStart("test", h, bootPick(h, null, BOOT_TEST_MAX), { station: 7 });
+  else if (t.hasAttribute("data-brefresh")) bootStart("refresh", h, shuffle(bootDue(h)).slice(0, 5));
+  else if (t.hasAttribute("data-bclose")) { bootUi.sess = null; renderBootcamp(); }
+  else if (t.dataset.bconf !== undefined) { const s = bootUi.sess; if (s && s.ans === null) { s.conf = s.conf === t.dataset.bconf ? null : t.dataset.bconf; t.parentNode.querySelectorAll("[data-bconf]").forEach(x => x.classList.toggle("on", x.dataset.bconf === s.conf)); } }
+  else if (t.dataset.bo !== undefined) bootAnswer(+t.dataset.bo);
+  else if (t.hasAttribute("data-bnext")) bootNext();
+  else if (t.hasAttribute("data-bcmp")) {
+    const b = bootOf(h), filled = BOOT_CARD.filter(([k]) => (b.card[k] || "").trim()).length;
+    if (filled < 2) { toast("Schreib zuerst mindestens zwei Felder aus dem Kopf"); return; }
+    bootUi.cmp[h] = true; b.st.s6 = b.st.s6 || { d: today(), sc: "" }; b.last = today(); save(); renderBootcamp();
+  }
+});
+$("#bootBody").addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "bootSearch") { bootUi.q = t.value; bootRenderList(); return; }
+  if (t.dataset.bfree) bootOf(bootUi.hero).free[t.dataset.bfree] = t.value;
+  else if (t.dataset.bcard) bootOf(bootUi.hero).card[t.dataset.bcard] = t.value;
+});
+$("#bootBody").addEventListener("change", e => { if (e.target.dataset && (e.target.dataset.bfree || e.target.dataset.bcard)) save(); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-bootopen]"); if (b) openBootcamp(b.dataset.bootopen); });
 
 // ---------- Offene Blöcke nachholen ----------
 const BLOCK_KEYS = ["b1", "b2", "b3"];
@@ -7737,13 +8027,19 @@ function renderKnow() {
 function answerKnow(oi) {
   if (kq.answered !== null) return;
   kq.answered = oi;
-  const q = kq.q, k = state.quiz.k, ok = oi === q.a;
-  k.asked++; k.seen[q.id] = (k.seen[q.id] || 0) + 1;
-  actInc("know"); leitner(q.id, ok ? 3 : 1); calRecord(kq.conf, ok);
-  if (ok) { k.correct++; if (k.wrong[q.id]) k.wrong[q.id]--; if (kqSession) kqSession.correct++; }
-  else k.wrong[q.id] = (k.wrong[q.id] || 0) + 1;
+  const q = kq.q, ok = oi === q.a;
+  knowRecord(q, ok, kq.conf);
+  if (ok && kqSession) kqSession.correct++;
   save();
   renderKnow();
+}
+// Antwort verbuchen (Statistik, Wiederholungs-Fach, Sicherheits-Einschätzung); auch vom Helden-Bootcamp genutzt
+function knowRecord(q, ok, conf) {
+  const k = state.quiz.k;
+  k.asked++; k.seen[q.id] = (k.seen[q.id] || 0) + 1;
+  actInc("know"); leitner(q.id, ok ? 3 : 1); calRecord(conf, ok);
+  if (ok) { k.correct++; if (k.wrong[q.id]) k.wrong[q.id]--; }
+  else k.wrong[q.id] = (k.wrong[q.id] || 0) + 1;
 }
 function showKnowResult() {
   const q = kq.q, ok = kq.answered === q.a;
@@ -9173,7 +9469,7 @@ function render() {
   applyPoolToPlan();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups })[currentTab()]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
