@@ -4010,7 +4010,7 @@ function renderToday() {
   }
   // 4) Spielen und festhalten
   const w = tm.filter(m => m.result === "W").length;
-  if (openR) items.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Trag Fehler und Stärken ein, solange du dich erinnerst.", a: `<button class="btn small" type="button" data-go="log">Fehler eintragen</button>` });
+  if (openR) items.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Trag Fehler und Stärken ein, solange du dich erinnerst.", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
   else if (tm.length) items.push({ done: true, t: `${plural(tm.length, "Match", "Matches")} heute`, s: `${plural(w, "Sieg", "Siege")} · ${plural(tm.length - w, "Niederlage", "Niederlagen")} · Block: ${tm.length} von ${blockMatches()} Matches`, a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
   else items.push({ done: false, t: "Spielen und festhalten", s: "Nach jedem Match 20 Sekunden fürs Log: Ergebnis, Held und ein Fehler.", a: `<button class="btn small" type="button" data-go="log">Match loggen</button>` });
   const doneN = items.filter(x => x.done).length;
@@ -4048,6 +4048,19 @@ function renderToday() {
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
   el.innerHTML = hero + list + focus + newsCard + first + guide;
 }
+// Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if (!b || !TITLES[b.dataset.go]) return;
+  showTab(b.dataset.go);
+  if (b.dataset.open === "refl") {
+    const open = state.matches.filter(isOpenRefl);
+    if (open.length === 1) { startEdit(open[0].id); return; }
+    const el = $("#openRefl");
+    if (el && !el.hidden) { el.scrollIntoView({ block: "start" }); return; }
+  }
+  window.scrollTo({ top: 0 });
+});
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-today]");
   if (b && b.dataset.today === "hidestart") { state.settings.hideStart = true; save(); renderToday(); }
@@ -4103,8 +4116,7 @@ function renderDashboard() {
       ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
   }
   const nOpen = state.matches.filter(isOpenRefl).length;
-  if (nOpen) card.insertAdjacentHTML("beforeend", `<p class="small" style="position:relative"><b>${plural(nOpen, "neues Match wartet", "neue Matches warten")} auf deine Reflexion.</b> <button class="btn small" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Fehler eintragen</button></p>`);
-  card.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
+  if (nOpen) card.insertAdjacentHTML("beforeend", `<p class="small" style="position:relative"><b>${plural(nOpen, "neues Match wartet", "neue Matches warten")} auf deine Reflexion.</b> <button class="btn small" type="button" data-go="log" data-open="refl" style="background:#fff;color:#2b1f8f">Fehler eintragen</button></p>`);
 
   // Trend
   const recent = ms.slice(-30);
@@ -6101,7 +6113,6 @@ function renderLessonView() {
     save(); renderLessonView();
   }));
   el.querySelectorAll("[data-pi]").forEach(c => c.addEventListener("change", () => { p.practice[+c.dataset.pi] = c.checked; save(); renderLessonView(); }));
-  el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.go)));
   function savePending() { const t = $("#lessonReflect"); if (t) p.reflection = t.value; }
 }
 function completeLesson(l, p) {
