@@ -1065,6 +1065,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <p class="muted small" style="margin:0 0 8px">Hast du daran gedacht, ohne es dir vorzunehmen? Lass leer, was im Match nicht vorkam.</p>
       <div id="ruleRows"></div>
     </div>
+    <div id="taskBox" hidden>
+      <h3>Bootcamp-Aufgabe: Hast du sie umgesetzt?</h3>
+      <p class="muted small" style="margin:0 0 8px">Das ist die aktuelle Aufgabe aus deinem Helden- oder Rollen-Bootcamp. Lass leer, was im Match nicht vorkam (zum Beispiel ein Team-Up ohne Partner). Zwei von drei Malen «Ja» heisst gemeistert.</p>
+      <div id="taskRows"></div>
+    </div>
     <div class="grid-2 mt">
       <label>Notizen / VOD-Zeitstempel <textarea name="notes" placeholder="z.B. 04:12 – ohne Heiler in den Fight gerannt"></textarea></label>
       <label>Eine Sache, die ich nächstes Match besser mache <textarea name="next" placeholder="z.B. Ult für den nächsten Teamfight aufheben"></textarea></label>
@@ -3089,7 +3094,7 @@ const TITLES = {
   data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"],
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
   teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
-  bootcamp: ["Helden-Bootcamp", "Pro Held ein Kurs: erst aus dem Kopf antworten, dann die Quellen, dann abgefragt werden"]
+  bootcamp: ["Helden-Bootcamp", "Pro Held und pro Rolle ein Kurs mit Aufgaben fürs Match"]
 };
 
 // ---------- Bereiche und Navigation ----------
@@ -4365,7 +4370,7 @@ function renderLog() {
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
-  renderMistakeChips(); renderRuleBox(); renderDeathBox();
+  renderMistakeChips(); renderRuleBox(); renderTaskBox(); renderDeathBox();
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -4444,7 +4449,7 @@ function clearForm() {
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   deathState = {};
   renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []);
-  renderRuleBox({});
+  renderRuleBox({}); renderTaskBox({});
   renderDeathBox();
   updateNemesis();
   refreshPickers($("#matchForm"));
@@ -4474,7 +4479,7 @@ function startEdit(id) {
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {});
   renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []);
-  renderRuleBox(Object.assign({}, m.rules));
+  renderRuleBox(Object.assign({}, m.rules)); renderTaskBox(Object.assign({}, m.tasks));
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
@@ -4656,7 +4661,7 @@ function renderMatchHints() {
     + `<p class="muted small hint-foot">Automatisch aus Aufstellung, Counter-Regeln und deinen bisherigen Matches abgeleitet – das sind Hinweise, keine Gewissheit.${missing ? " Mit vollständigen Teams werden sie genauer." : ""}</p>`;
 }
 ["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, e => {
-  if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); }
+  if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); renderTaskBox({}); }
   else if (e.target && e.target.name === "d") renderDeathBox();
   renderMatchHints();
 }));
@@ -4695,6 +4700,7 @@ $("#matchForm").addEventListener("submit", e => {
     mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
     goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v),
     rules: ruleValues(),
+    tasks: taskValues(),
     deathCauses: Object.assign({}, deathState)
   };
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
@@ -7659,9 +7665,11 @@ function renderTeamRead(TD) {
   $("#swapBox").innerHTML = swapHtml(TD);
 }
 
-// ---------- Helden-Bootcamp: ein Kurs pro Held ----------
+// ---------- Helden-Bootcamp und Rollen-Bootcamp: ein Kurs pro Held und pro Rolle ----------
 // Jede Station folgt demselben Ablauf: erst selbst aus dem Kopf antworten, dann die Quellen ansehen, dann abgefragt werden.
-// Alle Inhalte stammen aus den geprüften Heldenprofilen (PROF), die Fragen erzeugt hqGen. Nichts ist von Hand erfunden.
+// Alle Inhalte stammen aus den geprüften Heldenprofilen (PROF), den Rollenregeln und Lektionen der App; die Fragen erzeugen hqGen und der Wissens-Check.
+// Dazu kommen Match-Aufgaben: Aus den Tipps und dem Ult-Guide eines Helden (bzw. den Rollenregeln) werden kleine Aufgaben fürs Match.
+// Du trägst nach dem Match ein, ob es geklappt hat; zwei von drei Malen «Ja» heisst gemeistert, dann kommt die nächste Aufgabe.
 const BOOT_PASS = 0.8, BOOT_PRAXIS = 3, BOOT_TEST_MAX = 10;
 const BOOT_TYPES = ["inn", "abil", "ult", "konter", "fehler", "schw", "staerke", "lage", "tu"];
 const BOOT_TOPIC_ST = { "Fähigkeiten": 2, "Ult-Namen": 3, "Typische Fehler": 3, "Ult-Konter": 3, "Team-Ups": 4, "Lage lesen": 4, "Stärken und Schwächen": 5 };
@@ -7674,26 +7682,54 @@ const BOOT_STATIONS = [
   { n: 6, title: "Mein Steckbrief", min: 5 },
   { n: 7, title: "Abschlusstest", min: 5 }
 ];
+const ROLE_WISSEN = { Vanguard: ["L20"], Duelist: ["L21"], Strategist: ["L1", "L5", "L6", "L25"] };
+const ROLE_STATIONS = [
+  { n: 1, title: "Vorwissen", min: 3, types: null, qn: 3, ask: r => `Was weisst du schon über die Rolle ${ROLE_SHORT[r]}? Schreib in ein bis zwei Sätzen auf: Was ist ihre Aufgabe im Team, und was gehört nicht dazu? Raten ist erlaubt.` },
+  { n: 2, title: "Deine Aufgabe", min: 5, types: ["W"], qn: 3, ask: r => `Was ist die wichtigste Aufgabe als ${ROLE_SHORT[r]}? Schreib drei Dinge auf, die du in jedem Fight tun willst.` },
+  { n: 3, title: "Die Helden", min: 6, types: ["inn", "staerke", "schw", "ult"], qn: 3, ask: r => `Welche Helden der Rolle ${ROLE_SHORT[r]} kennst du, und wie unterscheiden sie sich in der Art zu spielen?` },
+  { n: 4, title: "Zusammenspiel", min: 5, types: ["tu", "konter"], qn: 3, ask: r => `Mit welchen Helden anderer Rollen spielst du als ${ROLE_SHORT[r]} gut zusammen, und was bringt das?` },
+  { n: 5, title: "Stolpersteine", min: 5, types: ["fehler", "W", "schw"], qn: 3, ask: r => `Welche Fehler passieren als ${ROLE_SHORT[r]} am häufigsten, und woran merkst du sie früh?` },
+  { n: 6, title: "Mein Steckbrief", min: 5 },
+  { n: 7, title: "Abschlusstest", min: 5 }
+];
 const BOOT_CARD = [
   ["k1", "Meine Rolle im Team (ein Satz)"],
   ["k2", "Meine zwei wichtigsten Stärken"],
   ["k3", "Wann ich die Ult zünde"],
   ["k4", "Wovor ich mich hüte (Gegner oder Fehler)"]
 ];
+const ROLE_CARD = [
+  ["k1", "Meine Aufgabe in einem Satz"],
+  ["k2", "Woran ich merke, dass es gut läuft"],
+  ["k3", "Mein häufigster Fehler in dieser Rolle"],
+  ["k4", "Worauf ich zuerst achte, wenn ein Fight beginnt"]
+];
 let bootUi = { hero: "", st: 0, q: "", role: "", pool: false, sess: null, shown: {}, cmp: {} };
 let BOOT_TUH = null;
 const BOOT_CACHE = {};
+const bootIsRole = k => String(k).startsWith("R:");
+const bootRole = k => String(k).slice(2);
+const bootValid = k => bootIsRole(k) ? ROLES.includes(bootRole(k)) : !!PROF[k];
+const bootDefs = k => bootIsRole(k) ? ROLE_STATIONS : BOOT_STATIONS;
 const bootTypeOf = id => id.split("|")[0];
+const bootQid = id => id.startsWith("W|") ? id.slice(2) : "H:" + id;
+const bootGen = id => id.startsWith("W|") ? wqById(id.slice(2)) : hqGen(id);
+const bootRoleHeroes = r => Object.keys(PROF).filter(h => heroByName(h) && heroRole(h) === r);
 function bootTuHero(id) {
   if (!BOOT_TUH) { BOOT_TUH = {}; TU.teamups.forEach(t => { const u = t.helden.filter(x => x.rolle === "Nutzer" && heroByName(x.name))[0]; if (u) BOOT_TUH["tu|" + t.name] = u.name; }); }
   return BOOT_TUH[id] || "";
 }
-function bootPool(h) {
-  return BOOT_CACHE[h] || (BOOT_CACHE[h] = hqIds().filter(id => { const t = bootTypeOf(id); return t === "tu" ? bootTuHero(id) === h : BOOT_TYPES.includes(t) && id.split("|")[1] === h; }));
+function bootPool(k) {
+  if (BOOT_CACHE[k]) return BOOT_CACHE[k];
+  if (bootIsRole(k)) {
+    const r = bootRole(k), w = WQ.filter(q => (ROLE_WISSEN[r] || []).includes(q.l) && !q.fig).map(q => "W|" + q.id);
+    return (BOOT_CACHE[k] = w.concat(bootRoleHeroes(r).flatMap(h => bootPool(h))));
+  }
+  return (BOOT_CACHE[k] = hqIds().filter(id => { const t = bootTypeOf(id); return t === "tu" ? bootTuHero(id) === k : BOOT_TYPES.includes(t) && id.split("|")[1] === k; }));
 }
 const bootHeroes = () => Object.keys(PROF).filter(h => heroByName(h) && bootPool(h).length >= 5);
-function bootPick(h, types, n) {
-  const pool = bootPool(h), lists = (types || shuffle(BOOT_TYPES.slice())).map(t => shuffle(pool.filter(id => bootTypeOf(id) === t))), out = [];
+function bootPick(k, types, n) {
+  const pool = bootPool(k), lists = (types || shuffle(BOOT_TYPES.concat(bootIsRole(k) ? ["W"] : []))).map(t => shuffle(pool.filter(id => bootTypeOf(id) === t))), out = [];
   while (out.length < n && lists.some(l => l.length)) lists.forEach(l => { if (out.length < n && l.length) out.push(l.shift()); });
   return out;
 }
@@ -7705,13 +7741,42 @@ function bootOf(h) {
 const bootStDone = (h, n) => { const b = bootGet(h); return !!b && (n === 7 ? !!(b.test && b.test.passed) : !!b.st["s" + n]); };
 const bootDoneN = h => [1, 2, 3, 4, 5, 6, 7].filter(n => bootStDone(h, n)).length;
 const bootPassed = h => bootStDone(h, 7);
-const bootDue = h => bootPool(h).filter(id => isDue("H:" + id));
-const bootMatches = h => { const b = bootGet(h); return state.matches.filter(m => m.hero === h && b && m.date >= b.since); };
+const bootDue = h => bootPool(h).filter(id => isDue(bootQid(id)));
+const bootMatches = h => { const b = bootGet(h); return state.matches.filter(m => b && m.date >= b.since && (bootIsRole(h) ? heroRole(m.hero) === bootRole(h) : m.hero === h)); };
 const bootNextSt = h => [1, 2, 3, 4, 5, 6, 7].find(n => !bootStDone(h, n)) || 7;
+// Hat die Person diese Rolle schon einmal gespielt (geloggt oder von Rivals Data)? Sonst empfiehlt das Heldenbootcamp zuerst das Rollenbootcamp.
+const rolePlayed = r => state.matches.some(m => heroRole(m.hero) === r);
+const roleNeed = r => !rolePlayed(r) && !bootPassed("R:" + r) && !((state.app && state.app.roleSkip) || {})[r];
+
+// Match-Aufgaben
+function heroTasks(h) {
+  const x = PROF[h];
+  if (!x) return [];
+  const tip = i => x.tipps[i] ? { id: "t" + i, kind: "Tipp umsetzen", text: x.tipps[i] } : null;
+  const ue = lab => { const t = (x.ue || []).find(z => z.startsWith(lab)); return t ? t.slice(lab.length).replace(/^[^:]*:\s*/, "") : ""; };
+  const wann = (x.ue || []).find(z => /^Wann/.test(z)), wo = (x.ue || []).find(z => /^Wo\/Wie/.test(z)), fehler = (x.ue || []).find(z => /^Typischer Fehler/.test(z));
+  const tu = tuOf(h).own[0];
+  const list = [tip(0), tip(1), wann && { id: "uw", kind: "Ult: wann zünden", text: wann.replace(/^Wann:\s*/, "") }, tip(2),
+    wo && { id: "uo", kind: "Ult: wo und wie", text: wo.replace(/^Wo\/Wie:\s*/, "") },
+    tu && { id: "tu", kind: "Team-Up ausprobieren", text: `«${tu.name}» mit ${tu.helden.filter(z => z.rolle === "Partner").map(z => z.name).join(", ")}: ${tuFirst(tu.wirkung)} Probier es aus, sobald ein Partner im Team ist.` },
+    fehler && { id: "uf", kind: "Fehler vermeiden", text: `Bei der Ult: ${fehler.replace(/^Typischer Fehler:\s*/, "")}` }, tip(3), tip(4), tip(5)].filter(Boolean);
+  return list.slice(0, 8);
+}
+const roleTasks = r => (ROLE_TIPS[r] || []).map((t, i) => ({ id: "t" + i, kind: "Rollenregel umsetzen", text: t }));
+const tasksOf = k => bootIsRole(k) ? roleTasks(bootRole(k)) : heroTasks(k);
+const taskKey = (k, t) => `${k}|${t.id}`;
+function taskByKey(key) { const i = key.lastIndexOf("|"), k = key.slice(0, i), id = key.slice(i + 1); const t = tasksOf(k).find(z => z.id === id); return t ? { k, t } : null; }
+const taskLog = key => state.matches.filter(m => m.tasks && m.tasks[key]).map(m => m.tasks[key]);
+function taskMastered(key) { const l = taskLog(key).slice(-3); return l.length >= 2 && l.filter(v => v === "ja").length >= 2; }
+const taskCurrent = k => tasksOf(k).find(t => !taskMastered(taskKey(k, t))) || null;
+const bootTaskDone = k => tasksOf(k).filter(t => taskMastered(taskKey(k, t))).length;
+const bootMastered = k => { const n = tasksOf(k).length; return bootPassed(k) && n > 0 && bootTaskDone(k) === n; };
+const TASK_V = [["ja", "Ja"], ["teils", "Teilweise"], ["nein", "Nein"]];
+function taskDots(key) { const l = taskLog(key).slice(-3); return l.length ? `<span class="rdots" title="Letzte Antworten, neueste rechts: grün ja, gelb teilweise, rot nein">${l.map(v => `<i class="${v === "ja" ? "auto" : v === "teils" ? "bewusst" : "nein"}"></i>`).join("")}</span>` : ""; }
 
 // Quiz in der Station
 function bootStart(kind, h, ids, extra) {
-  const qs = ids.map(hqGen).filter(Boolean);
+  const qs = ids.map(bootGen).filter(Boolean);
   if (!qs.length) { toast("Dazu gibt es noch keine Fragen"); return; }
   bootUi.sess = Object.assign({ kind, h, qs, i: 0, correct: 0, ans: null, conf: null, order: knowOrder(qs[0]), wrong: [], done: false }, extra || {});
   renderBootcamp();
@@ -7746,9 +7811,31 @@ function bootFinish(s) {
   save();
 }
 
-// Inhalte der Stationen (nur Daten aus dem Heldenprofil)
+// Inhalte der Stationen (nur Daten aus dem Heldenprofil, den Rollenregeln und Lektionen der App)
 const bootList = a => `<ul class="wl">${a.map(t => `<li>${t}</li>`).join("")}</ul>`;
+function roleReadHtml(r, n) {
+  const e = esc, heroes = bootRoleHeroes(r).sort((a, b) => a.localeCompare(b));
+  if (n === 1 || n === 2) {
+    const les = (ROLE_WISSEN[r] || []).map(id => wissenById(id)).filter(Boolean), pn = (META.balance_global || []).filter(g => g.rolle === r);
+    return `<b class="small">Regeln der Rolle ${e(ROLE_SHORT[r])}</b>${bootList((ROLE_TIPS[r] || []).map(e))}
+      ${les.length ? `<p class="small"><b>Zum Nachlesen im Lexikon:</b> ${les.map(w => `<button type="button" class="linkbtn" data-pact="wissen" data-l="${w.id}">${w.id} ${e(w.title)}</button>`).join(" · ")}</p>` : ""}
+      ${pn.length ? `<b class="small">Seit Season 10 für alle ${e(ROLE_SHORT[r])}</b>${bootList(pn.map(g => e(g.text)))}` : ""}
+      <p class="small muted" style="margin:6px 0 0">Zur Rolle gehören ${plural(heroes.length, "Held", "Helden")} mit Profil. Die lernst du in Station 3 kennen.</p>`;
+  }
+  if (n === 3) return `<p class="small muted" style="margin:0 0 6px">Spielstil-Tags sind eine Faustregel der App. Tipp auf «Bootcamp», um einen Helden genauer zu lernen.</p>${bootList(heroes.map(h => `<b>${e(h)}</b> <span class="muted small">${heroTags(h).filter(t => SWAP_TAGS.includes(t)).map(e).join(", ")}</span><br>${e(firstSentence(PROF[h].spielstil))} <button type="button" class="linkbtn" data-bhero="${e(h)}">Bootcamp</button>`))}`;
+  if (n === 4) {
+    const tus = TU.teamups.filter(t => t.helden.some(z => z.rolle === "Nutzer" && heroByName(z.name) && heroRole(z.name) === r)).slice(0, 10);
+    return `<p class="small muted" style="margin:0 0 6px">Team-Ups sind Zusatzfähigkeiten für bestimmte Heldenpaare. Hier eine Auswahl mit Helden der Rolle ${e(ROLE_SHORT[r])}.</p>${tus.length ? bootList(tus.map(t => `<b>${e(t.name)}</b> (${e(t.helden.filter(z => z.rolle === "Nutzer").map(z => z.name).join(", "))} mit ${e(t.helden.filter(z => z.rolle === "Partner").map(z => z.name).join(", "))}): ${e(tuFirst(t.wirkung))}`)) : "<p class=\"small\">Zu dieser Rolle sind keine Team-Ups erfasst.</p>"}`;
+  }
+  if (n === 5) {
+    const mm = mistakeCounts(state.matches.filter(m => heroRole(m.hero) === r)).slice(0, 3);
+    return `<b class="small">Typische Fehler laut Fehlerliste der App</b>${bootList((MISTAKE_BY_ROLE[r] || []).map(e))}
+      ${mm.length ? `<p class="small"><b>Deine häufigsten Fehler als ${e(ROLE_SHORT[r])}:</b> ${mm.map(z => `${e(z[0])} (${z[1]}×)`).join(", ")}</p>` : ""}`;
+  }
+  return "";
+}
 function bootReadHtml(h, n) {
+  if (bootIsRole(h)) return roleReadHtml(bootRole(h), n);
   const x = PROF[h], e = esc;
   if (n === 1) return `<p style="margin:0 0 6px"><b>Rolle im Team:</b> ${e(x.spielstil)}</p>
     <div class="grid-2" style="gap:8px 18px"><div><b class="small">Stärken</b>${bootList(x.staerken.map(e))}</div><div><b class="small">Schwächen</b>${bootList(x.schwaechen.map(e))}</div></div>`;
@@ -7785,7 +7872,7 @@ function bootReadHtml(h, n) {
 
 // HTML
 const bootQuizHtml = s => {
-  const q = s.qs[s.i], head = s.kind === "test" ? "Abschlusstest" : s.kind === "refresh" ? "Auffrischen" : `Station ${s.station}: ${BOOT_STATIONS[s.station - 1].title}`;
+  const q = s.qs[s.i], head = s.kind === "test" ? "Abschlusstest" : s.kind === "refresh" ? "Auffrischen" : `Station ${s.station}: ${bootDefs(s.h)[s.station - 1].title}`;
   const ok = s.ans === q.a;
   return `<div class="qmeta"><span class="tag">${esc(head)}</span><span class="badge">Frage ${s.i + 1} von ${s.qs.length}</span></div>
     <div class="kn-q">${esc(q.q)}</div>
@@ -7796,44 +7883,56 @@ const bootQuizHtml = s => {
       <div class="row mt"><button type="button" class="btn" data-bnext>${s.i + 1 >= s.qs.length ? "Auswertung" : "Nächste Frage →"}</button></div></div>` : ""}`;
 };
 function bootResultHtml(s) {
-  const n = s.qs.length, stNext = s.kind === "station" && s.station < 7 ? s.station + 1 : 0;
-  const weak = [...new Set(s.wrong.map(w => BOOT_TOPIC_ST[w.topic]).filter(Boolean))];
+  const n = s.qs.length, stNext = s.kind === "station" && s.station < 7 ? s.station + 1 : 0, defs = bootDefs(s.h);
+  const weak = bootIsRole(s.h) ? [] : [...new Set(s.wrong.map(w => BOOT_TOPIC_ST[w.topic]).filter(Boolean))];
   const title = s.kind === "test" ? (s.passed ? "Bootcamp bestanden!" : "Noch nicht bestanden") : `${s.correct} von ${n} richtig`;
   return `<div class="kn-q">${esc(title)}</div>
     <p style="margin:0 0 8px">${s.correct} von ${n} richtig${s.kind === "test" ? `. Zum Bestehen brauchst du ${Math.ceil(BOOT_PASS * n)}.` : "."} Falsch beantwortete Fragen kommen morgen wieder, richtig beantwortete nach 1, 2, 4, 8 … Tagen (Wiederholen mit wachsendem Abstand).</p>
     ${s.wrong.length ? `<p class="small" style="margin:0 0 4px"><b>Das war falsch:</b></p><ul class="small">${s.wrong.map(w => `<li>${esc(w.q)}<br><span class="muted">Richtig: ${esc(w.right)}</span></li>`).join("")}</ul>` : ""}
-    ${s.kind === "test" && !s.passed && weak.length ? `<p class="small">Schau dir diese Stationen nochmal an: ${weak.map(n2 => `<button type="button" class="linkbtn" data-bstep="${n2}">${n2} ${esc(BOOT_STATIONS[n2 - 1].title)}</button>`).join(" · ")}</p>` : ""}
-    <div class="row mt">${stNext ? `<button type="button" class="btn" data-bstep="${stNext}">Weiter: ${esc(BOOT_STATIONS[stNext - 1].title)}</button>` : ""}
+    ${s.kind === "test" && !s.passed && weak.length ? `<p class="small">Schau dir diese Stationen nochmal an: ${weak.map(n2 => `<button type="button" class="linkbtn" data-bstep="${n2}">${n2} ${esc(defs[n2 - 1].title)}</button>`).join(" · ")}</p>` : ""}
+    <div class="row mt">${stNext ? `<button type="button" class="btn" data-bstep="${stNext}">Weiter: ${esc(defs[stNext - 1].title)}</button>` : ""}
       ${s.kind === "test" ? `<button type="button" class="btn ${s.passed ? "ghost" : ""}" data-btest>Test nochmal</button>` : ""}
       <button type="button" class="btn ghost" data-bclose>Schliessen</button></div>`;
 }
 function bootCardHtml(h) {
-  const b = bootGet(h) || { card: {}, free: {}, st: {} }, x = PROF[h], e = esc, cmp = bootUi.cmp[h];
+  const role = bootIsRole(h), r = role ? bootRole(h) : "", fields = role ? ROLE_CARD : BOOT_CARD;
+  const b = bootGet(h) || { card: {}, free: {}, st: {} }, e = esc, cmp = bootUi.cmp[h];
   const field = ([k, label]) => `<label class="mt">${e(label)}<textarea data-bcard="${k}" rows="2">${e(b.card[k] || "")}</textarea></label>`;
-  const src = { k1: e(x.spielstil), k2: x.staerken.map(e).join("<br>"), k3: (x.ue || []).slice(0, 2).map(e).join("<br>"), k4: `${x.counter.map(c => e(c.held)).join(", ")}<br>${e(x.schwaechen[0] || "")}` };
+  let src, tips;
+  if (role) {
+    const tp = ROLE_TIPS[r] || [], mi = MISTAKE_BY_ROLE[r] || [];
+    src = { k1: e(tp[0] || ""), k2: tp.slice(0, 2).map(e).join("<br>"), k3: mi.slice(0, 3).map(e).join(", "), k4: tp.slice(2).map(e).join("<br>") };
+    tips = tp;
+  } else {
+    const x = PROF[h];
+    src = { k1: e(x.spielstil), k2: x.staerken.map(e).join("<br>"), k3: (x.ue || []).slice(0, 2).map(e).join("<br>"), k4: `${x.counter.map(c => e(c.held)).join(", ")}<br>${e(x.schwaechen[0] || "")}` };
+    tips = x.tipps;
+  }
+  const who = role ? `der Rolle ${e(ROLE_SHORT[r])}` : e(h);
   return `<p class="lead" style="margin:0 0 4px">Schreib deinen Steckbrief aus dem Kopf, ohne die anderen Stationen anzusehen. Danach vergleichst du mit den Quellen.</p>
-    ${BOOT_CARD.map(field).join("")}
-    <label class="mt">Mein Mini-Ziel für die nächsten ${BOOT_PRAXIS} Matches mit ${e(h)} (Wenn …, dann …)<textarea data-bcard="plan" rows="2" placeholder="Wenn ein Diver auf mich springt, dann …">${e(b.card.plan || "")}</textarea></label>
-    <details class="cp mt"><summary><span class="cp-name small">Ideen aus den Tipps</span></summary><div class="cp-body" style="padding-left:14px">${bootList(x.tipps.map(e))}</div></details>
+    ${fields.map(field).join("")}
+    <label class="mt">Mein Mini-Ziel für die nächsten ${BOOT_PRAXIS} Matches mit ${who} (Wenn …, dann …)<textarea data-bcard="plan" rows="2" placeholder="Wenn ein Diver auf mich springt, dann …">${e(b.card.plan || "")}</textarea></label>
+    <details class="cp mt"><summary><span class="cp-name small">Ideen aus den ${role ? "Rollenregeln" : "Tipps"}</span></summary><div class="cp-body" style="padding-left:14px">${bootList(tips.map(e))}</div></details>
     <div class="row mt"><button type="button" class="btn" data-bcmp>Mit den Quellen vergleichen</button></div>
-    ${cmp ? `<div class="bootcmp mt">${BOOT_CARD.map(([k, label]) => `<div class="swaprow"><b class="small">${e(label)}</b><p class="small" style="margin:4px 0"><span class="muted">Du:</span> ${e(b.card[k] || "–")}</p><p class="small" style="margin:0"><span class="muted">Laut Quellen:</span> ${src[k]}</p></div>`).join("")}</div>
+    ${cmp ? `<div class="bootcmp mt">${fields.map(([k, label]) => `<div class="swaprow"><b class="small">${e(label)}</b><p class="small" style="margin:4px 0"><span class="muted">Du:</span> ${e(b.card[k] || "–")}</p><p class="small" style="margin:0"><span class="muted">Laut Quellen:</span> ${src[k]}</p></div>`).join("")}</div>
       <p class="small muted">Stimmt dein Steckbrief nicht überall mit den Quellen überein, ist das normal. Ergänze, was dir fehlt, und schau die Station nochmal an.</p>` : ""}
     ${bootStDone(h, 6) ? `<p class="small" style="margin:8px 0 0"><span class="badge ok">Station geschafft</span> ${b.st.s6.d ? esc(fmtDate(b.st.s6.d)) : ""}</p>` : ""}`;
 }
 function bootTestHtml(h) {
-  const b = bootGet(h), t = b && b.test, ids = bootPick(h, null, BOOT_TEST_MAX), n = ids.length, m = bootMatches(h);
+  const b = bootGet(h), t = b && b.test, ids = bootPick(h, null, BOOT_TEST_MAX), n = ids.length, m = bootMatches(h), role = bootIsRole(h);
+  const who = role ? `als ${ROLE_SHORT[bootRole(h)]}` : `mit ${h}`;
   return `<p class="lead" style="margin:0 0 6px">${n} Fragen ohne Hilfe, mindestens ${Math.ceil(BOOT_PASS * n)} richtig. Du schätzt vor jeder Antwort, wie sicher du bist. Du kannst den Test beliebig oft wiederholen, die Fragen mischen sich neu.</p>
     ${t ? `<p class="small" style="margin:0 0 8px">Bester Versuch ${esc(`${t.best}/${t.bestN}`)}, ${t.tries} ${t.tries === 1 ? "Versuch" : "Versuche"}${t.passed ? `, bestanden am ${esc(fmtDate(t.passed))}` : ""}.</p>` : ""}
     <div class="row"><button type="button" class="btn" data-btest ${n < 5 ? "disabled" : ""}>${t ? "Test nochmal" : "Test starten"}</button></div>
-    ${t && t.passed ? `<div class="swaprow mt"><b>Praxis: ${BOOT_PRAXIS} Matches mit ${esc(h)}</b> ${m.length >= BOOT_PRAXIS ? '<span class="badge ok">automatisch erkannt ✓</span>' : ""}
-      <p class="small" style="margin:4px 0 0">${Math.min(m.length, BOOT_PRAXIS)} von ${BOOT_PRAXIS}. Die App zählt Matches, die du seit dem Start des Bootcamps mit ${esc(h)} loggst. Spiel mit dem Mini-Ziel aus Station 6${b.card && b.card.plan ? `: <i>${esc(b.card.plan)}</i>` : ""}.</p></div>` : ""}`;
+    ${t && t.passed ? `<div class="swaprow mt"><b>Praxis: ${BOOT_PRAXIS} Matches ${esc(who)}</b> ${m.length >= BOOT_PRAXIS ? '<span class="badge ok">automatisch erkannt ✓</span>' : ""}
+      <p class="small" style="margin:4px 0 0">${Math.min(m.length, BOOT_PRAXIS)} von ${BOOT_PRAXIS}. Die App zählt Matches, die du seit dem Start des Bootcamps ${esc(who)} loggst. Spiel mit dem Mini-Ziel aus Station 6${b.card && b.card.plan ? `: <i>${esc(b.card.plan)}</i>` : ""}.</p></div>` : ""}`;
 }
 function bootStationHtml(h, n) {
-  const S = BOOT_STATIONS[n - 1], b = bootGet(h), done = bootStDone(h, n), head = `<h3 style="margin:0 0 4px">Station ${n}: ${esc(S.title)} <span class="muted small">ca. ${S.min} Min</span></h3>`;
+  const S = bootDefs(h)[n - 1], b = bootGet(h), done = bootStDone(h, n), head = `<h3 style="margin:0 0 4px">Station ${n}: ${esc(S.title)} <span class="muted small">ca. ${S.min} Min</span></h3>`;
   if (n === 6) return head + bootCardHtml(h);
   if (n === 7) return head + bootTestHtml(h);
-  const key = h + ":" + n, shown = !!bootUi.shown[key] || done, ids = bootPick(h, S.types, S.qn);
-  return `${head}<div class="bootask"><b class="small">1. Erst du</b><p style="margin:2px 0 4px">${esc(S.ask(h))}</p>
+  const key = h + ":" + n, shown = !!bootUi.shown[key] || done, ids = bootPick(h, S.types, S.qn), subject = bootIsRole(h) ? bootRole(h) : h;
+  return `${head}<div class="bootask"><b class="small">1. Erst du</b><p style="margin:2px 0 4px">${esc(S.ask(subject))}</p>
       <textarea data-bfree="a${n}" rows="3" placeholder="Deine Antwort (leer lassen ist erlaubt)">${esc((b && b.free["a" + n]) || "")}</textarea></div>
     <div class="mt"><b class="small">2. Dann die Quellen</b>${shown ? `<div class="bootread">${bootReadHtml(h, n)}</div>` : `<div class="row" style="margin-top:4px"><button type="button" class="btn ${done ? "ghost" : ""}" data-bshow="${n}">Antwort mit den Quellen vergleichen</button></div>`}</div>
     ${shown ? `<div class="mt"><b class="small">3. Dann abgefragt</b><div class="row" style="margin-top:4px"><button type="button" class="btn ${done ? "ghost" : ""}" data-bq="${n}" ${ids.length ? "" : "disabled"}>${done ? "Nochmal abfragen" : `${plural(ids.length, "Frage", "Fragen")} beantworten`}</button>
@@ -7841,14 +7940,36 @@ function bootStationHtml(h, n) {
       ${n < 7 ? `<button type="button" class="btn ghost" data-bstep="${n + 1}">Weiter zu Station ${n + 1}</button>` : ""}</div>
       <p class="small muted" style="margin:6px 0 0">Beim Abfragen sind die Texte oben verdeckt: Du holst die Antwort aus dem Kopf, danach siehst du die Erklärung.</p></div>` : ""}`;
 }
+// Im Match üben: die Match-Aufgaben des Helden oder der Rolle
+function bootTasksHtml(k) {
+  const ts = tasksOf(k);
+  if (!ts.length) return "";
+  const cur = taskCurrent(k), done = bootTaskDone(k), who = bootIsRole(k) ? `als ${ROLE_SHORT[bootRole(k)]}` : `mit ${k}`;
+  return `<div class="card"><div class="card-head"><h2>${icon("target")}Im Match üben</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gemeistert</span></div>
+    <p class="lead" style="margin:0 0 8px">Eine Aufgabe nach der anderen. Spiel dein nächstes Match ${esc(who)} und achte nur auf die aktuelle Aufgabe. Danach trägst du unter «Match loggen» bei «Bootcamp-Aufgabe» ein, ob du sie umgesetzt hast. Zwei von drei Malen «Ja» heisst gemeistert.</p>
+    ${!bootGet(k) ? `<div class="note info"><span class="ni" aria-hidden="true">i</span><div>Die Aufgaben werden aktiv, sobald du den Kurs beginnst (Station 1 reicht). Du kannst sie auch jetzt schon freischalten.<div class="row mt"><button type="button" class="btn small" data-btaskstart>Aufgaben jetzt freischalten</button></div></div></div>`
+    : cur ? `<div class="swaprow"><b>Jetzt: ${esc(cur.kind)}</b> ${taskDots(taskKey(k, cur))}<p style="margin:6px 0 0">${esc(cur.text)}</p></div>` : '<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Aufgaben gemeistert.</b> Bleib dran: Die Auffrischen-Fragen und die Grundregeln halten es frisch.</div></div>'}
+    ${foldHtml("boot-tasks-" + k, "Alle Aufgaben", `<ul class="wl">${ts.map(t => { const key = taskKey(k, t), m = taskMastered(key); return `<li>${m ? "✓" : cur && cur.id === t.id ? "●" : "○"} <b class="small">${esc(t.kind)}</b> ${taskDots(key)}<br><span class="${m ? "muted" : ""} small">${esc(t.text)}</span></li>`; }).join("")}</ul>`, { icon: "list", sub: "gemeistert, aktuell und später" })}
+    <div class="row mt"><button type="button" class="btn small" data-pact="tab" data-tab="log">Match loggen</button></div></div>`;
+}
+function bootRoleNoteHtml(h) {
+  const r = heroRole(h);
+  if (bootIsRole(h) || !roleNeed(r)) return "";
+  return `<div class="note info" style="margin-top:10px"><span class="ni" aria-hidden="true">i</span><div><b>Du hast noch nie als ${esc(ROLE_SHORT[r])} gespielt.</b> Empfehlung: Mach zuerst das Rollen-Bootcamp ${esc(ROLE_SHORT[r])}. Es erklärt, was die Rolle im Team tut, damit dir ${esc(h)} leichter fällt.
+    <div class="row mt"><button type="button" class="btn small" data-bhero="R:${esc(r)}">Zum Rollen-Bootcamp</button><button type="button" class="btn ghost small" data-roleskip="${esc(r)}">Trotzdem mit ${esc(h)} starten</button></div></div></div>`;
+}
 function bootHeroHtml(h) {
-  const x = PROF[h], b = bootGet(h), n = bootUi.st || bootNextSt(h), due = bootDue(h), s = bootUi.sess && bootUi.sess.h === h ? bootUi.sess : null;
-  const steps = BOOT_STATIONS.map(S => `<button type="button" class="chip ${S.n === n ? "on" : ""}" data-bstep="${S.n}" aria-label="Station ${S.n}: ${esc(S.title)}${bootStDone(h, S.n) ? ", geschafft" : ""}">${bootStDone(h, S.n) ? "✓ " : ""}${S.n} ${esc(S.title)}</button>`).join("");
-  return `<div class="card"><div class="row between"><button type="button" class="btn ghost small" data-bback>← Alle Helden</button><span class="muted small">Stand der Daten: ${esc(fmtDate(x.stand))}</span></div>
-      <div class="row" style="margin-top:10px;gap:10px">${av(h, "lg")}<div><h2 style="margin:0">${esc(h)}</h2>${roleChip(heroRole(h), ROLE_DE[heroRole(h)])}${bootPassed(h) ? ' <span class="badge ok">Bootcamp bestanden</span>' : ""}</div></div>
+  const role = bootIsRole(h), r = role ? bootRole(h) : "", x = role ? null : PROF[h], n = bootUi.st || bootNextSt(h), due = bootDue(h), s = bootUi.sess && bootUi.sess.h === h ? bootUi.sess : null, defs = bootDefs(h);
+  const steps = defs.map(S => `<button type="button" class="chip ${S.n === n ? "on" : ""}" data-bstep="${S.n}" aria-label="Station ${S.n}: ${esc(S.title)}${bootStDone(h, S.n) ? ", geschafft" : ""}">${bootStDone(h, S.n) ? "✓ " : ""}${S.n} ${esc(S.title)}</button>`).join("");
+  const head = role ? `<div class="row" style="margin-top:10px;gap:10px"><div><h2 style="margin:0">Rollen-Bootcamp ${esc(ROLE_SHORT[r])}</h2>${roleChip(r, ROLE_DE[r])}${bootMastered(h) ? ' <span class="badge ok">Gemeistert</span>' : bootPassed(h) ? ' <span class="badge ok">Bootcamp bestanden</span>' : ""}</div></div>`
+    : `<div class="row" style="margin-top:10px;gap:10px">${av(h, "lg")}<div><h2 style="margin:0">${esc(h)}</h2>${roleChip(heroRole(h), ROLE_DE[heroRole(h)])}${bootMastered(h) ? ' <span class="badge ok">Gemeistert</span>' : bootPassed(h) ? ' <span class="badge ok">Bootcamp bestanden</span>' : ""}</div></div>`;
+  return `<div class="card"><div class="row between"><button type="button" class="btn ghost small" data-bback>← Alle Helden und Rollen</button><span class="muted small">${role ? "Aus den Rollenregeln, Lektionen und Heldenprofilen der App" : `Stand der Daten: ${esc(fmtDate(x.stand))}`}</span></div>
+      ${head}
       <div class="bootsteps">${steps}</div>
-      ${due.length ? `<div class="row" style="margin-top:10px"><span class="small">${plural(due.length, "Frage", "Fragen")} zu ${esc(h)} ${due.length === 1 ? "ist" : "sind"} zur Wiederholung fällig.</span><button type="button" class="btn small" data-brefresh>Auffrischen</button></div>` : ""}</div>
-    <div class="card" id="bootStation">${s ? (s.done ? bootResultHtml(s) : bootQuizHtml(s)) : bootStationHtml(h, n)}</div>`;
+      ${bootRoleNoteHtml(h)}
+      ${due.length ? `<div class="row" style="margin-top:10px"><span class="small">${plural(due.length, "Frage", "Fragen")} ${role ? "zu dieser Rolle" : "zu " + esc(h)} ${due.length === 1 ? "ist" : "sind"} zur Wiederholung fällig.</span><button type="button" class="btn small" data-brefresh>Auffrischen</button></div>` : ""}</div>
+    <div class="card" id="bootStation">${s ? (s.done ? bootResultHtml(s) : bootQuizHtml(s)) : bootStationHtml(h, n)}</div>
+    ${s ? "" : bootTasksHtml(h)}`;
 }
 function bootCardsHtml() {
   const q = bootUi.q, names = bootHeroes().filter(h => (!bootUi.role || heroRole(h) === bootUi.role) && (!bootUi.pool || poolHeroes().includes(h)) && (!q || heroHit(heroByName(h), q)));
@@ -7856,44 +7977,57 @@ function bootCardsHtml() {
   names.sort((a, b) => (pool.includes(b) ? 1 : 0) - (pool.includes(a) ? 1 : 0) || (bootGet(b) ? 1 : 0) - (bootGet(a) ? 1 : 0) || a.localeCompare(b));
   if (!names.length) return empty("Kein Held gefunden.", "heroes");
   return `<div class="bootgrid">${names.map(h => {
-    const d = bootDoneN(h), due = bootDue(h).length;
-    return `<button type="button" class="bootcard" data-bhero="${esc(h)}">${av(h, "lg")}<span class="bi"><b>${esc(h)}</b><span class="small muted" style="display:block">${esc(ROLE_DE[heroRole(h)] || "")}${pool.includes(h) ? " · dein Pool" : ""}</span>
+    const d = bootDoneN(h), due = bootDue(h).length, nt = tasksOf(h).length, td = bootTaskDone(h);
+    return `<button type="button" class="bootcard" data-bhero="${esc(h)}">${av(h, "lg")}<span class="bi"><b>${esc(h)}</b><span class="small muted" style="display:block">${esc(ROLE_DE[heroRole(h)] || "")}${pool.includes(h) ? " · dein Pool" : ""}${roleNeed(heroRole(h)) ? " · Rolle neu" : ""}</span>
       <span class="bootdots" aria-hidden="true">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${bootStDone(h, i) ? "on" : ""}"></i>`).join("")}</span>
-      <span class="small ${bootPassed(h) ? "" : "muted"}" style="display:block">${bootPassed(h) ? "✓ bestanden" : d ? `${d} von 7 Stationen` : "noch nicht gestartet"}${due ? ` · ${due} fällig` : ""}</span></span></button>`;
+      <span class="small ${bootPassed(h) ? "" : "muted"}" style="display:block">${bootMastered(h) ? "★ gemeistert" : bootPassed(h) ? "✓ bestanden" : d ? `${d} von 7 Stationen` : "noch nicht gestartet"}${bootGet(h) && nt ? ` · Aufgaben ${td}/${nt}` : ""}${due ? ` · ${due} fällig` : ""}</span></span></button>`;
   }).join("")}</div>`;
+}
+function bootRolesHtml() {
+  return `<div class="card"><div class="card-head"><h2>${icon("team")}Rollen-Bootcamp</h2><span class="muted small">Zuerst die Rolle, dann der Held</span></div>
+    <p class="lead" style="margin:0 0 8px">Ein Kurs pro Rolle mit denselben sieben Stationen und Match-Aufgaben aus den Rollenregeln. Wenn du eine Rolle noch nie gespielt hast, empfiehlt dir das Helden-Bootcamp, zuerst diesen Kurs zu machen.</p>
+    <div class="bootgrid">${ROLES.map(r => { const k = "R:" + r, d = bootDoneN(k), nt = tasksOf(k).length, played = state.matches.filter(m => heroRole(m.hero) === r).length;
+      return `<button type="button" class="bootcard" data-bhero="${k}"><span class="bi"><b>${esc(ROLE_SHORT[r])}</b><span class="small muted" style="display:block">${esc(ROLE_DE[r])} · ${played ? plural(played, "Match", "Matches") + " gespielt" : "noch nie gespielt"}</span>
+        <span class="bootdots" aria-hidden="true">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${bootStDone(k, i) ? "on" : ""}"></i>`).join("")}</span>
+        <span class="small ${bootPassed(k) ? "" : "muted"}" style="display:block">${bootMastered(k) ? "★ gemeistert" : bootPassed(k) ? "✓ bestanden" : d ? `${d} von 7 Stationen` : "noch nicht gestartet"}${bootGet(k) && nt ? ` · Aufgaben ${bootTaskDone(k)}/${nt}` : ""}</span></span></button>`; }).join("")}</div></div>`;
 }
 function bootRenderList() { const el = $("#bootList"); if (el) el.innerHTML = bootCardsHtml(); }
 function bootOverviewHtml() {
-  const all = bootHeroes(), passed = all.filter(bootPassed).length, going = all.filter(h => bootGet(h) && !bootPassed(h)).sort((a, b) => (bootGet(b).last || bootGet(b).since).localeCompare(bootGet(a).last || bootGet(a).since));
-  const due = all.reduce((n, h) => n + bootDue(h).length, 0), pool = poolHeroes().filter(h => all.includes(h) && !bootPassed(h) && !going.includes(h));
+  const all = bootHeroes(), passed = all.filter(bootPassed).length, keys = all.concat(ROLES.map(r => "R:" + r));
+  const going = keys.filter(h => bootGet(h) && !bootPassed(h)).sort((a, b) => (bootGet(b).last || bootGet(b).since).localeCompare(bootGet(a).last || bootGet(a).since));
+  const due = keys.reduce((n, h) => n + bootDue(h).length, 0), pool = poolHeroes().filter(h => all.includes(h) && !bootPassed(h) && !going.includes(h));
   const chip = (k, v, label) => `<button type="button" class="chip ${bootUi[k] === v ? "on" : ""}" data-bflt="${k}" data-v="${esc(v)}">${esc(label)}</button>`;
+  const lab = h => bootIsRole(h) ? `Rolle ${ROLE_SHORT[bootRole(h)]}` : h;
   return `<div class="card hero-banner"><div style="position:relative"><div class="small" style="opacity:.85">${passed} von ${all.length} Helden bestanden${due ? ` · ${plural(due, "Frage", "Fragen")} zur Wiederholung fällig` : ""}</div>
       <h2 style="margin-top:4px">Helden-Bootcamp</h2>
-      <p>Pro Held ein Kurs mit 7 Stationen, zusammen etwa 30 Minuten, verteilt auf so viele Sitzungen, wie du magst. Zuerst holst du selbst etwas aus dem Kopf, dann siehst du die Quellen, dann wirst du abgefragt. Am Ende steht ein Test mit bis zu ${BOOT_TEST_MAX} Fragen und ein Praxis-Auftrag.</p></div></div>
-    ${going.length || pool.length ? `<div class="card"><div class="card-head"><h2>${icon("target")}Weitermachen</h2></div><div class="row" style="gap:8px">${going.slice(0, 3).map(h => `<button type="button" class="btn small" data-bhero="${esc(h)}">${esc(h)} (${bootDoneN(h)} von 7)</button>`).join("")}${pool.slice(0, 3).map(h => `<button type="button" class="btn ghost small" data-bhero="${esc(h)}">${esc(h)} starten</button>`).join("")}</div></div>` : ""}
+      <p>Pro Held und pro Rolle ein Kurs mit 7 Stationen, zusammen etwa 30 Minuten, verteilt auf so viele Sitzungen, wie du magst. Zuerst holst du selbst etwas aus dem Kopf, dann siehst du die Quellen, dann wirst du abgefragt. Dazu kommen Aufgaben fürs Match, mit denen du den Helden nach und nach meisterst, und am Ende ein Test mit bis zu ${BOOT_TEST_MAX} Fragen.</p></div></div>
+    ${going.length || pool.length ? `<div class="card"><div class="card-head"><h2>${icon("target")}Weitermachen</h2></div><div class="row" style="gap:8px">${going.slice(0, 3).map(h => `<button type="button" class="btn small" data-bhero="${esc(h)}">${esc(lab(h))} (${bootDoneN(h)} von 7)</button>`).join("")}${pool.slice(0, 3).map(h => `<button type="button" class="btn ghost small" data-bhero="${esc(h)}">${esc(h)} starten</button>`).join("")}</div></div>` : ""}
+    ${bootRolesHtml()}
     <div class="card"><div class="row"><input id="bootSearch" placeholder="Helden suchen…" value="${esc(bootUi.q)}" style="max-width:240px"><div class="chips">${chip("role", "", "Alle Rollen")}${ROLES.map(r => chip("role", r, ROLE_DE[r])).join("")}<button type="button" class="chip ${bootUi.pool ? "on" : ""}" data-bflt="pool" data-v="1">Nur mein Pool</button></div></div></div>
     <div id="bootList"></div>
-    ${foldHtml("boot-why", "Warum so gelernt wird", `<ul class="wl"><li><b>Erst selbst antworten:</b> Etwas aus dem Kopf zu holen, bringt in Studien aus Schule und Labor mehr als Nachlesen. Auch ein falscher Versuch hilft, wenn danach die richtige Antwort kommt.</li><li><b>Wiederholen mit Abstand:</b> Die Fragen kommen nach 1, 2, 4, 8, 16 und 32 Tagen wieder. Falsche kommen morgen.</li><li><b>Sicherheit einschätzen:</b> So merkst du, wo du dich überschätzt.</li><li><b>Steckbrief und Wenn-dann-Ziel:</b> Selbst aufschreiben und ein konkretes Ziel fürs nächste Match setzen.</li></ul><p class="small muted">Diese Studien stammen nicht aus Videospielen. Dass es bei Marvel Rivals genauso hilft, ist plausibel, aber nicht bewiesen. Alle Inhalte stammen aus den geprüften Heldenprofilen (Guides und Patch-Notes, Stand pro Held angegeben); wo etwas nicht sicher belegt ist, steht das dabei.</p>`, { icon: "book", sub: "Die Methoden hinter dem Bootcamp" })}`;
+    ${foldHtml("boot-why", "Warum so gelernt wird", `<ul class="wl"><li><b>Erst selbst antworten:</b> Etwas aus dem Kopf zu holen, bringt in Studien aus Schule und Labor mehr als Nachlesen. Auch ein falscher Versuch hilft, wenn danach die richtige Antwort kommt.</li><li><b>Wiederholen mit Abstand:</b> Die Fragen kommen nach 1, 2, 4, 8, 16 und 32 Tagen wieder. Falsche kommen morgen.</li><li><b>Sicherheit einschätzen:</b> So merkst du, wo du dich überschätzt.</li><li><b>Steckbrief und Wenn-dann-Ziel:</b> Selbst aufschreiben und ein konkretes Ziel fürs nächste Match setzen.</li><li><b>Aufgaben im Match:</b> Eine kleine Aufgabe pro Match, eine nach der anderen. Zwei von drei Malen «Ja» heisst gemeistert.</li></ul><p class="small muted">Diese Studien stammen nicht aus Videospielen. Dass es bei Marvel Rivals genauso hilft, ist plausibel, aber nicht bewiesen. Alle Inhalte stammen aus den geprüften Heldenprofilen (Guides und Patch-Notes, Stand pro Held angegeben) und den Rollenregeln der App; wo etwas nicht sicher belegt ist, steht das dabei.</p>`, { icon: "book", sub: "Die Methoden hinter dem Bootcamp" })}`;
 }
 function renderBootcamp() {
   const el = $("#bootBody");
-  if (bootUi.hero && !PROF[bootUi.hero]) bootUi.hero = "";
+  if (bootUi.hero && !bootValid(bootUi.hero)) bootUi.hero = "";
   el.innerHTML = bootUi.hero ? bootHeroHtml(bootUi.hero) : bootOverviewHtml();
   if (!bootUi.hero) bootRenderList();
 }
 function openBootcamp(h) {
-  Object.assign(bootUi, { hero: PROF[h] ? h : "", st: 0, sess: null });
+  Object.assign(bootUi, { hero: bootValid(h) ? h : "", st: 0, sess: null });
   showTab("bootcamp"); window.scrollTo({ top: 0 });
 }
 $("#bootBody").addEventListener("click", e => {
   const t = e.target.closest("button"); if (!t) return;
   const h = bootUi.hero;
   if (t.dataset.bhero !== undefined) { Object.assign(bootUi, { hero: t.dataset.bhero, st: 0, sess: null }); renderBootcamp(); window.scrollTo({ top: 0 }); }
+  else if (t.dataset.roleskip !== undefined) { state.app = state.app || { seen: {}, tour: {} }; state.app.roleSkip = Object.assign({}, state.app.roleSkip, { [t.dataset.roleskip]: true }); save(); renderBootcamp(); }
+  else if (t.hasAttribute("data-btaskstart")) { bootOf(h); save(); renderBootcamp(); toast("Aufgaben sind aktiv. Du siehst sie beim Match loggen."); }
   else if (t.hasAttribute("data-bback")) { Object.assign(bootUi, { hero: "", sess: null }); renderBootcamp(); }
   else if (t.dataset.bstep !== undefined) { bootUi.st = +t.dataset.bstep; bootUi.sess = null; renderBootcamp(); }
   else if (t.dataset.bflt !== undefined) { const k = t.dataset.bflt; if (k === "pool") bootUi.pool = !bootUi.pool; else bootUi.role = t.dataset.v; renderBootcamp(); }
   else if (t.dataset.bshow !== undefined) { bootUi.shown[h + ":" + t.dataset.bshow] = true; renderBootcamp(); }
-  else if (t.dataset.bq !== undefined) { const n = +t.dataset.bq; bootStart("station", h, bootPick(h, BOOT_STATIONS[n - 1].types, BOOT_STATIONS[n - 1].qn), { station: n }); }
+  else if (t.dataset.bq !== undefined) { const n = +t.dataset.bq, S = bootDefs(h)[n - 1]; bootStart("station", h, bootPick(h, S.types, S.qn), { station: n }); }
   else if (t.hasAttribute("data-btest")) bootStart("test", h, bootPick(h, null, BOOT_TEST_MAX), { station: 7 });
   else if (t.hasAttribute("data-brefresh")) bootStart("refresh", h, shuffle(bootDue(h)).slice(0, 5));
   else if (t.hasAttribute("data-bclose")) { bootUi.sess = null; renderBootcamp(); }
@@ -7915,6 +8049,37 @@ $("#bootBody").addEventListener("input", e => {
 $("#bootBody").addEventListener("change", e => { if (e.target.dataset && (e.target.dataset.bfree || e.target.dataset.bcard)) save(); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-bootopen]"); if (b) openBootcamp(b.dataset.bootopen); });
 
+// Match-Log: Bootcamp-Aufgaben des gewählten Helden und seiner Rolle
+function taskRowsFor(hero) {
+  const rows = [];
+  if (hero && bootGet(hero)) { const c = taskCurrent(hero); if (c) rows.push({ k: hero, t: c }); }
+  const r = hero ? heroRole(hero) : "";
+  if (r && r !== "?" && bootGet("R:" + r)) { const c = taskCurrent("R:" + r); if (c) rows.push({ k: "R:" + r, t: c }); }
+  return rows;
+}
+function taskValues() {
+  const o = {};
+  document.querySelectorAll("#taskRows .chip.on").forEach(c => { o[c.dataset.tk] = c.dataset.tv; });
+  return o;
+}
+function renderTaskBox(selected) {
+  const box = $("#taskBox");
+  if (!box) return;
+  const sel = selected || taskValues(), hero = $("#heroSelect") ? $("#heroSelect").value : "";
+  const rows = taskRowsFor(hero).map(r => ({ key: taskKey(r.k, r.t), k: r.k, t: r.t })), keys = new Set(rows.map(r => r.key));
+  Object.keys(sel).forEach(key => { if (!keys.has(key)) { const x = taskByKey(key); if (x) rows.push({ key, k: x.k, t: x.t }); } });
+  box.hidden = !rows.length;
+  $("#taskRows").innerHTML = rows.map(r => `<div class="rrow"><span class="rl"><b class="small">${esc(bootIsRole(r.k) ? "Rolle " + ROLE_SHORT[bootRole(r.k)] : r.k)}</b> <span class="badge">${esc(r.t.kind)}</span><br><span class="small">${esc(r.t.text)}</span></span>
+    <span class="chips">${TASK_V.map(([v, label]) => `<button type="button" class="chip ${sel[r.key] === v ? "on" : ""}" data-tk="${esc(r.key)}" data-tv="${v}" aria-pressed="${sel[r.key] === v}">${label}</button>`).join("")}</span></div>`).join("");
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest("#taskRows [data-tk]");
+  if (!c) return;
+  const was = c.classList.contains("on");
+  c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
+  if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
+});
+
 // ---------- Die App langsam kennenlernen: Seitenhilfen, App-Übungen, Team & Counter in Schritten ----------
 // Nichts davon bringt neue Spielfakten: Es erklärt nur, wie die App aufgebaut ist und in welcher Reihenfolge du sie am besten benutzt.
 const appSeenN = k => (state.app && state.app.seen && state.app.seen[k]) || 0;
@@ -7929,10 +8094,11 @@ function appSeen(k, once) {
 const PAGE_HELP = {
   today: ["Heute", ["Oben siehst du, wie weit dein Tag ist. «Heute zu tun» hat vier Schritte: Lektion, Training, Wochenziel, Spielen.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«App-Übungen» führt dich Schritt für Schritt durch die App, immer nur ein bis zwei Übungen.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach)."]],
   plan: ["Trainingsplan", ["Wähle oben den Tag. Jeder Tag hat Start, Blöcke und eine Notiz am Ende.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
-  log: ["Match loggen", ["Pflicht sind nur Held, Ergebnis und K/D/A. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten: Todesursachen, Fehler, Stärken und die Grundregel-Fragen. Je mehr du einträgst, desto genauer die Auswertung.", "Matches, die die App von Rivals Data geholt hat, stehen oben unter «Reflexion offen». Dort trägst du nur noch Fehler und Stärken ein."]],
+  log: ["Match loggen", ["Pflicht sind nur Held, Ergebnis und K/D/A. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten: Todesursachen, Fehler, Stärken, die Grundregel-Fragen und, wenn du ein Bootcamp begonnen hast, die Bootcamp-Aufgabe. Je mehr du einträgst, desto genauer die Auswertung.", "Matches, die die App von Rivals Data geholt hat, stehen oben unter «Reflexion offen». Dort trägst du nur noch Fehler und Stärken ein."]],
   analysis: ["Auswertung", ["Oben filterst du Zeitraum, Modus und Rolle.", "Darunter stehen Schaden, Heilung und Geblockt pro 10 Minuten, deine Winrate gegen jeden Gegner-Helden, Maps und Tageszeit.", "Fang mit einer Zahl an und frag dich, was du dagegen tun kannst. Mit wenigen Matches sind die Zahlen noch unsicher."]],
   team: ["Team & Counter", ["Die Seite geht in vier Schritten: 1 Eintragen, 2 Lage lesen, 3 Wechsel prüfen, 4 Nachschlagen. Es ist immer nur ein Schritt offen.", "Beginne mit Schritt 1 und trag zwei Gegner ein. Mehr brauchst du am Anfang nicht.", "«Alles zeigen» blendet alle Karten gleichzeitig ein, wenn du die Seite schon kennst.", "Die Vorschläge sind Denkhilfen mit Begründung, keine Garantie."]],
   heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
+  bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse, darunter ein Kurs pro Held. Jeder Kurs hat sieben Stationen und endet mit einem Test.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn der Test bestanden ist und alle Match-Aufgaben gemeistert sind."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
 function renderPageHelp(name) {
@@ -7957,6 +8123,7 @@ const APP_TOUR = [
   { id: "quiz1", title: "Fünf Quizfragen beantworten", tab: "quiz", how: ["Öffne «Quiz» und wähle eine Art.", "Schätze vor jeder Antwort, wie sicher du bist."], done: () => (state.quiz.asked || 0) + (state.quiz.k.asked || 0) >= 5 },
   { id: "rules1", title: "Grundregeln nach einem Match beantworten", tab: "log", how: ["Trag ein Match ein, nachdem du mindestens einen Plantag erledigt hast.", "Beantworte unter «Grundregeln: Wie lief es?», ob du daran gedacht hast."], done: () => state.matches.some(m => m.rules && Object.keys(m.rules).length) },
   { id: "boot1", title: "Helden-Bootcamp: Station 1", tab: "bootcamp", how: ["Wähle einen Helden aus deinem Pool.", "Schreib zuerst deine Antwort auf, dann vergleichst du mit den Quellen und wirst abgefragt."], done: () => Object.values(state.boot || {}).some(b => b && b.st && b.st.s1) },
+  { id: "task1", title: "Eine Bootcamp-Aufgabe im Match auswerten", tab: "bootcamp", how: ["Starte im Bootcamp einen Helden oder eine Rolle. Unter «Im Match üben» steht die aktuelle Aufgabe.", "Trag nach dem Match unter «Bootcamp-Aufgabe» ein, ob du sie umgesetzt hast."], done: () => state.matches.some(m => m.tasks && Object.keys(m.tasks).length) },
   { id: "ana1", title: "Die Auswertung lesen", tab: "analysis", how: ["Öffne «Auswertung», sobald du etwa drei Matches hast.", "Schau dir eine Zahl an, zum Beispiel deine Winrate gegen einen Gegner-Helden."], done: () => seenFlag("tab:analysis") && state.matches.length >= 3 },
   { id: "bak1", title: "Ein Backup machen", tab: "data", how: ["Öffne «Daten & Sync».", "Tippe auf «Als JSON exportieren» und speichere die Datei."], done: () => seenFlag("backup") }
 ];
