@@ -36,5 +36,8 @@ Grundlage: Dunlosky et al. (2013), Cepeda et al. (2006), Roediger & Karpicke (20
 ## Wo es in der App steckt
 `docs/marvel-rivals/app/index.html`: Abschnitt «Wiederholungs-System, Zwischenstopps in den Blöcken, Rückblick» (`leitner`, `nugQuestion`, `recallNugHtml`, `tipNugHtml`, `whyNugHtml`, `reflectionHtml`), `startKnow` (gemischter Tages-Check), `renderKnow` (Sicherheit). Beschreibung für Nutzer: `docs/marvel-rivals/index.md`, Abschnitt «Lernmethoden hinter der App».
 
+## Heldenwissen-Fragen
+Sie entstehen aus den eingebetteten, geprüften Daten (`PROF`, `MAPINFO`, `TU`) durch `hqGen`/`hqIds` in `index.html`, nie von Hand. Neue Fragetypen nur aus Daten mit Quelle und Stand bauen, immer vier verschiedene Optionen, Erklärung mit Quelle. Falsche Optionen dürfen keine wahren Antworten sein (bei Konter-Fragen steht «laut den Quellen» in der Frage). Test: `t68.js`.
+
 ## Schreibregeln
 Deutsch, Schweizer Schreibung (immer «ss», nie «ß»), Du-Form, kurze Sätze, Fachwörter beim ersten Mal erklären, Namen von Helden, Fähigkeiten und Karten englisch wie im Spiel.

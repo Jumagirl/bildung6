@@ -4003,7 +4003,7 @@ function renderToday() {
   if (missed.length) news.push(["info", `<b>${plural(missed.length, "Lektion", "Lektionen")} aus früheren Tagen offen:</b> ${missed.slice(0, 3).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">${esc(lessonById(m.id).title)} (Tag ${m.day})</button>`).join(", ")}`]);
   if (g && g.due) { const left = Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(tdy + "T12:00:00")) / 864e5); if (left <= 2) news.push([left < 0 ? "bad" : "info", left < 0 ? `<b>Die Frist deines Ziels „${esc(g.title)}“ ist vorbei.</b> Schreib einen Rückblick und setz das nächste Ziel.` : `<b>Dein Ziel „${esc(g.title)}“ läuft ${left === 0 ? "heute" : left === 1 ? "morgen" : "in 2 Tagen"} ab.</b>`]); }
   if (IN_VIEWER && SYNC_HELPER && Bridge.auto && Bridge.auto.state === "none") news.push(["info", `<b>Automatischer Abgleich:</b> ${esc(Bridge.auto.text)}`]);
-  const dueN = dueQs(false).length;
+  const dueN = dueQs(false).length + dueHs().length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
   const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2></div>${notes(news)}</div>` : "";
@@ -7086,7 +7086,10 @@ function leitner(id, r) {   // r: 3 gewusst, 2 teilweise, 1 nicht gewusst
 const isDue = id => { const x = (state.quiz.k.box || {})[id]; return !!x && x.due <= today(); };
 const dueQs = noFig => WQ.filter(q => q.lvl <= currentLevel() && isDue(q.id) && !(noFig && q.fig)).sort((a, b) => kBox()[a.id].due.localeCompare(kBox()[b.id].due));
 function startDue() {
-  const qs = dueQs(false).slice(0, 5);
+  const w = dueQs(false), h = dueHs().map(hqGen).filter(Boolean);
+  let qs = [...w.slice(0, 3), ...h.slice(0, 2)];
+  if (qs.length < 5) qs = [...qs, ...w.slice(3), ...h.slice(2)].slice(0, 5);
+  qs = shuffle(qs);
   if (!qs.length) { toast("Heute ist nichts zur Wiederholung fällig"); return; }
   kqSession = { qs, i: 0, correct: 0, label: "Wiederholung", back: null };
   kq = null; quizMode = "wissen"; showTab("quiz"); window.scrollTo({ top: 0 });
@@ -7209,6 +7212,115 @@ function reflectionHtml(n) {
     { icon: "edit", open: !dayGet(n).done, sub: "Fehler verstehen, erklären, Vorsatz" });
 }
 
+
+// ---------- Heldenwissen: Fragen, die die App aus den geprüften Heldendaten selbst erzeugt ----------
+// Keine Frage ist von Hand erfunden: Sie entstehen aus Heldenprofilen, Ult-Anleitungen, Kartentipps und Team-Ups mit Quelle und Stand.
+// Sie laufen durch dasselbe System wie der Wissens-Check (Abrufen, Sicherheit, Wiederholen mit Abstand, Mischen).
+const HQ_MODES = ["Convoy", "Domination", "Convergence", "Doom Match"];
+const hqBase = h => !/^Deadpool/.test(h);
+const hqSrc = d => (d ? `Quelle: marvelrivals.gg und Patch-Notes, Stand ${fmtDate(d)}.` : "");
+const hqRand = a => a[Math.floor(Math.random() * a.length)];
+function hqOpts(correct, pool) {
+  const wrong = shuffle([...new Set(pool)].filter(x => x && x !== correct)).slice(0, 3);
+  if (wrong.length < 3) return null;
+  const opts = shuffle([correct, ...wrong]);
+  return { opts, a: opts.indexOf(correct) };
+}
+let HQ_IDS = null;
+function hqIds() {
+  if (HQ_IDS) return HQ_IDS;
+  const ids = [], heroes = Object.keys(PROF), owner = {};
+  heroes.filter(hqBase).forEach(h => PROF[h].kit.forEach(k => { (owner[k.n] = owner[k.n] || new Set()).add(h); }));
+  heroes.forEach(h => {
+    const x = PROF[h];
+    if (hqBase(h)) {
+      ids.push(`ult|${h}`);
+      x.kit.forEach(k => { if (owner[k.n] && owner[k.n].size === 1 && k.n.length <= 40) ids.push(`abil|${h}|${k.n}`); });
+    }
+    if ((x.uk || []).some(k => heroByName(k.held))) ids.push(`konter|${h}`);
+    if ((x.ue || []).some(t => /^Typischer Fehler:/.test(t))) ids.push(`fehler|${h}`);
+    if ((x.schwaechen || []).length && (x.staerken || []).length >= 3) ids.push(`schw|${h}`);
+  });
+  Object.keys(MAPINFO).forEach(m => {
+    ids.push(`modus|${m}`);
+    const short = m.split(": ").pop().toLowerCase();
+    MAPINFO[m].t.forEach((t, i) => { if (!t.toLowerCase().includes(short)) ids.push(`karte|${m}|${i}`); });
+  });
+  TU.teamups.forEach(t => {
+    const u = t.helden.filter(x => x.rolle === "Nutzer" && heroByName(x.name)), pa = t.helden.filter(x => x.rolle === "Partner" && heroByName(x.name));
+    if (u.length && pa.length) ids.push(`tu|${t.name}`);
+  });
+  return (HQ_IDS = ids);
+}
+function hqGen(id) {
+  const [type, a, b] = id.split("|"), qid = "H:" + id, heroes = Object.keys(PROF).filter(hqBase);
+  const mk = (q, o, why, extra) => o && Object.assign({ id: qid, kind: "H", l: "Heldenwissen", lvl: currentLevel(), q, opts: o.opts, a: o.a, why }, extra);
+  try {
+    if (type === "ult") {
+      const x = PROF[a];
+      return mk(`Wie heisst die Ult von ${a}?`, hqOpts(x.ult.n, heroes.filter(h => h !== a).map(h => PROF[h].ult.n)), `${x.ult.n} ist die Ult von ${a}.\n${x.ult.d}\n${hqSrc(x.stand)}`, { topic: "Ult-Namen", hero: a });
+    }
+    if (type === "abil") {
+      const x = PROF[a], k = x.kit.find(z => z.n === b);
+      const same = heroes.filter(h => h !== a && heroRole(h) === heroRole(a)), pool = same.length >= 3 ? same : heroes.filter(h => h !== a);
+      return mk(`Zu welchem Helden gehört die Fähigkeit «${b}»?`, hqOpts(a, pool), `${b} gehört zu ${a}.\n${k.d}\n${hqSrc(x.stand)}`, { topic: "Fähigkeiten", hero: a });
+    }
+    if (type === "konter") {
+      const x = PROF[a], uk = x.uk.filter(k => heroByName(k.held)), held = [...new Set(uk.map(k => k.held))];
+      const correct = hqRand(held), pool = heroes.filter(h => h !== a && !held.includes(h));
+      const lines = uk.slice(0, 4).map(k => `${k.held}: ${k.was} (${k.art}). ${k.wie}`);
+      return mk(`Welcher Held kann laut den Quellen die Ult von ${a} (${x.ult.n}) kontern?`, hqOpts(correct, pool), `${lines.join("\n")}\nDas sind die belegten Konter. Andere Helden können trotzdem helfen, nur steht das in keiner Quelle.\n${hqSrc(x.stand)}`, { topic: "Ult-Konter", hero: a });
+    }
+    if (type === "fehler") {
+      const x = PROF[a], txt = t => t.replace(/^Typischer Fehler:\s*/, ""), mine = txt(x.ue.find(t => /^Typischer Fehler:/.test(t)));
+      const pool = heroes.filter(h => h !== a && (PROF[h].ue || []).some(t => /^Typischer Fehler:/.test(t))).map(h => txt(PROF[h].ue.find(t => /^Typischer Fehler:/.test(t)))).filter(t => !t.includes(a));
+      return mk(`Was ist ein typischer Fehler beim Einsatz von ${x.ult.n} (${a})?`, hqOpts(mine, pool), `Typischer Fehler bei ${x.ult.n}: ${mine}\n${hqSrc(x.stand)}`, { topic: "Typische Fehler", hero: a });
+    }
+    if (type === "schw") {
+      const x = PROF[a], correct = hqRand(x.schwaechen);
+      return mk(`Welche Aussage beschreibt eine Schwäche von ${a}?`, hqOpts(correct, x.staerken), `Schwächen von ${a}:\n${x.schwaechen.join("\n")}\nStärken: ${x.staerken.join(" · ")}\n${hqSrc(x.stand)}`, { topic: "Stärken und Schwächen", hero: a });
+    }
+    if (type === "modus") {
+      const m = MAPINFO[a];
+      return mk(`Zu welchem Modus gehört die Karte ${a}?`, hqOpts(m.m, HQ_MODES), `${a} ist eine ${m.m}-Karte.\n${m.c}\nQuelle: marvelrivals.gg, Stand ${fmtDate(m.s)}.`, { topic: "Karten", map: a });
+    }
+    if (type === "karte") {
+      const m = MAPINFO[a], tip = m.t[+b], maps = Object.keys(MAPINFO).filter(n => n !== a), same = maps.filter(n => MAPINFO[n].m === m.m);
+      return mk(`Zu welcher Karte passt dieser Tipp? «${tip}»`, hqOpts(a, same.length >= 3 ? same : maps), `${tip}\nDas gilt für ${a} (${m.m}).\nQuelle: marvelrivals.gg, Stand ${fmtDate(m.s)}.`, { topic: "Karten", map: a });
+    }
+    if (type === "tu") {
+      const t = TU.teamups.find(z => z.name === a), u = t.helden.filter(x => x.rolle === "Nutzer" && heroByName(x.name)), pa = t.helden.filter(x => x.rolle === "Partner" && heroByName(x.name));
+      const names = t.helden.map(x => x.name), correct = hqRand(pa).name;
+      return mk(`Du spielst ${u[0].name} mit dem Team-Up «${a}». Wer im Team macht es stärker?`, hqOpts(correct, heroes.filter(h => !names.includes(h))), `${t.wirkung}\nQuelle: marvelrivals.gg und Patch-Notes, Stand ${fmtDate(TU.stand)}.`, { topic: "Team-Ups", hero: u[0].name });
+    }
+  } catch (e) { return null; }
+  return null;
+}
+const dueHs = () => hqIds().filter(i => isDue("H:" + i));
+function hqNext(last) {
+  const ids = hqIds(), k = state.quiz.k, mine = poolHeroes(), lastId = last ? last.id : "", lastType = lastId ? lastId.replace(/^H:/, "").split("|")[0] : "";
+  const w = id => { const qid = "H:" + id, hero = id.split("|")[1]; return (isDue(qid) ? 6 : 1) * (1 + 2 * (k.wrong[qid] || 0)) / (1 + 0.5 * (k.seen[qid] || 0)) * (mine.includes(hero) ? 3 : 1); };
+  for (let tries = 0; tries < 12; tries++) {
+    const due = dueHs();
+    let id;
+    if (due.length && Math.random() < 0.6) id = weightedPick(due, w);
+    else {
+      const byType = {}; ids.forEach(i => { (byType[i.split("|")[0]] = byType[i.split("|")[0]] || []).push(i); });
+      const types = Object.keys(byType).filter(t => t !== lastType), type = hqRand(types.length ? types : Object.keys(byType));
+      id = weightedPick(byType[type], w);
+    }
+    if ("H:" + id === lastId) continue;
+    const q = hqGen(id);
+    if (q) return q;
+  }
+  return null;
+}
+function hqLinkHtml(q) {
+  if (q.map) return `<div><button type="button" class="linkbtn" data-pact="hq-map" data-m="${esc(q.map)}">${esc(q.map)} bei den Spielregeln ansehen</button></div>`;
+  if (q.hero) return `<div><button type="button" class="linkbtn" data-pact="hq-hero" data-h="${esc(q.hero)}">${esc(q.hero)} im Helden-Guide ansehen</button></div>`;
+  return "";
+}
+
 // ---------- Offene Blöcke nachholen ----------
 const BLOCK_KEYS = ["b1", "b2", "b3"];
 const planCarry = () => state.plan.carry || (state.plan.carry = []);
@@ -7297,6 +7409,8 @@ function planAction(act, b) {
     case "auto": { const st = dayEnsure(+b.dataset.n), v = +b.dataset.v; st.auto = Object.assign({}, st.auto); if (st.auto[b.dataset.t] === v) delete st.auto[b.dataset.t]; else st.auto[b.dataset.t] = v; save(); renderPlan(); break; }
     case "tab": showTab(b.dataset.tab); window.scrollTo({ top: 0 }); break;
     case "due-start": startDue(); break;
+    case "hq-hero": openHeroSearch(b.dataset.h); break;
+    case "hq-map": lexTab = "rules"; $("#lexSearch").value = b.dataset.m; showTab("lexicon"); window.scrollTo({ top: 0 }); break;
     case "nug-show": nugSet(+b.dataset.n, b.dataset.slot, { shown: true }); save(); renderPlan(); break;
     case "nug-ok": { const o = nugOf(+b.dataset.n, b.dataset.slot); nugSet(+b.dataset.n, b.dataset.slot, { ok: !o.ok }); save(); renderPlan(); break; }
     case "nug-rate": {
@@ -7462,6 +7576,7 @@ function startKnow(opts) {
 const isLetterQ = q => !!q.fig && q.opts.every(o => o.length === 1);
 const knowOrder = q => (isLetterQ(q) ? [0, 1, 2, 3] : shuffle([0, 1, 2, 3]));
 function nextKnow() {
+  if (quizMode === "helden" && !kqSession) { const q = hqNext(kq && kq.q); return q ? { q, order: knowOrder(q), answered: null } : null; }
   if (kqSession) {
     if (kqSession.i >= kqSession.qs.length) return { done: true };
     const q = kqSession.qs[kqSession.i];
@@ -7490,7 +7605,7 @@ function renderKnow() {
   }
   const q = kq.q, w = wissenById(q.l), s = kqSession;
   const figHtml = q.fig ? FIGS[q.fig](kq.answered === null ? "ask" : q.fig === "fight" ? "teach" : "answer") : "";
-  $("#quizBox").innerHTML = `<div class="qmeta">${levelBadge(q.lvl)}<span class="tag">${esc(q.l)} ${esc(w ? w.title : "")}</span>${q.fig ? '<span class="badge">Bildfrage</span>' : ""}${s ? `<span class="badge">Frage ${s.i + 1} von ${s.qs.length} · ${esc(s.label)}</span>` : `<span class="muted small">Fragen bis Stufe ${L}, am häufigsten Stufe ${L}</span>`}</div>
+  $("#quizBox").innerHTML = `<div class="qmeta">${levelBadge(q.lvl)}<span class="tag">${esc(q.l)} ${esc(w ? w.title : (q.topic || ""))}</span>${q.fig ? '<span class="badge">Bildfrage</span>' : ""}${s ? `<span class="badge">Frage ${s.i + 1} von ${s.qs.length} · ${esc(s.label)}</span>` : `<span class="muted small">Fragen bis Stufe ${L}, am häufigsten Stufe ${L}</span>`}</div>
     <div class="kn-q">${esc(q.q)}</div>${figHtml}
     ${kq.answered === null ? `<div class="conf"><span class="muted small">Wie sicher bist du?</span>${CONF.map(([k, t]) => `<button type="button" class="chip ${kq.conf === k ? "on" : ""}" data-conf="${k}">${t}</button>`).join("")}</div>` : ""}
     <div class="kn-opts ${isLetterQ(q) ? "letters" : ""}">${kq.order.map(oi => `<button type="button" data-ko="${oi}">${esc(q.opts[oi])}</button>`).join("")}</div>
@@ -7516,16 +7631,16 @@ function showKnowResult() {
     b.disabled = true;
     if (+b.dataset.ko === q.a) b.classList.add("right"); else if (+b.dataset.ko === kq.answered) b.classList.add("wrong");
   });
-  $("#knowExplain").innerHTML = notes([[ok ? "good" : "bad", `<b>${ok ? "Richtig!" : "Leider falsch."}</b>${whyHtml(q.why, new Set())}<div><button type="button" class="linkbtn" data-pact="wissen" data-l="${q.l}">${q.l} nachlesen</button></div>`]])
+  $("#knowExplain").innerHTML = notes([[ok ? "good" : "bad", `<b>${ok ? "Richtig!" : "Leider falsch."}</b>${whyHtml(q.why, new Set())}${q.kind === "H" ? hqLinkHtml(q) : `<div><button type="button" class="linkbtn" data-pact="wissen" data-l="${q.l}">${q.l} nachlesen</button></div>`}`]])
     + `<div class="row mt"><button class="btn" type="button" id="knowNext">${kqSession && kqSession.i + 1 >= kqSession.qs.length ? "Auswertung" : "Nächste Frage →"}</button></div>`;
   const ch = calHint(kq.conf, ok); if (ch) $("#knowExplain").insertAdjacentHTML("afterbegin", `<p class="small calhint">${ch}</p>`);
   $("#knowNext").addEventListener("click", () => { if (kqSession) kqSession.i++; kq = nextKnow(); renderKnow(); });
 }
 function renderQuizTab() {
-  $("#quizModes").innerHTML = [["counter", "Counter-Training"], ["wissen", "Wissens-Check"]].map(([k, t]) => `<span class="chip ${quizMode === k ? "on" : ""}" data-qmode="${k}">${t}</span>`).join("");
-  $("#quizModes").querySelectorAll("[data-qmode]").forEach(c => c.addEventListener("click", () => { quizMode = c.dataset.qmode; renderQuizTab(); }));
+  $("#quizModes").innerHTML = [["counter", "Counter-Training"], ["wissen", "Wissens-Check"], ["helden", "Helden und Karten"]].map(([k, t]) => `<span class="chip ${quizMode === k ? "on" : ""}" data-qmode="${k}">${t}</span>`).join("");
+  $("#quizModes").querySelectorAll("[data-qmode]").forEach(c => c.addEventListener("click", () => { if (quizMode !== c.dataset.qmode) kq = null; quizMode = c.dataset.qmode; renderQuizTab(); }));
   $("#ruleCard").hidden = quizMode !== "counter";
-  if (quizMode === "wissen") renderKnow(); else { renderQuiz(); renderRules(); }
+  if (quizMode === "wissen" || quizMode === "helden") renderKnow(); else { renderQuiz(); renderRules(); }
 }
 
 // ---------- Dashboard: Lernpfad ----------
