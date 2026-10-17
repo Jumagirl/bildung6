@@ -366,6 +366,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .swaphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .swaprow ul { margin: 4px 0 0; padding-left: 18px; }
 .swapsteps { margin: 0 0 8px; padding-left: 20px; }
+.mbadge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .02em; vertical-align: middle; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); }
+.mbadge.R { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+.mbadge.U { background: var(--surface-3); }
+.mbadge.C, .mbadge.F { border-style: dashed; }
 .rrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .rrow .rl { flex: 1 1 200px; min-width: 0; }
 .rdots { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
@@ -6862,6 +6866,7 @@ function focusCardHtml(n) {
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
   const notYet = PLAN.tracker.filter(t => !t.neu.includes(n) && topicAuto(t) > 0 && topicAuto(t) < 3);
   if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Wähle eins davon unter Block 3 als dein Mini-Ziel.</li>`);
+  { const ms2 = modeSummaryLine(n); if (ms2) items.push(ms2); const mc = modeCheckLine(n); if (mc) items.push(mc); }
   if (fadeLevel(n) >= 1) items.push(`<li><b>Weniger Hilfe ab jetzt.</b> Die Aufgabentexte sind gekürzt${fadeLevel(n) >= 2 ? " und teils unter «Weitere Hinweise» eingeklappt" : ""}. Versuch es erst aus dem Kopf, «mehr» zeigt den ganzen Text. <button type="button" class="linkbtn" data-pact="fade-off">Immer ausführlich</button></li>`);
   else if (state.settings.fadeOff && n >= 43) items.push(`<li><b>Hilfen sind ausführlich.</b> Ab Tag 43 würden die Texte gekürzt. <button type="button" class="linkbtn" data-pact="fade-on">Wieder kürzen</button></li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
@@ -6991,6 +6996,48 @@ function poolCardHtml() {
     { icon: "heroes", open: !pool.length, sub: pool.length ? esc(listed) : "Noch nicht gewählt" });
 }
 
+// ---------- Welcher Modus gilt in welchem Block? ----------
+// Der Plan nennt den Modus pro Tag (R, U, «U, dann R» …). Daraus folgt für die Blöcke, nach den Regeln des Plans:
+// Neues zuerst ungewertet, in Ranked nur, was schon sitzt; ab Block 4 eher ungewertet oder Replays statt Ranked.
+function blockMode(d, key) {
+  const m = String(d.mode || "").trim(), i = /^b([1-4])$/.test(key) ? +key[1] : 0;
+  if (!i || !m) return null;
+  const late = i >= 4, lateMode = { k: "U", t: "Ungewertet oder Replay", tip: "Ab Block 4 spielst du eher ungewertet (Matches ohne Rang-Änderung) oder schaust Replays, statt Ranked zu spielen." };
+  const R = { k: "R", t: "Ranked", tip: "Gewerteter Modus mit Rang. Nach 3 Niederlagen in Folge ist Ranked für heute beendet." };
+  const U = { k: "U", t: "Ungewertet", tip: "Matches ohne Rang-Änderung, zum Üben (Quick Match oder ungewertet). Neues übst du zuerst hier." };
+  if (m === "R" || m === "K, R" || m === "R, solo") return late ? lateMode : R;
+  if (m === "U") return U;
+  if (m === "U, dann R") return i === 1 ? U : late ? lateMode : R;
+  if (m === "Custom, dann R") return i === 1 ? { k: "C", t: "Custom Game", tip: "Eigene Lobby mit Freunden oder Bots, zum gezielten Üben." } : late ? lateMode : R;
+  if (m === "R oder U") return { k: "F", t: "Ranked oder ungewertet", tip: "Du wählst: Ranked, wenn es schon sitzt, sonst ungewertet." };
+  return null;
+}
+function blockModeBadge(n, key) {
+  const b = blockMode(PLAN.days[n - 1], key);
+  return b ? ` <span class="mbadge ${b.k}" title="${esc(b.tip)}">${esc(b.t)}</span>` : "";
+}
+// Kurzfassung für den Tagesplan: welcher Modus in welchem Block
+function modeSummaryLine(n) {
+  const d = PLAN.days[n - 1], blocks = ["b1", "b2", "b3"].filter(k => d.steps.some(s => s.key === k));
+  const bm = blocks.map(k => [k, blockMode(d, k)]).filter(x => x[1]);
+  if (!bm.length) return "";
+  const groups = [];
+  bm.forEach(([k, b]) => { const g = groups[groups.length - 1], no = k[1]; if (g && g.b.t === b.t) g.nos.push(no); else groups.push({ b, nos: [no] }); });
+  const txt = groups.map(g => `${g.nos.length > 1 ? "Block " + g.nos.join(" und ") : "Block " + g.nos[0]}: <b>${esc(g.b.t)}</b>`).join(" · ");
+  const late = /\bR\b/.test(String(d.mode || "")) ? " · ab Block 4: ungewertet oder Replay" : "";
+  return `<li><b>Modus heute:</b> ${txt}${late}. <span class="muted small">Das Abzeichen steht auch bei jedem Block.</span></li>`;
+}
+// Heute geloggte Matches gegen den Plan halten: Der Plan nennt Ranked, geloggt ist nur ungewertet
+function modeCheckLine(n) {
+  if (n !== planDay()) return "";
+  const m = String(PLAN.days[n - 1].mode || "");
+  if (!/\bR\b/.test(m)) return "";
+  const tm = state.matches.filter(x => x.date === today() && x.mode !== "Custom / Training");
+  const ranked = tm.filter(x => x.mode === "Competitive").length, un = tm.length - ranked;
+  if (!un || ranked) return "";
+  return `<li><b>Modus prüfen:</b> Heute hast du ${plural(un, "ungewertetes Match", "ungewertete Matches")} geloggt, aber noch kein Ranked-Match. Der Plan nennt für diesen Tag Ranked (siehe Abzeichen an den Blöcken). Neues darfst du zuerst ungewertet üben, Ranked kommt, sobald es sitzt.</li>`;
+}
+
 // ---------- Eintragsfelder in den Blöcken und Mini-Ziel für Block 3 ----------
 const WRITE_RE = /(schreib|notier|aufschreib|standardzeile|trag\b[^.]*\bein\b|halte[^.]*fest)/i;
 function stepBodyHtml(n, s, seen) {
@@ -7034,7 +7081,7 @@ function stepHtml(n, s, seen, o = {}) {
   const auto = autoTagHtml(o.carry ? autoStepEval(o.carry.to, s, carryFor(o.carry.to).findIndex(x => x.id === o.carry.id)) : autoStepEval(n, s, -1), done);
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${auto}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
 const swapHintHtml = s => /Swap|Komposition|Gegnerteam aus/.test(s.t || "") ? `<div class="small" style="margin-top:6px"><button type="button" class="linkbtn" data-pact="swap-open">Dabei hilft dir der Support-Wechsel-Berater im Tab Team &amp; Counter</button></div>` : "";
