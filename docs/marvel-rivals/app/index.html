@@ -366,6 +366,18 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .swaphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .swaprow ul { margin: 4px 0 0; padding-left: 18px; }
 .swapsteps { margin: 0 0 8px; padding-left: 20px; }
+.rrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.rrow .rl { flex: 1 1 200px; min-width: 0; }
+.rdots { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.rdots i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-3); }
+.rdots i.auto { background: var(--good); }
+.rdots i.bewusst { background: var(--gold); }
+.rdots i.nein { background: var(--bad); }
+details.fade { display: inline; }
+details.fade > summary { display: inline; cursor: pointer; color: var(--accent-strong); font-size: .85rem; font-weight: 600; list-style: none; }
+details.fade > summary::-webkit-details-marker { display: none; }
+details.fade[open] { display: block; margin-top: 4px; }
+details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .bootgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
 .bootcard { display: flex; gap: 10px; align-items: center; text-align: left; font: inherit; color: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; min-width: 0; }
 .bootcard:hover { border-color: var(--accent); }
@@ -1041,6 +1053,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="chips" id="mistakeChips"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
+    <div id="ruleBox" hidden>
+      <h3>Grundregeln: Wie lief es?</h3>
+      <p class="muted small" style="margin:0 0 8px">Hast du daran gedacht, ohne es dir vorzunehmen? Lass leer, was im Match nicht vorkam.</p>
+      <div id="ruleRows"></div>
+    </div>
     <div class="grid-2 mt">
       <label>Notizen / VOD-Zeitstempel <textarea name="notes" placeholder="z.B. 04:12 – ohne Heiler in den Fight gerannt"></textarea></label>
       <label>Eine Sache, die ich nächstes Match besser mache <textarea name="next" placeholder="z.B. Ult für den nächsten Teamfight aufheben"></textarea></label>
@@ -4046,7 +4063,7 @@ function renderToday() {
     ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
-  el.innerHTML = hero + list + focus + newsCard + first + guide;
+  el.innerHTML = hero + list + focus + rulesCardHtml() + newsCard + first + guide;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -4333,7 +4350,7 @@ function renderLog() {
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
-  renderMistakeChips(); renderDeathBox();
+  renderMistakeChips(); renderRuleBox(); renderDeathBox();
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -4412,6 +4429,7 @@ function clearForm() {
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   deathState = {};
   renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []);
+  renderRuleBox({});
   renderDeathBox();
   updateNemesis();
   refreshPickers($("#matchForm"));
@@ -4441,6 +4459,7 @@ function startEdit(id) {
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {});
   renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []);
+  renderRuleBox(Object.assign({}, m.rules));
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
@@ -4660,6 +4679,7 @@ $("#matchForm").addEventListener("submit", e => {
     nemesis: f.get("nemesis") || "", swapped: !!f.get("swapped"),
     mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
     goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v),
+    rules: ruleValues(),
     deathCauses: Object.assign({}, deathState)
   };
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
@@ -5676,8 +5696,8 @@ function syncToast(r) {
   toast(`Rivals Data: ${r.added} neu, ${r.updated} aktualisiert${r.merged ? `, ${r.merged} zusammengeführt` : ""}${r.unknown ? ` · ${r.unknown} mit unbekanntem Helden` : ""}`);
 }
 // ---------- Automatischer Abgleich über den Sync-Helfer ----------
-// Die Seite darf selbst keine Internetanfragen stellen. Ein Sync-Helfer (eigene Claude-Sitzung, per Zeitplan etwa alle
-// 3 Stunden und per Knopf) holt die Matches von Rivals Data und schreibt sie als eine Zeile in sein Sitzungsprotokoll.
+// Die Seite darf selbst keine Internetanfragen stellen. Ein Sync-Helfer (eigene Claude-Sitzung, per Zeitplan alle
+// zwei Stunden von 10 bis 22 Uhr und per Knopf) holt die Matches von Rivals Data und schreibt sie als eine Zeile in sein Sitzungsprotokoll.
 // Die App liest dieses Protokoll über den Connector "Claude Code Remote" (list_events) und trägt die Matches ein.
 // Schreibrechte auf deine Daten braucht der Helfer dafür nicht.
 const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
@@ -6609,7 +6629,7 @@ function trackerHtml(cur) {
     return [`<b>${esc(t.topic)}</b>${due || isNew ? ` <span class="badge">${isNew ? "neu heute" : "heute auffrischen"}</span>` : ""}`,
       t.neu.length > 1 ? `${t.neu[0]}–${t.neu[t.neu.length - 1]}` : String(t.neu[0]),
       `<div class="dchips">${chips}</div>`,
-      topicAuto(t) ? (topicAuto(t) === 3 ? '<span class="badge ok">läuft von allein ✓</span>' : `<span class="small">${AUTO_LABEL[topicAuto(t)]}</span>`) : '<span class="muted small">–</span>',
+      topicAuto(t) ? (topicAuto(t) === 3 ? '<span class="badge ok">läuft von allein ✓</span>' : `<span class="small">${AUTO_LABEL[topicAuto(t)]}</span>`) + (ruleEvidence(t) ? ' <span class="muted small" title="Aus deinen Antworten im Match-Log">(aus Matches)</span>' : "") : '<span class="muted small">–</span>',
       `<input type="checkbox" data-ptopic="${t.id}" ${state.plan.topics[t.id] ? "checked" : ""} aria-label="Thema ${esc(t.topic)} erledigt">`];
   });
   return table(["Thema", "#Neu an Tag", "Auffrischen an Tag", "Sitzt es?", "#Erledigt"], rows);
@@ -6766,6 +6786,8 @@ function matchLenHtml() {
 // „Sitzt es?“: Selbsteinschätzung pro Thema am Tagesende. Zählt die jüngste Bewertung.
 const AUTO_LABEL = { 1: "muss ich noch denken", 2: "klappt meistens", 3: "läuft von allein" };
 function topicAuto(t) {
+  const ev = ruleEvidence(t);   // mindestens 3 Antworten im Match-Log: die letzten 5 zählen mehr als das Gefühl am Tagesende
+  if (ev) return ev;
   const days = Object.keys(state.plan.days).map(Number).sort((a, b) => b - a);
   for (const n of days) { const v = (state.plan.days[n].auto || {})[t.id]; if (v) return v; }
   return 0;
@@ -6840,6 +6862,8 @@ function focusCardHtml(n) {
   if (again.length) items.push(`<li><b>Kurz auffrischen:</b> ${names(again)}. Das kennst du schon, heute holst du es nur wieder nach vorn. ${refreshIds(n).length ? `<button class="btn small" type="button" data-pact="check-refresh" data-n="${n}">Auffrischen-Check</button>` : ""}</li>`);
   const notYet = PLAN.tracker.filter(t => !t.neu.includes(n) && topicAuto(t) > 0 && topicAuto(t) < 3);
   if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Wähle eins davon unter Block 3 als dein Mini-Ziel.</li>`);
+  if (fadeLevel(n) >= 1) items.push(`<li><b>Weniger Hilfe ab jetzt.</b> Die Aufgabentexte sind gekürzt${fadeLevel(n) >= 2 ? " und teils unter «Weitere Hinweise» eingeklappt" : ""}. Versuch es erst aus dem Kopf, «mehr» zeigt den ganzen Text. <button type="button" class="linkbtn" data-pact="fade-off">Immer ausführlich</button></li>`);
+  else if (state.settings.fadeOff && n >= 43) items.push(`<li><b>Hilfen sind ausführlich.</b> Ab Tag 43 würden die Texte gekürzt. <button type="button" class="linkbtn" data-pact="fade-on">Wieder kürzen</button></li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
   return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
     <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
@@ -6966,9 +6990,25 @@ function poolCardHtml() {
 // ---------- Eintragsfelder in den Blöcken und Mini-Ziel für Block 3 ----------
 const WRITE_RE = /(schreib|notier|aufschreib|standardzeile|trag\b[^.]*\bein\b|halte[^.]*fest)/i;
 function stepBodyHtml(n, s, seen) {
-  const lines = scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean), fields = dayGet(n).fields || {};
-  const item = (t, i) => `${linkify(esc(t), seen)}${WRITE_RE.test(t) ? `<textarea class="pfield" rows="2" data-pf="${n}|${s.key}|${i}" placeholder="Hier eintragen …" aria-label="Dein Eintrag zu dieser Aufgabe">${esc(fields[s.key + ":" + i] || "")}</textarea>` : ""}`;
-  return lines.length <= 1 ? `<div>${item(lines[0] || "", 0)}</div>` : `<ul class="wl">${lines.map((t, i) => `<li>${item(t, i)}</li>`).join("")}</ul>`;
+  const lines = scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean), fields = dayGet(n).fields || {}, lvl = fadeLevel(n);
+  const field = (t, i) => WRITE_RE.test(t) ? `<textarea class="pfield" rows="2" data-pf="${n}|${s.key}|${i}" placeholder="Hier eintragen …" aria-label="Dein Eintrag zu dieser Aufgabe">${esc(fields[s.key + ":" + i] || "")}</textarea>` : "";
+  // Weniger Hilfe in den letzten Wochen: Aufgaben mit Eintragsfeld bleiben ganz, sonst nur der erste Satz; ab Tag 50 steht der Rest gesammelt unter «Weitere Hinweise»
+  const shortOf = t => { const m = /^(.+?[.!?])(\s|$)/.exec(t); return m && m[1].length < t.length - 12 ? m[1] : t; };
+  const item = (t, i) => {
+    const sh = lvl >= 1 && !WRITE_RE.test(t) ? shortOf(t) : t;
+    return `${linkify(esc(sh), seen)}${sh !== t ? ` <details class="fade"><summary>mehr</summary>${linkify(esc(t.slice(sh.length).trim()), seen)}</details>` : ""}${field(t, i)}`;
+  };
+  if (lines.length <= 1) return `<div>${item(lines[0] || "", 0)}</div>`;
+  if (lvl >= 2) {
+    const show = [], rest = [];
+    lines.forEach((t, i) => { if (i === 0 || WRITE_RE.test(t)) show.push([t, i]); else rest.push(t); });
+    if (rest.length) {
+      const pos = show.findIndex(([, i]) => i > 0), box = ["__rest", -1];
+      show.splice(pos < 0 ? show.length : pos, 0, box);
+      return `<ul class="wl">${show.map(([t, i]) => t === "__rest" ? `<li><details class="fade"><summary>Weitere Hinweise (${rest.length})</summary><ul class="wl">${rest.map(r => `<li>${linkify(esc(r), seen)}</li>`).join("")}</ul></details></li>` : `<li>${item(t, i)}</li>`).join("")}</ul>`;
+    }
+  }
+  return `<ul class="wl">${lines.map((t, i) => `<li>${item(t, i)}</li>`).join("")}</ul>`;
 }
 function mini3Options(n) {
   const opts = [{ k: "plan", t: "Vorschlag des Plans", txt: "Spiel den Block so, wie es im Plan steht." }];
@@ -6995,6 +7035,76 @@ function stepHtml(n, s, seen, o = {}) {
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
 const swapHintHtml = s => /Swap|Komposition|Gegnerteam aus/.test(s.t || "") ? `<div class="small" style="margin-top:6px"><button type="button" class="linkbtn" data-pact="swap-open">Dabei hilft dir der Support-Wechsel-Berater im Tab Team &amp; Counter</button></div>` : "";
 
+
+// ---------- Grundregeln: was im Hintergrund mitlaufen soll ----------
+// Ein Thema aus dem Trainingsplan wird zur Grundregel, sobald sein erster Tag erledigt ist, und bleibt es, bis es von allein läuft.
+// Nach jedem Match sagst du, ob du daran gedacht hast, ohne es dir vorzunehmen. Daraus entsteht die Einschätzung «Wie sitzt es?»:
+// Mit mindestens 3 Antworten zählen die letzten 5 mehr als dein Gefühl am Tagesende.
+const RULE_V = [["auto", "Ja, von selbst"], ["bewusst", "Ja, bewusst"], ["nein", "Nein"]];
+const RULE_MAX = 4, RULE_SPOT_DAYS = 7;
+const ruleTopic = id => PLAN.tracker.find(t => t.id === +id);
+const ruleLog = t => state.matches.filter(m => m.rules && m.rules[t.id]).map(m => m.rules[t.id]);
+const ruleLastDate = t => { const l = state.matches.filter(m => m.rules && m.rules[t.id]); return l.length ? l[l.length - 1].date : ""; };
+function ruleEvidence(t) {
+  const l = ruleLog(t).slice(-5);
+  if (l.length < 3) return 0;
+  const a = l.filter(x => x === "auto").length, ok = l.filter(x => x !== "nein").length;
+  return a / l.length >= 0.8 ? 3 : ok / l.length >= 0.6 ? 2 : 1;
+}
+const fadeLevel = n => (state.settings && state.settings.fadeOff) ? 0 : n >= 50 ? 2 : n >= 43 ? 1 : 0;
+function ruleText(t) {
+  const id = dayLessons(Math.min(...t.neu))[0], l = id && lessonById(id);
+  return l && l.focus ? l.focus : "";
+}
+function activeRules() {
+  const learned = PLAN.tracker.filter(t => t.neu.some(n => dayGet(n).done));
+  const prio = t => { const v = topicAuto(t); return v === 1 ? 0 : v === 0 ? 1 : 2; };
+  const first = t => Math.min(...t.neu);
+  const open = learned.filter(t => topicAuto(t) < 3).sort((a, b) => prio(a) - prio(b) || first(b) - first(a)).slice(0, RULE_MAX).map(t => ({ t, level: topicAuto(t), spot: false }));
+  if (open.length < RULE_MAX) {
+    const limit = addDays(today(), -RULE_SPOT_DAYS);
+    const spot = learned.filter(t => topicAuto(t) === 3 && (ruleLastDate(t) || "") < limit).sort((a, b) => (ruleLastDate(a) || "").localeCompare(ruleLastDate(b) || ""))[0];
+    if (spot) open.push({ t: spot, level: 3, spot: true });
+  }
+  return open;
+}
+function ruleDots(t) {
+  const l = ruleLog(t).slice(-5);
+  return l.length ? `<span class="rdots" title="Letzte Antworten, neueste rechts: grün von selbst, gelb bewusst, rot nein">${l.map(v => `<i class="${v}"></i>`).join("")}</span>` : "";
+}
+function rulesCardHtml() {
+  if (!planStarted()) return "";
+  const rs = activeRules();
+  if (!rs.length) return "";
+  const kw = fadeLevel(Math.min(56, planDay())) >= 2, shown = new Set();
+  return `<div class="card today-card"><div class="card-head"><h2>${icon("check")}Deine Grundregeln fürs nächste Match</h2><span class="badge">${rs.length}</span></div>
+    <p class="lead" style="margin:0 0 6px">${kw ? "Nur noch Stichworte, du kennst sie. " : ""}Sie laufen im Hintergrund mit, du musst nicht ständig an alle denken. Nach dem Match fragt dich die App, ob du daran gedacht hast, ohne es dir vorzunehmen.</p>
+    <ul class="wl">${rs.map(r => { let tx = kw ? "" : ruleText(r.t); if (tx && shown.has(tx)) tx = ""; shown.add(tx); return `<li><b>${esc(r.t.topic)}</b>${r.spot ? ' <span class="badge">Stichprobe</span>' : ""} ${ruleDots(r.t)}${tx ? `<br><span class="small">${esc(tx)}</span>` : ""}</li>`; }).join("")}</ul>
+    <p class="small muted" style="margin:6px 0 0">Eine Regel verschwindet aus der Liste, sobald sie in den letzten Matches meist von selbst geklappt hat. Alte Regeln fragt die App ab und zu als Stichprobe wieder ab.</p></div>`;
+}
+// Fragen im Match-Log
+function renderRuleBox(selected) {
+  const box = $("#ruleBox");
+  if (!box) return;
+  const sel = selected || ruleValues(), rs = activeRules(), ids = new Set(rs.map(r => r.t.id));
+  const extra = Object.keys(sel).map(ruleTopic).filter(t => t && !ids.has(t.id));
+  const list = [...rs.map(r => ({ t: r.t, spot: r.spot })), ...extra.map(t => ({ t, spot: false }))];
+  box.hidden = !list.length;
+  $("#ruleRows").innerHTML = list.map(({ t, spot }) => `<div class="rrow"><span class="rl"><b>${esc(t.topic)}</b>${spot ? ' <span class="badge">Stichprobe</span>' : ""}</span>
+    <span class="chips">${RULE_V.map(([k, label]) => `<button type="button" class="chip ${sel[t.id] === k ? "on" : ""}" data-rt="${t.id}" data-rv="${k}" aria-pressed="${sel[t.id] === k}">${label}</button>`).join("")}</span></div>`).join("");
+}
+function ruleValues() {
+  const o = {};
+  document.querySelectorAll("#ruleRows .chip.on").forEach(c => { o[c.dataset.rt] = c.dataset.rv; });
+  return o;
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest("#ruleRows [data-rt]");
+  if (!c) return;
+  const was = c.classList.contains("on");
+  c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
+  if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
+});
 
 // ---------- Aufgaben automatisch abhaken ----------
 // Die App erkennt, was du schon getan hast (Quizfragen beantwortet, Matches gespielt, Ziele angelegt …), und hakt die passende Aufgabe selbst ab.
@@ -7823,6 +7933,8 @@ function planAction(act, b) {
   switch (act) {
     case "day": openPlanDay(+b.dataset.n); break;
     case "home": openPlanHome(); break;
+    case "fade-off": state.settings.fadeOff = true; save(); renderPlan(); break;
+    case "fade-on": delete state.settings.fadeOff; save(); renderPlan(); break;
     case "mini3": { const st = dayEnsure(+b.dataset.n); st.mini3 = Object.assign({}, st.mini3, { k: b.dataset.k }); save(); renderPlan(); break; }
     case "mainrole": { UIFOLD.pool = true; state.settings.mainRole = b.dataset.r; state.settings.pool = poolHeroes().filter(h => heroRole(h) === b.dataset.r); save(); applyPoolToPlan(); renderPlan(); renderLevelChip(); break; }
     case "dayrole": { const st = dayEnsure(+b.dataset.n); st.role = st.role === b.dataset.r ? "" : b.dataset.r; save(); renderPlan(); break; }
