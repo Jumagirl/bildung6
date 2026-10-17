@@ -46,7 +46,7 @@ Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | Wochenziele in eigenen Worten (zum Beispiel „Weniger sterben“). Die App erkennt das Thema, wählt passende Lektionen aus, stellt Aufgaben für die Woche zusammen und zeigt deinen Fortschritt aus den Matches (Tode, Heilung pro 10 Minuten, Ult-Wirkung, Rollen-Flex). Das Ziel erscheint auch im Trainingstag, im Dashboard und im Training; Vorschläge kommen aus deinen häufigsten Fehlern. Nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches mehrmals täglich, die App übernimmt sie beim Öffnen (oder sofort per Knopf „Jetzt aktualisieren“); Backup als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches (alle zwei Stunden von 10 bis 22 Uhr und zusätzlich, sobald die App geöffnet wird und der letzte Abruf älter als 30 Minuten ist; sofort per Knopf „Jetzt aktualisieren“), die App übernimmt sie; Backup als JSON, Export der Matches als CSV |
 
 !!! info "Wo werden deine Daten gespeichert?"
     - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
@@ -110,10 +110,14 @@ blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skri
 
 **In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine eigene Claude-Sitzung) ruft das Skript
 mehrmals täglich (alle zwei Stunden von 10 bis 22 Uhr, jeweils kurz nach der vollen Stunde) auf und legt das Ergebnis in seinem Sitzungsprotokoll ab. Die App liest es beim Öffnen und
-alle 20 Minuten, solange sie offen ist, und trägt neue Matches ein. Der Knopf **Jetzt aktualisieren** löst den
-Abgleich sofort aus (meist 1–3 Minuten). Der Helfer schreibt nichts in deine App-Daten, das Schreiben bleibt bei der App.
+alle 20 Minuten, solange sie offen ist, und trägt neue Matches ein. Ist das letzte Ergebnis des Helfers älter als
+30 Minuten, fragt die App selbst frische Matches an (höchstens alle 30 Minuten; abschaltbar unter **Daten & Sync**).
+Der Knopf **Jetzt aktualisieren** löst den Abgleich sofort aus (meist 1–3 Minuten). Der Helfer schreibt nichts in deine App-Daten, das Schreiben bleibt bei der App.
 Klappt der automatische Abgleich nicht (zum Beispiel weil die Verbindung zu Claude für die Seite nicht erlaubt ist), zeigt die App
-oben einen Hinweis mit dem Grund und einen Knopf **Berechtigungen öffnen**. Unter **Daten & Sync** steht immer, wann zuletzt abgerufen wurde.
+oben einen Hinweis mit dem Grund und einen Knopf **Berechtigungen öffnen**. Unter **Daten & Sync** steht immer, wann zuletzt abgerufen wurde und welches Match das neueste ist.
+**Grenze:** Rivals Data und die zweite Quelle (Rivals Tracker) tragen Matches teils erst nach einigen Stunden ein. Was dort noch fehlt, kann auch der
+Sync-Helfer nicht holen. Trag es dann von Hand ein: Die App führt es später mit dem Match aus Rivals Data zusammen (gleicher Tag, Held, Ergebnis, K/D/A).
+Die App merkt sich ab dem zweiten Abgleich, wann sie ein neues Match abgerufen hat, und zeigt den mittleren Abstand zum Spielende an.
 Andernfalls geht es von Hand:
 
 1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`

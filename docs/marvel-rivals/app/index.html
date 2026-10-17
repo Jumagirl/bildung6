@@ -1329,9 +1329,10 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
     <div class="note info mt" id="syncNowInfo" hidden></div>
     <div class="note info mt" id="autoPullInfo" hidden></div>
+    <label class="inline-label mt" id="autoRefreshWrap" hidden><input type="checkbox" id="autoRefresh" checked> Beim Öffnen und alle 30 Minuten frische Matches anfordern</label>
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
-    <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data mehrmals täglich ab (alle zwei Stunden von 10 bis 22 Uhr, jeweils kurz nach der vollen Stunde), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
+    <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data ab, alle zwei Stunden von 10 bis 22 Uhr und zusätzlich jedes Mal, wenn du die App öffnest und der letzte Abruf älter als 30 Minuten ist (das dauert meist 1–3 Minuten). Mit „Jetzt aktualisieren“ fragst du sofort an. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A). Sonst nutze die Schritte unten.</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
@@ -4065,7 +4066,7 @@ function renderToday() {
   const missed = missedLessons();
   if (missed.length) news.push(["info", `<b>${plural(missed.length, "Lektion", "Lektionen")} aus früheren Tagen offen:</b> ${missed.slice(0, 3).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">${esc(lessonById(m.id).title)} (Tag ${m.day})</button>`).join(", ")}`]);
   if (g && g.due) { const left = Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(tdy + "T12:00:00")) / 864e5); if (left <= 2) news.push([left < 0 ? "bad" : "info", left < 0 ? `<b>Die Frist deines Ziels „${esc(g.title)}“ ist vorbei.</b> Schreib einen Rückblick und setz das nächste Ziel.` : `<b>Dein Ziel „${esc(g.title)}“ läuft ${left === 0 ? "heute" : left === 1 ? "morgen" : "in 2 Tagen"} ab.</b>`]); }
-  if (IN_VIEWER && SYNC_HELPER && Bridge.auto && Bridge.auto.state === "none") news.push(["info", `<b>Automatischer Abgleich:</b> ${esc(Bridge.auto.text)}`]);
+  if (IN_VIEWER && SYNC_HELPER && Bridge.auto && (Bridge.auto.state === "none" || Bridge.auto.state === "requesting")) news.push(["info", `<b>Automatischer Abgleich:</b> ${esc(Bridge.auto.text)}`]);
   const dueN = dueQs(false).length + dueHs().length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
@@ -5677,6 +5678,7 @@ const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dm
 function importSync(data) {
   if (!data || data.format !== "rivals-coach-sync" || !Array.isArray(data.matches)) throw new Error("Keine Rivals-Data-Sync-Datei");
   const byExt = new Map(state.matches.filter(m => m.extId).map(m => [m.extId, m]));
+  const seen = byExt.size ? (data.generated || "") : "";   // Abrufzeit nur merken, wenn schon früher abgeglichen wurde (die erste Übernahme holt alte Matches nach)
   let added = 0, updated = 0, merged = 0, unknown = 0;
   data.matches.forEach(r => {
     if (!r || !r.extId || !r.hero || (r.result !== "W" && r.result !== "L")) return;
@@ -5698,7 +5700,7 @@ function importSync(data) {
       manual.extId = r.extId; manual.source = "rivalsdata"; merged++;
       return;
     }
-    state.matches.push(Object.assign({ id: newId(), extId: r.extId, source: "rivalsdata", enemies: [], allies: [], mistakes: [], goods: [], notes: "", next: "", nemesis: "", mood: null }, syncFields));
+    state.matches.push(Object.assign({ id: newId(), extId: r.extId, source: "rivalsdata", seenAt: seen, enemies: [], allies: [], mistakes: [], goods: [], notes: "", next: "", nemesis: "", mood: null }, syncFields));
     added++;
   });
   state.matches.sort((a, b) => matchTime(a) - matchTime(b));
@@ -5825,16 +5827,18 @@ async function autoPull(retried) {
   try {
     for (let i = 0; i < 40 && !Cloud.ready; i++) await new Promise(r => setTimeout(r, 500));
     if (!Cloud.ready) { setAuto({ state: "error", code: "cloud", text: "Dein Konto ist noch nicht geladen. Lade die Seite neu." }); return; }
-    if (Bridge.req) { setAuto(null); return; }
+    if (reqBusy()) { if (!Bridge.req.auto) setAuto(null); return; }
     const all = await fetchHelperResults();
     const ok = all.filter(x => x.kind === "ok").sort((a, b) => Date.parse(a.data.generated) - Date.parse(b.data.generated)).pop();
     if (!ok) {
       const err = all.filter(x => x.kind === "error").pop();
       setAuto({ state: "none", text: err ? `Der Sync-Helfer meldet: ${String(err.message).slice(0, 160)}` : "Der Sync-Helfer hat noch kein Ergebnis geliefert. Er läuft alle zwei Stunden von 10 bis 22 Uhr." });
+      maybeRequestFresh("");
       return;
     }
     const applied = await applyHelperResult(ok, true);
     setAuto({ state: "ok", gen: ok.data.generated, applied });
+    maybeRequestFresh(ok.data.generated);
   } catch (e) {
     const code = e && e.code;
     const perm = await permState();
@@ -5885,10 +5889,20 @@ function renderAuto() {
   line.hidden = !a || !Bridge.mcp && a.state !== "unavailable";
   if (!a) return;
   const t = { pulling: "Prüfe gerade, ob der Sync-Helfer neue Matches hat …",
-    ok: `Letzter automatischer Abruf: ${fmtDT(a.at)}. Stand des Sync-Helfers: ${fmtDT(a.gen)}.`,
-    none: a.text, error: a.text, unavailable: a.text }[a.state] || "";
-  line.className = `note ${a.state === "ok" ? "good" : a.state === "pulling" ? "info" : "bad"} mt`;
-  line.innerHTML = `<span class="ni" aria-hidden="true">${a.state === "ok" ? "✓" : a.state === "pulling" ? "i" : "!"}</span><div>${esc(t)}</div>`;
+    ok: `Letzter automatischer Abruf: ${fmtDT(a.at)}. Stand des Sync-Helfers: ${fmtDT(a.gen)}.${syncFreshText()}`,
+    requesting: a.text, none: a.text, error: a.text, unavailable: a.text }[a.state] || "";
+  line.className = `note ${a.state === "ok" ? "good" : a.state === "pulling" || a.state === "requesting" ? "info" : "bad"} mt`;
+  line.innerHTML = `<span class="ni" aria-hidden="true">${a.state === "ok" ? "✓" : a.state === "pulling" || a.state === "requesting" ? "i" : "!"}</span><div>${esc(t)}</div>`;
+}
+// Wie frisch sind die Daten von Rivals Data? Neuestes Match und wie lange Matches bisher bis zum Abruf brauchten (nur Matches, die diese App selbst abgerufen hat)
+const fmtSpan = ms => ms < 36e5 ? `${Math.max(1, Math.round(ms / 6e4))} Min.` : `${(Math.round(ms / 36e4) / 10).toLocaleString("de-CH")} Std.`;
+function syncFreshText() {
+  const syn = state.matches.filter(m => m.extId && m.ts);
+  if (!syn.length) return "";
+  const newest = Math.max(...syn.map(m => m.ts));
+  const lags = syn.filter(m => m.seenAt).map(m => Date.parse(m.seenAt) - m.ts).filter(x => isFinite(x) && x >= 0 && x < 3 * 864e5).sort((a, b) => a - b);
+  const med = lags.length >= 5 ? lags[Math.floor(lags.length / 2)] : null;
+  return ` Neuestes Match aus Rivals Data: ${fmtDT(newest)}.${med !== null ? ` Bisher dauerte es im Mittel ${fmtSpan(med)} vom Spielende bis zum Abruf durch den Sync-Helfer (${lags.length} Matches).` : ""}`;
 }
 $("#diagBtn").addEventListener("click", diagnoseBridge);
 $("#bridgeBanner").addEventListener("click", e => {
@@ -5911,17 +5925,41 @@ function renderBridge() {
   const ok = IN_VIEWER && !!Bridge.mcp;
   btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok; $("#diagBtn").hidden = !IN_VIEWER || !SYNC_HELPER;
   $("#syncManual").open = !ok || !!(Bridge.info && Bridge.info.kind === "bad");
-  const busy = !!(Bridge.req && Bridge.req.status !== "timeout");
+  const busy = reqBusy();
   btn.disabled = busy;
+  $("#autoRefreshWrap").hidden = !ok; $("#autoRefresh").checked = autoRefreshOn();
   info.hidden = !Bridge.info;
   if (Bridge.info) { info.className = `note ${Bridge.info.kind} mt`; info.innerHTML = `<span class="ni" aria-hidden="true">${Bridge.info.kind === "bad" ? "!" : "i"}</span><div>${esc(Bridge.info.text)}</div>`; }
 }
 function endBridgeRequest() { clearTimeout(Bridge.timer); Bridge.req = null; Bridge.info = ""; renderBridge(); }
-async function requestSync() {
-  if (!Cloud.ready) { toast("Dein Konto ist noch nicht geladen – einen Moment …"); return; }
+// Fragt der Sync-Helfer gerade im Auftrag der App oder per Knopf? (Nach einem Zeitablauf gilt die Anfrage als beendet.)
+const reqBusy = () => !!Bridge.req && Bridge.req.status !== "timeout";
+const AUTO_FRESH_MS = 30 * 60 * 1000;
+const autoRefreshOn = () => state.settings.autoRefresh !== false;
+function lastAutoRequest() {
+  let t = 0;
+  try { t = +localStorage.getItem("rc-auto-request") || 0; } catch (e) { /* ohne Browser-Speicher zählt nur diese Sitzung */ }
+  return Math.max(t, Bridge.lastAuto || 0);
+}
+// Ist das letzte Ergebnis des Helfers älter als 30 Minuten, fragt die App beim Öffnen (und alle 20 Minuten, solange sie offen ist) selbst frische Daten an.
+function maybeRequestFresh(genIso) {
+  if (!autoRefreshOn() || reqBusy() || !Bridge.mcp || !IN_VIEWER || !SYNC_HELPER) return;
+  const gen = Date.parse(genIso || ""), fresh = Bridge.freshMs ?? AUTO_FRESH_MS;
+  if (isFinite(gen) && Date.now() - gen < fresh) return;
+  if (Date.now() - lastAutoRequest() < fresh) return;
+  Bridge.lastAuto = Date.now();
+  try { localStorage.setItem("rc-auto-request", String(Bridge.lastAuto)); } catch (e) { /* siehe oben */ }
+  requestSync(true);
+}
+async function requestSync(auto) {
+  auto = auto === true;   // der Klick auf den Knopf reicht ein Ereignis weiter, das ist keine automatische Anfrage
+  if (!Cloud.ready) { if (!auto) toast("Dein Konto ist noch nicht geladen – einen Moment …"); return; }
+  if (reqBusy()) return;
   const id = newId();
-  Bridge.req = { id, status: "sending" };
-  setBridgeInfo("Sende Anfrage an den Sync-Helfer …");
+  Bridge.req = { id, status: "sending", auto };
+  // Automatische Anfragen melden sich in der Statuszeile (und auf «Heute»), Knopf-Anfragen im Tab «Daten & Sync»
+  const say = (text, kind) => { if (auto) setAuto({ state: kind === "bad" ? "none" : "requesting", text }); else setBridgeInfo(text, kind); };
+  say("Frage frische Matches beim Sync-Helfer an …");
   try {
     await Bridge.mcp.callTool(SYNC_SERVER, "send_message", { session_id: SYNC_HELPER, message: syncRequestText(id) }, { cache: false });
   } catch (e) {
@@ -5929,22 +5967,29 @@ async function requestSync() {
     const code = e && e.code;
     const text = code === "tool_error" ? `Der Sync-Helfer hat die Anfrage nicht angenommen${e.message ? ` (${String(e.message).slice(0, 140)})` : ""}. Wahrscheinlich ist die Sitzung beendet – nutze die Schritte unten.`
       : BRIDGE_ERRORS[code] || "Die Anfrage konnte nicht gesendet werden. Versuche es später erneut oder nutze die Schritte unten.";
-    setBridgeInfo(text, "bad");
+    say(auto ? `Frische Matches konnten nicht angefordert werden. ${text}` : text, "bad");
     return;
   }
-  Bridge.req = { id, status: "waiting" };
-  setBridgeInfo("Anfrage gesendet. Der Sync-Helfer holt deine Daten – das dauert meist 1–3 Minuten. Die Matches erscheinen hier von selbst.");
+  Bridge.req = { id, status: "waiting", auto };
+  say(auto ? "Frische Matches angefordert. Der Sync-Helfer braucht dafür meist 1–3 Minuten, sie erscheinen dann von selbst."
+    : "Anfrage gesendet. Der Sync-Helfer holt deine Daten – das dauert meist 1–3 Minuten. Die Matches erscheinen hier von selbst.");
   clearTimeout(Bridge.timer);
   const started = Date.now();
   const poll = async () => {
     if (!Bridge.req || Bridge.req.id !== id) return;
     try {
       const r = (await fetchHelperResults()).find(x => x.id === id);
-      if (r) { endBridgeRequest(); await applyHelperResult(r, false); return; }
+      if (r) {
+        endBridgeRequest();
+        const applied = await applyHelperResult(r, auto);
+        if (auto) setAuto(r.kind === "error" ? { state: "none", text: `Der Sync-Helfer meldet: ${String(r.message).slice(0, 160)}` } : { state: "ok", gen: r.data.generated, applied });
+        return;
+      }
     } catch (e) { /* nächster Versuch */ }
     if (Date.now() - started > Bridge.timeoutMs) {
       Bridge.req.status = "timeout";
-      setBridgeInfo("Noch keine Antwort. Vielleicht läuft der Sync-Helfer gerade nicht – die Matches werden beim nächsten Öffnen automatisch eingetragen, sobald er sie geholt hat. Oder nutze die Schritte unten.", "bad");
+      say(auto ? "Der Sync-Helfer hat nicht rechtzeitig geantwortet. Die App versucht es später erneut, spätestens holt ihn der nächste Zeitplan-Lauf (alle zwei Stunden von 10 bis 22 Uhr)."
+        : "Noch keine Antwort. Vielleicht läuft der Sync-Helfer gerade nicht – die Matches werden beim nächsten Öffnen automatisch eingetragen, sobald er sie geholt hat. Oder nutze die Schritte unten.", "bad");
       return;
     }
     Bridge.timer = setTimeout(poll, Bridge.pollMs || 10000);
@@ -5977,7 +6022,8 @@ async function takeInbox(box) {
   } catch (e) { /* der nächste Start versucht es erneut */ }
   finally { Bridge.busy = false; }
 }
-$("#syncNow").addEventListener("click", requestSync);
+$("#syncNow").addEventListener("click", () => requestSync());
+$("#autoRefresh").addEventListener("change", e => { state.settings.autoRefresh = e.target.checked; save(); });
 $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
