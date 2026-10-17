@@ -22,6 +22,13 @@ Grundlage: Dunlosky et al. (2013), Cepeda et al. (2006), Roediger & Karpicke (20
 - Ist es kurz (höchstens etwa 1 Minute pro Zwischenstopp) und überspringbar? Nicht überladen.
 - Zählt die Übung für das automatische Abhaken (`autoEval`)?
 
+## Was für Spiele belegt ist (Stand Oktober 2026, selbst recherchiert, Quellen im Abschnitt «Was die Forschung speziell zu Videospielen sagt» in `docs/marvel-rivals/index.md`)
+- Belegt, aber beobachtend: verteiltes Üben ohne lange Pausen (Stafford & Dewar 2014; Stafford & Haasnoot 2017; Huang et al. 2017). Kein Zusatznutzen von Schlaf in den Pausen gefunden.
+- **Nicht bestätigt:** Gezielte Übung (Ericsson) in Esport. Martončik et al. (2024, Collabra, vorab registriert) fanden keinen Zusammenhang mit Leistung bei CS:GO und LoL. Deshalb Mini-Ziele und Rückmeldung als Hilfe formulieren, nie als Garantie.
+- Zusätzliche Rückmeldung hilft beim Üben, der Vorteil schwindet nach dem Wegfall (Jiménez-Díaz et al. 2020, Bewegungsfertigkeiten): Hilfen ausblenden, ohne Hilfe üben lassen.
+- Tilt, Coaching, Vorstellungstraining: Forschung dünn. Nicht als Fakt in die App, höchstens als offene Frage.
+- Neue Belege nur nach Prüfung der Originalquelle übernehmen. Eine Webrecherche allein reicht nicht für Zahlen.
+
 ## Fallstricke
 - Abrufen ohne Antwortkontrolle; Abstände zu gross; nur Leichtes üben; Wissens-Check nur zu den Themen von heute.
 - Neues Wissen nur dann einbauen, wenn es belegt ist. Keine erfundenen Spielfakten, keine Zahlen ausser aus den Patch-Notes von Season 10 und 10.5.

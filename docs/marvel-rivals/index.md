@@ -84,7 +84,19 @@ Die App stützt sich auf Methoden, die in der Lernforschung gut belegt sind. Sie
 | **Sich selbst etwas erklären** | „Warum geht das schief?“, Rückblick in drei Fragen | Eigene Erklärungen vertiefen das Verständnis; Dunlosky et al. (2013) stufen das als nützlich ein, Abfragen und Verteilen sogar als besonders nützlich |
 | **Wenn-dann-Sätze** | Zwischenstopp „Wusstest du?“, Rückblick (Vorsatz für morgen) | „Wenn X passiert, dann tue ich Y“ erhöht die Chance, dass ein Vorsatz umgesetzt wird (Gollwitzer & Sheeran, 2006) |
 | **Planen, durchführen, reflektieren** | Aufbau der Lektionen und der Trainingstage, Wochenziele | Der Kreislauf des selbstgesteuerten Lernens (Zimmerman, 2002) |
-| **Gezielte Übung mit Rückmeldung** | Mini-Ziel pro Block, Todesursachen-Tracker, Auswertung | Üben mit einem klaren Ziel und Feedback bringt mehr als einfach viel spielen (Ericsson et al., 1993) |
+| **Gezielte Übung mit Rückmeldung** | Mini-Ziel pro Block, Todesursachen-Tracker, Auswertung | Üben mit einem klaren Ziel und Feedback gilt in Musik und Sport als Weg zur Meisterschaft (Ericsson et al., 1993). Für Esport ist das nicht bestätigt, siehe unten |
+
+### Was die Forschung speziell zu Videospielen sagt
+
+Die Forschung zu Lernen in Spielen ist jung und dünn. Das Wichtigste, was ich dazu gefunden und geprüft habe:
+
+- **Regelmässig, mit Abstand üben.** In Daten von über 850'000 Spielerinnen und Spielern eines Online-Tests für Wahrnehmung und Reaktion hing das Ergebnis davon ab, wie viel und wie verteilt geübt wurde. Wer früh unterschiedlich spielte und ausprobierte, verbesserte sich im Schnitt mehr (Stafford & Dewar, 2014). Eine zweite Auswertung mit über 1,2 Millionen Spielern bestätigte den Vorteil von verteiltem Üben, fand aber keinen zusätzlichen Gewinn durch eine Nacht Schlaf in der Pause (Stafford & Haasnoot, 2017).
+- **Ohne lange Pausen.** Bei StarCraft 2 lernten Spieler mit mässiger Spielhäufigkeit und ohne lange Pausen am schnellsten; die Besten verbesserten sich ohne Einbrüche und begannen Matches mit festen Routinen (Huang et al., 2017). Das sind Beobachtungen, kein Beweis für Ursache und Wirkung.
+- **Gezielte Übung: nicht bestätigt.** In einer vorab registrierten Studie mit Spielern von Counter-Strike (186) und League of Legends (411) hing die Selbstauskunft zu gezielter Übung nicht mit der Leistung zusammen. Bei League of Legends sagten die normalen Spielstunden etwas voraus, und jüngere Spieler waren besser (Martončik et al., 2024). Die Studie ist eine Momentaufnahme mit Selbstauskünften. Sie widerlegt den Nutzen von Ziel und Rückmeldung nicht, zeigt aber, dass er bei Spielen nicht einfach vorausgesetzt werden darf. Die App behandelt Mini-Ziele deshalb als Hilfe, nicht als Garantie.
+- **Rückmeldung nicht als Krücke.** Eine Zusammenfassung von 20 Studien zu Bewegungsfertigkeiten fand: Zusätzliche Rückmeldung hilft während des Übens, aber der Vorteil schwindet, wenn sie wegfällt (Jiménez-Díaz et al., 2020). Für Videorückmeldung allein ist der Effekt klein. Darum übst du auch ohne Hilfen und ohne Pings, nicht nur mit ihnen.
+- **Tilt.** Die Forschung dazu ist früh. Genannt werden Frust nach Niederlagen oder Fehlern von Mitspielern, und als wichtigste Fähigkeit das Regulieren von Gefühlen (Beres et al., 2023, Übersichtsarbeit). Welche Methoden wirklich helfen, ist offen.
+- **Coaching.** Interviews mit 14 Cheftrainern professioneller League-of-Legends-Teams zeigen einen Kreislauf aus Rückblick, Planen und Tun unter Siegesdruck (Sports Coaching Review, 2025). Das beschreibt die Praxis, es misst nicht die Wirkung.
+- **Vorstellungstraining.** Eine Studie mit 45 Esport-Spielern, die Vorstellungstraining mit normalem Üben verband, berichtet bessere Reaktionszeiten. Die Belege sind klein und noch nicht gesichert, deshalb ist das nicht in der App.
 
 !!! note "Was das nicht beweist"
     Diese Studien stammen aus Schule, Studium und Labor, nicht aus Untersuchungen zu Videospielen. Dass die Methoden auch für Marvel Rivals funktionieren, ist plausibel, aber nicht einzeln bewiesen. Die Zahlen zu Intervallen (1, 2, 4, 8, 16, 32 Tage) sind eine gängige Faustregel, keine Garantie.
