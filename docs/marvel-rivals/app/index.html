@@ -362,6 +362,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 
 /* Hinweise */
 .notes { display: flex; flex-direction: column; gap: 8px; }
+.swaprow { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); margin: 8px 0; }
+.swaphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.swaprow ul { margin: 4px 0 0; padding-left: 18px; }
+.swapsteps { margin: 0 0 8px; padding-left: 20px; }
 .fold.nugfold { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); margin: 10px 0; }
 .nug-q { margin: 0 0 8px; font-weight: 600; }
 .nug-tag { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -1109,6 +1113,14 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div id="enemyAnalysis" class="mt"></div>
   </div>
   <div class="card">
+    <div class="card-head"><h2 data-icon="team">Teams lesen</h2><span class="muted small">Beide Teams im Überblick</span></div>
+    <div id="teamRead"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2 data-icon="target">Support-Wechsel-Berater</h2><span class="muted small">Welcher Strategist passt jetzt?</span></div>
+    <div id="swapBox"></div>
+  </div>
+  <div class="card">
     <div class="card-head">
       <h2 data-icon="quiz">Counter-Vorschläge für dich</h2>
       <div class="row">
@@ -1120,7 +1132,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   </div>
   <div class="card">
     <div class="card-head"><h2 data-icon="team">Team-Aufstellungen</h2><span class="muted small">Vanguard – Duelist – Strategist</span></div>
-    <p class="lead">Marvel Rivals hat keine feste Rollenverteilung – jeder darf jeden Helden wählen. Laut aktuellen Statistiken gewinnt die Standard-Aufstellung 2-2-2 am häufigsten; andere Aufstellungen sind Anpassungen für bestimmte Situationen.</p>
+    <p class="lead">Marvel Rivals hat keine feste Rollenverteilung – jeder darf jeden Helden wählen. Die Standard-Aufstellung 2-2-2 war im März 2025 bei den besten Spielern die meistgespielte (marvelrivals.gg); andere Aufstellungen sind Anpassungen für bestimmte Situationen.</p>
     <div id="formats"></div>
   </div>
   <div class="card">
@@ -4865,6 +4877,7 @@ function renderTeam() {
   $("#enemyAnalysis").innerHTML = notes(ea) + (enemies.length
     ? `<h3>So spielst du gegen ihr Team</h3><div class="cp-list">${[...new Set(enemies)].map(counterplayHtml).join("")}</div>` : "");
   renderFormats(TD.team.filter(Boolean), enemies);
+  renderTeamRead(TD);
 
   const roleF = $("#pickRole").value, poolOnly = $("#pickPool").checked;
   const played = new Set(state.matches.map(m => m.hero));
@@ -6309,12 +6322,12 @@ function renderFormats(mine, enemies) {
   const myF = mine.length === 6 ? formatOf(mine).id : null;
   const enF = enemies.length === 6 ? formatOf(enemies) : null;
   // Empfehlung gegen das Gegnerteam
-  let rec = "2-2-2", why = "Die Standard-Aufstellung ist laut Statistik die sicherste Wahl.";
+  let rec = "2-2-2", why = "Einschätzung der App: 2-2-2 war im März 2025 bei den besten Spielern die meistgespielte Aufstellung (marvelrivals.gg).";
   if (enemies.length) {
     const dive = enemies.filter(e => heroTags(e).includes("Dive")).length;
-    if (enF && enF.s >= 3) { rec = "2-2-2"; why = "Gegen Triple Support: mit Dive oder viel Schaden ein Ziel konsequent fokussieren – 2-2-2 mit Divern ist eine gute Antwort."; }
-    else if (dive >= 3) { rec = "2-1-3"; why = `Gegen ${dive} Diver kann ein dritter Strategist mit Kontrolle (z.B. Mantis) helfen – oder 2-2-2 mit Anti-Dive-Helden.`; }
-    else if (enF && enF.v >= 3) { rec = "2-2-2"; why = "Gegen Triple Tank: kiten, Anti-Tank-Helden (z.B. Wolverine) und Heilungsreduktion einplanen."; }
+    if (enF && enF.s >= 3) { rec = "2-2-2"; why = "Einschätzung der App: Gegen Triple Support hilft es, ein Ziel konsequent zu fokussieren, zum Beispiel mit Dive oder viel Schaden."; }
+    else if (dive >= 3) { rec = "2-1-3"; why = `Einschätzung der App: Gegen ${dive} Diver können ein dritter Strategist oder Anti-Dive-Helden helfen.`; }
+    else if (enF && enF.v >= 3) { rec = "2-2-2"; why = "Einschätzung der App: Gegen Triple Tank können Distanzschaden, Anti-Tank-Helden und Heilungsreduktion helfen."; }
   }
   const lvlCls = { "Empfohlen": "good", "Situativ": "info", "Riskant": "warn", "Nische": "warn", "Nicht empfohlen": "bad" };
   const enNotes = [];
@@ -6951,8 +6964,10 @@ function stepHtml(n, s, seen, o = {}) {
   const auto = autoTagHtml(o.carry ? autoStepEval(o.carry.to, s, carryFor(o.carry.to).findIndex(x => x.id === o.carry.id)) : autoStepEval(n, s, -1), done);
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${auto}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${auto}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
+// Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
+const swapHintHtml = s => /Swap|Komposition|Gegnerteam aus/.test(s.t || "") ? `<div class="small" style="margin-top:6px"><button type="button" class="linkbtn" data-pact="swap-open">Dabei hilft dir der Support-Wechsel-Berater im Tab Team &amp; Counter</button></div>` : "";
 
 
 // ---------- Aufgaben automatisch abhaken ----------
@@ -7241,6 +7256,7 @@ function hqIds() {
     if ((x.ue || []).some(t => /^Typischer Fehler:/.test(t))) ids.push(`fehler|${h}`);
     if ((x.schwaechen || []).length && (x.staerken || []).length >= 3) ids.push(`schw|${h}`);
   });
+  heroes.filter(hqBase).forEach(S => { if (heroRole(S) === "Strategist" && heroes.some(e => e !== S && hqUk(e, S).length)) ids.push(`lage|${S}`); });
   Object.keys(MAPINFO).forEach(m => {
     ids.push(`modus|${m}`);
     const short = m.split(": ").pop().toLowerCase();
@@ -7279,6 +7295,12 @@ function hqGen(id) {
     if (type === "schw") {
       const x = PROF[a], correct = hqRand(x.schwaechen);
       return mk(`Welche Aussage beschreibt eine Schwäche von ${a}?`, hqOpts(correct, x.staerken), `Schwächen von ${a}:\n${x.schwaechen.join("\n")}\nStärken: ${x.staerken.join(" · ")}\n${hqSrc(x.stand)}`, { topic: "Stärken und Schwächen", hero: a });
+    }
+    if (type === "lage") {
+      const counters = heroes.filter(e => e !== a && hqUk(e, a).length), others = heroes.filter(e => e !== a && !(PROF[e].uk || []).some(k => k.held === a));
+      const E = hqRand(counters), rest = shuffle(others.slice()).slice(0, 5), team = shuffle([E, ...rest]), o = hqOpts(E, rest.slice(0, 5));
+      const k = hqUk(E, a);
+      return mk(`Gegnerteam: ${team.join(", ")}. Wessen Ult kann ${a} laut den Quellen kontern?`, o, `${E} (${PROF[E].ult.n}): ${k.map(z => `${z.was} (${z.art}). ${z.wie}`).join("\n")}\nBei den anderen steht kein Konter von ${a} in den Quellen. Das heisst nicht, dass es unmöglich ist.\n${hqSrc(PROF[E].stand)}`, { topic: "Lage lesen", hero: a });
     }
     if (type === "modus") {
       const m = MAPINFO[a];
@@ -7319,6 +7341,103 @@ function hqLinkHtml(q) {
   if (q.map) return `<div><button type="button" class="linkbtn" data-pact="hq-map" data-m="${esc(q.map)}">${esc(q.map)} bei den Spielregeln ansehen</button></div>`;
   if (q.hero) return `<div><button type="button" class="linkbtn" data-pact="hq-hero" data-h="${esc(q.hero)}">${esc(q.hero)} im Helden-Guide ansehen</button></div>`;
   return "";
+}
+
+
+// ---------- Teams lesen und Support-Wechsel-Berater ----------
+// Konter-Einträge, die eine Fähigkeit nennen (Einträge «nicht einzeln genannt» sind zu vage für eine Quizfrage)
+function hqUk(e, S) { return ((PROF[e] && PROF[e].uk) || []).filter(k => k.held === S && !/nicht einzeln/i.test(k.was)); }
+// Die Rangliste stützt sich auf belegte Beziehungen aus den Heldenprofilen (Ult-Konter, Team-Ups, Synergien, schwierige Gegner)
+// und auf die Spielstil-Tags der App (Faustregel). Sie zeigt zu jedem Punkt den Grund, damit du selbst entscheiden kannst.
+const SWAP_TAGS = ["Dive", "Flyer", "Sniper", "Hitscan", "Poke", "Brawl", "Schild", "Raumkontrolle", "AntiDive"];
+const DANGER_TAGS = ["Dive", "Flyer", "Sniper"];
+const tuLabel = n => String(n).replace(/^["“„]+|["”“]+$/g, "");
+const firstSentence = t => { const m = /^(.+?[.!?])(\s|$)/.exec(t || ""); return m ? m[1] : (t || ""); };
+function teamUpsIn(names) {
+  const base = names.map(tuName);
+  return TU.teamups.filter(t => t.helden.some(h => h.rolle === "Nutzer" && base.includes(h.name)) && t.helden.some(h => h.rolle === "Partner" && base.includes(h.name)));
+}
+const healCutIn = names => names.filter(h => PROF[h] && PROF[h].kit.concat([PROF[h].ult]).some(k => /Heilungsreduktion/.test(k.d)));
+const dangerIn = names => names.filter(h => DANGER_TAGS.some(t => heroTags(h).includes(t)));
+function teamReadHtml(list, mine) {
+  const names = list.filter(Boolean);
+  if (names.length < 2) return `<p class="muted small" style="margin:0">Trag mindestens zwei Helden ein, dann siehst du hier die Lage.</p>`;
+  const f = formatOf(names), known = FORMATS.find(x => x.id === f.id), counts = {};
+  names.forEach(h => heroTags(h).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const chips = SWAP_TAGS.filter(t => counts[t]).sort((a, b) => counts[b] - counts[a]).map(t => `<span class="chip" title="${esc(TAGS[t])}">${esc(t)} ×${counts[t]}</span>`).join(" ");
+  const style = ARCHETYPES.map(a => [a, names.filter(e => heroTags(e).includes(a.tag) || (a.tag === "Poke" && heroTags(e).includes("Sniper"))).length]).sort((x, y) => y[1] - x[1])[0];
+  const danger = dangerIn(names), cut = healCutIn(names), tus = teamUpsIn(names);
+  const items = [`<li><b>Aufstellung:</b> ${roleDots(f.v, f.d, f.s)} ${f.id}${known ? ` · ${esc(known.name.replace(/^[\d-]+ · /, ""))}` : ""}${names.length < 6 ? ` <span class="muted small">(erst ${names.length} von 6 eingetragen)</span>` : ""}</li>`];
+  if (chips) items.push(`<li><b>Spielstil-Tags:</b> ${chips} <span class="muted small">Faustregel der App</span><details class="small"><summary>Was bedeuten die Tags?</summary><ul>${SWAP_TAGS.filter(t => counts[t]).map(t => `<li><b>${esc(t)}:</b> ${esc(TAGS[t])}</li>`).join("")}</ul></details></li>`);
+  if (style && style[1] >= 2) items.push(`<li><b>${mine ? "Euer" : "Ihr"} Spielstil: ${esc(style[0].name)}</b> (${style[1]} Helden). ${esc(style[0].idea)} <span class="muted small">Schwach gegen: ${esc(style[0].weak)}</span></li>`);
+  if (danger.length) items.push(`<li><b>${mine ? "Eure Angreifer auf die Backline" : "Gefahr für Supports"}:</b> ${danger.map(heroChip).join(" ")} <span class="muted small">(Dive, Flyer oder Sniper laut App-Tags)</span></li>`);
+  if (cut.length) items.push(`<li><b>Heilungsreduktion:</b> ${cut.map(heroChip).join(" ")} <span class="muted small">Gegen sie wirkt reine Heilung schwächer (laut Heldenprofil)</span></li>`);
+  tus.slice(0, 4).forEach(t => {
+    const u = t.helden.filter(h => h.rolle === "Nutzer" && names.map(tuName).includes(h.name)).map(h => h.name), pa = t.helden.filter(h => h.rolle === "Partner" && names.map(tuName).includes(h.name)).map(h => h.name);
+    items.push(`<li><b>Team-Up «${esc(tuLabel(t.name))}»</b> möglich: ${esc(u.join(", "))} mit ${esc(pa.join(", "))}. <span class="muted small">${esc(firstSentence(t.wirkung))}</span></li>`);
+  });
+  if (mine && names.length >= 3) { const lack = []; if (!f.v) lack.push("Vanguard"); if (!f.s) lack.push("Strategist"); if (!f.d) lack.push("Duelist"); if (lack.length) items.push(`<li><b>Euch fehlt:</b> ${lack.join(", ")}</li>`); }
+  return `<ul class="wl" style="margin:0">${items.join("")}</ul>`;
+}
+// Rangliste der Strategists: nur Argumente mit Quelle zählen mit Gewicht, Tag-Faustregeln mit weniger
+function swapRank(team, enemies) {
+  const mates = team.slice(1).filter(Boolean), en = [...new Set(enemies.filter(Boolean))], pool = poolHeroes();
+  const mateBase = mates.map(tuName);
+  return allHeroes().filter(h => h.role === "Strategist" && !mates.includes(h.name)).map(h => {
+    const S = h.name, x = PROF[S] || {}, pro = [], con = [], sBase = tuName(S);
+    let score = 0;
+    const ultHits = [];
+    en.forEach(e => {
+      const pe = PROF[e], k = pe && (pe.uk || []).find(z => z.held === S);
+      if (k) ultHits.push({ e, k, gen: /^Allgemein/.test(k.wie) });
+    });
+    if (ultHits.length) {
+      // konkrete Quellenaussagen zählen voll, allgemeine halb; insgesamt höchstens 4 Punkte, damit eine einzelne Beziehung nicht alles überstimmt
+      score += Math.min(4, ultHits.reduce((a, z) => a + (z.gen ? 1 : 2), 0));
+      const best = ultHits.find(z => !z.gen) || ultHits[0], what = [...new Set(ultHits.map(z => z.k.was).filter(w => !/nicht einzeln/i.test(w)))];
+      pro.push(`<b>kann ${ultHits.length > 1 ? "die Ulten" : "die Ult"} von ${ultHits.map(z => esc(z.e)).join(", ")} kontern</b> ${what.length ? ` (mit ${what.map(w => `«${esc(w)}»`).join(" oder ")})` : ""}. ${esc(firstSentence(best.k.wie))}`);
+    }
+    const tuMates = new Set();
+    TU.teamups.forEach(t => {
+      const users = t.helden.filter(z => z.rolle === "Nutzer").map(z => z.name), pa = t.helden.filter(z => z.rolle === "Partner").map(z => z.name);
+      mates.forEach((m, i) => {
+        if (users.includes(sBase) && pa.includes(mateBase[i])) { tuMates.add(m); score += 1.5; pro.push(`<b>Team-Up «${esc(tuLabel(t.name))}» mit ${esc(m)}</b>: ${esc(firstSentence(t.wirkung))}`); }
+        else if (users.includes(mateBase[i]) && pa.includes(sBase)) { tuMates.add(m); score += 1.5; pro.push(`<b>${esc(m)} wird mit dir stärker</b> (Team-Up «${esc(tuLabel(t.name))}»)`); }
+      });
+    });
+    (x.synergie || []).filter(z => mates.includes(z.held) && !(tuMates.has(z.held) && /^Team-Up/.test(z.warum))).forEach(z => { score += 0.75; pro.push(`passt zu ${esc(z.held)}: ${esc(z.warum)}`); });
+    (x.counter || []).filter(z => en.includes(z.held)).forEach(z => { const weak = /nicht belegt/i.test(z.warum); score -= weak ? 0.4 : 1; con.push(`${esc(z.held)}: ${esc(z.warum)}`); });
+    const tagFor = en.filter(e => counterReasons(S, e).length && !(x.counter || []).some(z => z.held === e)), tagAgainst = en.filter(e => counterReasons(e, S).length);
+    if (tagFor.length) { score += 0.4 * Math.min(tagFor.length, 2); pro.push(`<span class="muted">Faustregel (Tags):</span> ${esc(S)} passt gegen ${tagFor.map(esc).join(", ")}`); }
+    if (tagAgainst.length) { score -= 0.4 * Math.min(tagAgainst.length, 2); con.push(`<span class="muted">Faustregel (Tags):</span> ${tagAgainst.map(esc).join(", ")} ${tagAgainst.length > 1 ? "liegen" : "liegt"} ${esc(S)} gut`); }
+    if (pool.includes(S)) { score += 0.3; pro.push("<span class=\"muted\">in deinem Helden-Pool</span>"); }
+    return { name: S, score, pro, con, cur: S === team[0] };
+  }).sort((a, b) => b.score - a.score);
+}
+function swapHtml(TD) {
+  const en = TD.enemy.filter(Boolean);
+  if (!en.length) return empty("Trag oben mindestens einen Gegner ein.", "target");
+  const rank = swapRank(TD.team, TD.enemy), top = rank.slice(0, 4), cur = rank.find(r => r.cur);
+  const danger = dangerIn([...new Set(en)]), mates = TD.team.slice(1).filter(Boolean);
+  const label = r => r.score >= 2.5 ? "klarer Vorteil" : r.score >= 1 ? "passt" : "wenig Argumente";
+  const row = r => `<div class="swaprow"><div class="swaphead">${heroChip(r.name)} <span class="badge ${r.score >= 2.5 ? "ok" : ""}">${label(r)}</span>${r.cur ? ' <span class="tag">du spielst gerade</span>' : ""}</div>
+    ${r.pro.length ? `<ul class="small">${r.pro.slice(0, 4).map(t => `<li>${t}</li>`).join("")}</ul>` : '<p class="small muted" style="margin:4px 0">Keine belegten Argumente für oder gegen diesen Helden.</p>'}
+    ${r.con.length ? `<p class="small" style="margin:4px 0"><b>Vorsicht:</b></p><ul class="small">${r.con.slice(0, 3).map(t => `<li>${t}</li>`).join("")}</ul>` : ""}</div>`;
+  const best = top[0], small = best.score < 1;
+  return `<p class="lead" style="margin:0 0 8px">Wenn alles durcheinander ist, hilft eine feste Reihenfolge. Geh sie in drei Fragen durch:</p>
+    <ol class="wl swapsteps">
+      <li><b>Was ist ihre grösste Gefahr für mich?</b> ${danger.length ? `Diese Gegner gehen auf die Backline oder treffen sie aus der Ferne: ${danger.map(heroChip).join(" ")}` : "Im Gegnerteam ist kein Diver, Flyer oder Sniper eingetragen."}</li>
+      <li><b>Was fehlt meinem Team?</b> ${mates.length >= 2 ? "Schau in „Teams lesen“ oben: Aufstellung, Team-Ups und was euch fehlt." : "Trag dein Team oben ein, dann siehst du Aufstellung und Team-Ups."}</li>
+      <li><b>Wen kann nur ich kontern oder verstärken?</b> ${small ? "Hier gibt es keinen belegten Vorteil für einen Wechsel." : `Am meisten Argumente hat ${heroChip(best.name)}.`}</li>
+    </ol>
+    <div class="swaplist">${top.map(row).join("")}</div>
+    ${cur && !top.includes(cur) ? `<p class="small muted">Dein aktueller Held ${esc(cur.name)} steht auf Platz ${rank.indexOf(cur) + 1} von ${rank.length}.</p>` : ""}
+    <p class="small muted" style="margin:8px 0 0">So wird gerechnet: Ult-Konter und Team-Ups mit deinem Team zählen am stärksten, dann Synergien und schwierige Gegner aus den Heldenprofilen, zuletzt die Tag-Faustregeln. Das ist eine Hilfe zum Denken, keine Garantie. Ein Wechsel lohnt sich vor allem, wenn mehrere Gründe zusammenkommen und du den neuen Helden sicher spielst.</p>`;
+}
+function renderTeamRead(TD) {
+  $("#teamRead").innerHTML = `<div class="grid-2" style="gap:12px 24px"><div><h3 style="margin:0 0 6px;font-size:.95rem">Mein Team</h3>${teamReadHtml(TD.team, true)}</div>
+    <div><h3 style="margin:0 0 6px;font-size:.95rem">Gegnerteam</h3>${teamReadHtml(TD.enemy, false)}</div></div>`;
+  $("#swapBox").innerHTML = swapHtml(TD);
 }
 
 // ---------- Offene Blöcke nachholen ----------
@@ -7407,6 +7526,7 @@ function planAction(act, b) {
     case "mainrole": { UIFOLD.pool = true; state.settings.mainRole = b.dataset.r; state.settings.pool = poolHeroes().filter(h => heroRole(h) === b.dataset.r); save(); applyPoolToPlan(); renderPlan(); renderLevelChip(); break; }
     case "dayrole": { const st = dayEnsure(+b.dataset.n); st.role = st.role === b.dataset.r ? "" : b.dataset.r; save(); renderPlan(); break; }
     case "auto": { const st = dayEnsure(+b.dataset.n), v = +b.dataset.v; st.auto = Object.assign({}, st.auto); if (st.auto[b.dataset.t] === v) delete st.auto[b.dataset.t]; else st.auto[b.dataset.t] = v; save(); renderPlan(); break; }
+    case "swap-open": showTab("team"); { const el = $("#swapBox"); if (el) el.scrollIntoView({ block: "start" }); } break;
     case "tab": showTab(b.dataset.tab); window.scrollTo({ top: 0 }); break;
     case "due-start": startDue(); break;
     case "hq-hero": openHeroSearch(b.dataset.h); break;
