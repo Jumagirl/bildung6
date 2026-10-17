@@ -3497,7 +3497,7 @@ function nextFlexRole(stats, seed) {
   if (!open.length) return null;
   return open.length > 1 && open[0].pct === open[1].pct ? open[(seed || 0) % 2] : open[0];
 }
-function flexPickOf(role) { return (state.settings.flexPick || {})[role] || ""; }
+function flexPickOf(role) { return (state.settings.flexPick || {})[role] || poolHeroes().find(h => heroRole(h) === role) || ""; }
 function flexRoleDays() { return PLAN.days.filter(d => /Tank|DPS|Rolle/.test(d.title) && !/Test/.test(d.title)); }
 function renderFlex() {
   const el = $("#flexCard");
@@ -6939,7 +6939,7 @@ const poolHeroes = () => [...new Set((state.settings.pool || []).filter(h => h &
 let PLAN_BASE = null, planSig = "";
 const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function planHeroMap() {
-  const pool = poolHeroes();
+  const pool = planPool();
   if (!pool.length) return null;
   const m = {};
   PLAN_HEROES.forEach((h, i) => { m[h] = pool[i] || "ein Held aus deinem Pool"; });
@@ -6961,7 +6961,7 @@ function planTx(t, m) {
     .replace(/Strichliste/g, "Todesursachen-Tracker").replace(/die Todesursachen-Tracker/g, "den Todesursachen-Tracker").replace(/in deiner Todesursachen-Tracker/g, "in deinem Todesursachen-Tracker").replace(/in den Todesursachen-Tracker/g, "in den Todesursachen-Tracker");
 }
 function applyPoolToPlan() {
-  const sig = JSON.stringify([poolHeroes(), myRole()]);
+  const sig = JSON.stringify([planPool(), myRole()]);
   if (PLAN_BASE && sig === planSig) return;
   if (!PLAN_BASE) PLAN_BASE = JSON.parse(JSON.stringify({ days: PLAN.days, phases: PLAN.phases, tracker: PLAN.tracker.map(t => t.topic) }));
   planSig = sig;
@@ -6976,15 +6976,19 @@ function applyPoolToPlan() {
   PLAN.tracker.forEach((t, i) => { t.topic = tx(PLAN_BASE.tracker[i]); });
   syncFlexRoles();
 }
+const POOL_SLOTS = 6;
+// Plan-Helden: Helden deiner Hauptrolle zuerst (der Plan ist für Heil-, Schutz- und Schadensthemen geschrieben, die zur Hauptrolle passen), dann die übrigen in deiner Reihenfolge
+function planPool() { const pool = poolHeroes(), main = myRole(); return [...pool.filter(h => heroRole(h) === main), ...pool.filter(h => heroRole(h) !== main)]; }
 function poolCardHtml() {
-  const main = myRole(), pool = poolHeroes();
-  const heroes = allHeroes().filter(h => h.role === main).sort((a, b) => a.name.localeCompare(b.name));
-  const slots = [0, 1, 2, 3, 4].map(i => `<label class="inline-label">Held ${i + 1}<select data-poolslot="${i}"><option value="">– offen –</option>${heroes.map(h => `<option value="${esc(h.name)}" ${pool[i] === h.name ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></label>`).join("");
-  return foldHtml("pool", "Dein Pool und deine Hauptrolle", `<p class="lead">Wähle deine Hauptrolle und bis zu fünf Helden, die du regelmässig spielst. Die Heldentage im Plan (Tag 22 bis 32) und die Beispiele im Text nennen dann deine Helden. Die beiden anderen Rollen übst du als Notfall-Rolle (Flex).</p>
+  const main = myRole(), pool = poolHeroes(), roles = [main, ...["Strategist", "Vanguard", "Duelist"].filter(r => r !== main)];
+  const opts = (cur) => roles.map(r => `<optgroup label="${esc(ROLE_DE[r])}">${allHeroes().filter(h => h.role === r).sort((a, b) => a.name.localeCompare(b.name)).map(h => `<option value="${esc(h.name)}" ${cur === h.name ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</optgroup>`).join("");
+  const slots = Array.from({ length: POOL_SLOTS }, (_, i) => `<label class="inline-label">Held ${i + 1}<select data-poolslot="${i}"><option value="">– offen –</option>${opts(pool[i])}</select></label>`).join("");
+  const listed = pool.map(h => `${h} (${ROLE_SHORT[heroRole(h)] || "?"})`).join(", ");
+  return foldHtml("pool", "Dein Pool und deine Hauptrolle", `<p class="lead">Wähle deine Hauptrolle und bis zu ${POOL_SLOTS} Helden, die du regelmässig spielst, aus beliebigen Rollen. Die Heldentage im Plan (Tag 22 bis 32) und die Beispiele im Text nennen dann deine Helden, die der Hauptrolle zuerst. Die beiden anderen Rollen übst du als Notfall-Rolle (Flex); ein Pool-Held aus dieser Rolle ist dort schon vorgewählt.</p>
     <div class="row" style="gap:6px;margin-bottom:10px"><b class="small">Hauptrolle:</b>${["Strategist", "Vanguard", "Duelist"].map(r => `<button type="button" class="chip ${main === r ? "on" : ""}" data-pact="mainrole" data-r="${r}">${ROLE_SHORT[r]}</button>`).join("")}</div>
     <div class="flexset">${slots}</div>
-    <p class="small muted" style="margin:10px 0 0">${pool.length ? `Der Plan nennt jetzt: ${esc(pool.join(", "))}.` : "Noch kein Pool gewählt: Der Plan zeigt seine Beispiel-Helden (Cloak &amp; Dagger, Jubilee, Gambit …)."}${main !== "Strategist" ? " Der Plan ist für Support geschrieben. Die Grundlagen gelten für jede Rolle, bei Heil-Themen denk dir deine Rolle dazu." : ""}</p>`,
-    { icon: "heroes", open: !pool.length, sub: pool.length ? `${ROLE_SHORT[main]}: ${esc(pool.join(", "))}` : "Noch nicht gewählt" });
+    <p class="small muted" style="margin:10px 0 0">${pool.length ? `Der Plan nennt jetzt: ${esc(planPool().join(", "))}.` : "Noch kein Pool gewählt: Der Plan zeigt seine Beispiel-Helden (Cloak &amp; Dagger, Jubilee, Gambit …)."}${main !== "Strategist" ? " Der Plan ist für Support geschrieben. Die Grundlagen gelten für jede Rolle, bei Heil-Themen denk dir deine Rolle dazu." : ""}</p>`,
+    { icon: "heroes", open: !pool.length, sub: pool.length ? esc(listed) : "Noch nicht gewählt" });
 }
 
 // ---------- Eintragsfelder in den Blöcken und Mini-Ziel für Block 3 ----------
@@ -7936,7 +7940,7 @@ function planAction(act, b) {
     case "fade-off": state.settings.fadeOff = true; save(); renderPlan(); break;
     case "fade-on": delete state.settings.fadeOff; save(); renderPlan(); break;
     case "mini3": { const st = dayEnsure(+b.dataset.n); st.mini3 = Object.assign({}, st.mini3, { k: b.dataset.k }); save(); renderPlan(); break; }
-    case "mainrole": { UIFOLD.pool = true; state.settings.mainRole = b.dataset.r; state.settings.pool = poolHeroes().filter(h => heroRole(h) === b.dataset.r); save(); applyPoolToPlan(); renderPlan(); renderLevelChip(); break; }
+    case "mainrole": { UIFOLD.pool = true; state.settings.mainRole = b.dataset.r; save(); applyPoolToPlan(); renderPlan(); renderLevelChip(); break; }
     case "dayrole": { const st = dayEnsure(+b.dataset.n); st.role = st.role === b.dataset.r ? "" : b.dataset.r; save(); renderPlan(); break; }
     case "auto": { const st = dayEnsure(+b.dataset.n), v = +b.dataset.v; st.auto = Object.assign({}, st.auto); if (st.auto[b.dataset.t] === v) delete st.auto[b.dataset.t]; else st.auto[b.dataset.t] = v; save(); renderPlan(); break; }
     case "swap-open": showTab("team"); { const el = $("#swapBox"); if (el) el.scrollIntoView({ block: "start" }); } break;
