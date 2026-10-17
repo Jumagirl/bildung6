@@ -49,3 +49,6 @@ Regeln: Inhalte und Fragen nur aus `PROF`/`TU`, keine erfundenen Spielfakten. Ne
 ## Grundregeln und «läuft von allein»
 Code: Abschnitt «Grundregeln» in `index.html` (`activeRules`, `ruleEvidence`, `renderRuleBox`, `rulesCardHtml`, `fadeLevel`, `stepBodyHtml`). Idee: Themen aus dem Plan laufen als höchstens vier Grundregeln im Hintergrund mit; nach jedem Match die Rückwärts-Frage «ohne es dir vorzunehmen?» (`m.rules[themaId]` = auto|bewusst|nein). `topicAuto` bevorzugt ab 3 Antworten die letzten 5 vor der Selbsteinschätzung am Tagesende (so gibt es einen Rückfall, wenn es doch nicht sitzt). Hilfen werden ab Tag 43 gekürzt, ab Tag 50 eingeklappt (abschaltbar). Das ist eine Selbstauskunft, keine Messung; Wirkung auf Marvel Rivals nicht belegt. Test: `t72.js`.
 
+## Die App selbst lernen (Einführung)
+Code: Abschnitt «Die App langsam kennenlernen» in `index.html` (`PAGE_HELP`, `renderPageHelp`, `APP_TOUR`, `tourCardHtml`, `TEAM_STEPS`, `applyTeamView`). Prinzipien: immer nur ein bis zwei Schritte zeigen (Überforderung vermeiden), Erledigtes selbst erkennen (`state.app.seen`), Hilfen von selbst zurücknehmen (Seitenhilfe klappt nach zwei Besuchen zu), Experten dürfen alles sehen («Alles zeigen»). Neue Seiten mit vielen Karten bekommen `data-tstep` oder einen Eintrag in `PAGE_HELP`. Texte erklären nur die App, keine Spielfakten. Test: `t75.js`.
+

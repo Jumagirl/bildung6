@@ -366,6 +366,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .swaphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .swaprow ul { margin: 4px 0 0; padding-left: 18px; }
 .swapsteps { margin: 0 0 8px; padding-left: 20px; }
+.tstep-off { display: none !important; }
+.pagehelp:empty { display: none; }
+.pagehelp { margin-bottom: 12px; }
 .mbadge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .02em; vertical-align: middle; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); }
 .mbadge.R { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
 .mbadge.U { background: var(--surface-3); }
@@ -1128,31 +1131,35 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 
 <!-- TEAM & COUNTER -->
 <section id="tab-team" hidden>
-  <div class="card" id="curMatchCard">
+  <div class="card" id="teamPath"></div>
+  <div class="card" id="curMatchCard" data-tstep="1">
     <div class="card-head"><h2 data-icon="log">Aktuelles Match</h2>
       <label class="inline-label">Quelle <select id="teamSource"></select></label></div>
     <div id="curMatch"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="1">
     <div class="card-head"><h2 data-icon="team">Mein Team</h2><button class="btn ghost small" type="button" id="teamClear">Leeren</button></div>
     <div class="grid-6" id="teamSlots"></div>
     <div id="teamFeedback" class="mt"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="1">
     <div class="card-head"><h2 data-icon="target">Gegnerteam</h2><button class="btn ghost small" type="button" id="enemyClear">Leeren</button></div>
     <p class="lead">Trag während der Heldenauswahl ein, was die Gegner spielen – du bekommst sofort Counter-Vorschläge.</p>
     <div class="grid-6" id="teamEnemySlots"></div>
-    <div id="enemyAnalysis" class="mt"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="2">
+    <div class="card-head"><h2 data-icon="target">Was fällt auf?</h2><span class="muted small">Hinweise und So spielst du dagegen</span></div>
+    <div id="enemyAnalysis"></div>
+  </div>
+  <div class="card" data-tstep="2">
     <div class="card-head"><h2 data-icon="team">Teams lesen</h2><span class="muted small">Beide Teams im Überblick</span></div>
     <div id="teamRead"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="3">
     <div class="card-head"><h2 data-icon="target">Support-Wechsel-Berater</h2><span class="muted small">Welcher Strategist passt jetzt?</span></div>
     <div id="swapBox"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="3">
     <div class="card-head">
       <h2 data-icon="quiz">Counter-Vorschläge für dich</h2>
       <div class="row">
@@ -1162,16 +1169,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
     <div id="picks"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="4">
     <div class="card-head"><h2 data-icon="team">Team-Aufstellungen</h2><span class="muted small">Vanguard – Duelist – Strategist</span></div>
     <p class="lead">Marvel Rivals hat keine feste Rollenverteilung – jeder darf jeden Helden wählen. Die Standard-Aufstellung 2-2-2 war im März 2025 bei den besten Spielern die meistgespielte (marvelrivals.gg); andere Aufstellungen sind Anpassungen für bestimmte Situationen.</p>
     <div id="formats"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="4">
     <div class="card-head"><h2 data-icon="quiz">Spielstile</h2><span class="muted small">Dive · Brawl · Poke</span></div>
     <div id="archetypes"></div>
   </div>
-  <div class="card">
+  <div class="card" data-tstep="4">
     <div class="card-head"><h2 data-icon="analysis">Aktuelle Meta-Picks</h2><span class="muted small" id="metaInfoTeam"></span></div>
     <div id="metaPicks"></div>
   </div>
@@ -3130,6 +3137,8 @@ function loadState(raw) {
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
   st.quiz = Object.assign({ asked: 0, correct: 0, wrong: {} }, st.quiz);
+  st.app = Object.assign({ seen: {}, tour: {} }, st.app);   // App kennenlernen: besuchte Seiten, erledigte Übungen
+  st.app.seen = st.app.seen || {}; st.app.tour = st.app.tour || {};
   st.boot = Object.assign({}, st.boot);   // Helden-Bootcamp: Fortschritt, eigene Antworten und Test pro Held
   st.act = Object.assign({}, st.act);   // beantwortete Quizfragen pro Tag, damit die App Aufgaben selbst abhaken kann
   st.quiz.k = Object.assign({ asked: 0, correct: 0, wrong: {}, seen: {}, box: {}, cal: {} }, st.quiz.k);
@@ -3680,7 +3689,9 @@ function showTab(name) {
   $("#pageSub").textContent = TITLES[name][1];
   $("#quickLog").style.display = name === "log" || name === "today" ? "none" : "";
   try { localStorage.setItem(STORE_KEY + "-tab", name); } catch (e) {}
+  appSeen("tab:" + name);
   render();
+  renderPageHelp(name);
 }
 $("#quickLog").addEventListener("click", () => { showTab("log"); window.scrollTo({ top: 0 }); });
 
@@ -4067,7 +4078,7 @@ function renderToday() {
     ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
-  el.innerHTML = hero + list + focus + rulesCardHtml() + newsCard + first + guide;
+  el.innerHTML = hero + list + focus + rulesCardHtml() + tourCardHtml() + newsCard + first + guide;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -4894,13 +4905,14 @@ function renderTeamSource(TD) {
   sel.value = [...sel.options].some(o => o.value === teamUi.src) ? teamUi.src : "auto";
 }
 $("#teamSource").addEventListener("change", e => { teamUi.src = e.target.value; renderTeam(); });
-function renderTeam() {
+function renderTeam() { renderTeamCards(); applyTeamView(); }
+function renderTeamCards() {
   const TD = teamData();
   renderTeamSource(TD);
   $("#curMatch").innerHTML = curMatchHtml(TD);
   $("#teamEnemySlots").innerHTML = TD.enemy.map((h, i) => heroSelectHtml(`data-eslot="${i}" aria-label="Gegner ${i + 1}"`, h, `Gegner ${i + 1}`, "enemy")).join("");
   $("#teamSlots").innerHTML = TD.team.map((h, i) => heroSelectHtml(`data-slot="${i}" aria-label="${i === 0 ? "Ich" : "Mitspieler " + i}"`, h, i === 0 ? "Ich" : `Mitspieler ${i}`, i === 0 ? "me" : "ally")).join("");
-  $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { teamEnsureManual(TD); state.enemyTeam[+s.dataset.eslot] = s.value; save(); renderTeam(); }));
+  $("#teamEnemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { teamEnsureManual(TD); state.enemyTeam[+s.dataset.eslot] = s.value; if (s.value) appSeen("enemy", true); save(); renderTeam(); }));
   $("#teamSlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { teamEnsureManual(TD); state.team[+s.dataset.slot] = s.value; save(); renderTeam(); }));
 
   const enemies = TD.enemy.filter(Boolean);
@@ -5125,6 +5137,7 @@ function renderRules() {
 // ---------- Helden ----------
 let roleFilter = "";
 function renderHeroes() {
+  if ($("#heroSearch").value.trim().length >= 2) appSeen("hero", true);
   $("#roleFilter").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${roleFilter === r ? "on" : ""}" data-r="${r}">${r || "Alle"}</span>`).join("");
   $("#roleFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { roleFilter = c.dataset.r; renderHeroes(); }));
   const q = $("#heroSearch").value.trim();
@@ -5963,7 +5976,7 @@ $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
 });
-$("#exportBtn").addEventListener("click", () => saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"));
+$("#exportBtn").addEventListener("click", () => { appSeen("backup", true); saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"); });
 $("#csvBtn").addEventListener("click", () => {
   const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "ults", "ultHit", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next", "source", "extId"];
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
@@ -7901,6 +7914,104 @@ $("#bootBody").addEventListener("input", e => {
 });
 $("#bootBody").addEventListener("change", e => { if (e.target.dataset && (e.target.dataset.bfree || e.target.dataset.bcard)) save(); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-bootopen]"); if (b) openBootcamp(b.dataset.bootopen); });
+
+// ---------- Die App langsam kennenlernen: Seitenhilfen, App-Übungen, Team & Counter in Schritten ----------
+// Nichts davon bringt neue Spielfakten: Es erklärt nur, wie die App aufgebaut ist und in welcher Reihenfolge du sie am besten benutzt.
+const appSeenN = k => (state.app && state.app.seen && state.app.seen[k]) || 0;
+function appSeen(k, once) {
+  state.app = state.app || { seen: {}, tour: {} };
+  state.app.seen = state.app.seen || {};
+  const n = state.app.seen[k] || 0;
+  if (once && n) return;
+  state.app.seen[k] = n + 1;
+  if (n < 6) save();   // nur die ersten Besuche speichern, spätere Zähler gehen beim nächsten Speichern mit
+}
+const PAGE_HELP = {
+  today: ["Heute", ["Oben siehst du, wie weit dein Tag ist. «Heute zu tun» hat vier Schritte: Lektion, Training, Wochenziel, Spielen.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«App-Übungen» führt dich Schritt für Schritt durch die App, immer nur ein bis zwei Übungen.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach)."]],
+  plan: ["Trainingsplan", ["Wähle oben den Tag. Jeder Tag hat Start, Blöcke und eine Notiz am Ende.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
+  log: ["Match loggen", ["Pflicht sind nur Held, Ergebnis und K/D/A. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten: Todesursachen, Fehler, Stärken und die Grundregel-Fragen. Je mehr du einträgst, desto genauer die Auswertung.", "Matches, die die App von Rivals Data geholt hat, stehen oben unter «Reflexion offen». Dort trägst du nur noch Fehler und Stärken ein."]],
+  analysis: ["Auswertung", ["Oben filterst du Zeitraum, Modus und Rolle.", "Darunter stehen Schaden, Heilung und Geblockt pro 10 Minuten, deine Winrate gegen jeden Gegner-Helden, Maps und Tageszeit.", "Fang mit einer Zahl an und frag dich, was du dagegen tun kannst. Mit wenigen Matches sind die Zahlen noch unsicher."]],
+  team: ["Team & Counter", ["Die Seite geht in vier Schritten: 1 Eintragen, 2 Lage lesen, 3 Wechsel prüfen, 4 Nachschlagen. Es ist immer nur ein Schritt offen.", "Beginne mit Schritt 1 und trag zwei Gegner ein. Mehr brauchst du am Anfang nicht.", "«Alles zeigen» blendet alle Karten gleichzeitig ein, wenn du die Seite schon kennst.", "Die Vorschläge sind Denkhilfen mit Begründung, keine Garantie."]],
+  heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
+  quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
+};
+function renderPageHelp(name) {
+  const sec = document.getElementById("tab-" + name), h = PAGE_HELP[name];
+  if (!sec) return;
+  let box = sec.querySelector(":scope > .pagehelp");
+  if (!h) { if (box) box.innerHTML = ""; return; }
+  if (!box) { box = document.createElement("div"); box.className = "pagehelp"; sec.prepend(box); }
+  const visits = appSeenN("tab:" + name);
+  box.innerHTML = foldHtml("help-" + name, "So liest du diese Seite", `<ul class="wl">${h[1].map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="small muted" style="margin:6px 0 0">Dieser Hinweis klappt von selbst zu, wenn du die Seite kennst. Du kannst ihn jederzeit wieder öffnen.</p>`, { icon: "book", sub: h[0], open: visits <= 2 });
+}
+
+// App-Übungen: immer nur die nächsten ein bis zwei, Erledigtes erkennt die App selbst
+const seenFlag = k => appSeenN(k) > 0;
+const APP_TOUR = [
+  { id: "log1", title: "Dein erstes Match loggen", tab: "log", how: ["Öffne «Match loggen».", "Trag nur Held, Ergebnis und K/D/A ein. Alles andere kannst du später nachtragen.", "Tippe auf «Match speichern»."], done: () => state.matches.length >= 1 },
+  { id: "log2", title: "Fehler und Stärken festhalten", tab: "log", how: ["Wähle bei einem Match unter «Was lief schief?» einen Fehler und unter «Was lief gut?» eine Stärke.", "Tipp bei jedem Tod auf die Ursache, auch mehrmals."], done: () => state.matches.some(m => (m.mistakes || []).length || (m.goods || []).length) },
+  { id: "team1", title: "Team & Counter, Schritt 1: Gegner eintragen", tab: "team", how: ["Öffne «Team & Counter». Du siehst zuerst nur Schritt 1.", "Trag zwei Gegner ein. Mehr brauchst du am Anfang nicht."], done: () => seenFlag("enemy") },
+  { id: "team2", title: "Schritt 2: Die Lage lesen", tab: "team", teamStep: 2, how: ["Tippe oben auf «Weiter zu Schritt 2».", "Lies zuerst nur die farbigen Hinweise ganz oben. Sie sagen dir, worauf du achten sollst."], done: () => seenFlag("team2") },
+  { id: "team3", title: "Schritt 3: Einen Wechsel prüfen", tab: "team", teamStep: 3, how: ["Tippe auf «Weiter zu Schritt 3».", "Der Wechsel-Berater nennt Gründe für und gegen einen Strategist. Lies die Gründe, nicht nur den Namen."], done: () => seenFlag("team3") },
+  { id: "hero1", title: "Einen Helden nachschlagen", tab: "heroes", how: ["Suche im Helden-Guide einen Helden.", "Klapp «Ult: richtig einsetzen und kontern» auf."], done: () => seenFlag("hero") },
+  { id: "quiz1", title: "Fünf Quizfragen beantworten", tab: "quiz", how: ["Öffne «Quiz» und wähle eine Art.", "Schätze vor jeder Antwort, wie sicher du bist."], done: () => (state.quiz.asked || 0) + (state.quiz.k.asked || 0) >= 5 },
+  { id: "rules1", title: "Grundregeln nach einem Match beantworten", tab: "log", how: ["Trag ein Match ein, nachdem du mindestens einen Plantag erledigt hast.", "Beantworte unter «Grundregeln: Wie lief es?», ob du daran gedacht hast."], done: () => state.matches.some(m => m.rules && Object.keys(m.rules).length) },
+  { id: "boot1", title: "Helden-Bootcamp: Station 1", tab: "bootcamp", how: ["Wähle einen Helden aus deinem Pool.", "Schreib zuerst deine Antwort auf, dann vergleichst du mit den Quellen und wirst abgefragt."], done: () => Object.values(state.boot || {}).some(b => b && b.st && b.st.s1) },
+  { id: "ana1", title: "Die Auswertung lesen", tab: "analysis", how: ["Öffne «Auswertung», sobald du etwa drei Matches hast.", "Schau dir eine Zahl an, zum Beispiel deine Winrate gegen einen Gegner-Helden."], done: () => seenFlag("tab:analysis") && state.matches.length >= 3 },
+  { id: "bak1", title: "Ein Backup machen", tab: "data", how: ["Öffne «Daten & Sync».", "Tippe auf «Als JSON exportieren» und speichere die Datei."], done: () => seenFlag("backup") }
+];
+const tourDone = t => !!(state.app && state.app.tour && state.app.tour[t.id]) || t.done();
+function tourCardHtml() {
+  if (state.settings && state.settings.hideTour) return "";
+  const done = APP_TOUR.filter(tourDone).length, open = APP_TOUR.filter(t => !tourDone(t)), now = open[0], next = open[1];
+  if (!now) return foldHtml("tour-all", "App-Übungen", `<ul class="wl">${APP_TOUR.map(t => `<li>✓ ${esc(t.title)}</li>`).join("")}</ul>`, { icon: "check", sub: "Alle geschafft", right: `<span class="badge ok">${done}/${APP_TOUR.length}</span>` });
+  return `<div class="card today-card"><div class="card-head"><h2>${icon("book")}App-Übungen</h2><span class="badge">${done} von ${APP_TOUR.length}</span></div>
+    <p class="lead" style="margin:0 0 8px">So lernst du die App Schritt für Schritt kennen. Die App erkennt selbst, was du schon gemacht hast.</p>
+    <div class="swaprow"><b>Jetzt: ${esc(now.title)}</b><ol class="small" style="margin:6px 0 0;padding-left:20px">${now.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
+      <div class="row mt"><button type="button" class="btn small" data-tour="open" data-id="${now.id}">Öffnen</button><button type="button" class="btn ghost small" data-tour="skip" data-id="${now.id}">Überspringen</button></div></div>
+    ${next ? `<p class="small muted" style="margin:8px 0 0">Danach: ${esc(next.title)}</p>` : ""}
+    ${foldHtml("tour-all", "Alle App-Übungen", `<ul class="wl">${APP_TOUR.map(t => `<li>${tourDone(t) ? "✓" : "○"} ${esc(t.title)}</li>`).join("")}</ul>`, { icon: "list", sub: `${APP_TOUR.length - done} offen` })}
+    <div class="row mt"><button type="button" class="linkbtn small" data-tour="hide">Übungen ausblenden</button></div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-tour]");
+  if (!b) return;
+  const t = APP_TOUR.find(x => x.id === b.dataset.id), a = b.dataset.tour;
+  if (a === "hide") { state.settings.hideTour = true; save(); renderToday(); return; }
+  if (!t) return;
+  if (a === "skip") { state.app.tour = state.app.tour || {}; state.app.tour[t.id] = today(); save(); renderToday(); return; }
+  if (a === "open") { if (t.teamStep) teamUi.step = t.teamStep; else if (t.tab === "team") teamUi.step = 1; showTab(t.tab); window.scrollTo({ top: 0 }); }
+});
+
+// Team & Counter in vier Schritten (oder alles auf einmal)
+const TEAM_STEPS = [
+  ["Eintragen", "Trag dein Team und das Gegnerteam ein, auch unvollständig. Mehr musst du in diesem Schritt nicht tun."],
+  ["Lage lesen", "Die App zeigt, was auffällt: wer auf die Backline geht, welche Spielstile die Gegner haben und wie du gegen jeden Helden spielst. Lies zuerst die farbigen Hinweise."],
+  ["Wechsel prüfen", "Der Wechsel-Berater schlägt Strategists vor, mit Gründen dafür und dagegen. Die Counter-Vorschläge zeigen Helden aller Rollen. Das sind Denkhilfen, du entscheidest."],
+  ["Nachschlagen", "Aufstellungen, Spielstile und Meta-Picks. Das brauchst du nicht in jedem Match."]
+];
+teamUi.step = 1;
+const teamAll = () => state.settings.teamView === "all";
+function renderTeamPath() {
+  const el = $("#teamPath"), st = teamUi.step || 1;
+  if (!el) return;
+  const hasEnemy = (teamData().enemy || []).filter(Boolean).length > 0;
+  el.innerHTML = `<div class="card-head"><h2>${icon("list")}So gehst du vor</h2><div class="chips"><button type="button" class="chip ${teamAll() ? "" : "on"}" data-tview="steps">Schritt für Schritt</button><button type="button" class="chip ${teamAll() ? "on" : ""}" data-tview="all">Alles zeigen</button></div></div>
+    ${teamAll() ? '<p class="muted small" style="margin:0">Alle Karten sind sichtbar. Mit «Schritt für Schritt» siehst du immer nur einen Teil.</p>' : `<div class="bootsteps" style="margin-top:0">${TEAM_STEPS.map((s, i) => `<button type="button" class="chip ${st === i + 1 ? "on" : ""}" data-tgo="${i + 1}">${i + 1} ${esc(s[0])}</button>`).join("")}</div>
+    <p style="margin:8px 0 0"><b>Schritt ${st}: ${esc(TEAM_STEPS[st - 1][0])}.</b> ${esc(TEAM_STEPS[st - 1][1])}</p>
+    <div class="row mt">${st > 1 ? `<button type="button" class="btn ghost small" data-tgo="${st - 1}">← Zurück zu Schritt ${st - 1}</button>` : ""}${st < 4 ? `<button type="button" class="btn small ${st === 1 && !hasEnemy ? "ghost" : ""}" data-tgo="${st + 1}">Weiter zu Schritt ${st + 1}</button>` : ""}${st === 1 && !hasEnemy ? '<span class="muted small">Trag zuerst mindestens einen Gegner ein.</span>' : ""}</div>`}`;
+}
+function applyTeamView() {
+  const st = teamUi.step || 1, all = teamAll();
+  document.querySelectorAll("#tab-team [data-tstep]").forEach(c => c.classList.toggle("tstep-off", !all && +c.dataset.tstep !== st));
+  renderTeamPath();
+  if (!all) { if (st === 2) appSeen("team2", true); if (st === 3) appSeen("team3", true); }
+}
+document.addEventListener("click", e => {
+  const g = e.target.closest("#teamPath [data-tgo]"), v = e.target.closest("#teamPath [data-tview]");
+  if (g) { teamUi.step = +g.dataset.tgo; applyTeamView(); $("#teamPath").scrollIntoView({ block: "start" }); }
+  else if (v) { state.settings.teamView = v.dataset.tview === "all" ? "all" : "steps"; save(); applyTeamView(); }
+});
 
 // ---------- Offene Blöcke nachholen ----------
 const BLOCK_KEYS = ["b1", "b2", "b3"];
