@@ -1298,7 +1298,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="note info mt" id="autoPullInfo" hidden></div>
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
-    <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data mehrmals täglich ab (etwa um 10, 14, 18 und 22 Uhr), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
+    <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data mehrmals täglich ab (alle zwei Stunden von 10 bis 22 Uhr, jeweils kurz nach der vollen Stunde), die App übernimmt das Ergebnis beim Öffnen. Mit „Jetzt aktualisieren“ geht es sofort, das dauert meist 1–3 Minuten. Sonst nutze die Schritte unten.</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
@@ -5787,7 +5787,7 @@ async function autoPull(retried) {
     const ok = all.filter(x => x.kind === "ok").sort((a, b) => Date.parse(a.data.generated) - Date.parse(b.data.generated)).pop();
     if (!ok) {
       const err = all.filter(x => x.kind === "error").pop();
-      setAuto({ state: "none", text: err ? `Der Sync-Helfer meldet: ${String(err.message).slice(0, 160)}` : "Der Sync-Helfer hat noch kein Ergebnis geliefert. Er läuft um 10, 14, 18 und 22 Uhr." });
+      setAuto({ state: "none", text: err ? `Der Sync-Helfer meldet: ${String(err.message).slice(0, 160)}` : "Der Sync-Helfer hat noch kein Ergebnis geliefert. Er läuft alle zwei Stunden von 10 bis 22 Uhr." });
       return;
     }
     const applied = await applyHelperResult(ok, true);
