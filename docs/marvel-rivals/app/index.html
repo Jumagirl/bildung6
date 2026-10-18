@@ -1340,7 +1340,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="note info mt" id="autoPullInfo" hidden></div>
     <div class="row mt"><button class="btn" type="button" id="webSyncNow" data-icon="sync" hidden>Jetzt von GitHub holen</button></div>
     <div class="note info mt" id="webSyncInfo" hidden></div>
-    <p class="muted small mt" id="webSyncNote" hidden>Gratis-Abgleich: Ein kostenloser Dienst auf GitHub fragt Rivals Data alle zwei Stunden für die Spieler aus einer Liste ab. Diese App holt die Datei zu deinem Spielernamen, sobald du sie öffnest (und alle 20 Minuten, solange sie offen ist). Dafür brauchst du kein Claude-Konto. Dein Name muss in der Liste stehen, und deine Match-History muss bei Rivals Data öffentlich sein. Die Daten sind dieselben, die Rivals Data ohnehin öffentlich zeigt. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch dieser Abgleich nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
+    <p class="muted small mt" id="webSyncNote" hidden>Gratis-Abgleich: Ein kostenloser Dienst auf GitHub fragt Rivals Data etwa alle halbe Stunde (zwischen 10 und 24 Uhr) für die Spieler aus einer Liste ab. Diese App holt die Datei zu deinem Spielernamen, sobald du sie öffnest (und alle 20 Minuten, solange sie offen ist). Dafür brauchst du kein Claude-Konto. Dein Name muss in der Liste stehen, und deine Match-History muss bei Rivals Data öffentlich sein. Die Daten sind dieselben, die Rivals Data ohnehin öffentlich zeigt. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch dieser Abgleich nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
     <label class="inline-label mt" id="autoRefreshWrap" hidden><input type="checkbox" id="autoRefresh" checked> Beim Öffnen und alle 30 Minuten frische Matches anfordern</label>
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
@@ -5680,7 +5680,7 @@ function renderData() {
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : webSyncOn() ? "Trag oben deinen Spielernamen ein. Steht er in der Spielerliste des Gratis-Abgleichs, holt die App deine Matches automatisch (alle zwei Stunden)." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : webSyncOn() ? "Trag oben deinen Spielernamen ein. Steht er in der Spielerliste des Gratis-Abgleichs, holt die App deine Matches automatisch (etwa alle halbe Stunde)." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
@@ -6072,7 +6072,7 @@ async function takeInbox(box) {
   finally { Bridge.busy = false; }
 }
 // ---------- Gratis-Abgleich über GitHub (ausserhalb von Claude: Datei oder eigene Webseite) ----------
-// Ein GitHub-Workflow holt alle zwei Stunden die öffentlichen Matches der Spieler aus einer Liste und legt sie im Branch
+// Ein GitHub-Workflow holt etwa alle halbe Stunde die öffentlichen Matches der Spieler aus einer Liste und legt sie im Branch
 // «sync-data» ab. Die App liest die Datei zum eigenen Spielernamen von raw.githubusercontent.com. Das braucht weder Claude noch ein Konto.
 // In der Claude-Ansicht darf die Seite keine fremden Adressen abrufen, dort gilt der Sync-Helfer.
 const WEB_SYNC_REPO = "Jumagirl/bildung6", WEB_SYNC_BRANCH = "sync-data";
@@ -6081,7 +6081,7 @@ const WebSync = { busy: false, last: 0, info: null, timer: null };
 // Dateiname eines Spielers; muss exakt zu player_slug() in rivals_sync.py passen (Test t81 vergleicht beide)
 function playerSlug(name) {
   const n = String(name || "").normalize("NFC").trim().toLowerCase();
-  const base = n.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24).replace(/^-+|-+$/g, "");
+  const base = n.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24).replace(/^-+|-+$/g, "");
   let h = 0x811c9dc5;
   new TextEncoder().encode(n).forEach(b => { h = Math.imul(h ^ b, 0x01000193) >>> 0; });
   return `${base || "spieler"}-${h.toString(16).padStart(8, "0")}`;
@@ -6134,7 +6134,7 @@ function renderWebSync() {
     busy: "Hole die Matches von GitHub …",
     name: "Trag oben deinen Spielernamen ein, dann holt die App deine Matches automatisch.",
     ok: `Letzter automatischer Abgleich: ${fmtDT(i.at)}.${syncFreshText()}${i.sErr ? ` Der letzte Abruf bei Rivals Data ist gescheitert (${i.sErr.text}). Du siehst den Stand davor.` : ""}`,
-    unknown: `Zu „${i.name}“ gibt es noch keine Daten. Entweder steht der Name noch nicht in der Spielerliste, oder der erste Abruf läuft noch (er läuft alle zwei Stunden). Prüfe die Schreibweise (genau wie bei Rivals Data) und frag die Person, die die App eingerichtet hat, ob dein Name in der Liste steht.`,
+    unknown: `Zu „${i.name}“ gibt es noch keine Daten. Entweder steht der Name noch nicht in der Spielerliste, oder der erste Abruf läuft noch (er läuft etwa alle halbe Stunde). Prüfe die Schreibweise (genau wie bei Rivals Data) und frag die Person, die die App eingerichtet hat, ob dein Name in der Liste steht.`,
     error: `Der Abruf bei Rivals Data ist gescheitert: ${i.text || ""}`,
     fail: `GitHub war gerade nicht erreichbar (${i.text}). Die App versucht es später erneut.`
   }[i.kind] || "";

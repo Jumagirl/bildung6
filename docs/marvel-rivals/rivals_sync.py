@@ -329,8 +329,15 @@ def sync(args: argparse.Namespace) -> dict:
             result["warnings"].append(f"Match-History nicht abrufbar: {exc}")
             print(f"! Match-History nicht abrufbar: {exc}")
 
-        skipped = 0
+        skipped = reused = 0
+        known = getattr(args, "known", None) or {}   # schon abgerufene Matches (extId -> Match), spart Abfragen bei häufigem Abgleich
         for i, row in enumerate(rows, 1):
+            old = known.get(str(getattr(row, "match_uid", "")))
+            if old is not None and (old.get("enemies") or not args.details):
+                result["matches"].append(old)   # Details waren schon da, Ergebnisse ändern sich nicht
+                reused += 1
+                print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
+                continue
             details = None
             if args.details:
                 try:
@@ -349,6 +356,8 @@ def sync(args: argparse.Namespace) -> dict:
             print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
         if rows:
             print()
+        if reused:
+            print(f"{reused} Match(es) schon bekannt, nur {len(rows) - reused} neu abgerufen.")
         if skipped:
             print(f"{skipped} Match(es) übersprungen (Unentschieden oder unvollständig).")
 
