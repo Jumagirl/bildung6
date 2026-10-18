@@ -1062,6 +1062,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="chips" id="goodChips"></div>
     <div id="ruleBox" hidden>
       <h3>Grundregeln: Wie lief es?</h3>
+      <label>Plantag an diesem Datum <select id="matchDay"></select></label>
+      <p class="muted small" style="margin:6px 0 10px" id="matchDayInfo"></p>
       <p class="muted small" style="margin:0 0 8px">Hast du daran gedacht, ohne es dir vorzunehmen? Lass leer, was im Match nicht vorkam.</p>
       <div id="ruleRows"></div>
     </div>
@@ -3140,9 +3142,10 @@ function loadState(raw) {
     matches: [], customHeroes: [], heroNotes: {}, counterNotes: {}, heroTagOverrides: {}, goals: [],
     routine: DEFAULT_ROUTINE.slice(), routineDone: {}, team: ["", "", "", "", "", ""], enemyTeam: ["", "", "", "", "", ""],
     quiz: { asked: 0, correct: 0, wrong: {} }, sync: null, heroAliases: {}, settings: { playerName: "", matchMin: null, matchMax: null, flexMatches: 10, flexHeroes: 2, flexPlan: true, flexPick: {}, blockMin: 60 },
-    plan: { start: null, days: {}, topics: {}, level: 0 }
+    plan: { start: null, days: {}, topics: {}, level: 0, dayByDate: {} }
   }, s || {});
-  st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0 }, st.plan);
+  st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0, dayByDate: {} }, st.plan);
+  st.plan.dayByDate = st.plan.dayByDate || {};   // Plantag pro Datum, den du selbst festgelegt hast (0 = freies Spiel)
   st.quiz = Object.assign({ asked: 0, correct: 0, wrong: {} }, st.quiz);
   st.app = Object.assign({ seen: {}, tour: {} }, st.app);   // App kennenlernen: besuchte Seiten, erledigte Übungen
   st.app.seen = st.app.seen || {}; st.app.tour = st.app.tour || {};
@@ -4350,7 +4353,7 @@ function renderOpenRefl() {
   el.innerHTML = `<div class="card-head"><h2>${icon("edit")}Neue Matches: Reflexion offen</h2><span class="badge">${open.length}</span></div>
     <p class="lead">Diese Matches hat die App automatisch von Rivals Data geholt. Trag nur noch ein, was schiefgelaufen ist oder gut lief.</p>
     ${open.slice(0, 6).map(m => `<div class="orow"><span>${resultPill(m.result)}</span><span>${heroChip(m.hero)}</span>
-      <span class="sp small">${fmtDate(m.date)} · ${m.k}/${m.d}/${m.a}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}${m.map ? ` · ${esc(m.map)}` : ""}</span>
+      <span class="sp small">${fmtDate(m.date)}${planStarted() ? ` · ${planDayOf(m.date) ? "Tag " + planDayOf(m.date) : "freies Spiel"}` : ""} · ${m.k}/${m.d}/${m.a}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}${m.map ? ` · ${esc(m.map)}` : ""}</span>
       <button class="btn small" type="button" data-oedit="${m.id}">Fehler eintragen</button>
       <button class="btn ghost small" type="button" data-odone="${m.id}" title="Nichts Besonderes: aus der Liste nehmen">Nichts eintragen</button></div>`).join("")}
     ${open.length > 6 ? `<div class="row mt"><span class="muted small">und ${open.length - 6} weitere</span><button class="btn ghost small" type="button" data-oall="1">Alle als erledigt markieren</button></div>` : ""}`;
@@ -4382,7 +4385,7 @@ function renderLog() {
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
   $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Ergebnis</th><th class="num">K/D/A</th><th>Map / Modus</th><th>Gegner</th><th>Reflexion</th><th></th></tr></thead><tbody>
     ${rows.map(m => `<tr>
-      <td class="small">${fmtDate(m.date)}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
+      <td class="small">${fmtDate(m.date)}${planStarted() ? `<br><span class="muted" data-dayfor="${m.date}">${planDayOf(m.date) ? "Tag " + planDayOf(m.date) : "freies Spiel"}</span>` : ""}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
       <td>${heroChip(m.hero)}</td>
       <td><button class="pill-btn" type="button" data-flip="${m.id}" title="Ergebnis ändern (Sieg ↔ Niederlage)" aria-label="Ergebnis ändern, aktuell ${m.result === "W" ? "Sieg" : "Niederlage"}">${resultPill(m.result)}</button></td>
       <td class="num">${m.k}/${m.d}/${m.a}${matchExtra(m)}</td>
@@ -4669,6 +4672,7 @@ function renderMatchHints() {
 ["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, e => {
   if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); renderTaskBox({}); }
   else if (e.target && e.target.name === "d") renderDeathBox();
+  else if (e.type === "change" && e.target && e.target.name === "date") renderRuleBox();
   renderMatchHints();
 }));
 ["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
@@ -5734,7 +5738,8 @@ const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
 // Eingang in der App-Datenbank: Ein geplanter Sync-Helfer in Claude legt das Ergebnis mit dem Werkzeug ArtifactData im Dokument
 // data/users/<id>/sync-inbox ab. Die App übernimmt es sofort (offen) oder beim nächsten Öffnen (takeInbox). Braucht keinen Connector.
 const SYNC_AUTO = ""; /* PRIVATE:SYNC_AUTO */
-const syncInboxOn = () => !!SYNC_AUTO && !SYNC_HELPER && IN_VIEWER;
+// An, wenn der Build es verlangt oder sobald ein automatischer Abgleich angekommen ist (so zeigt auch eine selbst eingerichtete Version die Statuszeile)
+const syncInboxOn = () => IN_VIEWER && !SYNC_HELPER && (!!SYNC_AUTO || !!(state.sync && /^auto-/.test(state.sync.lastId || "")));
 const BUILD_STAMP = ""; /* BUILD:STAMP */
 const SYNC_SERVER = "Claude Code Remote";
 const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "", auto: null, hidden: false, diag: "" };
@@ -6024,6 +6029,12 @@ async function takeInbox(box) {
   Bridge.busy = true;
   let keep = false;
   try {
+    // Plantage pro Datum (zum Beispiel von Claude gesetzt): {planDays: {"2026-10-17": 6}}, 0 = freies Spiel
+    if (box.planDays && typeof box.planDays === "object") {
+      state.plan.dayByDate = state.plan.dayByDate || {};
+      Object.entries(box.planDays).forEach(([d, n]) => { if (/^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isInteger(+n) && +n >= 0 && +n <= 56) state.plan.dayByDate[d] = +n; });
+      save(); render();
+    }
     if (box.payload) {
       try {
         const data = typeof box.payload === "string" ? JSON.parse(box.payload) : plainJson(box.payload);
@@ -7195,6 +7206,41 @@ function ruleText(t) {
   const id = dayLessons(Math.min(...t.neu))[0], l = id && lessonById(id);
   return l && l.focus ? l.focus : "";
 }
+// ---------- Plantag eines Datums ----------
+// Welcher Trainingstag galt an einem Tag? Du kannst ihn pro Datum selbst festlegen (auch «Freies Spiel» ohne Plantag).
+// Sonst rät die App: erster Tag, der an dem Datum noch offen war oder erst dann als erledigt markiert wurde. Tage, deren Blöcke alle abgehakt sind
+// und nach denen es weiterging, gelten als gemacht (auch ohne «erledigt»).
+const blocksTicked = n => { const bs = (PLAN.days[n - 1].steps || []).filter(x => /^b\d/.test(x.key)), st = dayGet(n).steps || {}; return bs.length > 0 && bs.every(x => st[x.key]); };
+function guessPlanDay(date) {
+  if (!planStarted() || !date || date < state.plan.start) return 0;
+  const laterDone = n => { for (let k = n + 1; k <= 56; k++) if (dayGet(k).done) return true; return false; };
+  for (let n = 1; n <= 56; n++) {
+    const d = dayGet(n).done;
+    if (d) {
+      if (d < date) continue;
+      let m = n;
+      if (d === date) while (m < 56 && dayGet(m + 1).done === d) m++;   // an einem Tag mehrere Tage erledigt: der letzte zählt
+      return m;
+    }
+    if (blocksTicked(n) && laterDone(n)) continue;
+    return n;
+  }
+  return 0;
+}
+const planDayManual = date => { const v = (state.plan.dayByDate || {})[date]; return v !== undefined && v !== null; };
+const planDayOf = date => planDayManual(date) ? state.plan.dayByDate[date] : guessPlanDay(date);
+const planDayLabel = n => n ? `Tag ${n}: ${PLAN.days[n - 1].title}` : "Freies Spiel (kein Plantag)";
+// Fragen zu einem Match: erst das Thema des Tages, dann Wiederholungsthemen, dann Grundregeln, die noch nicht von selbst laufen
+function rulesForDay(n) {
+  if (!n) return activeRules();
+  const prio = t => { const v = topicAuto(t); return v === 1 ? 0 : v === 0 ? 1 : 2; };
+  const main = PLAN.tracker.filter(t => t.neu.includes(n)).map(t => ({ t, spot: false, role: "day" }));
+  const again = PLAN.tracker.filter(t => t.refresh.includes(n) && !t.neu.includes(n)).map(t => ({ t, spot: false, role: "again" }));
+  const used = new Set([...main, ...again].map(r => r.t.id));
+  const rest = PLAN.tracker.filter(t => t.neu.some(x => x < n) && !used.has(t.id) && topicAuto(t) < 3)
+    .sort((a, b) => prio(a) - prio(b) || Math.min(...b.neu) - Math.min(...a.neu)).map(t => ({ t, spot: false, role: "" }));
+  return [...main, ...again, ...rest].slice(0, RULE_MAX + 1);
+}
 function activeRules() {
   const learned = PLAN.tracker.filter(t => t.neu.some(n => dayGet(n).done));
   const prio = t => { const v = topicAuto(t); return v === 1 ? 0 : v === 0 ? 1 : 2; };
@@ -7225,13 +7271,29 @@ function rulesCardHtml() {
 function renderRuleBox(selected) {
   const box = $("#ruleBox");
   if (!box) return;
-  const sel = selected || ruleValues(), rs = activeRules(), ids = new Set(rs.map(r => r.t.id));
+  const date = ($("#matchDate") && $("#matchDate").value) || today(), n = planDayOf(date), manual = planDayManual(date);
+  const sel = selected || ruleValues(), rs = rulesForDay(n), ids = new Set(rs.map(r => r.t.id));
   const extra = Object.keys(sel).map(ruleTopic).filter(t => t && !ids.has(t.id));
-  const list = [...rs.map(r => ({ t: r.t, spot: r.spot })), ...extra.map(t => ({ t, spot: false }))];
-  box.hidden = !list.length;
-  $("#ruleRows").innerHTML = list.map(({ t, spot }) => `<div class="rrow"><span class="rl"><b>${esc(t.topic)}</b>${spot ? ' <span class="badge">Stichprobe</span>' : ""}</span>
+  const list = [...rs, ...extra.map(t => ({ t, spot: false, role: "" }))];
+  box.hidden = !planStarted() && !list.length;
+  const dl = $("#matchDay");
+  if (dl) {
+    dl.innerHTML = `<option value="">Automatisch: ${esc(planDayLabel(guessPlanDay(date)))}</option><option value="0">Freies Spiel (kein Plantag)</option>${PLAN.days.map(d => `<option value="${d.n}">${esc(planDayLabel(d.n))}</option>`).join("")}`;
+    dl.value = manual ? String(state.plan.dayByDate[date]) : "";
+  }
+  const info = $("#matchDayInfo");
+  if (info) info.textContent = n ? `${manual ? "Von dir festgelegt" : "Automatisch erkannt"} für den ${fmtDate(date)}: ${planDayLabel(n)}. ${firstSentence(PLAN.days[n - 1].heute || "")}` : `${planStarted() ? "Kein Plantag" : "Plan noch nicht gestartet"}: Du siehst deine Grundregeln, die noch nicht von selbst laufen.`;
+  const badge = { day: "Thema des Tages", again: "Wiederholung heute" };
+  $("#ruleRows").innerHTML = list.map(({ t, spot, role }) => `<div class="rrow"><span class="rl"><b>${esc(t.topic)}</b>${spot ? ' <span class="badge">Stichprobe</span>' : ""}${badge[role] ? ` <span class="badge">${badge[role]}</span>` : ""}</span>
     <span class="chips">${RULE_V.map(([k, label]) => `<button type="button" class="chip ${sel[t.id] === k ? "on" : ""}" data-rt="${t.id}" data-rv="${k}" aria-pressed="${sel[t.id] === k}">${label}</button>`).join("")}</span></div>`).join("");
 }
+$("#matchDay").addEventListener("change", e => {
+  const date = ($("#matchDate") && $("#matchDate").value) || today(), v = e.target.value;
+  state.plan.dayByDate = state.plan.dayByDate || {};
+  if (v === "") delete state.plan.dayByDate[date]; else state.plan.dayByDate[date] = +v;
+  save(); renderRuleBox(); renderOpenRefl();
+  document.querySelectorAll("[data-dayfor]").forEach(x => { const d = planDayOf(x.dataset.dayfor); x.textContent = d ? "Tag " + d : "freies Spiel"; });
+});
 function ruleValues() {
   const o = {};
   document.querySelectorAll("#ruleRows .chip.on").forEach(c => { o[c.dataset.rt] = c.dataset.rv; });
