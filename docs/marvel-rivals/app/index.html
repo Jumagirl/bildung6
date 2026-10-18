@@ -841,6 +841,12 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .d-cd { fill: var(--surface-3); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .d-ready { fill: color-mix(in srgb, var(--strategist) 22%, transparent); stroke: var(--strategist); stroke-width: 1.5; }
 .d-diver { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 4 4; }
+.delta { font-weight: 700; white-space: nowrap; }
+.delta.good { color: var(--good-text); }
+.delta.bad { color: var(--bad); }
+.delta.neutral { color: var(--muted); }
+.progtable { min-width: 460px; }
+.progtable tr.grp td { background: var(--accent-soft); padding-top: 6px; padding-bottom: 6px; }
 .kpi-charts { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin-bottom: 12px; }
 .kpi-chart { border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px 6px; background: var(--surface); }
 .kpi-chart h4 { margin: 0 0 4px; font-size: .84rem; }
@@ -1221,6 +1227,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <section id="tab-teamups" hidden><div id="tuBody"></div></section>
 <section id="tab-meta" hidden><div id="metaBody"></div></section>
 <section id="tab-bootcamp" hidden><div id="bootBody"></div></section>
+<section id="tab-progress" hidden><div id="progressBody"></div></section>
 <section id="tab-heroes" hidden>
   <div class="card">
     <div class="row between">
@@ -3098,7 +3105,8 @@ const TITLES = {
   data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"],
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
   teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
-  bootcamp: ["Helden-Bootcamp", "Pro Held und pro Rolle ein Kurs mit Aufgaben fürs Match"]
+  bootcamp: ["Helden-Bootcamp", "Pro Held und pro Rolle ein Kurs mit Aufgaben fürs Match"],
+  progress: ["Verlauf", "Tage, Wochen und Phasen vergleichen und sehen, was besser geworden ist"]
 };
 
 // ---------- Bereiche und Navigation ----------
@@ -3106,11 +3114,11 @@ const TITLES = {
 const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
   { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "lexicon"] },
-  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten und auswerten", tabs: ["log", "analysis", "dashboard"] },
+  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten, auswerten und den Verlauf vergleichen", tabs: ["log", "analysis", "dashboard", "progress"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team, Counter und Meta", tabs: ["heroes", "team", "teamups", "meta"] },
   { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
 ];
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -8211,6 +8219,200 @@ document.addEventListener("click", e => {
   if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
 });
 
+// ---------- Verlauf: Tage, Wochen und Phasen vergleichen ----------
+// Die Matches werden in Abschnitte eingeteilt (pro Plantag, Kalenderwoche oder Plan-Phase). Pro Abschnitt rechnet die App Kennzahlen aus.
+// So siehst du die Entwicklung seit der Baseline (Tag 1), vergleichst zwei Abschnitte und siehst Diagramme über die Zeit.
+// Wenige Matches schwanken stark: Unter PROG_MIN_N Matches gilt ein Wert als unsicher und bekommt weder Farbe noch Urteil.
+const PROG_MIN_N = 5, PROG_NOW_N = 10, PROG_BASE_MIN = 3;
+const progUi = { by: "", role: "", mode: "", a: "", b: "" };
+const PROG_MODES = [["", "Alle Modi"], ["Competitive", "Ranked"], ["Quick Match", "Ungewertet"], ["Custom / Training", "Custom"]];
+const progReflected = m => !!((m.mistakes || []).length || (m.goods || []).length || deathTotal(m.deathCauses) || m.notes);
+function progWeekStart(date) { const wd = (new Date(date + "T12:00:00").getDay() + 6) % 7; return addDays(date, -wd); }
+function progWeekNo(monday) {
+  const d = new Date(monday + "T12:00:00"); d.setDate(d.getDate() + 3);   // Donnerstag der Woche bestimmt das Jahr
+  const y = new Date(d.getFullYear(), 0, 4), wk = 1 + Math.round(((d - y) / 864e5 - 3 + (y.getDay() + 6) % 7) / 7);
+  return wk;
+}
+const progShort = d => { const x = new Date(d + "T12:00:00"); return `${x.getDate()}.${x.getMonth() + 1}.`; };
+function progFiltered() {
+  return state.matches.filter(m => (!progUi.role || heroRole(m.hero) === progUi.role) && (!progUi.mode || m.mode === progUi.mode));
+}
+// Abschnitt eines Matches: { key, label, sub, sort }
+function progSegOf(m, by) {
+  const n = planDayOf(m.date), pre = planStarted() && m.date < state.plan.start && !planDayManual(m.date);
+  if (by === "week") {
+    const w = progWeekStart(m.date);
+    return { key: "w" + w, label: "KW " + progWeekNo(w), sub: `${progShort(w)}–${progShort(addDays(w, 6))}`, sort: Date.parse(w + "T12:00:00") };
+  }
+  if (pre) return { key: "pre", label: "Vor dem Plan", sub: "vor dem Start", sort: -1 };
+  if (!n) return { key: "free", label: "Ohne Plantag", sub: "Freies Spiel", sort: 1e6 };
+  if (by === "phase") {
+    const p = PLAN.days[n - 1].phase, ph = PLAN.phases.find(x => x.id === p) || {};
+    return { key: "p" + p, label: "Phase " + p, sub: ph.name || "", sort: p };
+  }
+  return { key: "d" + n, label: "Tag " + n, sub: PLAN.days[n - 1].title, sort: n };
+}
+function progSegments(ms, by) {
+  const map = new Map();
+  ms.slice().sort((a, b) => matchTime(a) - matchTime(b)).forEach(m => {
+    const s = progSegOf(m, by);
+    if (!map.has(s.key)) map.set(s.key, Object.assign(s, { ms: [] }));
+    map.get(s.key).ms.push(m);
+  });
+  return [...map.values()].sort((a, b) => a.sort - b.sort);
+}
+function progStats(ms) {
+  const s = summary(ms), refl = ms.filter(progReflected);
+  const ulted = ms.filter(m => m.ults !== null && m.ults !== undefined);
+  const ans = ms.flatMap(m => Object.values(m.rules || {}));
+  return { n: ms.length, wr: s.wr, d: s.d, kda: s.kda,
+    ultsPer: ulted.length ? ulted.reduce((x, m) => x + m.ults, 0) / ulted.length : NaN, ultN: ulted.length,
+    ultPct: s.ultPct, ultCnt: s.ultN,
+    fehler: refl.length ? refl.reduce((x, m) => x + matchMistakes(m).length, 0) / refl.length : NaN, fehlerN: refl.length,
+    autoPct: ans.length ? ans.filter(v => v === "auto").length / ans.length : NaN, autoN: ans.length,
+    deathCat: deathMainCat(ms) };
+}
+// tol: darunter gilt eine Änderung als «gleich»; better: 1 = mehr ist besser, -1 = weniger ist besser, 0 = kein Urteil; pp: Prozentpunkte
+const PROG_METRICS = [
+  { id: "wr", group: "Kern", label: "Winrate", pp: true, better: 1, tol: 0.05, needs: "n", fmt: v => pct(v) },
+  { id: "d", group: "Kern", label: "Ø Tode pro Match", better: -1, tol: 0.3, needs: "n", fmt: v => numDe(v.toFixed(1)) },
+  { id: "kda", group: "Kern", label: "KDA (Kills und Assists pro Tod)", better: 1, tol: 0.2, needs: "n", fmt: v => numDe(v.toFixed(1)) },
+  { id: "ultsPer", group: "Ult", label: "Ults pro Match", better: 0, tol: 0.3, needs: "ultN", fmt: v => numDe(v.toFixed(1)) },
+  { id: "ultPct", group: "Ult", label: "Ult-Wirkung", pp: true, better: 1, tol: 0.05, needs: "ultCnt", fmt: v => pct(v) },
+  { id: "fehler", group: "Gewohnheiten", label: "Fehler pro Match", better: -1, tol: 0.3, needs: "fehlerN", fmt: v => numDe(v.toFixed(1)) },
+  { id: "autoPct", group: "Gewohnheiten", label: "Grundregeln «von selbst»", pp: true, better: 1, tol: 0.1, needs: "autoN", fmt: v => pct(v) },
+  { id: "deathCat", group: "Gewohnheiten", label: "Häufigste Todesursache", text: true }
+];
+// Wie sicher ist der Wert? Zählt die Stichprobe, auf der er beruht (bei Ults und Grundregeln gilt eine kleinere Schwelle für die Anzahl)
+const progSure = (st, met) => met.text ? true : (st[met.needs] || 0) >= (met.needs === "n" || met.needs === "fehlerN" || met.needs === "ultN" ? PROG_MIN_N : 3);
+function progDelta(met, a, b) {
+  const va = a[met.id], vb = b[met.id];
+  if (met.text || !isFinite(va) || !isFinite(vb)) return null;
+  const d = vb - va, sure = progSure(a, met) && progSure(b, met);
+  const same = Math.abs(d) < met.tol, cls = !sure || same || !met.better ? "neutral" : (d * met.better > 0 ? "good" : "bad");
+  const num = met.pp ? `${Math.round(Math.abs(d) * 100)} Pp.` : numDe(Math.abs(d).toFixed(1));
+  return { d, cls, sure, same, text: same ? "gleich" : `${d > 0 ? "▲ +" : "▼ −"}${num}` };
+}
+const progVal = (met, st) => met.text ? (st.deathCat || "–") : (isFinite(st[met.id]) ? met.fmt(st[met.id]) : "–");
+function progBase(ms, by) {
+  // Baseline: die Matches von Tag 1, sonst die ersten Matches
+  const sorted = ms.slice().sort((a, b) => matchTime(a) - matchTime(b));
+  const day1 = sorted.filter(m => planStarted() && planDayOf(m.date) === 1);
+  if (day1.length >= PROG_BASE_MIN) return { ms: day1, label: `Tag 1 (Baseline)`, kind: "day1" };
+  const first = sorted.slice(0, PROG_NOW_N);
+  return { ms: first, label: `Die ersten ${first.length} Matches`, kind: "first" };
+}
+function progNow(ms, base) {
+  const used = new Set(base.ms.map(m => m.id)), rest = ms.slice().sort((a, b) => matchTime(a) - matchTime(b)).filter(m => !used.has(m.id));
+  const last = rest.slice(-PROG_NOW_N);
+  return { ms: last, label: `Jetzt (letzte ${last.length} Matches)` };
+}
+const progRange = ms => { const ds = ms.map(m => m.date).sort(); return ds.length ? (ds[0] === ds[ds.length - 1] ? fmtDate(ds[0]) : `${fmtDate(ds[0])} bis ${fmtDate(ds[ds.length - 1])}`) : ""; };
+function progCompareTable(A, B, la, lb) {
+  const groups = ["Kern", "Ult", "Gewohnheiten"];
+  const head = `<tr><th>Kennzahl</th><th class="num">${esc(la)}</th><th class="num">${esc(lb)}</th><th>Änderung</th></tr>`;
+  const rows = groups.map(g => `<tr class="grp"><td colspan="4"><b>${g}</b></td></tr>` + PROG_METRICS.filter(x => x.group === g).map(met => {
+    const dl = progDelta(met, A, B), unsure = !met.text && ((isFinite(A[met.id]) && !progSure(A, met)) || (isFinite(B[met.id]) && !progSure(B, met)));
+    return `<tr><td>${esc(met.label)}</td><td class="num">${esc(progVal(met, A))}</td><td class="num">${esc(progVal(met, B))}</td>
+      <td>${dl ? `<span class="delta ${dl.cls}">${dl.text}</span>${unsure ? ' <span class="muted small">unsicher</span>' : ""}` : '<span class="muted small">–</span>'}</td></tr>`;
+  }).join("")).join("");
+  return `<div style="overflow-x:auto"><table class="progtable"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+}
+function progSummaryLine(A, B) {
+  const res = PROG_METRICS.map(met => ({ met, dl: progDelta(met, A, B) })).filter(x => x.dl && x.dl.sure && !x.dl.same && x.met.better);
+  const good = res.filter(x => x.dl.cls === "good"), bad = res.filter(x => x.dl.cls === "bad");
+  const names = l => l.map(x => x.met.label).join(", ");
+  return `${good.length ? `<b>Besser:</b> ${esc(names(good))}. ` : ""}${bad.length ? `<b>Schlechter:</b> ${esc(names(bad))}. ` : ""}${!good.length && !bad.length ? "Bei den sicheren Kennzahlen ist noch kein klarer Unterschied zu sehen. " : ""}`;
+}
+// Liniendiagramm über die Abschnitte; gestrichelt: Wert des ersten Abschnitts; hohler Punkt: weniger als PROG_MIN_N Matches
+function progLine(title, sub, items, fmt, better) {
+  const pts = items.filter(i => i.v !== null && isFinite(i.v));
+  if (pts.length < 2) return `<div class="kpi-chart"><h4>${esc(title)} <span>${esc(sub)}</span></h4><p class="muted small" style="margin:8px 0 12px">Noch zu wenig Abschnitte für einen Verlauf.</p></div>`;
+  const W = 320, H = 150, pl = 10, pr = 14, top = 22, base = 112, n = items.length;
+  const vals = pts.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || Math.max(Math.abs(hi), 1) * .2;
+  const x = i => pl + (W - pl - pr) * (n === 1 ? .5 : i / (n - 1)), y = v => base - (base - top) * (v - (lo - span * .1)) / (span * 1.2);
+  const first = pts[0].v, last = pts[pts.length - 1].v;
+  const d = last - first, tone = !better || Math.abs(d) < 1e-9 ? "var(--accent)" : (d * better > 0 ? "var(--good)" : "var(--bad)");
+  let s = `<line x1="${pl}" y1="${base}" x2="${W - pr}" y2="${base}" stroke="var(--grid)" stroke-width="1.5"/>`;
+  s += `<line x1="${pl}" y1="${y(first)}" x2="${W - pr}" y2="${y(first)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 4"/>`;
+  s += `<polyline fill="none" stroke="${tone}" stroke-width="2.2" stroke-linejoin="round" points="${items.map((i, k) => i.v === null || !isFinite(i.v) ? "" : `${x(k).toFixed(1)},${y(i.v).toFixed(1)}`).filter(Boolean).join(" ")}"/>`;
+  const step = Math.max(1, Math.ceil(n / 6));
+  items.forEach((i, k) => {
+    if (i.v === null || !isFinite(i.v)) return;
+    const hollow = i.n < PROG_MIN_N;
+    s += `<circle cx="${x(k).toFixed(1)}" cy="${y(i.v).toFixed(1)}" r="4.2" fill="${hollow ? "var(--surface)" : tone}" stroke="${tone}" stroke-width="2"/>`;
+    if (k === n - 1 || k === 0) s += `<text x="${Math.min(Math.max(x(k), 24), W - 24).toFixed(1)}" y="${(y(i.v) - 9).toFixed(1)}" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">${esc(fmt(i.v))}</text>`;
+  });
+  items.forEach((i, k) => { if ((k % step === 0 && (n - 1 - k >= step || k === n - 1)) || k === n - 1) s += `<text x="${x(k).toFixed(1)}" y="${base + 17}" text-anchor="${k === 0 ? "start" : k === n - 1 ? "end" : "middle"}" fill="var(--text-2)" font-size="11">${esc(i.label)}</text>`; });
+  const desc = items.map(i => `${i.label}: ${i.v === null || !isFinite(i.v) ? "keine Werte" : fmt(i.v)}`).join(", ");
+  return `<div class="kpi-chart"><h4>${esc(title)} <span>${esc(sub)}</span></h4><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}: ${esc(desc)}">${s}</svg></div>`;
+}
+function progChartsHtml(segs) {
+  if (segs.length < 2) return "";
+  const items = f => segs.map(sg => { const st = progStats(sg.ms), met = PROG_METRICS.find(x => x.id === f); return { label: sg.label.replace(/^Tag /, "T").replace(/^Phase /, "P"), v: isFinite(st[f]) ? st[f] : null, n: st[met.needs] || 0 }; });
+  const mk = (f, title, sub, fmt, better) => progLine(title, sub, items(f), fmt, better);
+  return `<div class="kpi-charts">${mk("wr", "Winrate", "höher ist besser", v => pct(v), 1)}${mk("d", "Ø Tode pro Match", "weniger ist besser", v => numDe(v.toFixed(1)), -1)}${mk("kda", "KDA", "höher ist besser", v => numDe(v.toFixed(1)), 1)}`
+    + `${mk("ultPct", "Ult-Wirkung", "höher ist besser", v => pct(v), 1)}${mk("fehler", "Fehler pro Match", "weniger ist besser", v => numDe(v.toFixed(1)), -1)}${mk("autoPct", "Grundregeln «von selbst»", "höher ist besser", v => pct(v), 1)}</div>
+    <p class="muted small" style="margin:0 0 6px">Gestrichelt: Wert des ersten Abschnitts. Hohler Punkt: weniger als ${PROG_MIN_N} Matches oder Antworten, also unsicher.</p>`;
+}
+function progSegTable(segs) {
+  const heads = ["Abschnitt", "#Matches", "#Winrate", "#Ø Tode", "#KDA", "#Ult-Wirkung", "#Fehler", "#«Von selbst»", "Häufigste Todesursache"];
+  const rows = segs.map(sg => {
+    const st = progStats(sg.ms), f = id => { const met = PROG_METRICS.find(x => x.id === id); const t = progVal(met, st); return !met.text && t !== "–" && !progSure(st, met) ? `<span class="muted">${esc(t)}</span>` : esc(t); };
+    return [`<b>${esc(sg.label)}</b><br><span class="muted small">${esc(sg.sub)}</span>`, `${st.n}${st.n < PROG_MIN_N ? ' <span class="muted small">(wenig)</span>' : ""}`, f("wr"), f("d"), f("kda"), f("ultPct"), f("fehler"), f("autoPct"), esc(st.deathCat || "–")];
+  });
+  return `<div style="overflow-x:auto">${table(heads, rows)}</div><p class="muted small" style="margin:6px 0 0">Graue Werte beruhen auf wenigen Matches.</p>`;
+}
+function progSelect(id, segs, cur) {
+  return `<select data-psel="${id}" aria-label="Abschnitt ${id === "a" ? "A" : "B"}">${segs.map(sg => `<option value="${esc(sg.key)}" ${sg.key === cur ? "selected" : ""}>${esc(sg.label)}${sg.sub ? ` · ${esc(sg.sub)}` : ""} (${plural(sg.ms.length, "Match", "Matches")})</option>`).join("")}</select>`;
+}
+function progChip(k, v, label, on) { return `<button type="button" class="chip ${on ? "on" : ""}" data-pfilt="${k}" data-v="${esc(v)}" aria-pressed="${on}">${esc(label)}</button>`; }
+function renderProgress() {
+  const el = $("#progressBody");
+  if (!el) return;
+  const by = progUi.by || (planStarted() ? "day" : "week");   // solange du nichts gewählt hast, gilt der Plan-Stand
+  const ms = progFiltered(), segs = progSegments(ms, by), all = state.matches.length;
+  const filters = `<div class="card"><div class="row" style="gap:10px;align-items:flex-start;flex-wrap:wrap">
+      <div><div class="small muted">Einteilung</div><div class="chips">${[["day", "Tag"], ["week", "Woche"], ["phase", "Phase"]].map(([k, l]) => progChip("by", k, l, by === k)).join("")}</div></div>
+      <div><div class="small muted">Rolle</div><div class="chips">${progChip("role", "", "Alle", !progUi.role)}${ROLES.map(r => progChip("role", r, ROLE_SHORT[r], progUi.role === r)).join("")}</div></div>
+      <div><div class="small muted">Modus</div><div class="chips">${PROG_MODES.map(([k, l]) => progChip("mode", k, l, progUi.mode === k)).join("")}</div></div></div>
+    ${by !== "week" && !planStarted() ? '<p class="small muted" style="margin:8px 0 0">Der Trainingsplan ist noch nicht gestartet, deshalb haben die Matches keinen Plantag. Schalte auf «Woche» um oder starte den Plan.</p>' : ""}</div>`;
+  if (!all) { el.innerHTML = filters + `<div class="card">${empty("Noch keine Matches. Logge Matches oder gleiche sie mit Rivals Data ab, dann zeigt dir diese Seite den Verlauf.", "analysis")}</div>`; return; }
+  if (!ms.length) { el.innerHTML = filters + `<div class="card">${empty("Mit diesen Filtern gibt es keine Matches.", "analysis")}</div>`; return; }
+  // Auf einen Blick: Baseline gegen jetzt
+  const base = progBase(ms), now = progNow(ms, base), A0 = progStats(base.ms), B0 = progStats(now.ms);
+  const glance = now.ms.length >= PROG_BASE_MIN
+    ? `<p class="lead" style="margin:0 0 8px">${progSummaryLine(A0, B0)}</p>${progCompareTable(A0, B0, base.label, now.label)}
+      <p class="small muted" style="margin:6px 0 0">${esc(base.label)}: ${plural(base.ms.length, "Match", "Matches")}, ${esc(progRange(base.ms))}. ${esc(now.label)}: ${esc(progRange(now.ms))}.${base.kind === "first" ? " Tag 1 hat zu wenige Matches, deshalb gelten die ersten Matches als Baseline." : ""}</p>`
+    : `<p class="lead" style="margin:0">Für den Vergleich fehlen noch Matches nach der Baseline (mindestens ${PROG_BASE_MIN}). Spiel weiter, dann siehst du hier, was sich verändert.</p>`;
+  // A gegen B
+  if (!segs.some(s => s.key === progUi.a)) progUi.a = segs[0].key;
+  if (!segs.some(s => s.key === progUi.b)) progUi.b = segs[segs.length - 1].key;
+  const sa = segs.find(s => s.key === progUi.a), sb = segs.find(s => s.key === progUi.b);
+  const ab = segs.length < 2 ? `<p class="muted" style="margin:0">Für A gegen B brauchst du mindestens zwei Abschnitte mit Matches.</p>`
+    : `<div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:8px"><label class="small">A ${progSelect("a", segs, progUi.a)}</label><label class="small">B ${progSelect("b", segs, progUi.b)}</label></div>
+      ${progCompareTable(progStats(sa.ms), progStats(sb.ms), sa.label, sb.label)}`;
+  const flag = icon("analysis");
+  el.innerHTML = `${filters}
+    <div class="card"><div class="card-head"><h2>${flag}Auf einen Blick</h2><span class="muted small">Baseline gegen jetzt</span></div>${glance}</div>
+    <div class="card"><div class="card-head"><h2>${flag}A gegen B</h2><span class="muted small">zwei Abschnitte nebeneinander</span></div>${ab}</div>
+    <div class="card"><div class="card-head"><h2>${flag}Verlauf über die Zeit</h2><span class="muted small">${plural(segs.length, "Abschnitt", "Abschnitte")} · ${plural(ms.length, "Match", "Matches")}</span></div>${progChartsHtml(segs)}${progSegTable(segs)}</div>
+    ${foldHtml("prog-help", "So liest du diese Seite", `<ul class="wl"><li><b>Auf einen Blick</b> vergleicht deine Baseline (die Matches von Tag 1, sonst deine ersten Matches) mit deinen letzten ${PROG_NOW_N} Matches.</li><li><b>Pfeile:</b> Grün ist besser, rot schlechter, grau gleich oder unsicher. «Pp.» heisst Prozentpunkte. Kleine Unterschiede zählen als gleich.</li><li><b>Wenige Matches schwanken stark.</b> Unter ${PROG_MIN_N} Matches ist ein Wert unsicher und bekommt kein Urteil. Schau auf den Trend über mehrere Abschnitte, nicht auf einen einzelnen.</li><li><b>Tag, Woche, Phase:</b> Der Plantag kommt aus «Plantag an diesem Datum» im Match-Log. Dort kannst du ihn ändern oder «Freies Spiel» wählen.</li><li><b>Grundregeln «von selbst»</b> sind deine eigenen Antworten nach dem Match, also eine Selbstauskunft.</li><li><b>Fehler pro Match</b> zählt nur Matches, bei denen du etwas zur Reflexion eingetragen hast.</li></ul>`, { icon: "book", sub: "Pfeile, Farben und Grenzen" })}`;
+}
+$("#progressBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-pfilt]");
+  if (!b) return;
+  progUi[b.dataset.pfilt] = b.dataset.v;
+  if (b.dataset.pfilt === "by") { progUi.a = ""; progUi.b = ""; }
+  renderProgress();
+});
+$("#progressBody").addEventListener("change", e => {
+  const s = e.target.closest("[data-psel]");
+  if (!s) return;
+  progUi[s.dataset.psel] = s.value;
+  renderProgress();
+});
+
 // ---------- Die App langsam kennenlernen: Seitenhilfen, App-Übungen, Team & Counter in Schritten ----------
 // Nichts davon bringt neue Spielfakten: Es erklärt nur, wie die App aufgebaut ist und in welcher Reihenfolge du sie am besten benutzt.
 const appSeenN = k => (state.app && state.app.seen && state.app.seen[k]) || 0;
@@ -8229,6 +8431,7 @@ const PAGE_HELP = {
   analysis: ["Auswertung", ["Oben filterst du Zeitraum, Modus und Rolle.", "Darunter stehen Schaden, Heilung und Geblockt pro 10 Minuten, deine Winrate gegen jeden Gegner-Helden, Maps und Tageszeit.", "Fang mit einer Zahl an und frag dich, was du dagegen tun kannst. Mit wenigen Matches sind die Zahlen noch unsicher."]],
   team: ["Team & Counter", ["Die Seite geht in vier Schritten: 1 Eintragen, 2 Lage lesen, 3 Wechsel prüfen, 4 Nachschlagen. Es ist immer nur ein Schritt offen.", "Beginne mit Schritt 1 und trag zwei Gegner ein. Mehr brauchst du am Anfang nicht.", "«Alles zeigen» blendet alle Karten gleichzeitig ein, wenn du die Seite schon kennst.", "Die Vorschläge sind Denkhilfen mit Begründung, keine Garantie."]],
   heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
+  progress: ["Verlauf", ["Oben wählst du die Einteilung (Tag, Woche oder Phase), die Rolle und den Modus.", "«Auf einen Blick» vergleicht deine Baseline (Tag 1) mit deinen letzten Matches. Grüne Pfeile heissen besser, rote schlechter.", "Mit «A gegen B» legst du zwei Abschnitte nebeneinander, zum Beispiel Tag 1 gegen Tag 6 oder eine Woche gegen die nächste.", "Wenige Matches schwanken stark: Werte mit weniger als fünf Matches sind grau und haben keinen Pfeil."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse, darunter ein Kurs pro Held. Jeder Kurs hat sieben Stationen und endet mit einem Test.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn der Test bestanden ist und alle Match-Aufgaben gemeistert sind."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
@@ -10052,7 +10255,7 @@ function render() {
   applyPoolToPlan();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp })[currentTab()]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, progress: renderProgress })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
