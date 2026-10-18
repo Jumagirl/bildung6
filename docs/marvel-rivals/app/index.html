@@ -6081,7 +6081,7 @@ const WebSync = { busy: false, last: 0, info: null, timer: null };
 // Dateiname eines Spielers; muss exakt zu player_slug() in rivals_sync.py passen (Test t81 vergleicht beide)
 function playerSlug(name) {
   const n = String(name || "").normalize("NFC").trim().toLowerCase();
-  const base = n.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24).replace(/^-+|-+$/g, "");
+  const base = n.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24).replace(/^-+|-+$/g, "");
   let h = 0x811c9dc5;
   new TextEncoder().encode(n).forEach(b => { h = Math.imul(h ^ b, 0x01000193) >>> 0; });
   return `${base || "spieler"}-${h.toString(16).padStart(8, "0")}`;
