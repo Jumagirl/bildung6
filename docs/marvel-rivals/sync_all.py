@@ -41,11 +41,11 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def fetch(name: str, limit: int, details: bool, rank: str, platform: int) -> tuple[dict | None, str | None]:
-    """Gibt (Daten, None) oder (None, Fehlertext) zurück."""
+def fetch(name: str, limit: int, details: bool, rank: str, platform: int, known: dict | None = None) -> tuple[dict | None, str | None]:
+    """Gibt (Daten, None) oder (None, Fehlertext) zurück. ``known``: schon abgerufene Matches (extId -> Match)."""
     from rivals_api import CloudflareError, PlayerNotFoundError, PrivacyError, RivalsDataError
 
-    args = SimpleNamespace(player=name, limit=limit, details=details, rank=rank, platform=platform, browser=False)
+    args = SimpleNamespace(player=name, limit=limit, details=details, rank=rank, platform=platform, browser=False, known=known)
     try:
         data = rs.sync(args)
     except PlayerNotFoundError:
@@ -96,8 +96,14 @@ def main() -> int:
     for name in names:
         slug = rs.player_slug(name)
         print(f"- {name} → {slug}")
-        data, error = fetch(name, args.limit, args.details, args.rank, args.platform)
         good, bad = out / f"{slug}.json", out / f"{slug}.error.json"
+        known = None
+        if good.exists():
+            try:
+                known = {str(m["extId"]): m for m in json.loads(good.read_text(encoding="utf-8")).get("matches", []) if m.get("extId")}
+            except (OSError, ValueError, AttributeError, TypeError):
+                known = None   # kaputte Datei: alles neu holen
+        data, error = fetch(name, args.limit, args.details, args.rank, args.platform, known)
         if data is not None:
             good.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
             bad.unlink(missing_ok=True)

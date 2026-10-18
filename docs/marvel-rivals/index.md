@@ -123,7 +123,7 @@ Connector Seiten aber keine Werkzeuge zur Verfügung («keine Werkzeuge», `bloc
 aber abgeschaltet (kein `SYNC_HELPER` in `private.json`). Auch Routinen können in diesem Konto keine Connectors mitbekommen. Der Weg über die Datenbank braucht keinen Connector.
 Ein Lauf mit dem Haiku-Modell kostet etwa 0,01 US-Dollar (mit Sonnet wären es 0,10 bis 0,17), das Wochenlimit deines Kontos zählt mit.
 **Gratis-Abgleich über GitHub (ohne Claude-Konto):** Wer die App als Datei oder auf einer Webseite öffnet (nicht in einer Claude-Ansicht),
-bekommt ihre Matches kostenlos und automatisch. Der Workflow `.github/workflows/sync.yml` läuft alle zwei Stunden (10:17 bis 00:17 Uhr Schweizer Sommerzeit)
+bekommt ihre Matches kostenlos und automatisch. Der Workflow `.github/workflows/sync.yml` läuft zweimal pro Stunde (10:07 bis 00:37 Uhr Schweizer Sommerzeit, im Winter eine Stunde früher)
 auf GitHub, ruft für jeden Namen aus der Spielerliste `sync_all.py` auf und legt pro Spieler eine Datei `data/<name>-<prüfwert>.json` im Branch **`sync-data`** ab
 (immer nur ein Commit, jeder Lauf ersetzt ihn). Die App berechnet denselben Dateinamen aus dem Spielernamen (`playerSlug` entspricht `player_slug` in `rivals_sync.py`),
 liest die Datei von `raw.githubusercontent.com` (beim Öffnen, bei Namensänderung, alle 20 Minuten und mit dem Knopf «Jetzt von GitHub holen») und trägt die Matches ein.
@@ -132,7 +132,7 @@ Die **Spielerliste** steht in `players.txt` im Branch `sync-data` (ein Name pro 
 Eine Person hinzufügen heisst, einen Namen in diese Datei zu schreiben, nicht, eine Version zu veröffentlichen.
 Grenzen: Die Daten sind öffentlich (dieselben, die Rivals Data zeigt). GitHub pausiert geplante Workflows, wenn 60 Tage lang nichts im Repository passiert;
 dann unter *Actions → sync → Enable workflow* wieder einschalten. Der Zeitplan läuft nur, wenn der Workflow auf dem Standard-Branch (`main`) liegt.
-Rivals Data selbst hinkt dem Spiel um Stunden hinterher, das ändert der Abgleich nicht.
+Rivals Data selbst hinkt dem Spiel um Stunden hinterher, das ändert der Abgleich nicht. Bekannte Matches fragt `sync_all.py` nicht noch einmal ab (nur neue und solche ohne Details), deshalb belastet der dichte Takt Rivals Data kaum: ein Lauf dauert dann wenige Sekunden statt knapp einer Minute. GitHub startet geplante Läufe bei hoher Last teils verspätet oder lässt einzelne aus.
 Andernfalls geht es von Hand:
 
 1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`

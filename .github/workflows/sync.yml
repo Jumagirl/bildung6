@@ -1,12 +1,12 @@
 name: sync
-# Gratis-Abgleich für den Rivals Coach: holt alle zwei Stunden die öffentlichen Matches der Spieler aus der Liste
+# Gratis-Abgleich für den Rivals Coach: holt etwa alle halbe Stunde die öffentlichen Matches der Spieler aus der Liste
 # von Rivals Data und legt sie als JSON-Dateien im Branch «sync-data» ab (Ordner data/). Die App liest sie von
 # raw.githubusercontent.com. Die Spielerliste steht in players.txt im Branch «sync-data»
 # (beim allerersten Lauf kommt sie aus docs/marvel-rivals/players.txt).
 on:
   schedule:
-    # UTC: 10:17 bis 00:17 Uhr Schweizer Sommerzeit (09:17 bis 23:17 im Winter)
-    - cron: "17 8,10,12,14,16,18,20,22 * * *"
+    # UTC, zweimal pro Stunde: 10:07 bis 00:37 Uhr Schweizer Sommerzeit (09:07 bis 23:37 im Winter)
+    - cron: "7,37 8-22 * * *"
   workflow_dispatch:
   push:
     branches: [main, claude/marvel-rivals-improvement-app-e4l00i]
