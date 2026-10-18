@@ -25,7 +25,9 @@ import argparse
 import base64
 import gzip
 import json
+import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 
@@ -42,6 +44,19 @@ NAME_FIXES = {
 # Queue-Codes laut rivals-api: 1 Quick Match, 2 Competitive, 3 Custom, 4 Arcade
 MODES = {1: "Quick Match", 2: "Competitive", 3: "Custom / Training", 4: "Arcade / Event"}
 GAME_TYPES = ("Domination", "Convoy", "Convergence", "Doom Match", "Conquest")
+
+
+def player_slug(name: Any) -> str:
+    """Dateiname für einen Spieler im Gratis-Abgleich (GitHub). Muss exakt zu playerSlug() in der App passen:
+    Kleinbuchstaben ohne Akzente, alles ausser a–z und 0–9 wird zu «-», dahinter ein Prüfwert (FNV-1a) des genauen Namens,
+    damit sich «Ju_ma» und «Ju-ma» nie eine Datei teilen."""
+    n = unicodedata.normalize("NFC", str(name or "")).strip().lower()
+    plain = re.sub("[\u0300-\u036f]", "", unicodedata.normalize("NFKD", n))
+    base = re.sub("[^a-z0-9]+", "-", plain).strip("-")[:24].strip("-")
+    h = 0x811C9DC5
+    for byte in n.encode("utf-8"):
+        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
+    return f"{base or 'spieler'}-{h:08x}"
 
 
 # ---------- Hilfsfunktionen (ohne Netzwerk, testbar) ----------

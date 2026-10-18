@@ -1,0 +1,3 @@
+# Spielerliste für den Gratis-Abgleich (GitHub). Eine Zeile pro Spieler, genau so geschrieben wie bei Rivals Data.
+# Diese Datei wird nur beim allerersten Lauf kopiert; danach gilt players.txt im Branch «sync-data».
+Jumagirl

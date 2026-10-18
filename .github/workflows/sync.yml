@@ -1,0 +1,63 @@
+name: sync
+# Gratis-Abgleich für den Rivals Coach: holt alle zwei Stunden die öffentlichen Matches der Spieler aus der Liste
+# von Rivals Data und legt sie als JSON-Dateien im Branch «sync-data» ab (Ordner data/). Die App liest sie von
+# raw.githubusercontent.com. Die Spielerliste steht in players.txt im Branch «sync-data»
+# (beim allerersten Lauf kommt sie aus docs/marvel-rivals/players.txt).
+on:
+  schedule:
+    # UTC: 10:17 bis 00:17 Uhr Schweizer Sommerzeit (09:17 bis 23:17 im Winter)
+    - cron: "17 8,10,12,14,16,18,20,22 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main, claude/marvel-rivals-improvement-app-e4l00i]
+    paths:
+      - ".github/workflows/sync.yml"
+      - "docs/marvel-rivals/sync_all.py"
+      - "docs/marvel-rivals/rivals_sync.py"
+permissions:
+  contents: write
+concurrency:
+  group: sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install rivals-api
+      - name: Stand des Branches sync-data holen
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          rm -rf out
+          if git clone -q --depth 1 --branch sync-data "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" out 2>/dev/null; then
+            rm -rf out/.git
+          else
+            mkdir -p out
+          fi
+          mkdir -p out/data
+          [ -f out/players.txt ] || cp docs/marvel-rivals/players.txt out/players.txt
+      - name: Matches abrufen
+        run: python docs/marvel-rivals/sync_all.py out/players.txt --out-dir out/data --limit 50
+      - name: In sync-data ablegen
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          cat > README.md <<'EOF'
+          Automatisch erzeugt vom Workflow «sync» (Rivals Coach). Nicht von Hand ändern, ausser players.txt.
+          - players.txt: ein Spielername pro Zeile (genau wie bei Rivals Data), Zeilen mit # sind Kommentare
+          - data/<name>-<prüfwert>.json: die letzten Matches dieses Spielers (öffentliche Daten von Rivals Data)
+          - data/<name>-<prüfwert>.error.json: nur wenn der letzte Abruf scheiterte
+          Der Branch hat immer nur einen Commit; jeder Lauf ersetzt ihn.
+          EOF
+          git init -q -b sync-data
+          git config user.name "rivals-coach-sync"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Sync $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" sync-data
