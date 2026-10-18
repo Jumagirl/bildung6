@@ -174,6 +174,7 @@ und auf einem anderen Gerät wieder einlesen (*Backup importieren*).
 - Die öffentliche Datei enthält keine persönlichen Werte: keinen Artifact-Link und keine Sync-Sitzung. Der automatische
   Abgleich im Hintergrund ist deshalb nur in der privaten Version aktiv.
 - Freunde gleichen ihre Matches am einfachsten über den **Gratis-Abgleich über GitHub** ab (siehe oben): Name in die Spielerliste, Name in der App eintragen, fertig. Das funktioniert, wenn sie die Datei oder eine Webseite mit der App öffnen, nicht in einem Claude-Artifact. Alternativ mit dem Skript `rivals_sync.py` (Tab *Daten*) oder, mit eigenem Claude-Konto, mit der Anleitung `setup-freundin.md`.
+- **Als Webseite:** Der Workflow `.github/workflows/pages.yml` veröffentlicht dieselbe Version (ohne Heldenbilder, ohne private Werte) unter `https://jumagirl.github.io/bildung6/`, sobald er auf `main` liegt und im Repository unter *Settings → Pages* bei «Source» die Option «GitHub Actions» gewählt ist. Dort läuft der Gratis-Abgleich ebenfalls; die Daten jeder Person bleiben in deren Browser.
 - `python3 app_build.py file` baut eine eigenständige Datei zum Verschicken (`artifact/rivals-coach-fuer-freunde.html`),
   `python3 app_build.py friends` die gleiche Version für ein eigenes Artifact. Beide enthalten keine Heldenbilder
   und keine privaten Werte. Die Heldenbilder gehören Marvel/NetEase und werden nicht weitergegeben; die App zeigt

@@ -1,0 +1,40 @@
+name: pages
+# Veröffentlicht die App als Webseite (ohne Heldenbilder, ohne private Werte): https://jumagirl.github.io/bildung6/
+# Einmalig nötig: Im Repository unter Settings → Pages bei «Source» die Option «GitHub Actions» wählen.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/marvel-rivals/app/index.html"
+      - "docs/marvel-rivals/app_build.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: App bauen
+        run: |
+          python docs/marvel-rivals/app_build.py file
+          mkdir -p _site
+          cp docs/marvel-rivals/artifact/rivals-coach-fuer-freunde.html _site/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
