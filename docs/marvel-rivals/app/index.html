@@ -1331,13 +1331,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   <div class="card">
     <div class="card-head"><h2 data-icon="sync">Mit Rivals Data synchronisieren</h2></div>
     <div class="sync-status" id="syncStatus"></div>
-    <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt nicht diese Seite die Daten, sondern ein kleines Python-Skript: deine öffentlichen Matches und die globalen Helden-Statistiken.</p>
+    <p class="lead mt">Rivals Data hat keine offizielle Schnittstelle und blockiert direkte Abfragen aus dem Browser. Deshalb holt nicht diese Seite die Daten selbst, sondern ein kleines Python-Skript oder der Gratis-Abgleich auf GitHub (siehe unten): deine öffentlichen Matches und die globalen Helden-Statistiken.</p>
     <div class="row mt">
       <input id="syncPlayer" placeholder="Spielername oder UID" style="max-width:260px" aria-label="Spielername oder UID bei Rivals Data">
       <button class="btn" type="button" id="syncNow" data-icon="sync" hidden>Jetzt aktualisieren</button>
     </div>
     <div class="note info mt" id="syncNowInfo" hidden></div>
     <div class="note info mt" id="autoPullInfo" hidden></div>
+    <div class="row mt"><button class="btn" type="button" id="webSyncNow" data-icon="sync" hidden>Jetzt von GitHub holen</button></div>
+    <div class="note info mt" id="webSyncInfo" hidden></div>
+    <p class="muted small mt" id="webSyncNote" hidden>Gratis-Abgleich: Ein kostenloser Dienst auf GitHub fragt Rivals Data alle zwei Stunden für die Spieler aus einer Liste ab. Diese App holt die Datei zu deinem Spielernamen, sobald du sie öffnest (und alle 20 Minuten, solange sie offen ist). Dafür brauchst du kein Claude-Konto. Dein Name muss in der Liste stehen, und deine Match-History muss bei Rivals Data öffentlich sein. Die Daten sind dieselben, die Rivals Data ohnehin öffentlich zeigt. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch dieser Abgleich nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
     <label class="inline-label mt" id="autoRefreshWrap" hidden><input type="checkbox" id="autoRefresh" checked> Beim Öffnen und alle 30 Minuten frische Matches anfordern</label>
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
@@ -5677,7 +5680,7 @@ function renderData() {
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : webSyncOn() ? "Trag oben deinen Spielernamen ein. Steht er in der Spielerliste des Gratis-Abgleichs, holt die App deine Matches automatisch (alle zwei Stunden)." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
@@ -5686,7 +5689,10 @@ function renderData() {
     <span class="muted small">Letzter Abgleich ${fmtDT(s.at)} · ${plural(n, "importiertes Match", "importierte Matches")} · ${plural((s.playerHeroes || []).length, "Helden-Statistik", "Helden-Statistiken")}${s.meta ? ` · globale Tierlist (${esc(s.meta.rank || "?")})` : ""}</span>
     ${(s.warnings || []).length ? `<br><span class="small" style="color:var(--warn)">${plural(s.warnings.length, "Hinweis", "Hinweise")} beim Abruf: ${esc(s.warnings[0])}</span>` : ""}</div>`;
 }
-$("#syncPlayer").addEventListener("input", e => { state.settings.playerName = e.target.value.trim(); save(); $("#syncCmd").textContent = syncCommand(); });
+$("#syncPlayer").addEventListener("input", e => {
+  state.settings.playerName = e.target.value.trim(); save(); $("#syncCmd").textContent = syncCommand();
+  if (webSyncOn()) { clearTimeout(WebSync.timer); WebSync.timer = setTimeout(() => webSyncPull(false), 1200); }
+});
 $("#syncCmdCopy").addEventListener("click", () => copyText(syncCommand(), "Befehl kopiert!"));
 $("#copyScript").addEventListener("click", () => copyText($("#syncScriptSrc").textContent.replace(/^\n/, ""), "Skript kopiert – als rivals_sync.py speichern"));
 document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copyText(b.dataset.copy, "Befehl kopiert!")));
@@ -5936,7 +5942,7 @@ function syncFreshText() {
   const newest = Math.max(...syn.map(m => m.ts));
   const lags = syn.filter(m => m.seenAt).map(m => Date.parse(m.seenAt) - m.ts).filter(x => isFinite(x) && x >= 0 && x < 3 * 864e5).sort((a, b) => a - b);
   const med = lags.length >= 5 ? lags[Math.floor(lags.length / 2)] : null;
-  return ` Neuestes Match aus Rivals Data: ${fmtDT(newest)}.${med !== null ? ` Bisher dauerte es im Mittel ${fmtSpan(med)} vom Spielende bis zum Abruf durch den Sync-Helfer (${lags.length} Matches).` : ""}`;
+  return ` Neuestes Match aus Rivals Data: ${fmtDT(newest)}.${med !== null ? ` Bisher dauerte es im Mittel ${fmtSpan(med)} vom Spielende bis zum Abruf durch den automatischen Abgleich (${lags.length} Matches).` : ""}`;
 }
 $("#diagBtn").addEventListener("click", diagnoseBridge);
 $("#bridgeBanner").addEventListener("click", e => {
@@ -5960,7 +5966,8 @@ function renderBridge() {
   btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok; $("#diagBtn").hidden = !IN_VIEWER || !SYNC_HELPER;
   $("#syncAutoNote").hidden = !inbox;
   if (inbox) renderInboxLine();
-  $("#syncManual").open = (!ok && !inbox) || !!(Bridge.info && Bridge.info.kind === "bad");
+  $("#syncManual").open = (!ok && !inbox && !webSyncOn()) || !!(Bridge.info && Bridge.info.kind === "bad");
+  renderWebSync();
   const busy = reqBusy();
   btn.disabled = busy;
   $("#autoRefreshWrap").hidden = !ok; $("#autoRefresh").checked = autoRefreshOn();
@@ -6063,6 +6070,84 @@ async function takeInbox(box) {
     if (!keep) await Cloud.base.doc("sync-inbox").delete();
   } catch (e) { /* der nächste Start versucht es erneut */ }
   finally { Bridge.busy = false; }
+}
+// ---------- Gratis-Abgleich über GitHub (ausserhalb von Claude: Datei oder eigene Webseite) ----------
+// Ein GitHub-Workflow holt alle zwei Stunden die öffentlichen Matches der Spieler aus einer Liste und legt sie im Branch
+// «sync-data» ab. Die App liest die Datei zum eigenen Spielernamen von raw.githubusercontent.com. Das braucht weder Claude noch ein Konto.
+// In der Claude-Ansicht darf die Seite keine fremden Adressen abrufen, dort gilt der Sync-Helfer.
+const WEB_SYNC_REPO = "Jumagirl/bildung6", WEB_SYNC_BRANCH = "sync-data";
+const webSyncOn = () => !IN_VIEWER && !!WEB_SYNC_REPO;
+const WebSync = { busy: false, last: 0, info: null, timer: null };
+// Dateiname eines Spielers; muss exakt zu player_slug() in rivals_sync.py passen (Test t81 vergleicht beide)
+function playerSlug(name) {
+  const n = String(name || "").normalize("NFC").trim().toLowerCase();
+  const base = n.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24).replace(/^-+|-+$/g, "");
+  let h = 0x811c9dc5;
+  new TextEncoder().encode(n).forEach(b => { h = Math.imul(h ^ b, 0x01000193) >>> 0; });
+  return `${base || "spieler"}-${h.toString(16).padStart(8, "0")}`;
+}
+const webSyncUrl = (name, ext, stamp) => `https://raw.githubusercontent.com/${WEB_SYNC_REPO}/${WEB_SYNC_BRANCH}/data/${playerSlug(name)}.${ext}?t=${stamp}`;
+async function webSyncPull(manual) {
+  if (!webSyncOn() || WebSync.busy) return;
+  const name = (state.settings.playerName || "").trim();
+  if (!name) { WebSync.info = { kind: "name" }; renderWebSync(); return; }
+  if (!manual && name === WebSync.lastName && Date.now() - WebSync.last < 15000) return;   // Start und Namensfeld lösen oft gleichzeitig aus
+  WebSync.busy = true; WebSync.last = Date.now(); WebSync.lastName = name;
+  WebSync.info = { kind: "busy" }; renderWebSync();
+  try {
+    const stamp = Math.floor(Date.now() / 3e5);   // raw.githubusercontent.com speichert ohnehin etwa fünf Minuten zwischen
+    const res = await fetch(webSyncUrl(name, "json", stamp), { cache: "no-store" });
+    if (res.status === 404) {
+      // Entweder fehlt der Name in der Liste, oder der erste Abruf scheiterte (dann steht der Grund in einer Fehlerdatei)
+      let err = null;
+      try { const r2 = await fetch(webSyncUrl(name, "error.json", stamp), { cache: "no-store" }); if (r2.ok) err = await r2.json(); } catch (e) { /* ohne Fehlerdatei gilt «noch keine Daten» */ }
+      WebSync.info = err && err.error ? { kind: "error", text: String(err.error).slice(0, 200), at: err.at } : { kind: "unknown", name };
+    } else if (!res.ok) {
+      throw new Error("Antwort " + res.status);
+    } else {
+      const data = await res.json();
+      const id = "web-" + (data.generated || "");
+      const sErr = data.syncError && data.syncError.error ? { text: String(data.syncError.error).slice(0, 200), at: data.syncError.at } : null;
+      if (state.sync && state.sync.lastId === id) WebSync.info = { kind: "ok", at: data.generated, sErr };
+      else {
+        data._id = id;
+        const r = importSync(data);
+        quiz = null; render();
+        if (r.added || manual) syncToast(r);
+        WebSync.info = { kind: "ok", at: data.generated, sErr };
+      }
+    }
+  } catch (e) {
+    WebSync.info = { kind: "fail", text: (e && e.message) || "unbekannter Fehler" };
+  }
+  WebSync.busy = false;
+  renderWebSync();
+}
+function renderWebSync() {
+  const box = $("#webSyncInfo"), btn = $("#webSyncNow"), note = $("#webSyncNote");
+  if (!box) return;
+  const on = webSyncOn(), i = WebSync.info;
+  btn.hidden = !on; note.hidden = !on; box.hidden = !on || !i;
+  btn.disabled = WebSync.busy;
+  if (!on || !i) return;
+  const text = {
+    busy: "Hole die Matches von GitHub …",
+    name: "Trag oben deinen Spielernamen ein, dann holt die App deine Matches automatisch.",
+    ok: `Letzter automatischer Abgleich: ${fmtDT(i.at)}.${syncFreshText()}${i.sErr ? ` Der letzte Abruf bei Rivals Data ist gescheitert (${i.sErr.text}). Du siehst den Stand davor.` : ""}`,
+    unknown: `Zu „${i.name}“ gibt es noch keine Daten. Entweder steht der Name noch nicht in der Spielerliste, oder der erste Abruf läuft noch (er läuft alle zwei Stunden). Prüfe die Schreibweise (genau wie bei Rivals Data) und frag die Person, die die App eingerichtet hat, ob dein Name in der Liste steht.`,
+    error: `Der Abruf bei Rivals Data ist gescheitert: ${i.text || ""}`,
+    fail: `GitHub war gerade nicht erreichbar (${i.text}). Die App versucht es später erneut.`
+  }[i.kind] || "";
+  const kind = i.kind === "ok" && !i.sErr ? "good" : ["error", "fail"].includes(i.kind) || i.sErr ? "bad" : "info";
+  box.className = `note ${kind} mt`;
+  box.innerHTML = `<span class="ni" aria-hidden="true">${kind === "good" ? "✓" : kind === "bad" ? "!" : "i"}</span><div>${esc(text)}</div>`;
+}
+$("#webSyncNow").addEventListener("click", () => webSyncPull(true));
+function initWebSync() {
+  if (!webSyncOn()) return;
+  setTimeout(() => webSyncPull(false), 1200);
+  setInterval(() => { if (document.visibilityState === "visible") webSyncPull(false); }, 20 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && Date.now() - WebSync.last > 10 * 60 * 1000) webSyncPull(false); });
 }
 $("#syncNow").addEventListener("click", () => requestSync());
 $("#autoRefresh").addEventListener("change", e => { state.settings.autoRefresh = e.target.checked; save(); });
@@ -10268,6 +10353,7 @@ setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "today");
 initCloud();
 initBridge();
+initWebSync();
 </script>
 </body>
 </html>

@@ -5,10 +5,10 @@ Liest eine Liste von Spielernamen (eine Zeile pro Name, Zeilen mit # am Anfang s
 die öffentlichen Daten von Rivals Data (über ``rivals_sync``) und schreibt pro Spieler eine Datei:
 
     <ausgabe>/<slug>.json          die Matches im Format von rivals_sync.py (die App liest sie ein)
-    <ausgabe>/<slug>.error.json    nur wenn der letzte Abruf scheiterte: {"error": "...", "at": "..."}
+    <ausgabe>/<slug>.error.json    nur wenn der Abruf scheiterte und es noch keine gute Datei gibt: {"error": "...", "at": "..."}
 
 Den Dateinamen (``slug``) bildet ``rivals_sync.player_slug``; die App berechnet ihn genauso aus dem Spielernamen.
-Scheitert der Abruf eines Spielers, bleibt seine letzte gute Datei erhalten. Der Workflow ``.github/workflows/sync.yml``
+Scheitert der Abruf eines Spielers, bleibt seine letzte gute Datei erhalten und bekommt das Feld ``syncError``. Der Workflow ``.github/workflows/sync.yml``
 ruft das Skript alle zwei Stunden auf und legt die Dateien im Branch ``sync-data`` ab.
 
 Benutzung:
@@ -97,7 +97,17 @@ def main() -> int:
             ok += 1
             print(f"  {len(data['matches'])} Matches, {len(data['warnings'])} Hinweise")
         else:
-            bad.write_text(json.dumps({"error": error, "at": now()}, ensure_ascii=False), encoding="utf-8")
+            stamp = {"error": error, "at": now()}
+            if good.exists():
+                # Die letzte gute Datei bleibt, trägt aber den Fehler (so sieht die App beides mit einer Anfrage)
+                try:
+                    old = json.loads(good.read_text(encoding="utf-8"))
+                    old["syncError"] = stamp
+                    good.write_text(json.dumps(old, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                except (OSError, ValueError):
+                    bad.write_text(json.dumps(stamp, ensure_ascii=False), encoding="utf-8")
+            else:
+                bad.write_text(json.dumps(stamp, ensure_ascii=False), encoding="utf-8")
             failed += 1
             print(f"  FEHLER: {error}")
     print(f"Fertig: {ok} ok, {failed} mit Fehler")
