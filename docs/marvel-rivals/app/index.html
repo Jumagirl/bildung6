@@ -1227,6 +1227,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 <section id="tab-teamups" hidden><div id="tuBody"></div></section>
 <section id="tab-meta" hidden><div id="metaBody"></div></section>
 <section id="tab-bootcamp" hidden><div id="bootBody"></div></section>
+<section id="tab-watch" hidden><div id="watchBody"></div></section>
 <section id="tab-progress" hidden><div id="progressBody"></div></section>
 <section id="tab-heroes" hidden>
   <div class="card">
@@ -3109,6 +3110,7 @@ const TITLES = {
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
   teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
   bootcamp: ["Helden-Bootcamp", "Pro Held und pro Rolle ein Kurs mit Aufgaben fürs Match"],
+  watch: ["Zuschauen", "Von guten Streamern lernen: Aufgaben, worauf du beim Zuschauen achtest"],
   progress: ["Verlauf", "Tage, Wochen und Phasen vergleichen und sehen, was besser geworden ist"]
 };
 
@@ -3116,12 +3118,12 @@ const TITLES = {
 // Fünf Bereiche statt dreizehn Reiter. Jeder Bereich hat Unterseiten; die Seiten selbst (tab-…) bleiben unverändert.
 const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
-  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "lexicon"] },
+  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Zuschauen und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "watch", "lexicon"] },
   { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten, auswerten und den Verlauf vergleichen", tabs: ["log", "analysis", "dashboard", "progress"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team, Counter und Meta", tabs: ["heroes", "team", "teamups", "meta"] },
   { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
 ];
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -3161,6 +3163,8 @@ function loadState(raw) {
   st.app = Object.assign({ seen: {}, tour: {} }, st.app);   // App kennenlernen: besuchte Seiten, erledigte Übungen
   st.app.seen = st.app.seen || {}; st.app.tour = st.app.tour || {};
   st.boot = Object.assign({}, st.boot);   // Helden-Bootcamp: Fortschritt, eigene Antworten und Test pro Held
+  st.watch = Object.assign({ log: [] }, st.watch);   // Zuschauen: deine Antworten zu den Streamer-Aufgaben
+  if (!Array.isArray(st.watch.log)) st.watch.log = [];
   st.act = Object.assign({}, st.act);   // beantwortete Quizfragen pro Tag, damit die App Aufgaben selbst abhaken kann
   st.quiz.k = Object.assign({ asked: 0, correct: 0, wrong: {}, seen: {}, box: {}, cal: {} }, st.quiz.k);
   st.lessons = Object.assign({ done: {}, progress: {}, activeFocus: null, wrong: {} }, st.lessons);
@@ -3192,7 +3196,7 @@ const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
 const Cloud = { db: null, base: null, ready: false, status: "init", rev: null, lastJson: {}, chunkCount: 0, timer: null, queue: Promise.resolve(), unsub: null, error: "" };
 const CHUNK_BYTES = 180000; // Sicherheitsabstand zur Dokumentgrenze von 256 KiB
 function plainJson(x) { return JSON.parse(JSON.stringify(x)); }
-function hasUserData(s) { return s.matches.length || s.goals.length || Object.keys(s.lessons.done).length || Object.keys(s.heroNotes).length || Object.keys(s.boot || {}).length || s.sync || s.plan.start || Object.keys(s.plan.days).length; }
+function hasUserData(s) { return s.matches.length || s.goals.length || Object.keys(s.lessons.done).length || Object.keys(s.heroNotes).length || Object.keys(s.boot || {}).length || (s.watch && s.watch.log && s.watch.log.length) || s.sync || s.plan.start || Object.keys(s.plan.days).length; }
 
 function setSyncStatus(status, error) {
   Cloud.status = status; Cloud.error = error || "";
@@ -8193,7 +8197,8 @@ function bootHeroHtml(h) {
       ${bootRoleNoteHtml(h)}
       ${due.length ? `<div class="row" style="margin-top:10px"><span class="small">${plural(due.length, "Frage", "Fragen")} ${role ? "zu dieser Rolle" : "zu " + esc(h)} ${due.length === 1 ? "ist" : "sind"} zur Wiederholung fällig.</span><button type="button" class="btn small" data-brefresh>Auffrischen</button></div>` : ""}</div>
     <div class="card" id="bootStation">${s ? (s.done ? bootResultHtml(s) : bootQuizHtml(s)) : bootStationHtml(h, n)}</div>
-    ${s ? "" : bootTasksHtml(h)}`;
+    ${s ? "" : bootTasksHtml(h)}
+    ${s ? "" : bootWatchHtml(h)}`;
 }
 function bootCardsHtml() {
   const q = bootUi.q, names = bootHeroes().filter(h => (!bootUi.role || heroRole(h) === bootUi.role) && (!bootUi.pool || poolHeroes().includes(h)) && (!q || heroHit(heroByName(h), q)));
@@ -8303,6 +8308,216 @@ document.addEventListener("click", e => {
   c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
   if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
 });
+
+// ---------- Zuschauen: von guten Streamern lernen ----------
+// Aufgaben wie im Helden-Bootcamp, aber für Streams und Aufnahmen: erst im Kopf überlegen, dann gezielt schauen, dann kurz sagen, ob du es gesehen hast.
+// Aufschreiben musst du nichts (Wunsch der Nutzerin). Alle Inhalte der Aufgaben stammen aus den geprüften Heldenprofilen (PROF), den Team-Ups (TU)
+// und den Rollenregeln (ROLE_TIPS). Die Streamer-Vorschläge stammen von Liquipedia und den Kanalbeschreibungen (Stand WATCH_STAND);
+// die App prüft nicht, wer gerade wie gut spielt oder ob ein Kanal aktiv ist.
+const WATCH_STAND = "2026-10-18";
+const WATCH_STREAMERS = [
+  { n: "NekoandTora", rs: ["Strategist"], h: [], tw: "nekoandtora", yt: "@nekoandtora", fav: 1,
+    note: "Coaching-Kanal: Laut Kanalbeschreibung geht es darum, wie man ein guter Strategist wird. Zuschauer können ihre Spiele zur Durchsicht einreichen (Discord).", src: "Twitch- und YouTube-Beschreibung des Kanals" },
+  { n: "Jay3", rs: ["Duelist"], h: ["Winter Soldier", "The Punisher", "Namor"], tw: "jay3", yt: "@Jay3", fav: 1,
+    note: "Macht hauptsächlich Marvel-Rivals-Videos: Ranked, Spassmodi und Reaktionsvideos. Für die Aufgaben passen die Ranked-Sendungen.", src: "Liquipedia, YouTube-Beschreibung" },
+  { n: "Aramori", rs: ["Strategist"], h: ["Mantis", "Loki", "Luna Snow"], tw: "aramori", yt: "@aramori_MR", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Sleepy", rs: ["Strategist"], h: ["Luna Snow", "Loki"], tw: "sleepy", yt: "@sleepy", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "SeLegendXXVII", rs: ["Strategist"], h: ["Jubilee", "Luna Snow", "Invisible Woman"], tw: "thelegendxxvil", yt: "@TheLegendXXVII", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Kayjii", rs: ["Strategist"], h: ["White Fox", "Luna Snow", "Mantis"], tw: "kayjii", yt: "", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Guru", rs: ["Vanguard"], h: ["Doctor Strange", "Emma Frost", "Angela"], tw: "guru", yt: "user/Gurululz", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Flats", rs: ["Vanguard"], h: ["Magneto", "Doctor Strange", "Thor"], tw: "flats", yt: "@Flats_OW", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Bogur", rs: ["Vanguard"], h: ["Doctor Strange"], tw: "bogur", yt: "@bogurLIVE", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Imperator", rs: ["Vanguard"], h: ["Doctor Strange", "Captain America"], tw: "imperator", yt: "@imperatorfps", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "WhyAndr3w", rs: ["Vanguard"], h: ["Venom", "Magneto"], tw: "whyandr3w", yt: "@WhyAndr3w", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "TeamCaptain", rs: ["Vanguard", "Duelist"], h: ["Wolverine", "Angela", "Thor"], tw: "teamcaptain001", yt: "@TeamCaptain001", note: "Laut Liquipedia aktiv als Content Creator (Vanguard und Duelist).", src: "Liquipedia" },
+  { n: "M0xy", rs: ["Duelist"], h: ["Hawkeye", "Namor", "Hela"], tw: "m0xyy", yt: "@m0xyyYT", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Gale", rs: ["Duelist"], h: ["The Punisher", "Hawkeye", "Hela"], tw: "gale", yt: "", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Necros", rs: ["Duelist"], h: ["Spider-Man", "Human Torch", "Black Panther"], tw: "necros", yt: "@NecrosOW", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Lyte", rs: ["Duelist"], h: ["Spider-Man", "Star-Lord", "Wolverine"], tw: "lytepk", yt: "channel/UC93QP81Qj8z9v0aPigD2H1A", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Kragie", rs: ["Duelist"], h: ["Hela", "The Punisher", "Star-Lord"], tw: "kragiee", yt: "", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
+  { n: "Rigsychu", rs: ["Duelist"], h: ["Elsa Bloodstone", "Psylocke", "Phoenix"], tw: "rigsychu", yt: "@rigsychu", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" }
+];
+const WATCH_V = [["ja", "Gesehen"], ["teils", "Teilweise"], ["nein", "Nicht gesehen"]];
+const watchUi = { k: "", show: "", rev: {} };
+let WATCH_UC = null;
+const watchNamed = u => !!u && !!u.was && !/nicht einzeln genannt/i.test(u.was);   // in einigen Profilen steht statt des Namens ein Platzhalter
+// Wer kontert welche Ult? Aus den Profilen: Bei jedem Helden steht in «uk», welche Fähigkeit eines anderen Helden seine Ult stoppt oder abschwächt.
+function watchUc(h) {
+  if (!WATCH_UC) {
+    WATCH_UC = {};
+    Object.keys(PROF).forEach(t => (PROF[t].uk || []).filter(watchNamed).forEach(u => { (WATCH_UC[u.held] = WATCH_UC[u.held] || []).push({ target: t, was: u.was, art: u.art, wie: u.wie }); }));
+  }
+  return WATCH_UC[h] || [];
+}
+const watchStrip = (t, re) => String(t || "").replace(re, "").trim();
+function watchHeroTasks(h) {
+  const x = PROF[h];
+  if (!x) return [];
+  const ue = x.ue || [], find = re => ue.find(z => re.test(z));
+  const wann = find(/^Wann/), wo = find(/^Wo\/Wie/), davor = find(/^Davor und danach/), fehler = find(/^Typischer Fehler/);
+  const ult = (x.ult && x.ult.n) || "die Ult", stand = `Heldenprofil ${h}, Stand ${fmtDate(x.stand)}`, out = [];
+  out.push({ id: "up", kind: "Position", mt: "", src: stand,
+    think: `Wo stehst du mit ${h} zu Beginn eines Fights, und wohin weichst du aus, wenn es eng wird?`,
+    ask: `Achte darauf, wo ${h} vor dem Fight steht, wie sich ${h} im Fight bewegt und wohin ${h} ausweicht.`,
+    reveal: [`So beschreibt das Profil den Spielstil: ${x.spielstil}`].concat(x.schwaechen && x.schwaechen[0] ? [`Eine Schwäche laut Profil: ${x.schwaechen[0]}`] : []) });
+  const ukn = (x.uk || []).filter(watchNamed);
+  if (ukn.length) out.push({ id: "uk", kind: "Konter gegen die Ult", mt: "", src: stand,
+    think: `Wer kann die Ult «${ult}» von ${h} stoppen oder abschwächen?`,
+    ask: `Achte darauf, ob Gegner die Ult von ${h} zu stoppen versuchen und was getan wird, damit sie trotzdem wirkt, zum Beispiel beim Zeitpunkt, beim Winkel oder mit Hilfe vom Team.`,
+    reveal: ukn.slice(0, 3).map(u => `«${u.was}» von ${u.held} (${u.art}): ${tuFirst(u.wie)}`) });
+  const uc = watchUc(h);
+  if (uc.length) {
+    const cnt = {}; uc.forEach(u => { cnt[u.was] = (cnt[u.was] || 0) + 1; });
+    const was = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0], mine = uc.filter(u => u.was === was), targets = [...new Set(mine.map(u => u.target))].slice(0, 5);
+    out.push({ id: "uc", kind: "Ults kontern", mt: "", src: "Heldenprofile der App (Spalte «Konter der Ult»)",
+      think: `Gegen welche gegnerischen Ults setzt du «${was}» ein, und wann?`,
+      ask: `Achte darauf, wann «${was}» eingesetzt wird: gleich beim Start der gegnerischen Ult oder zu spät, und gegen welche Helden.`,
+      reveal: [`Laut den Profilen der App wirkt «${was}» (${mine[0].art}) gegen die Ult von: ${targets.join(", ")}.`, `Zum Beispiel gegen ${mine[0].target}: ${tuFirst(mine[0].wie)}`] });
+  }
+  if (wann) out.push({ id: "uw", kind: "Ult-Zeitpunkt", mt: "uw", src: stand,
+    think: `Wann zündest du ${ult}, und wann lieber nicht?`,
+    ask: "Achte darauf, in welcher Lage die Ult gezündet wird: Rückt das Team vor, verteidigt es, oder steckt es schon mitten im Kampf?",
+    reveal: [watchStrip(wann, /^Wann:\s*/)] });
+  if (wo) out.push({ id: "uo", kind: "Ult: Ort und Absprache", mt: "uo", src: stand,
+    think: `Wo stehst du, wenn du ${ult} zündest, und mit wem sprichst du dich ab?`,
+    ask: `Achte darauf, wo ${h} steht, wenn die Ult gezündet wird, und ob sich vorher mit dem Team abgesprochen wird.`,
+    reveal: [watchStrip(wo, /^Wo\/Wie:\s*/)].concat(davor ? [watchStrip(davor, /^[^:]*:\s*/)] : []) });
+  const cs = (x.counter || []).slice(0, 3);
+  if (cs.length) out.push({ id: "cp", kind: "Wenn ein Counter im Gegnerteam ist", mt: "", src: stand,
+    think: `Was änderst du, wenn ${cs[0].held} im Gegnerteam spielt?`,
+    ask: `Achte darauf, was sich ändert, wenn ${cs.map(c => c.held).join(", ")} im Gegnerteam spielt: Wird der Held gewechselt, die Position geändert oder hilft das Team?`,
+    reveal: cs.map(c => `${c.held}: ${c.warum}`) });
+  const tu = tuOf(h).own[0];
+  if (tu) out.push({ id: "tu", kind: "Team-Up", mt: "tu", src: `Team-Ups der App, Stand ${fmtDate(TU.stand)}`,
+    think: `Mit wem passt ${h} gut zusammen, und was bringt das?`,
+    ask: `Achte darauf, ob das Team-Up «${tu.name}» mit ${tu.helden.filter(z => z.rolle === "Partner").map(z => z.name).join(", ")} gespielt wird und wann es hilft.`,
+    reveal: [tuFirst(tu.wirkung)] });
+  if (fehler) out.push({ id: "uf", kind: "Typischer Fehler bei der Ult", mt: "uf", src: stand,
+    think: `Welchen Fehler macht man mit ${ult} am häufigsten?`,
+    ask: "Achte darauf, ob dieser Fehler vorkommt und wie er vermieden wird.",
+    reveal: [watchStrip(fehler, /^Typischer Fehler:\s*/)] });
+  (x.tipps || []).slice(0, 2).forEach((t, i) => out.push({ id: "t" + i, kind: "Tipp beobachten", mt: "t" + i, src: stand, think: "", ask: `Achte darauf, ob es so umgesetzt wird: ${t}`, reveal: [] }));
+  return out;
+}
+function watchRoleTasks(r) {
+  const tips = ROLE_TIPS[r] || [], who = ROLE_SHORT[r], out = [];
+  out.push({ id: "rp", kind: "Position im Fight", mt: "", src: "Rollenregeln der App",
+    think: `Wo ist dein Platz im Fight als ${who}, und wann wechselst du ihn?`,
+    ask: "Achte darauf, wo vor dem Fight gestanden wird, wie sich die Position im Fight verändert und wann sie gewechselt wird.",
+    reveal: tips.slice(0, 2) });
+  out.push({ id: "rc", kind: "Reaktion auf gegnerische Ults", mt: "", src: "Lexikon der App",
+    think: "Was tust du, wenn eine gegnerische Ult beginnt?",
+    ask: "Achte darauf, wie auf gegnerische Ults reagiert wird: Rückzug, Konter, Fokus auf den Ult-Spieler oder weiterspielen?",
+    reveal: ["Im Lexikon (Lernen, dann Lexikon) steht pro Ult, wer sie kontert. Schlag dort nach, wenn du eine Ult im Video nicht kennst."] });
+  tips.forEach((t, i) => out.push({ id: "rt" + i, kind: "Rollenregel beobachten", mt: "t" + i, src: "Rollenregeln der App", think: "", ask: `Achte darauf, ob diese Regel gezeigt wird: ${t}`, reveal: [] }));
+  return out;
+}
+const watchTasks = k => bootIsRole(k) ? watchRoleTasks(bootRole(k)) : watchHeroTasks(k);
+const watchValid = k => !!k && (bootIsRole(k) ? ROLES.includes(bootRole(k)) : !!PROF[k] && !!heroByName(k));
+const watchKey = (k, t) => `${k}|${t.id}`;
+const watchLog = () => ((state.watch && state.watch.log) || []);
+const watchLast = key => { const l = watchLog().filter(e => e.key === key); return l.length ? l[l.length - 1] : null; };
+const watchDone = key => { const e = watchLast(key); return !!e && e.v !== "nein"; };
+const watchCurrent = k => watchTasks(k).find(t => !watchDone(watchKey(k, t))) || null;
+const watchDoneN = k => watchTasks(k).filter(t => watchDone(watchKey(k, t))).length;
+function watchSet(key, v) {
+  state.watch = state.watch || { log: [] };
+  const w = state.watch, d = today(), i = w.log.findIndex(e => e.key === key && e.d === d);
+  if (i >= 0) { if (w.log[i].v === v) w.log.splice(i, 1); else w.log[i].v = v; }   // gleiches Feld nochmal tippen nimmt die Antwort zurück
+  else w.log.push({ key, d, v });
+  w.log = w.log.slice(-600);
+  save();
+}
+function watchDefaultKey() {
+  const c = {};
+  state.matches.slice(-20).forEach(m => { if (PROF[m.hero] && heroByName(m.hero)) c[m.hero] = (c[m.hero] || 0) + 1; });
+  const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+  if (top) return top[0];
+  return "R:" + (mainRole() || "Strategist");
+}
+const watchRoleOf = k => bootIsRole(k) ? bootRole(k) : heroRole(k);
+// Vorschläge: zuerst Streamer, die den Helden spielen, dann deine Empfehlungen der Rolle, dann die übrigen der Rolle
+function watchSuggest(k) {
+  const r = watchRoleOf(k), role = WATCH_STREAMERS.filter(s => s.rs.includes(r));
+  const hero = bootIsRole(k) ? [] : role.filter(s => s.h.includes(k));
+  const fav = role.filter(s => s.fav && !hero.includes(s));
+  const rest = role.filter(s => !hero.includes(s) && !fav.includes(s));
+  return [...hero, ...fav, ...rest];
+}
+const watchYt = y => y ? "https://www.youtube.com/" + y : "";
+function watchStreamerHtml(s, k) {
+  const links = [`<a class="btn ghost small" href="https://www.twitch.tv/${esc(s.tw)}" target="_blank" rel="noopener">Twitch</a>`, s.yt ? `<a class="btn ghost small" href="${esc(watchYt(s.yt))}" target="_blank" rel="noopener">YouTube</a>` : ""].filter(Boolean).join(" ");
+  const plays = !bootIsRole(k) && s.h.includes(k);
+  return `<div class="rrow"><span class="rl"><b>${esc(s.n)}</b> ${s.fav ? '<span class="badge ok">Deine Empfehlung</span> ' : ""}${s.rs.map(r => `<span class="badge">${esc(ROLE_SHORT[r])}</span>`).join(" ")}${plays ? ` <span class="badge ok">spielt ${esc(k)}</span>` : ""}
+    ${s.h.length ? `<br><span class="small muted">Lieblingshelden: ${s.h.map(esc).join(", ")}</span>` : ""}<br><span class="small">${esc(s.note)}</span></span><span class="row" style="gap:6px">${links}</span></div>`;
+}
+function watchSubjectHtml(k) {
+  const pool = poolHeroes().filter(h => PROF[h]).slice(0, 6);
+  const heroes = Object.keys(PROF).filter(h => heroByName(h)).sort((a, b) => a.localeCompare(b));
+  const grp = r => `<optgroup label="${esc(ROLE_SHORT[r])}">${heroes.filter(h => heroRole(h) === r).map(h => `<option value="${esc(h)}" ${h === k ? "selected" : ""}>${esc(h)}</option>`).join("")}</optgroup>`;
+  return `<div class="card"><div class="small muted">Für wen schaust du?</div>
+    <div class="chips" style="margin-top:4px">${ROLES.map(r => `<button type="button" class="chip ${k === "R:" + r ? "on" : ""}" data-wk="R:${r}" aria-pressed="${k === "R:" + r}">${esc(ROLE_SHORT[r])}-Rolle</button>`).join("")}${pool.map(h => `<button type="button" class="chip ${k === h ? "on" : ""}" data-wk="${esc(h)}" aria-pressed="${k === h}">${esc(h)}</button>`).join("")}</div>
+    <label class="small" style="display:block;margin-top:8px">Oder einen Helden wählen <select id="watchHero" aria-label="Held für die Zuschau-Aufgaben"><option value="">Held wählen …</option>${ROLES.map(grp).join("")}</select></label></div>`;
+}
+function watchTaskHtml(k, t, ts) {
+  const key = watchKey(k, t), rev = !!watchUi.rev[key], last = watchLast(key), tod = last && last.d === today() ? last.v : "";
+  const sug = watchSuggest(k).slice(0, 2), done = watchDoneN(k);
+  const mt = t.mt ? (bootIsRole(k) ? roleTasks(bootRole(k)) : heroTasks(k)).find(z => z.id === t.mt) : null;
+  const next = watchCurrent(k);
+  const think = t.think ? `<li><div><b>Erst im Kopf überlegen</b><p style="margin:4px 0">${esc(t.think)}</p>
+      ${rev ? `<div class="bootread"><b class="small">Laut den Quellen der App</b>${t.reveal.map(x => `<p class="small" style="margin:4px 0">${esc(x)}</p>`).join("")}<span class="small muted">Quelle: ${esc(t.src)}</span></div>`
+        : `<button type="button" class="btn ghost small" data-wrev="${esc(key)}">Ich habe eine Idee, Hinweis zeigen</button>`}</div></li>` : "";
+  return `<div class="card"><div class="card-head"><h2>${icon("play")}${esc(t.kind)}</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gesehen</span></div>
+    <ol class="steps">${think}
+      <li><div><b>Dann 10 bis 15 Minuten schauen</b><p style="margin:4px 0">${esc(t.ask)}</p>
+        ${sug.length ? `<span class="small muted">Zum Beispiel bei ${sug.map(s => `<b>${esc(s.n)}</b>`).join(" oder ")} (unten steht mehr). Schau lieber eine Aufnahme (VOD) als den Live-Stream: Du kannst pausieren und zurückspulen.</span>` : ""}</div></li>
+      <li><div><b>Wie lief es?</b>
+        <div class="chips" style="margin:4px 0">${WATCH_V.map(([v, label]) => `<button type="button" class="chip ${tod === v ? "on" : ""}" data-wkey="${esc(key)}" data-wv="${v}" aria-pressed="${tod === v}">${label}</button>`).join("")}</div>
+        <span class="small muted">«Nicht gesehen» heisst: Die Situation kam im Video nicht vor. Dann schau ein anderes Video, die Aufgabe bleibt offen.</span>
+        ${tod && tod !== "nein" ? `<div class="row mt"><button type="button" class="btn small" data-wnext>${next && next.id !== t.id ? "Nächste Aufgabe" : "Fertig für heute"}</button></div>` : ""}
+        ${mt ? `<p class="small muted" style="margin:6px 0 0">Zum Üben im Match gibt es dazu die Bootcamp-Aufgabe «${esc(mt.kind)}» (Match loggen).</p>` : ""}</div></li></ol></div>`;
+}
+function renderWatch() {
+  const el = $("#watchBody");
+  if (!el) return;
+  if (!watchValid(watchUi.k)) watchUi.k = watchDefaultKey();
+  const k = watchUi.k, ts = watchTasks(k), cur = watchCurrent(k);
+  const shown = ts.find(t => t.id === watchUi.show) || cur || ts[ts.length - 1] || null;
+  const who = bootIsRole(k) ? `Rolle ${ROLE_SHORT[bootRole(k)]}` : k;
+  const list = ts.map(t => { const key = watchKey(k, t), d = watchDone(key), l = watchLast(key); return `<li>${d ? "✓" : shown && shown.id === t.id ? "●" : "○"} <b class="small">${esc(t.kind)}</b>${l && l.v === "nein" ? ' <span class="badge">nicht gesehen</span>' : ""} <button type="button" class="btn ghost small" data-wopen="${esc(t.id)}">Öffnen</button><br><span class="small ${d ? "muted" : ""}">${esc(t.ask)}</span></li>`; }).join("");
+  const sug = watchSuggest(k);
+  el.innerHTML = `${watchSubjectHtml(k)}
+    ${shown ? watchTaskHtml(k, shown, ts) : `<div class="card">${empty("Für diese Auswahl gibt es noch keine Aufgaben.", "heroes")}</div>`}
+    <div class="card"><div class="card-head"><h2>${icon("target")}Alle Aufgaben für ${esc(who)}</h2></div><ul class="wl">${list}</ul></div>
+    <div class="card"><div class="card-head"><h2>${icon("play")}Streamer zum Anschauen</h2><span class="muted small">Stand ${esc(fmtDate(WATCH_STAND))}</span></div>
+      ${sug.length ? sug.map(s => watchStreamerHtml(s, k)).join("") : '<p class="muted">Für diese Rolle gibt es keine Vorschläge.</p>'}
+      <p class="small muted" style="margin:8px 0 0">Quellen: Liquipedia (aktive Content Creator mit Rolle und Lieblingshelden) und die Kanalbeschreibungen. Die App prüft nicht, wie gut jemand gerade spielt oder ob der Kanal aktiv ist. Schau zuerst fünf Minuten rein. Den Rang eines Spielers siehst du bei Rivals Data, wenn du seinen Spielernamen kennst.</p></div>
+    ${foldHtml("watch-how", "So schaust du richtig", `<ul class="wl"><li>Nimm einen Streamer, der deinen Helden oder deine Rolle spielt, am besten in Ranked.</li><li>Gut ist, wenn er erzählt, was er tut und warum. Dann lernst du mehr als beim reinen Zuschauen.</li><li>Eine Aufnahme (VOD, auf Twitch unter «Videos») kannst du pausieren. Halte an, wenn die Lage aus der Aufgabe kommt, und überleg, was du tun würdest, bevor du weiterschaust.</li><li>Schau nur auf eine Sache pro Video. Zehn bis fünfzehn Minuten reichen.</li><li><b>Ehrlich gesagt:</b> Ob Zuschauen dein Spiel verbessert, ist für Marvel Rivals nicht untersucht. Die Aufgaben sind so gebaut, dass du gezielt schaust statt nebenbei. Dass du alles nur im Kopf machst, ist weniger verbindlich als Aufschreiben; wenn du merkst, dass du es überspringst, schreib dir die Antwort kurz auf.</li></ul>`, { icon: "book", sub: "Auswahl, Ablauf und Grenzen" })}`;
+}
+function openWatch(k) {
+  Object.assign(watchUi, { k: watchValid(k) ? k : "", show: "" });
+  showTab("watch"); window.scrollTo({ top: 0 });
+}
+$("#watchBody").addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.wk !== undefined) { Object.assign(watchUi, { k: t.dataset.wk, show: "" }); renderWatch(); }
+  else if (t.dataset.wrev !== undefined) { watchUi.rev[t.dataset.wrev] = true; renderWatch(); }
+  else if (t.dataset.wv !== undefined) { watchSet(t.dataset.wkey, t.dataset.wv); watchUi.show = t.dataset.wkey.slice(t.dataset.wkey.lastIndexOf("|") + 1); renderWatch(); }
+  else if (t.hasAttribute("data-wnext")) { watchUi.show = ""; renderWatch(); window.scrollTo({ top: 0 }); }
+  else if (t.dataset.wopen !== undefined) { watchUi.show = t.dataset.wopen; renderWatch(); window.scrollTo({ top: 0 }); }
+});
+$("#watchBody").addEventListener("change", e => { if (e.target.id === "watchHero" && e.target.value) { Object.assign(watchUi, { k: e.target.value, show: "" }); renderWatch(); } });
+document.addEventListener("click", e => { const b = e.target.closest("[data-watchopen]"); if (b) openWatch(b.dataset.watchopen); });
+// Karte im Helden-Bootcamp: die aktuelle Zuschau-Aufgabe des Helden oder der Rolle
+function bootWatchHtml(k) {
+  const ts = watchTasks(k);
+  if (!ts.length) return "";
+  const cur = watchCurrent(k), done = watchDoneN(k);
+  return `<div class="card"><div class="card-head"><h2>${icon("play")}Von einem Streamer lernen</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gesehen</span></div>
+    <p class="lead" style="margin:0 0 8px">Schau einem guten Spieler zu und achte nur auf eine Sache. Du überlegst zuerst im Kopf, schaust dann und sagst kurz, ob du es gesehen hast. Aufschreiben musst du nichts.</p>
+    ${cur ? `<div class="swaprow"><b>Jetzt: ${esc(cur.kind)}</b><p style="margin:6px 0 0">${esc(cur.ask)}</p></div>` : '<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Zuschau-Aufgaben gesehen.</b> Du kannst sie auf der Seite «Zuschauen» jederzeit nochmal öffnen.</div></div>'}
+    <div class="row mt"><button type="button" class="btn small" data-watchopen="${esc(k)}">Aufgabe und Streamer öffnen</button></div></div>`;
+}
 
 // ---------- Verlauf: Tage, Wochen und Phasen vergleichen ----------
 // Die Matches werden in Abschnitte eingeteilt (pro Plantag, Kalenderwoche oder Plan-Phase). Pro Abschnitt rechnet die App Kennzahlen aus.
@@ -8517,7 +8732,8 @@ const PAGE_HELP = {
   team: ["Team & Counter", ["Die Seite geht in vier Schritten: 1 Eintragen, 2 Lage lesen, 3 Wechsel prüfen, 4 Nachschlagen. Es ist immer nur ein Schritt offen.", "Beginne mit Schritt 1 und trag zwei Gegner ein. Mehr brauchst du am Anfang nicht.", "«Alles zeigen» blendet alle Karten gleichzeitig ein, wenn du die Seite schon kennst.", "Die Vorschläge sind Denkhilfen mit Begründung, keine Garantie."]],
   heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
   progress: ["Verlauf", ["Oben wählst du die Einteilung (Tag, Woche oder Phase), die Rolle und den Modus.", "«Auf einen Blick» vergleicht deine Baseline (Tag 1) mit deinen letzten Matches. Grüne Pfeile heissen besser, rote schlechter.", "Mit «A gegen B» legst du zwei Abschnitte nebeneinander, zum Beispiel Tag 1 gegen Tag 6 oder eine Woche gegen die nächste.", "Wenige Matches schwanken stark: Werte mit weniger als fünf Matches sind grau und haben keinen Pfeil."]],
-  bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse, darunter ein Kurs pro Held. Jeder Kurs hat sieben Stationen und endet mit einem Test.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn der Test bestanden ist und alle Match-Aufgaben gemeistert sind."]],
+  watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
+  bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse, darunter ein Kurs pro Held. Jeder Kurs hat sieben Stationen und endet mit einem Test.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn der Test bestanden ist und alle Match-Aufgaben gemeistert sind."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
 function renderPageHelp(name) {
@@ -10340,7 +10556,7 @@ function render() {
   applyPoolToPlan();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, progress: renderProgress })[currentTab()]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, watch: renderWatch, progress: renderProgress })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
