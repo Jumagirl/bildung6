@@ -379,6 +379,12 @@ def chat_line(data: dict, request_id: str) -> str:
         matches = sorted(matches, key=lambda m: m.get("ts") or 0, reverse=True)[:-1]
 
 
+def write_inbox(path: str, doc: dict) -> None:
+    """Schreibt das fertige Eingangs-Dokument für den automatischen Abgleich (die App liest es aus ihrer Datenbank)."""
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(doc, fh, ensure_ascii=False, separators=(",", ":"))
+
+
 def chat_error(message: str, request_id: str) -> str:
     return f"@@RIVALS-SYNC:ERROR {request_id}@@ " + b64url(message.encode("utf-8")) + " @@RIVALS-SYNC:END@@"
 
@@ -396,6 +402,9 @@ def main() -> int:
                         help='Browser-Fallback bei Cloudflare-Sperre (vorher: pip install "rivals-api[browser]")')
     parser.add_argument("-o", "--out", default="rivals-sync.json", help="Ausgabedatei")
     parser.add_argument("--chat", metavar="ID", help="Zusätzlich das Ergebnis als eine Zeile ausgeben (für den automatischen Abgleich der App)")
+    parser.add_argument("--inbox", metavar="DATEI",
+                        help="Zusätzlich das Ergebnis als fertiges Eingangs-Dokument {payload, at} in diese Datei schreiben "
+                             "(der Sync-Helfer legt es mit ArtifactData in der App-Datenbank ab)")
     args = parser.parse_args()
 
     try:
@@ -411,6 +420,8 @@ def main() -> int:
             print(line)
         if args.chat:
             print(chat_error(short, args.chat))
+        if args.inbox:
+            write_inbox(args.inbox, {"error": short, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         return 1
 
     try:
@@ -436,6 +447,10 @@ def main() -> int:
     print("Jetzt im Rivals Coach unter „Daten → Rivals Data importieren“ einlesen.")
     if args.chat:
         print(chat_line(data, args.chat))
+    if args.inbox:
+        data["_id"] = args.chat or "auto-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+        write_inbox(args.inbox, {"payload": json.dumps(data, ensure_ascii=False, separators=(",", ":")), "at": data["generated"]})
+        print(f"Eingangs-Dokument geschrieben: {args.inbox} ({data['_id']})")
     return 0
 
 
