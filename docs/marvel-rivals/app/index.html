@@ -1333,6 +1333,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
     <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data ab, alle zwei Stunden von 10 bis 22 Uhr und zusätzlich jedes Mal, wenn du die App öffnest und der letzte Abruf älter als 30 Minuten ist (das dauert meist 1–3 Minuten). Mit „Jetzt aktualisieren“ fragst du sofort an. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A). Sonst nutze die Schritte unten.</p>
+    <p class="muted small mt" id="syncAutoNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data alle zwei Stunden von 10 bis 24 Uhr ab und legt das Ergebnis in deinem Konto ab. Die App übernimmt es beim Öffnen und sofort, solange sie offen ist. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
@@ -4067,6 +4068,10 @@ function renderToday() {
   if (missed.length) news.push(["info", `<b>${plural(missed.length, "Lektion", "Lektionen")} aus früheren Tagen offen:</b> ${missed.slice(0, 3).map(m => `<button class="linkbtn" type="button" data-lesson="${m.id}" data-from-day="${m.day}">${esc(lessonById(m.id).title)} (Tag ${m.day})</button>`).join(", ")}`]);
   if (g && g.due) { const left = Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(tdy + "T12:00:00")) / 864e5); if (left <= 2) news.push([left < 0 ? "bad" : "info", left < 0 ? `<b>Die Frist deines Ziels „${esc(g.title)}“ ist vorbei.</b> Schreib einen Rückblick und setz das nächste Ziel.` : `<b>Dein Ziel „${esc(g.title)}“ läuft ${left === 0 ? "heute" : left === 1 ? "morgen" : "in 2 Tagen"} ab.</b>`]); }
   if (IN_VIEWER && SYNC_HELPER && Bridge.auto && (Bridge.auto.state === "none" || Bridge.auto.state === "requesting")) news.push(["info", `<b>Automatischer Abgleich:</b> ${esc(Bridge.auto.text)}`]);
+  if (syncInboxOn() && state.sync) {
+    const ageH = (Date.now() - Date.parse(state.sync.at || "")) / 36e5, hr = new Date().getHours();
+    if (isFinite(ageH) && ageH > 3 && hr >= 11) news.push(["info", `<b>Der letzte automatische Abgleich ist ${fmtSpan(ageH * 36e5)} her</b> (${esc(fmtDT(state.sync.at))}). Neue Matches kommen, sobald der Sync-Helfer sie abgelegt hat. Fehlt ein Match schon länger, trag es von Hand ein.`]);
+  }
   const dueN = dueQs(false).length + dueHs().length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
@@ -5660,7 +5665,7 @@ function renderData() {
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
@@ -5726,6 +5731,10 @@ function syncToast(r) {
 // Die App liest dieses Protokoll über den Connector "Claude Code Remote" (list_events) und trägt die Matches ein.
 // Schreibrechte auf deine Daten braucht der Helfer dafür nicht.
 const SYNC_HELPER = ""; /* PRIVATE:SYNC_HELPER */
+// Eingang in der App-Datenbank: Ein geplanter Sync-Helfer in Claude legt das Ergebnis mit dem Werkzeug ArtifactData im Dokument
+// data/users/<id>/sync-inbox ab. Die App übernimmt es sofort (offen) oder beim nächsten Öffnen (takeInbox). Braucht keinen Connector.
+const SYNC_AUTO = ""; /* PRIVATE:SYNC_AUTO */
+const syncInboxOn = () => !!SYNC_AUTO && !SYNC_HELPER && IN_VIEWER;
 const BUILD_STAMP = ""; /* BUILD:STAMP */
 const SYNC_SERVER = "Claude Code Remote";
 const Bridge = { mcp: null, req: null, timer: null, busy: false, pulling: false, timeoutMs: 6 * 60 * 1000, info: "", auto: null, hidden: false, diag: "" };
@@ -5877,7 +5886,19 @@ async function diagnoseBridge() {
 }
 // Sichtbarer Status des automatischen Abgleichs (Banner oben bei Problemen, Zeile im Tab „Daten & Sync“)
 function setAuto(a) { Bridge.auto = a ? Object.assign({ at: Date.now() }, a) : null; renderAuto(); if (currentTabSafe() === "today" && typeof renderToday === "function") renderToday(); }
+// Statuszeile im Tab «Daten & Sync» für den Eingang in der Datenbank (ohne Connector)
+function renderInboxLine() {
+  const line = $("#autoPullInfo"), banner = $("#bridgeBanner");
+  if (!line) return;
+  if (banner) banner.hidden = true;
+  const s = state.sync, ageH = s ? (Date.now() - Date.parse(s.at || "")) / 36e5 : NaN;
+  const text = s ? `Letzter automatischer Abgleich: ${fmtDT(s.at)}.${syncFreshText()}` : "Noch kein automatischer Abgleich angekommen. Der Sync-Helfer läuft alle zwei Stunden von 10 bis 24 Uhr.";
+  line.hidden = false;
+  line.className = `note ${s && ageH < 3 ? "good" : "info"} mt`;
+  line.innerHTML = `<span class="ni" aria-hidden="true">${s && ageH < 3 ? "✓" : "i"}</span><div>${esc(text)}</div>`;
+}
 function renderAuto() {
+  if (!SYNC_HELPER) { if (syncInboxOn()) renderInboxLine(); return; }
   const a = Bridge.auto, banner = $("#bridgeBanner"), line = $("#autoPullInfo");
   if (!banner || !line) return;
   const bad = !!a && (a.state === "error" || a.state === "unavailable");
@@ -5922,9 +5943,11 @@ function setBridgeInfo(text, kind) { Bridge.info = text ? { text, kind: kind || 
 function renderBridge() {
   const btn = $("#syncNow"), info = $("#syncNowInfo");
   if (!btn) return;
-  const ok = IN_VIEWER && !!Bridge.mcp;
+  const ok = IN_VIEWER && !!Bridge.mcp, inbox = syncInboxOn();
   btn.hidden = !ok; $("#syncBridgeNote").hidden = !ok; $("#diagBtn").hidden = !IN_VIEWER || !SYNC_HELPER;
-  $("#syncManual").open = !ok || !!(Bridge.info && Bridge.info.kind === "bad");
+  $("#syncAutoNote").hidden = !inbox;
+  if (inbox) renderInboxLine();
+  $("#syncManual").open = (!ok && !inbox) || !!(Bridge.info && Bridge.info.kind === "bad");
   const busy = reqBusy();
   btn.disabled = busy;
   $("#autoRefreshWrap").hidden = !ok; $("#autoRefresh").checked = autoRefreshOn();
