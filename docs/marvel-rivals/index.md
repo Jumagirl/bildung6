@@ -124,7 +124,7 @@ Connector Seiten aber keine Werkzeuge zur Verfügung («keine Werkzeuge», `bloc
 aber abgeschaltet (kein `SYNC_HELPER` in `private.json`). Auch Routinen können in diesem Konto keine Connectors mitbekommen. Der Weg über die Datenbank braucht keinen Connector.
 Ein Lauf mit dem Haiku-Modell kostet etwa 0,01 US-Dollar (mit Sonnet wären es 0,10 bis 0,17), das Wochenlimit deines Kontos zählt mit.
 **Gratis-Abgleich über GitHub (ohne Claude-Konto):** Wer die App als Datei oder auf einer Webseite öffnet (nicht in einer Claude-Ansicht),
-bekommt ihre Matches kostenlos und automatisch. Der Workflow `.github/workflows/sync.yml` läuft zweimal pro Stunde (10:07 bis 00:37 Uhr Schweizer Sommerzeit, im Winter eine Stunde früher)
+bekommt ihre Matches kostenlos und automatisch. Der Workflow `.github/workflows/sync.yml` ist auf alle 15 Minuten eingestellt (10:04 bis 00:49 Uhr Schweizer Sommerzeit, im Winter eine Stunde früher); GitHub startet geplante Läufe bei hoher Last verspätet oder lässt einzelne aus, in der Praxis kam bisher etwa alle ein bis zwei Stunden ein Lauf
 auf GitHub, ruft für jeden Namen aus der Spielerliste `sync_all.py` auf und legt pro Spieler eine Datei `data/<name>-<prüfwert>.json` im Branch **`sync-data`** ab
 (immer nur ein Commit, jeder Lauf ersetzt ihn). Die App berechnet denselben Dateinamen aus dem Spielernamen (`playerSlug` entspricht `player_slug` in `rivals_sync.py`),
 liest die Datei von `raw.githubusercontent.com` (beim Öffnen, bei Namensänderung, alle 20 Minuten und mit dem Knopf «Jetzt von GitHub holen») und trägt die Matches ein.
