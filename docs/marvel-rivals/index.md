@@ -120,7 +120,7 @@ Die App merkt sich ab dem zweiten Abgleich, wann sie ein neues Match abgerufen h
 **Warum nicht über einen Connector:** Ein früherer Entwurf las das Protokoll des Helfers über den Connector «Claude Code Remote». In einer echten Ansicht stellt dieser
 Connector Seiten aber keine Werkzeuge zur Verfügung («keine Werkzeuge», `blocked_by_policy`), das hat nie funktioniert. Dieser Code ist noch in der App,
 aber abgeschaltet (kein `SYNC_HELPER` in `private.json`). Auch Routinen können in diesem Konto keine Connectors mitbekommen. Der Weg über die Datenbank braucht keinen Connector.
-Ein Lauf kostet etwa 0,10 US-Dollar (Sonnet-Modell), das Wochenlimit deines Kontos zählt mit.
+Ein Lauf mit dem Haiku-Modell kostet etwa 0,01 US-Dollar (mit Sonnet wären es 0,10 bis 0,17), das Wochenlimit deines Kontos zählt mit.
 Andernfalls geht es von Hand:
 
 1. Python 3.10 oder neuer installieren, dann einmalig: `python -m pip install rivals-api`
