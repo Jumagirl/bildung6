@@ -12,7 +12,7 @@ Scheitert der Abruf eines Spielers, bleibt seine letzte gute Datei erhalten und 
 ruft das Skript alle zwei Stunden auf und legt die Dateien im Branch ``sync-data`` ab.
 
 Benutzung:
-    python sync_all.py players.txt --out-dir out/data --limit 50
+    python sync_all.py players.txt --out-dir out/data --limit 50 --prune
 """
 
 from __future__ import annotations
@@ -73,6 +73,7 @@ def main() -> int:
     ap.add_argument("--no-details", dest="details", action="store_false", help="Ohne Match-Details (schneller, aber ohne Teams)")
     ap.add_argument("--rank", default="grandmaster_plus")
     ap.add_argument("--platform", default=1, type=int)
+    ap.add_argument("--prune", action="store_true", help="Dateien von Spielern löschen, die nicht mehr in der Liste stehen")
     args = ap.parse_args()
 
     try:
@@ -85,6 +86,12 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     names = read_players(args.players)
     print(f"{len(names)} Spieler in der Liste")
+    if args.prune:
+        keep = {rs.player_slug(n) for n in names}
+        for f in sorted(out.glob("*.json")):
+            if f.name.removesuffix(".error.json").removesuffix(".json") not in keep:
+                f.unlink()
+                print(f"- {f.name} gelöscht (Spieler steht nicht mehr in der Liste)")
     ok = failed = 0
     for name in names:
         slug = rs.player_slug(name)

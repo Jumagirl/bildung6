@@ -42,7 +42,7 @@ jobs:
           mkdir -p out/data
           [ -f out/players.txt ] || cp docs/marvel-rivals/players.txt out/players.txt
       - name: Matches abrufen
-        run: python docs/marvel-rivals/sync_all.py out/players.txt --out-dir out/data --limit 50
+        run: python docs/marvel-rivals/sync_all.py out/players.txt --out-dir out/data --limit 50 --prune
       - name: In sync-data ablegen
         env:
           TOKEN: ${{ github.token }}
