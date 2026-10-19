@@ -3415,6 +3415,40 @@ function counterReasons(attacker, target) {
 }
 function countersOf(target) { return allHeroes().map(h => h.name).filter(n => n !== target && counterReasons(n, target).length); }
 function strongAgainst(hero) { return allHeroes().map(h => h.name).filter(n => n !== hero && counterReasons(hero, n).length); }
+// Warum kontert `attacker` den Helden `target`? Erst die Begründung aus den Quellen im Heldenprofil, sonst die Spielstil-Regel (Tags).
+const COUNTER_NOWHY = /ohne Begründung|nicht (genannt|angegeben|erklärt|belegt)|Grund wird dort nicht/i;
+const counterSrc = (attacker, target) => (((PROF[target] || {}).counter) || []).find(c => c.held === attacker) || null;
+function counterWhy(attacker, target) {
+  const src = counterSrc(attacker, target), rule = counterReasons(attacker, target)[0];
+  if (src && !COUNTER_NOWHY.test(src.warum)) return { text: src.warum, from: "Quelle" };
+  if (rule) return { text: rule.why, from: "Regel" };
+  return null;
+}
+// Kurzform der Regel, zum Beispiel «Dive gegen Sniper»
+function counterRuleLabel(attacker, target) {
+  const r = counterReasons(attacker, target)[0];
+  return r ? `${r.by.find(b => heroTags(attacker).includes(b))} gegen ${r.target}` : "";
+}
+// Wer ist laut den Profilen der anderen Helden stark gegen `name`? (Einträge aus «counter» der Gegner, mit Begründung)
+function strongAgainstSrc(name) {
+  const out = [];
+  Object.keys(PROF).forEach(t => (PROF[t].counter || []).forEach(c => { if (c.held === name) out.push({ target: t, warum: c.warum }); }));
+  return out;
+}
+const counterSrcListHtml = name => { const x = PROF[name]; return `<ul>${x.counter.map(c => { const rule = COUNTER_NOWHY.test(c.warum) ? counterReasons(c.held, name)[0] : null;
+  return `<li><b>${esc(c.held)}:</b> ${esc(c.warum)}${rule ? ` <span class="muted small">Nach den Spielstil-Regeln der App (nicht aus der Quelle): ${esc(rule.why)}</span>` : ""}</li>`; }).join("")}</ul>`; };
+// Nach Spielstil-Regeln gruppiert: warum wird `name` gekontert, und gegen wen ist `name` stark?
+function counterGroupsHtml(name) {
+  const tags = heroTags(name), others = allHeroes().map(h => h.name).filter(n => n !== name), names = l => l.length ? esc(l.slice(0, 10).join(", ")) + (l.length > 10 ? ` und ${l.length - 10} weitere` : "") : "–";
+  const bad = COUNTER_RULES.filter(r => tags.includes(r.target)).map(r => `<li><b>${esc(name)} gilt als ${esc(r.target)}</b> <span class="muted small">(${esc(TAGS[r.target] || "")})</span>. ${esc(r.why)}<br><span class="small"><b>Konter (${r.by.map(esc).join(" / ")}):</b> ${names(others.filter(n => r.by.some(b => heroTags(n).includes(b))))}</span></li>`);
+  const good = COUNTER_RULES.filter(r => r.by.some(b => tags.includes(b))).map(r => { const by = r.by.filter(b => tags.includes(b));
+    return `<li><b>${esc(name)} hat ${by.map(esc).join(" / ")}</b> <span class="muted small">(${by.map(b => esc(TAGS[b] || "")).join("; ")})</span>. ${esc(r.why)}<br><span class="small"><b>Trifft ${esc(r.target)}:</b> ${names(others.filter(n => heroTags(n).includes(r.target)))}</span></li>`; });
+  if (!bad.length && !good.length) return "";
+  return `<details class="cp" open><summary><span class="cp-name"><b>Wer kontert wen, und warum</b> <span class="muted small">Spielstil-Regeln</span></span></summary><div class="cp-body" style="padding-left:14px">
+    ${bad.length ? `<b class="small bad">${esc(name)} wird gekontert, weil …</b><ul>${bad.join("")}</ul>` : ""}
+    ${good.length ? `<b class="small good">${esc(name)} kontert, weil …</b><ul>${good.join("")}</ul>` : ""}
+    <p class="small muted" style="margin:6px 0 0">Das sind Faustregeln nach dem Spielstil (Tags), keine Garantie. Wer wirklich gut gegen wen ist, hängt auch von Rang, Karte und Team ab.</p></div></details>`;
+}
 
 // ---------- Rivals-Data-Abgleich ----------
 function metaMap() { return new Map(((state.sync && state.sync.meta && state.sync.meta.heroes) || []).map(h => [h.hero, h])); }
@@ -3856,7 +3890,8 @@ function heroProfileHtml(name) {
     <b class="small">Tipps</b>${list(x.tipps)}
     ${x.support_hinweis ? `<p class="small"><b>Als Support:</b> ${esc(x.support_hinweis)}</p>` : ""}
     ${x.synergie.length ? `<div class="vs-line"><span class="lbl good">Passt gut zu</span>${esc(x.synergie.map(s => s.held).join(", "))}</div>` : ""}
-    ${x.counter.length ? `<div class="vs-line"><span class="lbl bad">Schwer gegen</span>${esc(x.counter.map(s => s.held).join(", "))}</div>` : ""}
+    ${x.counter.length ? `<b class="small">Wer ${esc(name)} kontert, laut Quellen</b>${counterSrcListHtml(name)}` : ""}
+    ${(() => { const sa = strongAgainstSrc(name); return sa.length ? `<b class="small">Gegen wen ${esc(name)} laut Quellen stark ist</b><ul>${sa.slice(0, 8).map(c => `<li><b>${esc(c.target)}:</b> ${esc(c.warum)}</li>`).join("")}</ul>${sa.length > 8 ? `<p class="small muted" style="margin:0 0 6px">Und ${sa.length - 8} weitere.</p>` : ""}` : ""; })()}
     ${x.ue ? ultGuideHtml(x) : ""}
     <details class="cp"><summary><span class="cp-name"><b>Alle Fähigkeiten</b> <span class="muted small">${x.kit.length + 1}</span></span></summary><div class="cp-body" style="padding-left:14px"><ul>${x.kit.map(k => `<li><b>${esc(k.n)}</b> <span class="muted small">${esc(k.typ)}</span><br>${esc(k.d)}</li>`).join("")}<li><b>${esc(x.ult.n)}</b> <span class="muted small">Ult</span><br>${esc(x.ult.d)}</li></ul></div></details>
     ${rel.length ? `<details class="cp"><summary><span class="cp-name"><b>Änderungen seit Season 10</b></span></summary><div class="cp-body" style="padding-left:14px"><ul>${rel.map(a => `<li><b>${esc(a.wann)}:</b> ${esc(a.text)}</li>`).join("")}</ul></div></details>` : ""}
@@ -4558,22 +4593,25 @@ function matchHints(d, skipId) {
     COUNTER_RULES.forEach(r => {
       const enT = enemies.filter(e => heroTags(e).includes(r.target)), ownAns = team.filter(h => r.by.some(b => heroTags(h).includes(b)));
       if (enT.length >= 2 && !ownAns.length) cn.push([enT.length, neg, `Der Gegner hatte <b>${enT.length}× ${esc(r.target)}</b> (${nameList(enT)}), euer Team keine Antwort darauf (${esc(r.by.join(" / "))}). ${esc(r.why)}`]);
-      else if (enT.length >= 2 && ownAns.length >= 2) cn.push([enT.length, "good", `Gegen <b>${enT.length}× ${esc(r.target)}</b> beim Gegner hattet ihr <b>${esc(r.by.join(" / "))}</b> (${nameList(ownAns)}).`]);
+      else if (enT.length >= 2 && ownAns.length >= 2) cn.push([enT.length, "good", `Gegen <b>${enT.length}× ${esc(r.target)}</b> beim Gegner hattet ihr <b>${esc(r.by.join(" / "))}</b> (${nameList(ownAns)}). ${esc(r.why)}`]);
       const myT = team.filter(h => heroTags(h).includes(r.target)), enAns = enemies.filter(e => r.by.some(b => heroTags(e).includes(b)));
-      if (myT.length >= 2 && enAns.length >= 2) cn.push([myT.length, neg, `Euer Team spielte <b>${myT.length}× ${esc(r.target)}</b> (${nameList(myT)}) – der Gegner hatte dagegen ${nameList(enAns)} (${esc(r.by.join(" / "))}).`]);
+      if (myT.length >= 2 && enAns.length >= 2) cn.push([myT.length, neg, `Euer Team spielte <b>${myT.length}× ${esc(r.target)}</b> (${nameList(myT)}) – der Gegner hatte dagegen ${nameList(enAns)} (${esc(r.by.join(" / "))}). ${esc(r.why)}`]);
     });
     cn.sort((a, b) => b[0] - a[0]).slice(0, 3).forEach(([, t, html]) => match.push([t, html]));
     const threatened = team.filter(h => enemies.some(e => counterReasons(e, h).length));
     const countering = enemies.filter(e => team.some(h => counterReasons(h, e).length));
-    if (threatened.length >= 3) match.push([neg, `<b>${threatened.length} eurer Helden</b> wurden vom Gegnerteam gekontert (${nameList(threatened, 4)}). Ein Heldenwechsel hätte sich gelohnt.`]);
+    if (threatened.length >= 3) {
+      const ex = threatened.slice(0, 2).map(h => { const e = enemies.find(z => counterReasons(z, h).length), w = e && counterWhy(e, h); return w ? `<li><b>${esc(h)}</b> gegen ${esc(e)}: ${esc(w.text)}</li>` : ""; }).join("");
+      match.push([neg, `<b>${threatened.length} eurer Helden</b> wurden vom Gegnerteam gekontert (${nameList(threatened, 4)}). Ein Heldenwechsel hätte sich gelohnt.${ex ? `<br><b>Warum:</b><ul style="margin:4px 0 0;padding-left:18px">${ex}</ul>` : ""}`]);
+    }
     if (countering.length >= 3) match.push(["good", `Euer Team konnte <b>${countering.length} Gegner</b> kontern (${nameList(countering, 4)}).`]);
   }
   // 3) Dein Held im Matchup
   if (d.hero && enemies.length) {
     const against = enemies.filter(e => counterReasons(e, d.hero).length), favored = enemies.filter(e => counterReasons(d.hero, e).length);
-    const explain = !match.length;   // Begründung nur, wenn sie nicht schon in den Spielstil-Hinweisen steht
-    if (against.length) match.push([neg, `<b>${esc(d.hero)}</b> wird von ${nameList(against)} gekontert.${explain ? " " + esc(counterReasons(against[0], d.hero)[0].why) : ""}`]);
-    if (favored.length) match.push(["good", `<b>${esc(d.hero)}</b> kontert ${nameList(favored)}.${explain ? " " + esc(counterReasons(d.hero, favored[0])[0].why) : ""}`]);
+    const wa = against.length ? counterWhy(against[0], d.hero) : null, wf = favored.length ? counterWhy(d.hero, favored[0]) : null;
+    if (against.length) match.push([neg, `<b>${esc(d.hero)}</b> wird von ${nameList(against)} gekontert.${wa ? ` <b>Warum (${esc(against[0])}):</b> ${esc(wa.text)}` : ""}`]);
+    if (favored.length) match.push(["good", `<b>${esc(d.hero)}</b> kontert ${nameList(favored)}.${wf ? ` <b>Warum (${esc(favored[0])}):</b> ${esc(wf.text)}` : ""}`]);
   }
   // 4) Ult-Konter im eigenen Team
   const ultAns = [...new Set(enemies)].filter(e => ULTS[e]).map(e => [e, ULTS[e].by.filter(([h]) => team.includes(h))]).filter(x => x[1].length).slice(0, 2);
@@ -4646,11 +4684,17 @@ function matchBetter(d, skipId) {
     return allHeroes().map(h => h.name).filter(n => n !== hero && heroRole(n) === role && !taken.includes(n)).map(n => [n, score(n)]).filter(([, sc]) => sc > cur).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(x => x[0]); };
   if (enemies.length >= 3 && d.hero) {
     const alts = better(d.hero, team);
-    if (alts.length) out.push(["info", `<b>Dein Held:</b> Gegen dieses Gegnerteam hätten ${nameList(alts)} noch besser gepasst als ${esc(d.hero)} (nach den Spielstil-Regeln). Probier sie aus, wenn du sie sicher spielst.`]);
+    if (alts.length) {
+      const f = enemies.find(z => counterReasons(alts[0], z).length), wf = f && counterWhy(alts[0], f);
+      out.push(["info", `<b>Dein Held:</b> Gegen dieses Gegnerteam hätten ${nameList(alts)} noch besser gepasst als ${esc(d.hero)} (nach den Spielstil-Regeln).${wf ? ` Zum Beispiel kontert ${esc(alts[0])} den Gegner ${esc(f)}: ${esc(wf.text)}` : ""} Probier sie aus, wenn du sie sicher spielst.`]);
+    }
     else if (score(d.hero) > 0) out.push(["good", `<b>Dein Held:</b> ${esc(d.hero)} war gegen dieses Gegnerteam eine gute Wahl.`]);
     d.allies.filter(a => enemies.some(e => counterReasons(e, a).length)).slice(0, 2).forEach(a => {
       const alts2 = better(a, team);
-      if (alts2.length) out.push(["info", `<b>Im Team:</b> ${esc(a)} wurde gekontert. Besser gewesen wären ${nameList(alts2)}. Sag das nächstes Mal in der Heldenwahl an.`]);
+      if (alts2.length) {
+        const e = enemies.find(z => counterReasons(z, a).length), w = e && counterWhy(e, a), f = enemies.find(z => counterReasons(alts2[0], z).length), wf = f && counterWhy(alts2[0], f);
+        out.push(["info", `<b>Im Team:</b> ${esc(a)} wurde gekontert${e ? ` (von ${esc(e)})` : ""}.${w ? ` <b>Warum:</b> ${esc(w.text)}` : ""} Besser gewesen wären ${nameList(alts2)}.${wf ? ` Zum Beispiel kontert ${esc(alts2[0])} den Gegner ${esc(f)}: ${esc(wf.text)}` : ""} Sag das nächstes Mal in der Heldenwahl an.`]);
+      }
     });
   }
   if (d.hero && d.allies.length >= 3) {
@@ -4987,8 +5031,8 @@ function renderTeamCards() {
       let score = 0;
       const pro = [], con = [];
       enemies.forEach(e => {
-        if (counterReasons(h.name, e).length) { score += 1; pro.push(`kontert ${esc(e)}`); }
-        if (counterReasons(e, h.name).length) { score -= 0.75; con.push(`wird von ${esc(e)} gekontert`); }
+        if (counterReasons(h.name, e).length) { score += 1; pro.push(`kontert ${esc(e)} <span class="muted small">(${esc(counterRuleLabel(h.name, e))})</span>`); }
+        if (counterReasons(e, h.name).length) { score -= 0.75; con.push(`wird von ${esc(e)} gekontert <span class="muted small">(${esc(counterRuleLabel(e, h.name))})</span>`); }
         const vs = summary(state.matches.filter(m => m.hero === h.name && m.enemies.includes(e)));
         if (vs.n >= 2) {
           score += (vs.wr - 0.5) * 2;
@@ -5008,7 +5052,7 @@ function renderTeamCards() {
         <div><b>${esc(x.h.name)}</b> ${roleChip(x.h.role)} ${x.own.n ? `<span class="muted small">· du: ${pct(x.own.wr)} in ${plural(x.own.n, "Match", "Matches")}</span>` : ""}</div>
         <div class="score" title="Score ${x.score.toFixed(1)}"><div class="track"><span style="width:${Math.max(0, x.score) / maxS * 100}%"></span></div></div>
         <div class="why">${x.pro.length ? "✓ " + x.pro.join(" · ") : ""}${x.con.length ? `${x.pro.length ? "<br>" : ""}<span class="con">✕ ${x.con.join(" · ")}</span>` : ""}</div>
-      </div>`).join("") : empty("Keine passenden Helden – Filter anpassen.", "target");
+      </div>`).join("") + foldHtml("pick-rules", "Warum kontert wer wen? Die Spielstil-Regeln", table(["Gegner ist …", "Gekontert durch …", "Warum"], COUNTER_RULES.map(r => [`<span class="tag">${esc(r.target)}</span><br><span class="small muted">${esc(TAGS[r.target])}</span>`, r.by.map(b => `<span class="tag">${esc(b)}</span>`).join(""), esc(r.why)])), { icon: "book", sub: "Die Kürzel in Klammern bei den Vorschlägen" }) : empty("Keine passenden Helden – Filter anpassen.", "target");
   }
 
   const picked = TD.team.filter(Boolean);
@@ -5031,7 +5075,10 @@ function renderTeamCards() {
   if (nPoke >= 3) out.push(["info", "Poke-Komposition: Auf Distanz bleiben, hohe Positionen halten und Gegner langsam zermürben."]);
   if (enemies.length) {
     const threatened = picked.filter(h => enemies.some(e => counterReasons(e, h).length));
-    if (threatened.length >= 3) out.push(["bad", `${threatened.length} eurer Helden werden vom Gegnerteam gekontert (${esc(threatened.join(", "))}). Ein Wechsel kann sich lohnen.`]);
+    if (threatened.length >= 3) {
+      const ex = threatened.slice(0, 2).map(h => { const e = enemies.find(z => counterReasons(z, h).length), w = e && counterWhy(e, h); return w ? `<li><b>${esc(h)}</b> gegen ${esc(e)}: ${esc(w.text)}</li>` : ""; }).join("");
+      out.push(["bad", `${threatened.length} eurer Helden werden vom Gegnerteam gekontert (${esc(threatened.join(", "))}). Ein Wechsel kann sich lohnen.${ex ? `<br><b>Warum:</b><ul style="margin:4px 0 0;padding-left:18px">${ex}</ul>` : ""}`]);
+    }
   }
   $("#teamFeedback").innerHTML = notes(out);
 }
@@ -5196,8 +5243,7 @@ function renderHeroes() {
         ${g && isFinite(g.winrate) ? `<span>Global: <b>${g.winrate.toFixed(1)} %</b> WR${isFinite(g.pickrate) ? ` · ${g.pickrate.toFixed(1)} % Pick` : ""}</span>` : ""}
       </div>
       ${PROF[h.name] ? `<details class="cp" open><summary><span class="cp-name"><b>Spielweise und Tipps</b></span></summary><div class="cp-body" style="padding-left:14px">${heroProfileHtml(h.name)}</div></details>` : `<ul>${h.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`}
-      <div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div>
-      <div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>
+      ${counterGroupsHtml(h.name) || `<div class="vs-line"><span class="lbl good">Stark gegen</span>${esc(strongAgainst(h.name).join(", ") || "–")}</div><div class="vs-line"><span class="lbl bad">Gekontert von</span>${esc(countersOf(h.name).join(", ") || "–")}</div>`}
       ${heroTeamupsHtml(h.name)}
       ${PROF[h.name] ? `<div class="row" style="margin:6px 0"><button type="button" class="btn ghost small" data-bootopen="${esc(h.name)}">${bootPassed(h.name) ? "Bootcamp auffrischen" : bootGet(h.name) ? "Bootcamp fortsetzen" : "Bootcamp für " + esc(h.name)}</button></div>` : ""}
       ${ULTS[h.name] ? `<details class="cp"><summary><span class="cp-name"><b>Ult: ${esc(ultName(ULTS[h.name]))}</b></span></summary><div class="cp-body" style="padding-left:14px">${ultCounterHtml(h.name)}</div></details>` : ""}
