@@ -3889,7 +3889,7 @@ function heroProfileHtml(name) {
     <div class="grid-2" style="gap:8px 18px"><div><b class="small">Stärken</b>${list(x.staerken)}</div><div><b class="small">Schwächen</b>${list(x.schwaechen)}</div></div>
     <b class="small">Tipps</b>${list(x.tipps)}
     ${x.support_hinweis ? `<p class="small"><b>Als Support:</b> ${esc(x.support_hinweis)}</p>` : ""}
-    ${x.synergie.length ? `<div class="vs-line"><span class="lbl good">Passt gut zu</span>${esc(x.synergie.map(s => s.held).join(", "))}</div>` : ""}
+    ${x.synergie.length ? `<b class="small">Passt gut zu, und warum</b><ul>${x.synergie.map(s => `<li><b>${esc(s.held)}:</b> ${esc(s.warum)}</li>`).join("")}</ul>` : ""}
     ${x.counter.length ? `<b class="small">Wer ${esc(name)} kontert, laut Quellen</b>${counterSrcListHtml(name)}` : ""}
     ${(() => { const sa = strongAgainstSrc(name); return sa.length ? `<b class="small">Gegen wen ${esc(name)} laut Quellen stark ist</b><ul>${sa.slice(0, 8).map(c => `<li><b>${esc(c.target)}:</b> ${esc(c.warum)}</li>`).join("")}</ul>${sa.length > 8 ? `<p class="small muted" style="margin:0 0 6px">Und ${sa.length - 8} weitere.</p>` : ""}` : ""; })()}
     ${x.ue ? ultGuideHtml(x) : ""}
