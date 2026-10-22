@@ -7945,26 +7945,41 @@ function rvMissing(m) {
 }
 const rvPer10 = (m, f) => (m.dur > 0 && m[f] !== null && m[f] !== undefined ? m[f] / m.dur * 10 : null);
 function rvKeyStat(m) { const r = heroRole(m.hero); return r === "Strategist" ? ["heal", "Heilung"] : r === "Duelist" ? ["dmg", "Schaden"] : ["block", "Geblockt"]; }
-// Warum ist dieses Match wichtig? Vergleich immer mit deinen eigenen Matches (gleicher Held, sonst gleiche Rolle, sonst alle).
+// Warum ist dieses Match wichtig? Jeder Held wird nur mit sich selbst verglichen: zuerst mit deinen eigenen Matches mit genau diesem
+// Helden (ab 3), sonst mit den Besten auf diesem Helden (Median der Celestial-Spieler aus «Wissen der Besten»). Nie mit anderen Helden,
+// auch nicht derselben Rolle: Cloak & Dagger stirbt anders als Mantis, Luna Snow heilt anders als Jeff.
 function rvCtx() {
-  return { byHero: group(state.matches, x => x.hero), byRole: group(state.matches, x => heroRole(x.hero)), all: state.matches.slice(-41) };
+  return { byHero: group(state.matches, x => x.hero) };
+}
+const rvTbKey = f => (f === "block" ? "blk" : f);
+// Median der Besten mit diesem Helden (Celestial, sonst Eternity), pro 10 Minuten
+function rvTbRef(hero, key) {
+  const b = typeof tbHero === "function" ? tbHero(hero) : null;
+  if (!b) return null;
+  if (b.c && b.c[key]) return { v: b.c[key][1], name: `Celestial-Spieler mit ${hero}` };
+  if (b.e && b.e[key]) return { v: b.e[key][1], name: `Eternity-Spieler mit ${hero}` };
+  return null;
 }
 function rvReasons(m, ctx) {
   const RV_REF = 40, c = ctx || rvCtx(), out = [];   // Vergleich mit den jeweils letzten 40 Matches, damit es bei vielen Matches schnell bleibt
-  const ex = l => (l || []).filter(x => x.id !== m.id).slice(-RV_REF);
-  const sameHero = ex(c.byHero[m.hero]), sameRole = ex(c.byRole[heroRole(m.hero)]), others = ex(c.all);
-  const ref = sameHero.length >= 3 ? sameHero : sameRole.length >= 3 ? sameRole : others;
-  const refName = ref === sameHero && sameHero.length >= 3 ? `deine ${m.hero}-Matches` : ref === sameRole && sameRole.length >= 3 ? `deine ${ROLE_SHORT[heroRole(m.hero)]}-Matches` : "deine Matches";
-  const s = summary(ref), lost = m.result === "L";
-  const dv = rvPer10(m, "d"), timedD = dv !== null && s.timedN >= 3 && isFinite(s.d10);
-  const dVal = timedD ? dv : (+m.d || 0), dBase = timedD ? s.d10 : s.d;
-  if (ref.length >= 3 && isFinite(dBase) && dBase > 0) {
-    if (m.d >= 4 && dVal >= dBase * 1.25) out.push({ k: "death", label: "Viele Tode", text: `${plural(m.d, "Tod", "Tode")}${m.dur > 0 ? ` in ${numDe(m.dur)} Min` : ""}, sonst im Schnitt ${numDe(dBase.toFixed(1))}${timedD ? " pro 10 Min" : ""} (${refName})`, sev: dVal / dBase });
-    if (!lost && m.d <= 5 && dVal <= dBase * 0.6) out.push({ k: "model", label: "Vorbild", text: `Sieg mit nur ${plural(m.d, "Tod", "Tode")}: Was hat hier funktioniert?`, sev: dBase / Math.max(0.5, dVal) });
-  } else if (m.d >= 8) out.push({ k: "death", label: "Viele Tode", text: plural(m.d, "Tod", "Tode"), sev: m.d / 8 });
-  const [kf, kl] = rvKeyStat(m), timed = m.dur > 0 && s.timedN >= 3;
-  const kv = timed ? rvPer10(m, kf) : (m[kf] === undefined ? null : m[kf]), kb = timed ? s[kf + "10"] : s[kf];
-  if (kv !== null && kv !== undefined && isFinite(kb) && kb > 0 && ref.length >= 3 && kv <= kb * 0.75) out.push({ k: "low", label: `Wenig ${kl}`, text: `${kl} ${fmtNum(kv)}${timed ? " pro 10 Min" : ""}, sonst im Schnitt ${fmtNum(kb)} (${refName})`, sev: kb / Math.max(1, kv) });
+  const own = (c.byHero[m.hero] || []).filter(x => x.id !== m.id).slice(-RV_REF), s = own.length >= 3 ? summary(own) : null, lost = m.result === "L";
+  const ownName = `deine anderen ${m.hero}-Matches`;
+  // Vergleichswert: v = dieses Match, b = Bezug, per = pro 10 Minuten, tb = Bezug sind die Besten
+  const ref = f => {
+    const v10 = rvPer10(m, f);
+    if (s && v10 !== null && s.timedN >= 3 && isFinite(s[f + "10"]) && s[f + "10"] > 0) return { v: v10, b: s[f + "10"], per: true, name: ownName };
+    if (s && v10 === null && m[f] !== null && m[f] !== undefined && isFinite(s[f]) && s[f] > 0) return { v: +m[f], b: s[f], per: false, name: ownName };
+    const t = v10 !== null ? rvTbRef(m.hero, rvTbKey(f)) : null;
+    return t ? { v: v10, b: t.v, per: true, name: t.name, tb: true } : null;
+  };
+  const fmtB = (r, fmt) => r.tb ? `${r.name} kommen im Median auf ${fmt(r.b)} pro 10 Min` : `sonst im Schnitt ${fmt(r.b)}${r.per ? " pro 10 Min" : ""} (${r.name})`;
+  const rd = ref("d"), dfmt = v => numDe(v.toFixed(1));
+  if (rd) {
+    if (m.d >= 4 && rd.v >= rd.b * (rd.tb ? 1.4 : 1.25)) out.push({ k: "death", label: "Viele Tode", text: `${plural(m.d, "Tod", "Tode")}${m.dur > 0 ? ` in ${numDe(m.dur)} Min (${dfmt(rd.v)} pro 10 Min)` : ""}, ${fmtB(rd, dfmt)}`, sev: rd.v / rd.b });
+    if (!lost && m.d <= 5 && rd.v <= rd.b * 0.6) out.push({ k: "model", label: "Vorbild", text: `Sieg mit nur ${plural(m.d, "Tod", "Tode")}: Was hat hier funktioniert?`, sev: rd.b / Math.max(0.5, rd.v) });
+  }
+  const [kf, kl] = rvKeyStat(m), rk = ref(kf);
+  if (rk && rk.v <= rk.b * 0.75) out.push({ k: "low", label: `Wenig ${kl}`, text: `${kl} ${fmtNum(rk.v)}${rk.per ? " pro 10 Min" : ""}, ${fmtB(rk, fmtNum)}`, sev: rk.b / Math.max(1, rk.v) });
   if (m.ults >= 2 && m.ultHit !== null && m.ultHit !== undefined && m.ultHit / m.ults <= 0.34) out.push({ k: "ult", label: "Ults ohne Wirkung", text: `Ult-Wirkung ${numDe(m.ultHit)} von ${m.ults}`, sev: 2 - m.ultHit / m.ults });
   if (lost) {
     const cs = [...new Set(m.enemies || [])].filter(e => counterSrc(e, m.hero));   // nur Counter, die im Heldenprofil mit Quelle stehen (die Spielstil-Regeln würden fast jede Niederlage treffen)
@@ -7973,15 +7988,50 @@ function rvReasons(m, ctx) {
   }
   return out;
 }
-// Aus den offenen Matches die n wichtigsten: abwechselnd viele Tode, wenig Heilung/Schaden, Ult, Counter, dazu höchstens ein Vorbild
+// Worauf das Review gerade achtet. Die Gewichte passen sich an deinen Stand an: Was bei dir schon im Rahmen der Besten liegt, kommt
+// seltener dran, was oft daneben liegt, öfter. Mit mehr ausgewerteten Matches kommen öfter gute Matches (Vorbild) dazu. Matches zu einer
+// offenen Mission (gleicher Held, gleiches Thema) zählen mehr. Das ist eine Faustregel der App, keine belegte Lernmethode.
+const RV_KINDS = { death: "Viele Tode", low: "Wenig Heilung, Schaden oder Geblockt", ult: "Ults ohne Wirkung", counter: "Gegen Counter verloren", model: "Vorbild-Siege" };
+function rvFocus() {
+  const recent = state.matches.slice(-20), w = {}, why = {};
+  const share = worse => { let n = 0, bad = 0; recent.forEach(m => { const r = worse(m); if (r === null) return; n++; if (r) bad++; }); return { n, bad }; };
+  const setBy = (k, x, what) => {
+    if (x.n < 5) { w[k] = 1; why[k] = `Noch zu wenige Matches mit Dauer für einen Vergleich (${x.n} von 5).`; return; }
+    const q = x.bad / x.n, t = `In ${x.bad} von ${x.n} deiner letzten Matches ${what}`;
+    if (q >= 0.5) { w[k] = 1.4; why[k] = `${t}. Deshalb kommt das öfter dran.`; }
+    else if (q <= 0.25) { w[k] = 0.6; why[k] = `${t}. Das sitzt schon recht gut, deshalb seltener.`; }
+    else { w[k] = 1; why[k] = `${t}.`; }
+  };
+  setBy("death", share(m => { const v = rvPer10(m, "d"), t = rvTbRef(m.hero, "d"); return v === null || !t ? null : v > t.v * 1.15; }),
+    "bist du deutlich häufiger gestorben als die Besten mit demselben Helden");
+  setBy("low", share(m => { const f = rvKeyStat(m)[0], v = rvPer10(m, f), t = rvTbRef(m.hero, rvTbKey(f)); return v === null || !t ? null : v < t.v * 0.85; }),
+    "lag deine Heilung, dein Schaden oder Geblockt deutlich unter den Besten mit demselben Helden");
+  const su = summary(recent);
+  if (su.ultN >= 5) {
+    const t = `Deine letzten Ults hatten zu ${pct(su.ultPct)} Wirkung`;
+    if (su.ultPct <= 0.4) { w.ult = 1.3; why.ult = `${t}. Deshalb kommt das öfter dran.`; }
+    else if (su.ultPct >= 0.6) { w.ult = 0.6; why.ult = `${t}. Das sitzt schon recht gut, deshalb seltener.`; }
+    else { w.ult = 1; why.ult = `${t}.`; }
+  } else { w.ult = 1; why.ult = "Noch zu wenige Matches mit Angaben zur Ult-Wirkung."; }
+  w.counter = 1; why.counter = "Niederlagen gegen Helden, die deinen Helden laut Quellen kontern.";
+  const tot = rvTotal();
+  w.model = Math.round((0.5 + Math.min(0.7, tot / 30)) * 10) / 10;
+  why.model = `Du hast ${plural(tot, "Match", "Matches")} ausgewertet. Je mehr es sind, desto öfter kommen auch gute Matches dran, damit du siehst, was schon funktioniert.`;
+  const order = Object.keys(RV_KINDS).sort((a, b) => w[b] - w[a]);
+  return { w, why, order };
+}
+// Aus den offenen Matches die n wichtigsten: Reihenfolge nach den Gewichten von rvFocus, dazu höchstens ein Vorbild
 function rvRank(cands, n) {
-  const ctx = rvCtx(), info = cands.map(m => ({ m, reasons: rvReasons(m, ctx) }));
-  const sev = (x, k) => x.reasons.find(r => r.k === k).sev;
+  const ctx = rvCtx(), info = cands.map(m => ({ m, reasons: rvReasons(m, ctx) })), F = rvFocus();
+  const mis = new Set(rvState().missions.filter(x => x.status === "open").map(x => `${x.hero}|${x.wid === "cause" ? "death" : x.wid === "enemy" ? "counter" : x.wid}`));
+  const sev = (x, k) => x.reasons.find(r => r.k === k).sev * (mis.has(`${x.m.hero}|${k}`) ? 1.3 : 1);
   const by = k => info.filter(x => x.reasons.some(r => r.k === k)).sort((a, b) => sev(b, k) - sev(a, k));
-  const lists = { death: by("death"), low: by("low"), ult: by("ult"), counter: by("counter"), model: by("model") };
+  const lists = {}; Object.keys(RV_KINDS).forEach(k => { lists[k] = by(k); });
   const out = [], seen = new Set();
   const take = k => { const x = lists[k].find(y => !seen.has(y.m.id)); if (x) { seen.add(x.m.id); out.push(x); } return !!x; };
-  const order = ["death", "low", "ult", "counter", "death", "low", "model"];
+  // Wichtige Themen (Gewicht ab 1,2) zweimal pro Runde, schwache (unter 0,8) erst am Schluss
+  const strong = F.order.filter(k => F.w[k] >= 0.8), weak = F.order.filter(k => F.w[k] < 0.8);
+  const order = strong.concat(strong.filter(k => F.w[k] >= 1.2 && k !== "model")).concat(weak);
   for (let round = 0; out.length < n && round < 12; round++) {
     let any = false;
     for (const k of order) {
@@ -7993,6 +8043,12 @@ function rvRank(cands, n) {
   }
   if (out.length < n) info.filter(x => !seen.has(x.m.id)).sort((a, b) => (b.m.result === "L") - (a.m.result === "L") || matchTime(b.m) - matchTime(a.m)).slice(0, n - out.length).forEach(x => { seen.add(x.m.id); out.push(x); });
   return out;
+}
+function rvFocusHtml() {
+  const F = rvFocus(), lv = v => (v >= 1.2 ? "öfter" : v < 0.8 ? "seltener" : "normal");
+  return `<details class="rvdone"><summary class="small">Worauf das Review gerade achtet: zuerst ${esc(RV_KINDS[F.order[0]])}</summary>
+    <ul class="wl small" style="margin:6px 0">${F.order.map(k => `<li><b>${esc(RV_KINDS[k])}</b> (${lv(F.w[k])}): ${esc(F.why[k])}</li>`).join("")}</ul>
+    <p class="small muted" style="margin:0">Jeder Held wird nur mit sich selbst verglichen: mit deinen eigenen Matches mit genau diesem Helden, sonst mit den Besten auf diesem Helden. Matches zu einer offenen Mission kommen öfter dran. Die Gewichte passen sich mit jedem Match an. Das ist eine Faustregel der App; ob diese Reihenfolge schneller besser macht, ist nicht untersucht.</p></details>`;
 }
 // Die Auswahl richtet sich nach dem Stand der Matches: Neue Matches können unberührte Vorschläge ersetzen, ein Match, an dem du schon
 // arbeitest (Ursache, Stärke oder Vorsatz eingetragen, oder gerade geöffnet), bleibt in jedem Fall stehen.
@@ -8112,6 +8168,7 @@ function rvCardHtml() {
     ${st.ok && total ? `<div class="note good" style="margin:0"><span class="ni" aria-hidden="true">✓</span><div><b>Review für heute geschafft.</b> Du darfst gern noch weitere Matches auswerten, indem du die Zahl pro Tag erhöhst.</div></div>` : ""}
     <div class="rvlist">${items.map(x => rvMatchHtml(x, cur && x.m.id === cur.m.id, L)).join("")}</div>
     ${doneList}
+    ${rvFocusHtml()}
     <div class="row small muted" style="gap:8px;align-items:center">Matches pro Tag:
       <button type="button" class="btn ghost small" data-rv="n-" aria-label="Eins weniger" ${L.n <= 1 ? "disabled" : ""}>−</button><b>${L.n}</b>
       <button type="button" class="btn ghost small" data-rv="n+" aria-label="Eins mehr" ${L.n >= RV_MAX ? "disabled" : ""}>+</button></div>
@@ -8194,7 +8251,7 @@ function rvStreak() {
 }
 
 // ---------- Schwächen pro Held und kleine Missionen ----------
-// Aus deinen Matches mit einem Helden (letzte 12) sucht die App Auffälligkeiten: mehr Tode als bei deinen anderen Helden, eine häufige
+// Aus deinen Matches mit einem Helden (letzte 12) sucht die App Auffälligkeiten: mehr Tode als die Besten mit demselben Helden (oder als früher), eine häufige
 // Todesursache, wenig Heilung/Schaden/Geblockt, Ults ohne Wirkung, ein Gegner, gegen den es selten klappt. Zu jeder Auffälligkeit gehören
 // die passenden Lektionen und Übungen aus den Wochenzielen (GOAL_TOPICS) und eine Mission über die nächsten drei Matches mit diesem Helden.
 // Die Missionen prüft die App allein aus deinen Zahlen. Kleine Stichproben: Es sind Hinweise, keine Urteile.
@@ -8210,17 +8267,26 @@ const tbEvid = (h, k) => { const b = typeof tbHero === "function" ? tbHero(h) : 
 function wkFind(hero) {
   const all = state.matches, mine = all.filter(m => m.hero === hero).slice(-WK_LAST);
   if (mine.length < WK_MIN) return [];
-  const role = heroRole(hero), same = all.filter(m => m.hero !== hero && heroRole(m.hero) === role).slice(-30), rest = all.filter(m => m.hero !== hero).slice(-40);
-  const ref = same.length >= WK_MIN ? same : rest, refName = same.length >= WK_MIN ? `deinen anderen ${ROLE_SHORT[role]}-Helden` : "deinen anderen Helden";
-  const s = summary(mine), so = summary(ref), out = [];
+  // Verglichen wird nur mit demselben Helden: zuerst mit den Besten auf diesem Helden (Median der Celestial-Spieler), sonst mit deinen
+  // früheren Matches mit diesem Helden. Andere Helden derselben Rolle spielen sich anders (Cloak & Dagger stirbt anders als Mantis).
+  const older = all.filter(m => m.hero === hero).slice(0, -WK_LAST).slice(-30);
+  const s = summary(mine), so = older.length >= 5 ? summary(older) : null, out = [];
   const add = w => out.push(Object.assign({ hero }, w));
-  // 1) Mehr Tode als sonst
-  const timed = s.timedN >= 3 && so.timedN >= 3, dNow = timed ? s.d10 : s.d, dRef = timed ? so.d10 : so.d;
-  if (ref.length >= WK_MIN && isFinite(dNow) && isFinite(dRef) && dRef > 0 && dNow >= dRef * 1.2 && dNow - dRef >= (timed ? 0.8 : 1)) {
-    const unit = timed ? "pro 10 Min" : "pro Match", tgt = Math.round(dNow * 0.8 * 10) / 10;
-    add({ id: "death", topic: "survive", title: "Du stirbst häufiger als sonst", sev: dNow / dRef,
-      evid: `Mit ${hero} stirbst du im Schnitt ${numDe(dNow.toFixed(1))}× ${unit}, bei ${refName} ${numDe(dRef.toFixed(1))}× (${plural(mine.length, "Match", "Matches")}).${timed ? tbEvid(hero, "d") : ""}`,
-      mission: { metric: timed ? "d10" : "d", op: "<=", base: dNow, target: tgt } });
+  // Bezug für eine Kennzahl: {b, per, name, tb}
+  const wkRef = (f, key) => {
+    const t = s.timedN >= 3 ? rvTbRef(hero, key) : null;
+    if (t) return { now: s[f + "10"], b: t.v, per: true, name: `${t.name} im Median`, tb: true };
+    if (!so) return null;
+    const per = s.timedN >= 3 && so.timedN >= 3;
+    return { now: per ? s[f + "10"] : s[f], b: per ? so[f + "10"] : so[f], per, name: `in deinen früheren ${hero}-Matches` };
+  };
+  // 1) Mehr Tode als die Besten mit diesem Helden (oder als früher)
+  const rd = wkRef("d", "d");
+  if (rd && isFinite(rd.now) && isFinite(rd.b) && rd.b > 0 && rd.now >= rd.b * 1.2 && rd.now - rd.b >= (rd.per ? 0.8 : 1)) {
+    const dNow = rd.now, unit = rd.per ? "pro 10 Min" : "pro Match", tgt = Math.round(dNow * 0.8 * 10) / 10;
+    add({ id: "death", topic: "survive", title: rd.tb ? "Du stirbst häufiger als die Besten mit diesem Helden" : "Du stirbst häufiger als früher", sev: dNow / rd.b,
+      evid: `Mit ${hero} stirbst du im Schnitt ${numDe(dNow.toFixed(1))}× ${unit}, ${rd.name} ${numDe(rd.b.toFixed(1))}× (deine letzten ${plural(mine.length, "Match", "Matches")}).${rd.tb ? tbEvid(hero, "d") : ""}`,
+      mission: { metric: rd.per ? "d10" : "d", op: "<=", base: dNow, target: tgt } });
   }
   // 2) Häufigste Todesursache
   const ds = deathStats(mine);
@@ -8234,12 +8300,13 @@ function wkFind(hero) {
     }
   }
   // 3) Wenig Heilung / Schaden / Geblockt
-  const [kf, kl] = rvKeyStat({ hero }), tm = s.timedN >= 3 && so.timedN >= 3, kNow = tm ? s[kf + "10"] : s[kf], kRef = tm ? so[kf + "10"] : so[kf];
-  if (ref.length >= WK_MIN && isFinite(kNow) && isFinite(kRef) && kRef > 0 && kNow <= kRef * 0.85) {
-    const tp = kf === "heal" ? "heal" : kf === "dmg" ? "aim" : "tank", tgt = Math.round(kRef * 1.0 / 100) * 100 || Math.round(kRef);
-    add({ id: "low", topic: tp, title: `${kl} liegt unter deinem Schnitt`, sev: kRef / Math.max(1, kNow),
-      evid: `${kl} mit ${hero}: ${fmtNum(kNow)}${tm ? " pro 10 Min" : " pro Match"}, bei ${refName} ${fmtNum(kRef)}.${tm ? tbEvid(hero, kf === "block" ? "blk" : kf) : ""}`,
-      mission: { metric: tm ? kf + "10" : kf, op: ">=", base: kNow, target: tgt } });
+  const [kf, kl] = rvKeyStat({ hero }), rk = wkRef(kf, rvTbKey(kf));
+  if (rk && isFinite(rk.now) && isFinite(rk.b) && rk.b > 0 && rk.now <= rk.b * 0.85) {
+    const kNow = rk.now, tp = kf === "heal" ? "heal" : kf === "dmg" ? "aim" : "tank";
+    const tgt = Math.round(Math.min(rk.b, kNow * 1.2) / 100) * 100 || Math.round(Math.min(rk.b, kNow * 1.2));   // kleiner Schritt: höchstens ein Fünftel mehr
+    add({ id: "low", topic: tp, title: rk.tb ? `${kl} liegt unter den Besten mit diesem Helden` : `${kl} liegt unter deinem früheren Schnitt`, sev: rk.b / Math.max(1, kNow),
+      evid: `${kl} mit ${hero}: ${fmtNum(kNow)}${rk.per ? " pro 10 Min" : " pro Match"}, ${rk.name} ${fmtNum(rk.b)}.${rk.tb ? tbEvid(hero, rvTbKey(kf)) : ""}`,
+      mission: { metric: rk.per ? kf + "10" : kf, op: ">=", base: kNow, target: tgt } });
   }
   // 4) Ults ohne Wirkung
   if (s.ultN >= 4 && s.ultPct <= 0.4) {
@@ -8365,7 +8432,7 @@ function renderWeak() {
   const found = heroes.map(h => [h, wkFind(h)]), withF = found.filter(x => x[1].length), plain = found.filter(x => !x[1].length).map(x => x[0]);
   const open = rv.missions.filter(x => x.status === "open"), closed = rv.missions.filter(x => x.status !== "open").slice(-6).reverse();
   el.innerHTML = `<div class="card"><div class="card-head"><h2>${icon("target")}Schwächen-Training</h2></div>
-    <p class="lead">Die App schaut sich deine letzten ${WK_LAST} Matches pro Held an und sucht, was sich lohnt: mehr Tode als sonst, eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen.</p>
+    <p class="lead">Die App schaut sich deine letzten ${WK_LAST} Matches pro Held an und sucht, was sich lohnt: mehr Tode als die Besten mit demselben Helden, eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen. Jeder Held wird nur mit sich selbst verglichen: mit den Besten auf genau diesem Helden (Median der Celestial-Spieler), sonst mit deinen früheren Matches mit ihm. Nie mit anderen Helden, denn Cloak & Dagger spielt sich anders als Mantis.</p>
     <p class="small muted" style="margin:0">Das sind Hinweise aus kleinen Stichproben, keine Urteile. Ob Missionen dein Spiel verbessern, ist für Marvel Rivals nicht untersucht.</p></div>
     ${open.length ? `<div class="card"><div class="card-head"><h2>${icon("check")}Offene Missionen</h2><span class="badge">${open.length} von ${WK_OPEN_MAX}</span></div>${open.map(wkMissionHtml).join("")}</div>` : ""}
     ${heroes.length ? withF.slice(0, 8).map(([h, ws]) => wkHeroCardHtml(h, ws)).join("") : empty(`Noch kein Held mit mindestens ${WK_MIN} Matches. Sobald du ${WK_MIN} Matches mit einem Helden hast, zeigt die App hier, was sich lohnt.`, "heroes")}
