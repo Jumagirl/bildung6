@@ -6283,8 +6283,11 @@ async function requestSync(auto) {
   Bridge.timer = setTimeout(poll, Bridge.firstPollMs || 20000);
 }
 async function takeInbox(box) {
-  if (Bridge.busy || !box) return;
-  Bridge.busy = true;
+  if (!box) return;
+  // Kommt ein Eingang an, während der vorige noch verarbeitet wird, kommt er danach dran (sonst bliebe er bis zum nächsten Öffnen liegen)
+  if (Bridge.busy) { Bridge.nextBox = box; return; }
+  if (box.at && box.at === Bridge.lastBoxAt && !box.planDays) return;   // derselbe Eingang doppelt gemeldet
+  Bridge.busy = true; Bridge.lastBoxAt = box.at || "";
   let keep = false;
   try {
     // Plantage pro Datum (zum Beispiel von Claude gesetzt): {planDays: {"2026-10-17": 6}}, 0 = freies Spiel
@@ -6314,7 +6317,11 @@ async function takeInbox(box) {
     }
     if (!keep) await Cloud.base.doc("sync-inbox").delete();
   } catch (e) { /* der nächste Start versucht es erneut */ }
-  finally { Bridge.busy = false; }
+  finally {
+    Bridge.busy = false;
+    const next = Bridge.nextBox; Bridge.nextBox = null;
+    if (next) setTimeout(() => takeInbox(next), 0);
+  }
 }
 // ---------- Gratis-Abgleich über GitHub (ausserhalb von Claude: Datei oder eigene Webseite) ----------
 // Ein GitHub-Workflow holt regelmässig (geplant alle 15 Minuten) die öffentlichen Matches der Spieler aus einer Liste und legt sie im Branch
