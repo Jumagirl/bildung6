@@ -1410,7 +1410,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="row mt"><button class="btn ghost small" type="button" id="diagBtn" data-icon="sync" hidden>Verbindung prüfen</button></div>
     <pre class="prompt" id="diagOut" hidden></pre>
     <p class="muted small mt" id="syncBridgeNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data ab, alle zwei Stunden von 10 bis 22 Uhr und zusätzlich jedes Mal, wenn du die App öffnest und der letzte Abruf älter als 30 Minuten ist (das dauert meist 1–3 Minuten). Mit „Jetzt aktualisieren“ fragst du sofort an. Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A). Sonst nutze die Schritte unten.</p>
-    <p class="muted small mt" id="syncAutoNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data alle zwei Stunden von 10 bis 24 Uhr ab und legt das Ergebnis in deinem Konto ab. Die App übernimmt es beim Öffnen und sofort, solange sie offen ist. Willst du nicht warten: Zieh ganz oben auf einer Seite mit dem Finger nach unten (oder tippe auf «Jetzt abgleichen»). Dann startet der Sync-Helfer sofort, und die neuen Matches erscheinen nach ein bis zwei Minuten (höchstens alle 5 Minuten). Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
+    <p class="muted small mt" id="syncAutoNote" hidden>Die App holt deine Matches automatisch: Ein Sync-Helfer in Claude fragt Rivals Data jede Stunde von 10 bis 24 Uhr ab und legt das Ergebnis in deinem Konto ab. Die App übernimmt es beim Öffnen und sofort, solange sie offen ist. Willst du nicht warten: Zieh ganz oben auf einer Seite mit dem Finger nach unten (oder tippe auf «Jetzt abgleichen»). Dann startet der Sync-Helfer sofort, und die neuen Matches erscheinen nach ein bis zwei Minuten (höchstens alle 5 Minuten). Rivals Data trägt Matches teils erst nach einigen Stunden ein: Was dort noch fehlt, kann auch der Sync-Helfer nicht holen. Trag es dann kurz von Hand ein, die App führt es später mit dem Match von Rivals Data zusammen (gleicher Tag, Held, Ergebnis und K/D/A).</p>
     <details class="mt" id="syncManual" open>
     <summary>Selbst abrufen (mit Python)</summary>
     <ol class="steps">
@@ -5918,7 +5918,7 @@ function renderData() {
   const s = state.sync, el = $("#syncStatus");
   if (!s) {
     el.className = "sync-status";
-    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (alle zwei Stunden von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : webSyncOn() ? "Trag oben deinen Spielernamen ein. Steht er in der Spielerliste des Gratis-Abgleichs, holt die App deine Matches automatisch (geplant alle 15 Minuten, je nach GitHub seltener)." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
+    el.innerHTML = `<span class="dot"></span><div><b>Noch nicht synchronisiert</b><br><span class="muted small">${syncInboxOn() ? "Die App holt deine Matches automatisch (jede Stunde von 10 bis 24 Uhr), sie erscheinen beim Öffnen von selbst." : webSyncOn() ? "Trag oben deinen Spielernamen ein. Steht er in der Spielerliste des Gratis-Abgleichs, holt die App deine Matches automatisch (geplant alle 15 Minuten, je nach GitHub seltener)." : IN_VIEWER && Bridge.mcp ? "Die App holt deine Matches automatisch. Mit „Jetzt aktualisieren“ geht es sofort." : "Folge den Schritten unten."}</span></div>`;
     return;
   }
   const n = state.matches.filter(m => m.source === "rivalsdata").length;
@@ -6149,7 +6149,7 @@ function renderInboxLine() {
   if (!line) return;
   if (banner) banner.hidden = true;
   const s = state.sync, ageH = s ? (Date.now() - Date.parse(s.at || "")) / 36e5 : NaN;
-  const text = s ? `Letzter automatischer Abgleich: ${fmtDT(s.at)}.${syncFreshText()}` : "Noch kein automatischer Abgleich angekommen. Der Sync-Helfer läuft alle zwei Stunden von 10 bis 24 Uhr.";
+  const text = s ? `Letzter automatischer Abgleich: ${fmtDT(s.at)}.${syncFreshText()}` : "Noch kein automatischer Abgleich angekommen. Der Sync-Helfer läuft jede Stunde von 10 bis 24 Uhr.";
   const k = typeof kickState === "function" ? kickState() : null, kt = k ? kickText() : "", on = typeof kickOn === "function" && kickOn();
   line.hidden = false;
   line.className = `note ${k && k.err ? "bad" : s && ageH < 3 ? "good" : "info"} mt`;
@@ -6409,7 +6409,7 @@ const kickOn = () => IN_VIEWER && !!SYNC_TRIGGER;
 const KICK_ERRORS = {
   not_in_manifest: "Die App darf den Connector «Claude Code Remote» noch nicht nutzen. Erlaube ihn im Menü der Seite unter «Permissions» und zieh nochmals nach unten.",
   not_granted: "Die App darf den Connector «Claude Code Remote» noch nicht nutzen. Erlaube ihn im Menü der Seite unter «Permissions» und zieh nochmals nach unten.",
-  blocked_by_policy: "Das Werkzeug «fire_trigger» des Connectors «Claude Code Remote» ist für Seiten gesperrt. Öffne die Connector-Einstellungen, tippe auf «Claude Code Remote» und erlaube bei den Tool-Berechtigungen «fire_trigger». Wird das nicht angeboten, lässt es dein Konto nicht zu; dann kommen die Matches weiter automatisch alle zwei Stunden.",
+  blocked_by_policy: "Das Werkzeug «fire_trigger» des Connectors «Claude Code Remote» ist für Seiten gesperrt. Öffne die Connector-Einstellungen, tippe auf «Claude Code Remote» und erlaube bei den Tool-Berechtigungen «fire_trigger». Wird das nicht angeboten, lässt es dein Konto nicht zu; dann kommen die Matches weiter automatisch jede Stunde.",
   server_not_connected: "Der Connector «Claude Code Remote» ist in deinem Konto nicht verbunden (claude.ai → Einstellungen → Connectors).",
   selection_required: "Du hast mehrere Connectoren mit dem Namen «Claude Code Remote». Wähle einen aus und zieh nochmals nach unten.",
   needs_reauth: "Verbinde «Claude Code Remote» in den claude.ai-Einstellungen unter «Connectors» neu.",
@@ -6417,7 +6417,7 @@ const KICK_ERRORS = {
   tool_error: "Der Sync-Helfer liess sich nicht starten.",
   server_unavailable: "Claude hat nicht geantwortet. Vielleicht läuft der Abgleich trotzdem; schau in zwei Minuten nach, bevor du es nochmals versuchst.",
   upstream_error: "Claude hat nicht geantwortet. Vielleicht läuft der Abgleich trotzdem; schau in zwei Minuten nach, bevor du es nochmals versuchst.",
-  capability_disabled: "Diese Ansicht kann den Abgleich nicht anstossen (zum Beispiel in einer Vorschau). Die Matches kommen weiter automatisch alle zwei Stunden."
+  capability_disabled: "Diese Ansicht kann den Abgleich nicht anstossen (zum Beispiel in einer Vorschau). Die Matches kommen weiter automatisch jede Stunde."
 };
 // Stand des letzten Anstosses: {at, err?, text?}; ein angekommener Eingang erledigt ihn (takeInbox)
 const kickState = () => state.syncKick || null;
@@ -6453,7 +6453,7 @@ async function ptrRefresh() {
   try {
     if (webSyncOn()) { await webSyncPull(true); toast("Neuester Stand von GitHub geholt"); }
     else if (kickOn()) await syncKick();
-    else if (syncInboxOn()) toast("Neue Matches kommen automatisch alle zwei Stunden.");
+    else if (syncInboxOn()) toast("Neue Matches kommen automatisch jede Stunde.");
     render();
   } finally { Ptr.busy = false; ptrShow(0); }
 }

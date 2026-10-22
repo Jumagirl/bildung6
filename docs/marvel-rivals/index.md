@@ -55,7 +55,7 @@ Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | Wochenziele in eigenen Worten (zum Beispiel „Weniger sterben“). Die App erkennt das Thema, wählt passende Lektionen aus, stellt Aufgaben für die Woche zusammen und zeigt deinen Fortschritt aus den Matches (Tode, Heilung pro 10 Minuten, Ult-Wirkung, Rollen-Flex). Das Ziel erscheint auch im Trainingstag, im Dashboard und im Training; Vorschläge kommen aus deinen häufigsten Fehlern. Nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches alle zwei Stunden (10 bis 24 Uhr) und legt sie in deiner App-Datenbank ab, die App übernimmt sie sofort oder beim Öffnen; Backup als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches jede Stunde (10 bis 24 Uhr) und legt sie in deiner App-Datenbank ab, die App übernimmt sie sofort oder beim Öffnen; Backup als JSON, Export der Matches als CSV |
 
 !!! info "Wo werden deine Daten gespeichert?"
     - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
@@ -125,7 +125,7 @@ Statt jedes Match von Hand einzutragen, kannst du deine öffentlichen Matches vo
 [Rivals Data](https://rivalsdata.com) übernehmen. Rivals Data hat keine offizielle Schnittstelle und
 blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript die Daten ab:
 
-**In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine geplante Claude-Sitzung, alle zwei Stunden von 10 bis 24 Uhr,
+**In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine geplante Claude-Sitzung, jede Stunde von 10 bis 24 Uhr,
 jeweils sieben Minuten nach der vollen Stunde) ruft das Skript mit `--inbox` auf und legt das fertige Ergebnis mit dem Werkzeug ArtifactData
 im Dokument `sync-inbox` deiner App-Datenbank ab. Die App übernimmt es sofort, solange sie offen ist, sonst beim nächsten Öffnen,
 trägt die neuen Matches ein und leert den Eingang. Der Helfer schreibt nur dieses eine Dokument, die Daten tippt er nie selbst ab (er übergibt die Datei).
