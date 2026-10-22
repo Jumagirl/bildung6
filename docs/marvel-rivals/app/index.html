@@ -3217,6 +3217,8 @@ function loadState(raw) {
   st.app.seen = st.app.seen || {}; st.app.tour = st.app.tour || {};
   st.boot = Object.assign({}, st.boot);   // Helden-Bootcamp: Fortschritt, eigene Antworten und Test pro Held
   st.watch = Object.assign({ log: [] }, st.watch);   // Zuschauen: deine Antworten zu den Streamer-Aufgaben
+  st.pro = Object.assign({ notes: [] }, st.pro);   // Profi-Notizbuch
+  if (!Array.isArray(st.pro.notes)) st.pro.notes = [];
   st.rv = Object.assign({ pins: {}, missions: [], badges: {} }, st.rv);   // Review: Auswahl des Tages, Schwächen-Missionen, Abzeichen
   if (!st.rv.pins || typeof st.rv.pins !== "object") st.rv.pins = {};
   if (!Array.isArray(st.rv.missions)) st.rv.missions = [];
@@ -3950,6 +3952,7 @@ function heroProfileHtml(name) {
     ${x.synergie.length ? `<b class="small">Passt gut zu, und warum</b><ul>${x.synergie.map(s => `<li><b>${esc(s.held)}:</b> ${esc(s.warum)}</li>`).join("")}</ul>` : ""}
     ${x.counter.length ? `<b class="small">Wer ${esc(name)} kontert, laut Quellen</b>${counterSrcListHtml(name)}` : ""}
     ${(() => { const sa = strongAgainstSrc(name); return sa.length ? `<b class="small">Gegen wen ${esc(name)} laut Quellen stark ist</b><ul>${sa.slice(0, 8).map(c => `<li><b>${esc(c.target)}:</b> ${esc(c.warum)}${muNote(name, c.target)}</li>`).join("")}</ul>${sa.length > 8 ? `<p class="small muted" style="margin:0 0 6px">Und ${sa.length - 8} weitere.</p>` : ""}` : ""; })()}
+    <details class="cp"><summary><span class="cp-name"><b>Profi-Tipps aus Videos</b> <span class="muted small">${proNotes().filter(n => n.hero === name).length}</span></span></summary><div class="cp-body" style="padding-left:14px">${proBodyHtml(name)}</div></details>
     ${tbHero(name) ? `<details class="cp"><summary><span class="cp-name"><b>So spielen die Besten (Zahlen)</b> <span class="muted small">Eternity+ und Celestial, mit deinen Werten</span></span></summary><div class="cp-body" style="padding-left:14px">${tbHeroHtml(name)}</div></details>` : ""}
     ${x.ue ? ultGuideHtml(x) : ""}
     <details class="cp"><summary><span class="cp-name"><b>Alle Fähigkeiten</b> <span class="muted small">${x.kit.length + 1}</span></span></summary><div class="cp-body" style="padding-left:14px"><ul>${x.kit.map(k => `<li><b>${esc(k.n)}</b> <span class="muted small">${esc(k.typ)}</span><br>${esc(k.d)}</li>`).join("")}<li><b>${esc(x.ult.n)}</b> <span class="muted small">Ult</span><br>${esc(x.ult.d)}</li></ul></div></details>
@@ -4189,6 +4192,7 @@ function renderToday() {
     const ageH = (Date.now() - Date.parse(state.sync.at || "")) / 36e5, hr = new Date().getHours();
     if (isFinite(ageH) && ageH > 3 && hr >= 11) news.push(["info", `<b>Der letzte automatische Abgleich ist ${fmtSpan(ageH * 36e5)} her</b> (${esc(fmtDT(state.sync.at))}). Neue Matches kommen, sobald der Sync-Helfer sie abgelegt hat. Fehlt ein Match schon länger, trag es von Hand ein.`]);
   }
+  { const pd = proDue().filter(n => kBox()[proId(n)]).length; if (pd) news.push(["info", `<b>${plural(pd, "Profi-Notiz", "Profi-Notizen")} zur Wiederholung fällig.</b> <button class="btn small" type="button" data-pro-go="${esc(proDue().filter(n => kBox()[proId(n)])[0].hero)}">Wiederholen</button>`]); }
   const dueN = dueQs(false).length + dueHs().length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
@@ -7854,6 +7858,51 @@ function muTeamHtml(enemies) {
     ${mine.length ? `<p class="small" style="margin:8px 0 4px"><b>Deine Pool-Helden:</b></p><div class="row" style="gap:6px;flex-wrap:wrap">${mine.sort((a, b) => b.wr - a.wr).map(chip).join("")}</div>` : ""}`;
 }
 const muNote = (a, b) => { const m = muWr(a, b); return m ? ` <span class="muted small">Daten: ${esc(a)} gewinnt ${numDe(m.wr.toFixed(1))} % gegen ${esc(b)} (${fmtNum(m.n)} Matches, alle Ränge).</span>` : ""; };
+
+// ---------- Profi-Notizbuch: Wissen aus Videos und Streams der Besten selbst festhalten ----------
+// Die App kann Videos nicht lesen. Was du beim Zuschauen lernst (Tipp, Trick, Position, Timing), schreibst du hier in einem Satz auf, mit Quelle.
+// Danach fragt dich die App danach ab (Wiederholen mit wachsendem Abstand wie bei den Fragen). Die Notizen sind deine eigenen, die App prüft sie nicht.
+const proNotes = () => state.pro.notes;
+const proId = n => "N:" + n.id;
+const proDue = () => proNotes().filter(n => !kBox()[proId(n)] || isDue(proId(n)));
+const proUi = { show: "" };
+function proFormHtml(hero) {
+  const heroes = Object.keys(PROF).filter(h => heroByName(h)).sort((a, b) => a.localeCompare(b));
+  return `<div class="profrm">${hero ? `<input type="hidden" data-pro-hero value="${esc(hero)}">` : `<label class="inline-label">Held <select data-pro-hero>${heroes.map(h => `<option>${esc(h)}</option>`).join("")}</select></label>`}
+    <textarea class="pfield" rows="2" data-pro-text placeholder="Was hast du gelernt? Ein Satz, zum Beispiel: Sie zündet die Ult erst, wenn der Gegner-Tank seine Fähigkeit benutzt hat." maxlength="300" aria-label="Dein Profi-Tipp"></textarea>
+    <input type="text" class="pfield" data-pro-src placeholder="Quelle: Name, Video oder Stream, Datum" maxlength="120" aria-label="Quelle">
+    <button type="button" class="btn small" data-pro="add">Notiz speichern</button></div>`;
+}
+function proListHtml(hero) {
+  const l = proNotes().filter(n => !hero || n.hero === hero);
+  return l.length ? `<ul class="wl">${l.slice().reverse().map(n => `<li>${hero ? "" : `<b>${esc(n.hero)}:</b> `}${esc(n.text)} <span class="muted small">(${esc(n.src || "ohne Quelle")}, ${fmtDate(n.date)})</span> <button type="button" class="linkbtn small" data-pro="del" data-id="${n.id}">löschen</button></li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine Notizen${hero ? ` zu ${esc(hero)}` : ""}.</p>`;
+}
+function proReviewHtml(hero) {
+  const due = proDue().filter(x => !hero || x.hero === hero), n = due[0];
+  if (!n) return "";
+  const shown = proUi.show === n.id;
+  return `<p class="small muted" style="margin:0 0 6px">${plural(due.length, "Notiz", "Notizen")} zum Wiederholen. Sag dir zuerst im Kopf, was du dir zu diesem Helden gemerkt hast.</p>
+    <div class="note info" style="margin:0"><span class="ni" aria-hidden="true">?</span><div><b>${esc(n.hero)}</b>: Was war dein Profi-Tipp?${shown ? `<div style="margin-top:6px">${esc(n.text)} <span class="muted small">(${esc(n.src || "ohne Quelle")})</span></div>` : ""}</div></div>
+    <div class="row mt">${shown ? [[3, "Gewusst"], [2, "Teilweise"], [1, "Nicht gewusst"]].map(([r, l]) => `<button type="button" class="btn small ${r === 3 ? "" : "ghost"}" data-pro="rate" data-id="${n.id}" data-r="${r}">${l}</button>`).join("") : `<button type="button" class="btn small" data-pro="show" data-id="${n.id}">Notiz aufdecken</button>`}</div>`;
+}
+// Inhalt für das Heldenprofil: Formular, Wiederholen der fälligen Notizen zu diesem Helden, Liste
+const proBodyHtml = hero => `${proFormHtml(hero)}${proReviewHtml(hero)}<div style="margin-top:8px">${proListHtml(hero)}</div><p class="small muted" style="margin:8px 0 0">Für Tipps aus Videos und Streams, wenn du sie festhalten willst. Die App kann Videos nicht lesen und prüft die Notizen nicht; schreib die Quelle dazu.</p>`;
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-pro-go]");
+  if (g) { openHeroSearch(g.dataset.proGo); return; }
+  const b = e.target.closest("[data-pro]");
+  if (!b) return;
+  const a = b.dataset.pro;
+  if (a === "add") {
+    const box = b.closest(".profrm"), hero = box.querySelector("[data-pro-hero]").value, text = box.querySelector("[data-pro-text]").value.trim(), src = box.querySelector("[data-pro-src]").value.trim();
+    if (rvWords(text) < 5) { toast("Schreib mindestens fünf Wörter, damit du es später verstehst."); return; }
+    proNotes().push({ id: newId(), hero, text, src, date: today() }); save(); toast("Notiz gespeichert");
+  } else if (a === "del") { state.pro.notes = proNotes().filter(n => n.id !== b.dataset.id); save(); }
+  else if (a === "show") proUi.show = b.dataset.id;
+  else if (a === "rate") { const n = proNotes().find(x => x.id === b.dataset.id); if (!n) return; const days = leitner(proId(n), +b.dataset.r); const k = state.quiz.k; k.asked++; k.seen[proId(n)] = (k.seen[proId(n)] || 0) + 1; if (+b.dataset.r === 3) k.correct++; actInc("know"); proUi.show = ""; save(); toast(+b.dataset.r === 3 ? `Gewusst. Wieder in ${plural(days, "Tag", "Tagen")}.` : "Kommt morgen wieder."); }
+  else return;
+  render();
+});
 
 // ---------- Match-Review: die wichtigsten Matches anschauen und nachtragen ----------
 // Zu jedem Trainingstag gehört ein Review. Die App wählt die wichtigsten Matches der letzten Tage (viele Tode, wenig Heilung bzw. Schaden,
