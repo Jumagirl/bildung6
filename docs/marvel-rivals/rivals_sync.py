@@ -160,6 +160,27 @@ def main_hero(player: Mapping[str, Any]) -> tuple[str | None, bool]:
     return hero_label(player.get("hero_id", hero.get("hero_id")), hero), False
 
 
+def hero_breakdown(player: Mapping[str, Any]) -> list[dict]:
+    """Anteile pro Held bei einem Wechsel: Spielzeit (Sekunden), Kills, Tode, Assists. Heilung, Schaden und Geblockt liefert
+    Rivals Data nur fürs ganze Match. Leer, wenn nur ein Held gespielt wurde."""
+    out: dict[str, dict] = {}
+    for h in values(player.get("heroes")):
+        if not isinstance(h, Mapping):
+            continue
+        name = hero_label(h.get("hero_id", h.get("id")), h)
+        if not name:
+            continue
+        e = out.setdefault(name, {"hero": name, "sec": 0, "k": 0, "d": 0, "a": 0})
+        try:
+            e["sec"] += round(float(h.get("play_time") or 0))
+        except (TypeError, ValueError):
+            pass
+        for key, src in (("k", "kills"), ("d", "deaths"), ("a", "assists")):
+            e[key] += to_int(h.get(src)) or 0
+    rows = sorted((e for e in out.values() if e["sec"] > 0), key=lambda e: -e["sec"])
+    return rows if len(rows) > 1 else []
+
+
 def number(value: Any) -> int | None:
     try:
         return round(float(value))
@@ -241,6 +262,9 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
                 hero, swapped = main_hero(player)
                 match["hero"] = hero or match["hero"]
                 match["swapped"] = swapped
+                parts = hero_breakdown(player)
+                if parts:
+                    match["heroes"] = parts
                 match["dmg"] = number(player.get("damage"))
                 match["heal"] = number(player.get("healing"))
                 match["block"] = number(player.get("blocked"))
@@ -333,7 +357,8 @@ def sync(args: argparse.Namespace) -> dict:
         known = getattr(args, "known", None) or {}   # schon abgerufene Matches (extId -> Match), spart Abfragen bei häufigem Abgleich
         for i, row in enumerate(rows, 1):
             old = known.get(str(getattr(row, "match_uid", "")))
-            if old is not None and (old.get("enemies") or not args.details):
+            # Gewechselte Matches ohne Aufteilung pro Held einmal neu holen (ältere Abgleiche kannten sie noch nicht)
+            if old is not None and (old.get("enemies") or not args.details) and (not old.get("swapped") or old.get("heroes") or not args.details):
                 result["matches"].append(old)   # Details waren schon da, Ergebnisse ändern sich nicht
                 reused += 1
                 print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)

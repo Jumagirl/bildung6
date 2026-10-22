@@ -1481,8 +1481,11 @@ from __future__ import annotations
 
 import argparse
 import base64
+import gzip
 import json
+import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 
@@ -1499,6 +1502,19 @@ NAME_FIXES = {
 # Queue-Codes laut rivals-api: 1 Quick Match, 2 Competitive, 3 Custom, 4 Arcade
 MODES = {1: "Quick Match", 2: "Competitive", 3: "Custom / Training", 4: "Arcade / Event"}
 GAME_TYPES = ("Domination", "Convoy", "Convergence", "Doom Match", "Conquest")
+
+
+def player_slug(name: Any) -> str:
+    """Dateiname für einen Spieler im Gratis-Abgleich (GitHub). Muss exakt zu playerSlug() in der App passen:
+    Kleinbuchstaben ohne Akzente, alles ausser a–z und 0–9 wird zu «-», dahinter ein Prüfwert (FNV-1a) des genauen Namens,
+    damit sich «Ju_ma» und «Ju-ma» nie eine Datei teilen."""
+    n = unicodedata.normalize("NFC", str(name or "")).strip().lower()
+    plain = re.sub("[\u0300-\u036f]", "", unicodedata.normalize("NFKD", n))
+    base = re.sub("[^a-z0-9]+", "-", plain).strip("-")[:24].strip("-")
+    h = 0x811C9DC5
+    for byte in n.encode("utf-8"):
+        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
+    return f"{base or 'spieler'}-{h:08x}"
 
 
 # ---------- Hilfsfunktionen (ohne Netzwerk, testbar) ----------
@@ -1602,6 +1618,27 @@ def main_hero(player: Mapping[str, Any]) -> tuple[str | None, bool]:
     return hero_label(player.get("hero_id", hero.get("hero_id")), hero), False
 
 
+def hero_breakdown(player: Mapping[str, Any]) -> list[dict]:
+    """Anteile pro Held bei einem Wechsel: Spielzeit (Sekunden), Kills, Tode, Assists. Heilung, Schaden und Geblockt liefert
+    Rivals Data nur fürs ganze Match. Leer, wenn nur ein Held gespielt wurde."""
+    out: dict[str, dict] = {}
+    for h in values(player.get("heroes")):
+        if not isinstance(h, Mapping):
+            continue
+        name = hero_label(h.get("hero_id", h.get("id")), h)
+        if not name:
+            continue
+        e = out.setdefault(name, {"hero": name, "sec": 0, "k": 0, "d": 0, "a": 0})
+        try:
+            e["sec"] += round(float(h.get("play_time") or 0))
+        except (TypeError, ValueError):
+            pass
+        for key, src in (("k", "kills"), ("d", "deaths"), ("a", "assists")):
+            e[key] += to_int(h.get(src)) or 0
+    rows = sorted((e for e in out.values() if e["sec"] > 0), key=lambda e: -e["sec"])
+    return rows if len(rows) > 1 else []
+
+
 def number(value: Any) -> int | None:
     try:
         return round(float(value))
@@ -1683,6 +1720,9 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
                 hero, swapped = main_hero(player)
                 match["hero"] = hero or match["hero"]
                 match["swapped"] = swapped
+                parts = hero_breakdown(player)
+                if parts:
+                    match["heroes"] = parts
                 match["dmg"] = number(player.get("damage"))
                 match["heal"] = number(player.get("healing"))
                 match["block"] = number(player.get("blocked"))
@@ -1771,8 +1811,16 @@ def sync(args: argparse.Namespace) -> dict:
             result["warnings"].append(f"Match-History nicht abrufbar: {exc}")
             print(f"! Match-History nicht abrufbar: {exc}")
 
-        skipped = 0
+        skipped = reused = 0
+        known = getattr(args, "known", None) or {}   # schon abgerufene Matches (extId -> Match), spart Abfragen bei häufigem Abgleich
         for i, row in enumerate(rows, 1):
+            old = known.get(str(getattr(row, "match_uid", "")))
+            # Gewechselte Matches ohne Aufteilung pro Held einmal neu holen (ältere Abgleiche kannten sie noch nicht)
+            if old is not None and (old.get("enemies") or not args.details) and (not old.get("swapped") or old.get("heroes") or not args.details):
+                result["matches"].append(old)   # Details waren schon da, Ergebnisse ändern sich nicht
+                reused += 1
+                print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
+                continue
             details = None
             if args.details:
                 try:
@@ -1791,6 +1839,8 @@ def sync(args: argparse.Namespace) -> dict:
             print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
         if rows:
             print()
+        if reused:
+            print(f"{reused} Match(es) schon bekannt, nur {len(rows) - reused} neu abgerufen.")
         if skipped:
             print(f"{skipped} Match(es) übersprungen (Unentschieden oder unvollständig).")
 
@@ -1828,10 +1878,18 @@ def chat_line(data: dict, request_id: str) -> str:
     matches = list(data.get("matches", []))
     while True:
         slim["matches"] = matches
-        line = f"@@RIVALS-SYNC:BEGIN {request_id}@@ " + b64url(json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + " @@RIVALS-SYNC:END@@"
+        raw = json.dumps(slim, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        # BEGINZ = gzip + Base64: etwa fünfmal kürzer, schont das Sitzungsprotokoll des Helfers und die Verbindung der App
+        line = f"@@RIVALS-SYNC:BEGINZ {request_id}@@ " + b64url(gzip.compress(raw, 9, mtime=0)) + " @@RIVALS-SYNC:END@@"
         if len(line) <= CHAT_LIMIT or not matches:
             return line
         matches = sorted(matches, key=lambda m: m.get("ts") or 0, reverse=True)[:-1]
+
+
+def write_inbox(path: str, doc: dict) -> None:
+    """Schreibt das fertige Eingangs-Dokument für den automatischen Abgleich (die App liest es aus ihrer Datenbank)."""
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(doc, fh, ensure_ascii=False, separators=(",", ":"))
 
 
 def chat_error(message: str, request_id: str) -> str:
@@ -1851,6 +1909,9 @@ def main() -> int:
                         help='Browser-Fallback bei Cloudflare-Sperre (vorher: pip install "rivals-api[browser]")')
     parser.add_argument("-o", "--out", default="rivals-sync.json", help="Ausgabedatei")
     parser.add_argument("--chat", metavar="ID", help="Zusätzlich das Ergebnis als eine Zeile ausgeben (für den automatischen Abgleich der App)")
+    parser.add_argument("--inbox", metavar="DATEI",
+                        help="Zusätzlich das Ergebnis als fertiges Eingangs-Dokument {payload, at} in diese Datei schreiben "
+                             "(der Sync-Helfer legt es mit ArtifactData in der App-Datenbank ab)")
     args = parser.parse_args()
 
     try:
@@ -1866,6 +1927,8 @@ def main() -> int:
             print(line)
         if args.chat:
             print(chat_error(short, args.chat))
+        if args.inbox:
+            write_inbox(args.inbox, {"error": short, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         return 1
 
     try:
@@ -1891,6 +1954,10 @@ def main() -> int:
     print("Jetzt im Rivals Coach unter „Daten → Rivals Data importieren“ einlesen.")
     if args.chat:
         print(chat_line(data, args.chat))
+    if args.inbox:
+        data["_id"] = args.chat or "auto-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+        write_inbox(args.inbox, {"payload": json.dumps(data, ensure_ascii=False, separators=(",", ":")), "at": data["generated"]})
+        print(f"Eingangs-Dokument geschrieben: {args.inbox} ({data['_id']})")
     return 0
 
 
@@ -3525,6 +3592,41 @@ function today() { return new Date().toISOString().slice(0, 10); }
 function fmtDT(d) { const x = new Date(d); return isNaN(x) ? "" : x.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
 function fmtDate(d) { const x = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d || "") ? `${d}T12:00:00` : d); return isNaN(x) ? "" : x.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }); }
 function kda(m) { return (m.k + m.a) / Math.max(1, m.d); }
+// Heldenwechsel im Match: Nicht alle Zahlen gehören zum Haupthelden. Rivals Data liefert pro Held Spielzeit, Kills, Tode und Assists
+// (beim Abgleich in m.heroes), Heilung, Schaden und Geblockt aber nur fürs ganze Match. Für Werte pro Held zählt deshalb nur der Anteil
+// des Haupthelden: K/D/A und Dauer aus seinem Anteil, Heilung/Schaden/Geblockt nur ab 80 % der Spielzeit. Ohne Aufteilung (von Hand
+// eingetragen oder alter Abgleich) zählt ein gewechseltes Match für Werte pro Held nur beim Ergebnis.
+const MIX_MAIN = 0.8;
+function heroSplit(m) {
+  const hs = Array.isArray(m.heroes) ? m.heroes.filter(h => h && h.hero && h.sec > 0) : [];
+  if (!m.swapped && hs.length < 2) return null;
+  const tot = hs.reduce((a, h) => a + h.sec, 0), main = hs.find(h => h.hero === m.hero) || null;
+  return { list: hs.slice().sort((a, b) => b.sec - a.sec), tot, main, share: main && tot ? main.sec / tot : null };
+}
+function heroView(m) {
+  const sp = m ? heroSplit(m) : null;
+  if (!sp) return m;
+  const v = Object.assign({}, m, { mixed: sp.share === null ? 1 : sp.share });
+  if (sp.main) Object.assign(v, { k: sp.main.k, d: sp.main.d, a: sp.main.a, dur: Math.round(sp.main.sec / 6) / 10 });
+  else Object.assign(v, { k: null, d: null, a: null, dur: null });
+  if (!(sp.share >= MIX_MAIN)) Object.assign(v, { dmg: null, heal: null, block: null });
+  else ["dmg", "heal", "block"].forEach(f => { if (v[f] !== null && v[f] !== undefined) v[f] = Math.round(v[f] * sp.share); });   // Schätzung: gleiches Tempo wie im ganzen Match, damit es zur Dauer des Helden passt
+  return v;
+}
+const heroOnly = list => list.map(heroView);
+function mixTag(m) {
+  const sp = heroSplit(m);
+  if (!sp) return "";
+  const others = sp.list.filter(h => h.hero !== m.hero).map(h => h.hero);
+  return `<div class="small muted" title="${esc(mixText(m))} Für Werte pro Held zählt nur der Anteil von ${esc(m.hero)}.">${others.length ? "+ " + esc(others.join(", ")) : "gewechselt"}</div>`;
+}
+const fmtSec = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+function mixText(m) {
+  const sp = heroSplit(m);
+  if (!sp) return "";
+  if (!sp.list.length) return "Während des Matches gewechselt (ohne Aufteilung pro Held).";
+  return "Gewechselt: " + sp.list.map(h => `${h.hero} ${fmtSec(h.sec)}`).join(", ") + ".";
+}
 function plural(n, one, many) { return `${n} ${n === 1 ? one : many}`; }
 function fmtNum(v) { return isFinite(v) ? Math.round(v).toLocaleString("de-CH") : "–"; }
 function initials(name) {
@@ -3692,7 +3794,7 @@ function summary(list) {
     timedN: timed.length, dur: timed.length ? timed.reduce((s, m) => s + m.dur, 0) / timed.length : NaN,
     d10: per10("d"), dmg10: per10("dmg"), heal10: per10("heal"), block10: per10("block"), ults10: per10("ults"),
     ultN, ultHit, ultPct: ultN ? ultHit / ultN : NaN,
-    kda: list.length ? list.reduce((s, m) => s + kda(m), 0) / list.length : NaN };
+    kda: (() => { const v = list.filter(m => m.k !== null && m.k !== undefined && m.d !== null && m.d !== undefined); return v.length ? v.reduce((s, m) => s + kda(m), 0) / v.length : NaN; })() };
 }
 const numDe = v => String(v).replace(".", ",");
 function mistakeCounts(list) {
@@ -3728,7 +3830,7 @@ function enemyStats(list) {
 // Eigene Helden, die gegen `enemy` funktioniert haben
 function personalCounters(enemy) {
   const vs = state.matches.filter(m => m.enemies.includes(enemy));
-  return Object.entries(group(vs, m => m.hero)).map(([h, l]) => [h, summary(l)])
+  return Object.entries(group(heroOnly(vs), m => m.hero)).map(([h, l]) => [h, summary(l)])
     .filter(([, s]) => s.n >= 2 && s.wr >= 0.5).sort((a, b) => b[1].wr - a[1].wr || b[1].n - a[1].n);
 }
 function counterTip(enemy) {
@@ -4299,7 +4401,7 @@ function renderDashboard() {
   renderFlex();
 
   // Helden
-  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
+  const byHero = Object.entries(group(heroOnly(ms), m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
   $("#byHero").innerHTML = table(["Held", "#Matches", "Winrate", "#Ø K/D/A"],
     byHero.map(([h, s]) => [heroChip(h), s.n, `${wrBadge(s)}<span class="minibar"><span style="width:${s.wr * 100}%"></span></span>`, `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}`]),
     "Noch keine Matches geloggt.");
@@ -4323,7 +4425,7 @@ function insights() {
   const s = summary(ms), l10 = summary(ms.slice(-10));
   if (l10.wr > s.wr + 0.1) out.push(["good", `Du bist im Aufwind: Die letzten 10 Matches liegen ${Math.round((l10.wr - s.wr) * 100)} Prozentpunkte über deinem Schnitt.`]);
   if (l10.wr < s.wr - 0.1) out.push(["bad", "Deine letzten 10 Matches liegen unter deinem Schnitt. Vielleicht eine Pause oder ein neues Lernziel?"]);
-  const byHero = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(x => x[1].n >= 3);
+  const byHero = Object.entries(group(heroOnly(ms), m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(x => x[1].n >= 3);
   if (byHero.length) {
     const best = byHero.slice().sort((a, b) => b[1].wr - a[1].wr)[0];
     const worst = byHero.slice().sort((a, b) => a[1].wr - b[1].wr)[0];
@@ -4506,7 +4608,7 @@ function renderLog() {
   $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Ergebnis</th><th class="num">K/D/A</th><th>Map / Modus</th><th>Gegner</th><th>Reflexion</th><th></th></tr></thead><tbody>
     ${rows.map(m => `<tr>
       <td class="small">${fmtDate(m.date)}${planStarted() ? `<br><span class="muted" data-dayfor="${m.date}">${planDayOf(m.date) ? "Tag " + planDayOf(m.date) : "freies Spiel"}</span>` : ""}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
-      <td>${heroChip(m.hero)}</td>
+      <td>${heroChip(m.hero)}${mixTag(m)}</td>
       <td><button class="pill-btn" type="button" data-flip="${m.id}" title="Ergebnis ändern (Sieg ↔ Niederlage)" aria-label="Ergebnis ändern, aktuell ${m.result === "W" ? "Sieg" : "Niederlage"}">${resultPill(m.result)}</button></td>
       <td class="num">${m.k}/${m.d}/${m.a}${matchExtra(m)}</td>
       <td class="small">${esc(m.map || m.type)}<br><span class="muted">${esc(m.mode)}</span></td>
@@ -4698,14 +4800,15 @@ function matchHints(d, skipId) {
     if (lost && kd >= Math.max(3, ref * 1.3)) mine.push(["info", `<b>Niederlage trotz starker Einzelleistung</b> (KDA ${kd.toFixed(1)}, dein Schnitt ${ref.toFixed(1)}). Das spricht eher für Teamfaktoren – Aufstellung, Ult-Timing, Fokus – als für dein Spiel.`]);
     if (!lost && d.result === "W" && kd < Math.max(1.2, ref * 0.6)) mine.push(["info", `<b>Sieg bei schwacher Einzelleistung</b> (KDA ${kd.toFixed(1)}, dein Schnitt ${ref.toFixed(1)}). Dein Team hat getragen – schau, was du besser machen kannst.`]);
   }
+  const dv = heroView(d), hv = heroOnly(hist);   // bei Heldenwechsel nur der Anteil des Haupthelden
   [["dmg", "Schaden"], ["heal", "Heilung"], ["block", "Geblockt"]].forEach(([k, label]) => {
-    if (d[k] === null || !d.hero) return;
+    if (dv[k] === null || dv[k] === undefined || !d.hero) return;
     // Mit Dauer: pro 10 Minuten vergleichen, damit kurze und lange Matches fair verglichen werden
-    const timed = d.dur > 0;
-    const same = hist.filter(m => m.hero === d.hero && m[k] !== null && m[k] !== undefined && (!timed || m.dur > 0));
+    const timed = dv.dur > 0;
+    const same = hv.filter(m => m.hero === d.hero && m[k] !== null && m[k] !== undefined && (!timed || m.dur > 0));
     if (same.length < 3) return;
     const sum = same.reduce((a, m) => a + m[k], 0);
-    const mean = timed ? sum / same.reduce((a, m) => a + m.dur, 0) * 10 : sum / same.length, cur = timed ? d[k] / d.dur * 10 : d[k];
+    const mean = timed ? sum / same.reduce((a, m) => a + m.dur, 0) * 10 : sum / same.length, cur = timed ? dv[k] / dv.dur * 10 : dv[k];
     if (!mean) return;
     const fmt = n => Math.round(n).toLocaleString("de-CH"), unit = timed ? " pro 10 Min" : "", tip = timed ? "" : " Trag die Dauer ein, dann vergleicht die App pro 10 Minuten.";
     if (cur <= mean * 0.7) mine.push([neg, `<b>${label} unter deinem Schnitt</b> mit ${esc(d.hero)}: ${fmt(cur)}${unit} statt Ø ${fmt(mean)}${unit}.${tip}`]);
@@ -4931,7 +5034,7 @@ function renderAnalysis() {
 
   $("#deathCard").innerHTML = deathCardHtml(ms);
   // Pro 10 Minuten nach Held: Werte aus Matches mit Dauer, Ult-Wirkung aus Matches mit Ults
-  const per10Rows = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(([, x]) => x.timedN || x.ultN)
+  const per10Rows = Object.entries(group(heroOnly(ms), m => m.hero)).map(([h, l]) => [h, summary(l)]).filter(([, x]) => x.timedN || x.ultN)
     .sort((a, b) => b[1].n - a[1].n).map(([h, x]) => [heroChip(h), x.timedN || "–", x.timedN ? numDe(x.dur.toFixed(1)) : "–",
       fmtNum(x.dmg10), fmtNum(x.heal10), fmtNum(x.block10), x.ultN ? `${pct(x.ultPct)} <span class="muted small">${numDe(x.ultHit)}/${x.ultN}</span>` : "–"]);
   $("#aPer10").innerHTML = table(["Held", "#Mit Dauer", "#Ø Min", "#Schaden", "#Heilung", "#Geblockt", "#Ult-Wirkung"], per10Rows,
@@ -5110,7 +5213,7 @@ function renderTeamCards() {
         }
       });
       if (mates.length && mates.length < 5 && cnt[h.role] < 2 && cnt[h.role] === minRole) { score += 0.4; pro.push(`dein Team braucht noch einen ${h.role}`); }
-      const own = summary(state.matches.filter(m => m.hero === h.name));
+      const own = summary(heroOnly(state.matches.filter(m => m.hero === h.name)));
       if (own.n >= 3) score += own.wr - 0.5;
       const g = meta.get(h.name);
       if (g && isFinite(g.winrate)) { score += (g.winrate - 50) / 10; if (Math.abs(g.winrate - 50) >= 1.5) (g.winrate >= 50 ? pro : con).push(`Meta: ${g.winrate.toFixed(1)} % WR`); }
@@ -5736,7 +5839,7 @@ $("#goalForm").addEventListener("input", renderGoalDetect);
 // ---------- KI-Coach ----------
 function buildPrompt() {
   const ms = state.matches, s = summary(ms), focus = $("#aiFocus").value;
-  const heroes = Object.entries(group(ms, m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
+  const heroes = Object.entries(group(heroOnly(ms), m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n);
   const lines = [
     "Du bist ein erfahrener Marvel-Rivals-Coach. Analysiere meine Statistik und gib mir konkretes, umsetzbares Feedback auf Deutsch.",
     "Wenn du dir bei aktuellen Helden-Fähigkeiten oder Balancing nicht sicher bist, sag das ehrlich.",
@@ -5817,7 +5920,7 @@ $("#syncCmdCopy").addEventListener("click", () => copyText(syncCommand(), "Befeh
 $("#copyScript").addEventListener("click", () => copyText($("#syncScriptSrc").textContent.replace(/^\n/, ""), "Skript kopiert – als rivals_sync.py speichern"));
 document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copyText(b.dataset.copy, "Befehl kopiert!")));
 
-const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "swapped", "mvp", "svp", "ts", "date"];
+const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "swapped", "heroes", "mvp", "svp", "ts", "date"];
 function importSync(data) {
   if (!data || data.format !== "rivals-coach-sync" || !Array.isArray(data.matches)) throw new Error("Keine Rivals-Data-Sync-Datei");
   const byExt = new Map(state.matches.filter(m => m.extId).map(m => [m.extId, m]));
@@ -7697,7 +7800,7 @@ function tbRowHtml(key, mine, e, c) {
 function tbHeroHtml(h, opts) {
   const b = tbHero(h), t = TB();
   if (!b || !b.e) return t ? `<p class="small muted">Für ${esc(h)} reichen die Daten der Besten noch nicht für Vergleichswerte (zu wenige Matches in den Top-Lobbys).</p>` : "";
-  const role = heroRole(h), keys = TB_BY_ROLE[role] || TB_BY_ROLE.Strategist, mine = state.matches.filter(m => m.hero === h).slice(-12);
+  const role = heroRole(h), keys = TB_BY_ROLE[role] || TB_BY_ROLE.Strategist, mine = heroOnly(state.matches.filter(m => m.hero === h).slice(-12));
   const rows = keys.map(k => tbRowHtml(k, tbMine(mine, k), b.e, b.c)).join("");
   const carry = a => (a ? Math.round((a.mvp + a.svp) * 100) + " %" : "–");
   const my = mine.filter(m => m.source === "rivalsdata"), myCarry = my.length >= 3 ? Math.round(my.filter(m => m.mvp || m.svp).length / my.length * 100) + " %" : "–";
@@ -7748,7 +7851,7 @@ function tbLadderHtml() {
 // Meilensteine pro Rolle: jeder gilt als erreicht, wenn mindestens zwei Drittel deiner Helden dieser Rolle (mit mindestens 3 Matches, mindestens 2 Helden) die Marke erreichen
 const TB_MAIN = { Strategist: "heal", Vanguard: "blk", Duelist: "dmg" };
 function tbRoleStatus(role) {
-  const by = group(state.matches.slice(-60).filter(m => heroRole(m.hero) === role), m => m.hero);
+  const by = group(heroOnly(state.matches.slice(-60).filter(m => heroRole(m.hero) === role)), m => m.hero);
   return Object.keys(by).filter(h => by[h].length >= 3 && tbHero(h) && tbHero(h).e).sort((a, b) => by[b].length - by[a].length).map(h => {
     const b = tbHero(h), st = {};
     TB_BY_ROLE[role].forEach(k => { st[k] = tbStatus(k, tbMine(by[h].slice(-12), k), b.e, b.c); });
@@ -7786,7 +7889,7 @@ function tbCarryHtml(role) {
 function tbRoleHtml(role) {
   const t = TB();
   if (!t) return "";
-  const ms = state.matches.slice(-60).filter(m => heroRole(m.hero) === role), by = group(ms, m => m.hero);
+  const ms = heroOnly(state.matches.slice(-60).filter(m => heroRole(m.hero) === role)), by = group(ms, m => m.hero);
   const heroes = Object.keys(by).filter(h => by[h].length >= 3).sort((a, b) => by[b].length - by[a].length).slice(0, 6);
   const keys = TB_BY_ROLE[role], rb = tbRole(role);
   let ok2 = 0, ok1 = 0, tot = 0;
@@ -7949,7 +8052,7 @@ function rvKeyStat(m) { const r = heroRole(m.hero); return r === "Strategist" ? 
 // Helden (ab 3), sonst mit den Besten auf diesem Helden (Median der Celestial-Spieler aus «Wissen der Besten»). Nie mit anderen Helden,
 // auch nicht derselben Rolle: Cloak & Dagger stirbt anders als Mantis, Luna Snow heilt anders als Jeff.
 function rvCtx() {
-  return { byHero: group(state.matches, x => x.hero) };
+  return { byHero: group(heroOnly(state.matches), x => x.hero) };
 }
 const rvTbKey = f => (f === "block" ? "blk" : f);
 // Median der Besten mit diesem Helden (Celestial, sonst Eternity), pro 10 Minuten
@@ -7960,8 +8063,8 @@ function rvTbRef(hero, key) {
   if (b.e && b.e[key]) return { v: b.e[key][1], name: `Eternity-Spieler mit ${hero}` };
   return null;
 }
-function rvReasons(m, ctx) {
-  const RV_REF = 40, c = ctx || rvCtx(), out = [];   // Vergleich mit den jeweils letzten 40 Matches, damit es bei vielen Matches schnell bleibt
+function rvReasons(m0, ctx) {
+  const m = heroView(m0), RV_REF = 40, c = ctx || rvCtx(), out = [];   // Vergleich mit den jeweils letzten 40 Matches, damit es bei vielen Matches schnell bleibt
   const own = (c.byHero[m.hero] || []).filter(x => x.id !== m.id).slice(-RV_REF), s = own.length >= 3 ? summary(own) : null, lost = m.result === "L";
   const ownName = `deine anderen ${m.hero}-Matches`;
   // Vergleichswert: v = dieses Match, b = Bezug, per = pro 10 Minuten, tb = Bezug sind die Besten
@@ -7993,7 +8096,7 @@ function rvReasons(m, ctx) {
 // offenen Mission (gleicher Held, gleiches Thema) zählen mehr. Das ist eine Faustregel der App, keine belegte Lernmethode.
 const RV_KINDS = { death: "Viele Tode", low: "Wenig Heilung, Schaden oder Geblockt", ult: "Ults ohne Wirkung", counter: "Gegen Counter verloren", model: "Vorbild-Siege" };
 function rvFocus() {
-  const recent = state.matches.slice(-20), w = {}, why = {};
+  const recent = heroOnly(state.matches.slice(-20)), w = {}, why = {};
   const share = worse => { let n = 0, bad = 0; recent.forEach(m => { const r = worse(m); if (r === null) return; n++; if (r) bad++; }); return { n, bad }; };
   const setBy = (k, x, what) => {
     if (x.n < 5) { w[k] = 1; why[k] = `Noch zu wenige Matches mit Dauer für einen Vergleich (${x.n} von 5).`; return; }
@@ -8140,6 +8243,7 @@ function rvMatchHtml(x, open, L) {
   const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4;
   return `<div class="rvm open" data-m="${m.id}">${head}<div class="rvb">
     ${why ? `<ul class="wl small" style="margin:0">${why}</ul>` : ""}
+    ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
     <div class="rvs"><h4><span class="rvn">1</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
       ${d ? `<div class="deathgrid">${labels.concat(extra).map(l => { const n = (m.deathCauses || {})[l] || 0;
@@ -8265,7 +8369,7 @@ const wkTopic = id => GOAL_TOPICS.find(t => t.id === id);
 // Vergleichswert der Besten für denselben Helden, wenn die Daten ihn kennen (pro 10 Minuten)
 const tbEvid = (h, k) => { const b = typeof tbHero === "function" ? tbHero(h) : null; return b && b.e && b.e[k] ? ` Zum Vergleich: Eternity-Spieler mit ${h} kommen im Median auf ${TB_METRICS[k].fmt(b.e[k][1])} pro 10 Min${b.c && b.c[k] ? `, Celestial-Spieler auf ${TB_METRICS[k].fmt(b.c[k][1])}` : ""}.` : ""; };
 function wkFind(hero) {
-  const all = state.matches, mine = all.filter(m => m.hero === hero).slice(-WK_LAST);
+  const all = heroOnly(state.matches), mine = all.filter(m => m.hero === hero).slice(-WK_LAST);
   if (mine.length < WK_MIN) return [];
   // Verglichen wird nur mit demselben Helden: zuerst mit den Besten auf diesem Helden (Median der Celestial-Spieler), sonst mit deinen
   // früheren Matches mit diesem Helden. Andere Helden derselben Rolle spielen sich anders (Cloak & Dagger stirbt anders als Mantis).
@@ -8334,7 +8438,7 @@ function wkMissionText(mis) {
   return `${lab} von mindestens ${fmtNum(tg)}${/10$/.test(t) ? " pro 10 Minuten" : " pro Match"}`;
 }
 function wkWindow(mis) {
-  let ms = state.matches.filter(m => m.hero === mis.hero && matchTime(m) > mis.since);
+  let ms = heroOnly(state.matches.filter(m => m.hero === mis.hero && matchTime(m) > mis.since));
   if (mis.metric.startsWith("cause:")) ms = ms.filter(m => deathTotal(m.deathCauses) >= (+m.d || 0));
   else if (mis.metric === "ultPct") ms = ms.filter(m => m.ults > 0 && m.ultHit !== null && m.ultHit !== undefined);
   else if (/10$/.test(mis.metric)) { const f = mis.metric.slice(0, -2); ms = ms.filter(m => m.dur > 0 && m[f] !== null && m[f] !== undefined); }
@@ -8424,7 +8528,7 @@ function wkWeakHtml(w) {
       <button type="button" class="btn small" data-wk="accept" data-hero="${esc(w.hero)}" data-w="${w.id}">Mission annehmen</button></div>`) : ""}</div>`;
 }
 function wkHeroCardHtml(h, ws) {
-  const mine = state.matches.filter(m => m.hero === h), s = summary(mine.slice(-WK_LAST));
+  const mine = heroOnly(state.matches.filter(m => m.hero === h)), s = summary(mine.slice(-WK_LAST));
   return `<div class="card wkcard"><div class="card-head"><h2>${heroChip(h)}</h2><span class="muted small">${plural(Math.min(mine.length, WK_LAST), "Match", "Matches")} · ${pct(s.wr)} Siege${isFinite(s.d) ? ` · Ø ${numDe(s.d.toFixed(1))} Tode` : ""}</span></div>${ws.map(wkWeakHtml).join("")}</div>`;
 }
 function renderWeak() {
