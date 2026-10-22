@@ -278,6 +278,7 @@ textarea { min-height: 76px; resize: vertical; }
 }
 .chip:hover { border-color: var(--accent); color: var(--text); }
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.chip.hot::before { content: "★ "; color: var(--gold); }
 .tag {
   display: inline-flex; align-items: center; border-radius: 6px; padding: 1px 8px; font-size: .72rem; font-weight: 600;
   background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); margin: 2px 4px 0 0;
@@ -1115,6 +1116,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     <div class="chips" id="mistakeChips"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
+    <div id="fqBox" hidden>
+      <h3>Passend zu deinem Lernstand</h3>
+      <p class="muted small" style="margin:0 0 8px" id="fqInfo"></p>
+      <div id="fqRows"></div>
+    </div>
     <div id="ruleBox" hidden>
       <h3>Grundregeln: Wie lief es?</h3>
       <label>Plantag an diesem Datum <select id="matchDay"></select></label>
@@ -1131,6 +1137,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
       <label>Notizen / VOD-Zeitstempel <textarea name="notes" placeholder="z.B. 04:12 – ohne Heiler in den Fight gerannt"></textarea></label>
       <label>Eine Sache, die ich nächstes Match besser mache <textarea name="next" placeholder="z.B. Ult für den nächsten Teamfight aufheben"></textarea></label>
     </div>
+    <div id="nextStartWrap" class="mt" hidden><span class="small muted">Satzanfänge aus deinem Lernstand (antippen, dann anpassen):</span><div class="chips" id="nextStarters" style="margin-top:4px"></div></div>
     <div class="row mt">
       <button class="btn" type="submit" id="saveBtn" data-icon="check">Match speichern</button>
     </div>
@@ -4517,10 +4524,12 @@ function deathStats(list) {
 function renderMistakeChips(selected, hero) {
   const sel = selected || [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v);
   const h = hero !== undefined ? hero : ($("#heroSelect") ? $("#heroSelect").value : "");
-  const opts = mistakeOptions(h), list = [...opts, ...sel.filter(x => !opts.includes(x))];
+  const date = ($("#matchDate") && $("#matchDate").value) || today(), hot = typeof fqMistakes === "function" ? fqMistakes(date) : [];
+  const opts = mistakeOptions(h), base = [...opts, ...sel.filter(x => !opts.includes(x))], list = [...hot.filter(x => !base.includes(x)), ...base].sort((a, b) => hot.includes(b) - hot.includes(a));
   chipGroup($("#mistakeChips"), list); setChips($("#mistakeChips"), sel);
+  $("#mistakeChips").querySelectorAll(".chip").forEach(c => { if (hot.includes(c.dataset.v)) { c.classList.add("hot"); c.title = "Passt zu deinem Lernstand"; } });
   const r = roleOfHero(h);
-  $("#mistakeHint").textContent = h ? `Die Auswahl passt zu ${r ? ROLE_DE[r] : "deinem Helden"}${h ? " und " + h : ""}.` : "Wähle oben deinen Helden, dann passt die App die Auswahl an Rolle und Held an.";
+  $("#mistakeHint").textContent = (h ? `Die Auswahl passt zu ${r ? ROLE_DE[r] : "deinem Helden"}${h ? " und " + h : ""}.` : "Wähle oben deinen Helden, dann passt die App die Auswahl an Rolle und Held an.") + (hot.length ? " Vorne mit Stern: Fehler, um die es in deinen aktuellen Lektionen geht." : "");
 }
 function renderDeathBox() {
   const el = $("#deathBox");
@@ -4601,7 +4610,7 @@ function renderLog() {
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", updateNemesis));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
-  renderMistakeChips(); renderRuleBox(); renderTaskBox(); renderDeathBox();
+  renderMistakeChips(); renderRuleBox(); renderFqBox(); renderTaskBox(); renderDeathBox();
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -4680,7 +4689,7 @@ function clearForm() {
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   deathState = {};
   renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []);
-  renderRuleBox({}); renderTaskBox({});
+  renderRuleBox({}); renderFqBox({}); renderTaskBox({});
   renderDeathBox();
   updateNemesis();
   refreshPickers($("#matchForm"));
@@ -4710,7 +4719,7 @@ function startEdit(id) {
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {});
   renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []);
-  renderRuleBox(Object.assign({}, m.rules)); renderTaskBox(Object.assign({}, m.tasks));
+  renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks));
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
@@ -4904,7 +4913,7 @@ function renderMatchHints() {
 ["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, e => {
   if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); renderTaskBox({}); }
   else if (e.target && e.target.name === "d") renderDeathBox();
-  else if (e.type === "change" && e.target && e.target.name === "date") renderRuleBox();
+  else if (e.type === "change" && e.target && e.target.name === "date") { renderRuleBox(); renderFqBox(); renderMistakeChips(); }
   renderMatchHints();
 }));
 ["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
@@ -4942,6 +4951,7 @@ $("#matchForm").addEventListener("submit", e => {
     mistakes: [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v),
     goods: [...document.querySelectorAll("#goodChips .chip.on")].map(c => c.dataset.v),
     rules: ruleValues(),
+    fq: fqValues(),
     tasks: taskValues(),
     deathCauses: Object.assign({}, deathState)
   };
@@ -7615,7 +7625,7 @@ $("#matchDay").addEventListener("change", e => {
   const date = ($("#matchDate") && $("#matchDate").value) || today(), v = e.target.value;
   state.plan.dayByDate = state.plan.dayByDate || {};
   if (v === "") delete state.plan.dayByDate[date]; else state.plan.dayByDate[date] = +v;
-  save(); renderRuleBox(); renderOpenRefl();
+  save(); renderRuleBox(); renderFqBox(); renderMistakeChips(); renderOpenRefl();
   document.querySelectorAll("[data-dayfor]").forEach(x => { const d = planDayOf(x.dataset.dayfor); x.textContent = d ? "Tag " + d : "freies Spiel"; });
 });
 function ruleValues() {
@@ -7629,6 +7639,106 @@ document.addEventListener("click", e => {
   const was = c.classList.contains("on");
   c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
   if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
+});
+
+// ---------- Gezielt zum Lernstand: Fragen, Fehler und Satzanfänge beim Eintragen ----------
+// Zusätzlich zu Grundregeln und Bootcamp-Aufgaben: Was beim Eintragen eines Matches gefragt und angeboten wird, richtet sich nach dem
+// Plantag des Matches (Lexikon-Themen des Tages, PLAN.days[n-1].l; im freien Spiel das zuletzt gelernte Thema) und nach deinen Lektionen
+// (Lektionen des Tages, aktueller Lektions-Fokus). Alles stammt aus den geprüften Texten: «So machst du es», «Typische Fehler» und
+// «Woran du merkst, dass es klappt» im Lexikon, Fokus und Fehler-Marken der Lektionen. Nichts davon ist neu erfunden.
+// Antworten liegen im Match als m.fq["L4|so|2"] = ja|teils|nein. Die Frage wechselt von Match zu Match, damit mit der Zeit alle Schritte drankommen.
+const FQ_V = [["ja", "Ja"], ["teils", "Teils"], ["nein", "Nein"]], FQ_MAX = 4;
+const fqFirst = t => { const x = String(t || "").trim().split(/(?<=[.!?])\s+/)[0]; return x.length > 170 ? x.slice(0, 167) + "…" : x; };
+const fqWissen = n => (n && PLAN.days[n - 1] ? PLAN.days[n - 1].l || [] : []).map(k => WISSEN.find(w => w.n === k)).filter(Boolean);
+// Zuletzt gelernter Plantag mit Lexikon-Themen (für freies Spiel)
+function fqLastDay() {
+  for (let n = Math.min(56, planDay()); n >= 1; n--) if (dayGet(n).done && fqWissen(n).length) return n;
+  return 0;
+}
+function fqContext(date) {
+  const started = planStarted(), n = started ? planDayOf(date) : 0, last = started && !n ? fqLastDay() : 0, src = n || last;
+  const wis = fqWissen(src).slice(0, 2);
+  const les = [...new Set([...(src ? dayLessons(src) : []), state.lessons.activeFocus].filter(Boolean))].map(lessonById).filter(Boolean);
+  return { n, last, src, wis, les };
+}
+// Welche Zeile ist dran? Beim Bearbeiten bleibt die schon beantwortete, sonst die nächste in der Reihe.
+function fqPick(w, kind, len, sel) {
+  const pre = `${w.id}|${kind}|`, had = Object.keys(sel || {}).find(k => k.startsWith(pre));
+  if (had) return +had.slice(pre.length);
+  const seen = state.matches.filter(m => m.fq && Object.keys(m.fq).some(k => k.startsWith(pre))).length;
+  return len ? seen % len : 0;
+}
+function fqItems(date, sel) {
+  const c = fqContext(date), out = [];
+  c.wis.forEach(w => {
+    const steps = (w.so && w.so.items) || [];
+    if (steps.length) { const i = fqPick(w, "so", steps.length, sel); out.push({ key: `${w.id}|so|${i}`, w, kind: "so", q: "Hast du das im Match gemacht?", t: fqFirst(steps[i]) }); }
+    const errs = String(w.fehler || "").split("\n").map(x => x.trim()).filter(Boolean);
+    if (errs.length) { const i = fqPick(w, "f", errs.length, sel); out.push({ key: `${w.id}|f|${i}`, w, kind: "f", q: "Typischer Fehler: Ist dir das passiert?", t: fqFirst(errs[i]) }); }
+  });
+  if (c.wis.length === 1 && c.wis[0].merkst && c.wis[0].merkst.t) out.push({ key: `${c.wis[0].id}|mk|0`, w: c.wis[0], kind: "mk", q: "Hast du gemerkt, dass es klappt?", t: fqFirst(c.wis[0].merkst.t) });
+  return { c, items: out.slice(0, FQ_MAX) };
+}
+// Bisherige Antworten zu einem Lexikon-Thema (letzte 10 Matches mit Antwort)
+function fqHistory(w) {
+  const pre = `${w.id}|so|`, v = [];
+  state.matches.forEach(m => Object.entries(m.fq || {}).forEach(([k, x]) => { if (k.startsWith(pre)) v.push(x); }));
+  const last = v.slice(-10), n = k => last.filter(x => x === k).length;
+  return last.length ? `Bisher bei «${w.title}» (letzte ${last.length}): ${n("ja")}× Ja, ${n("teils")}× Teils, ${n("nein")}× Nein.` : "";
+}
+// Fehler-Marken, die zu deinem Lernstand passen (aus den Lektionen des Tages und dem Lektions-Fokus)
+function fqMistakes(date) {
+  return [...new Set(fqContext(date).les.flatMap(l => l.mistakes || []))];
+}
+// Satzanfänge für «Eine Sache, die ich nächstes Match besser mache»
+function fqStarters(date) {
+  const c = fqContext(date), out = ["Wenn …, dann …"];
+  c.wis.forEach(w => ((w.so && w.so.items) || []).slice(0, 2).forEach(t => out.push(fqFirst(t))));
+  const f = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (f && f.focus) out.push(fqFirst(f.focus));
+  return [...new Set(out)].slice(0, 5);
+}
+function fqValues() {
+  const o = {};
+  document.querySelectorAll("#fqRows .chip.on").forEach(c => { o[c.dataset.fq] = c.dataset.fv; });
+  return o;
+}
+function renderFqBox(selected) {
+  const box = $("#fqBox");
+  if (!box) return;
+  const date = ($("#matchDate") && $("#matchDate").value) || today(), sel = selected || fqValues(), { c, items } = fqItems(date, sel);
+  box.hidden = !items.length;
+  const src = c.src ? `${c.n ? "Plantag" : "Freies Spiel, zuletzt gelernt"}: Tag ${c.src} «${PLAN.days[c.src - 1].title}»` : "";
+  const lex = c.wis.map(w => `L${w.n} «${w.title}»`).join(", ");
+  $("#fqInfo").textContent = items.length ? `${src}${lex ? ` · Lexikon ${lex}` : ""}. Die Fragen stammen aus diesen Themen und wechseln von Match zu Match. Lass leer, was im Match nicht vorkam.` : "";
+  const hist = c.wis.map(fqHistory).filter(Boolean);
+  $("#fqRows").innerHTML = items.map(it => `<div class="rrow"><span class="rl"><span class="small muted">${esc(it.q)}</span><br><b>${esc(it.t)}</b></span>
+    <span class="chips">${(it.kind === "f" ? [["ja", "Ja"], ["nein", "Nein"]] : FQ_V).map(([k, label]) => `<button type="button" class="chip ${sel[it.key] === k ? "on" : ""}" data-fq="${esc(it.key)}" data-fv="${k}" aria-pressed="${sel[it.key] === k}">${label}</button>`).join("")}</span></div>`).join("")
+    + (hist.length ? `<p class="small muted" style="margin:6px 0 0">${esc(hist.join(" "))}</p>` : "");
+  const st = $("#nextStarters"), wrap = $("#nextStartWrap");
+  if (st && wrap) {
+    const list = fqStarters(date);
+    wrap.hidden = list.length <= 1 && !planStarted();
+    st.innerHTML = list.map(t => `<button type="button" class="chip" data-start="${esc(t)}">${esc(t)}</button>`).join("");
+  }
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest("#fqRows [data-fq]");
+  if (c) {
+    const was = c.classList.contains("on");
+    c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
+    if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
+    return;
+  }
+  const s = e.target.closest("#nextStarters [data-start]");
+  if (s) {
+    const ta = $("#matchForm") && $("#matchForm").elements.next;
+    if (!ta) return;
+    const t = s.dataset.start === "Wenn …, dann …" ? "Wenn , dann " : s.dataset.start;
+    ta.value = ta.value.trim() ? `${ta.value.trim()} ${t}` : t;
+    ta.focus();
+    if (t === "Wenn , dann ") { const p = ta.value.lastIndexOf("Wenn , dann ") + 5; ta.setSelectionRange(p, p); }
+  }
 });
 
 // ---------- Aufgaben automatisch abhaken ----------
@@ -8253,7 +8363,8 @@ function rvMatchHtml(x, open, L) {
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
     <div class="rvs"><h4><span class="rvn">3</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
-      <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p></div>
+      <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
+      ${(() => { const ideas = fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …"); return ideas.length ? `<details class="small" style="margin-top:4px"><summary>Ideen aus deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
     <div class="rvfoot rvs" data-foot="${m.id}">${rvFootHtml(m, L)}</div></div></div>`;
 }
 function rvCardHtml() {
