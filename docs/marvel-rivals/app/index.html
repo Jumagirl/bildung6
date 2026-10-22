@@ -700,6 +700,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .rvtag { font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); white-space: nowrap; }
 .rvtag.death, .rvtag.lost { background: color-mix(in srgb, var(--bad) 13%, transparent); color: var(--bad); }
 .rvtag.model { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); }
+.rvtag.replay { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 600; }
+.rvtag.replay.soon { border-color: color-mix(in srgb, var(--warn) 60%, transparent); color: color-mix(in srgb, var(--warn) 75%, var(--text, currentColor)); }
 .rvb { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
 .rvs h4 { margin: 0 0 6px; font-size: .92rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .rvn { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: .75rem; font-weight: 800; background: var(--accent); color: var(--accent-text); flex: none; }
@@ -7913,6 +7915,17 @@ document.addEventListener("click", e => {
 const RV_N = 5, RV_MAX = 8, RV_DAYS = 7, RV_SWAPS = 2;
 const rvState = () => state.rv || (state.rv = { pins: {}, missions: [], badges: {} });
 const rvN = () => { const v = Math.round(+state.settings.reviewN); return v >= 1 && v <= RV_MAX ? v : RV_N; };
+// Das Spiel behält nur die Replays der letzten Matches (beobachtet: etwa 30). Gezählt werden die Matches in der App, neueste zuerst.
+// Neue Vorschläge brauchen etwas Reserve (RV_SPARE), weil der Abgleich hinterherhinkt und im Spiel schon neuere Matches stehen können.
+// Ein angefangenes Match, das aus dem Verlauf rutscht, fällt ohne Wechsel weg.
+const RV_REPLAYS = 30, RV_REPLAYS_MIN = 10, RV_REPLAYS_MAX = 60, RV_SPARE = 3;
+const rvReplayN = () => { const v = Math.round(+state.settings.replayN); return v >= RV_REPLAYS_MIN && v <= RV_REPLAYS_MAX ? v : RV_REPLAYS; };
+// Wie viele Matches bleiben, bis das Replay aus dem Verlauf rutscht? 0 = schon weg.
+function rvReplayLeft(ms) {
+  const n = rvReplayN(), order = (ms || state.matches).slice().sort((a, b) => matchTime(b) - matchTime(a)), out = {};
+  order.forEach((m, i) => { out[m.id] = Math.max(0, n - i); });
+  return out;
+}
 const rvDone = m => !!(m && m.review && m.review.on);
 const rvTotal = () => state.matches.filter(rvDone).length;
 const rvWords = t => (String(t || "").match(/[\p{L}\d]{2,}/gu) || []).length;
@@ -7989,15 +8002,18 @@ function rvList() {
   const byId = id => state.matches.find(m => m.id === id);
   const done = state.matches.filter(m => rvDone(m) && m.review.on === d);
   const touched = m => (m.goods || []).length || deathTotal(m.deathCauses) || rvWords(m.next) || rvUi.open === m.id;
+  const left = rvReplayLeft();
   const was = pin.ids.map(byId).filter(m => m && !rvDone(m));
-  const keep = was.filter(touched).slice(0, Math.max(0, n - done.length));
+  const gone = was.filter(m => !left[m.id]);
+  const keep = was.filter(m => left[m.id] && touched(m)).slice(0, Math.max(0, n - done.length));
   const free = Math.max(0, n - done.length - keep.length);
-  const used = new Set([...keep.map(m => m.id), ...pin.skip]), from = addDays(d, -(RV_DAYS - 1));
-  const cands = state.matches.filter(m => !rvDone(m) && (m.date || "") >= from && !used.has(m.id));
+  const used = new Set([...keep.map(m => m.id), ...pin.skip, ...gone.map(m => m.id)]), from = addDays(d, -(RV_DAYS - 1));
+  const cands = state.matches.filter(m => !rvDone(m) && (m.date || "") >= from && !used.has(m.id) && left[m.id] > RV_SPARE);
   const open = keep.concat(free ? rvRank(cands, free).map(x => x.m) : []);
   const ids = open.map(m => m.id);
   if (ids.join() !== pin.ids.join()) { pin.ids = ids; saveCore(); }
-  const val = { n, done, open, swapsLeft: RV_SWAPS - (pin.swaps || 0) };
+  if (gone.length) pin.gone = [...new Set((pin.gone || []).concat(gone.map(m => m.id)))];
+  const val = { n, done, open, left, gone: (pin.gone || []).length, swapsLeft: RV_SWAPS - (pin.swaps || 0) };
   rvCache = { day: d, open: rvUi.open, ms: state.matches, len: state.matches.length, val };
   return val;
 }
@@ -8048,12 +8064,16 @@ function rvFootHtml(m, L) {
     <div class="row" style="gap:8px"><button type="button" class="btn small" data-rv="finish" data-id="${m.id}" ${miss.length ? "disabled" : ""}>${icon("check")}Match abschliessen</button>
     ${left > 0 ? `<button type="button" class="btn ghost small" data-rv="swap" data-id="${m.id}" title="Nur wenn das Replay nicht mehr verfügbar ist. Heute noch ${left}× möglich.">Replay weg? Anderes Match</button>` : ""}</div>`;
 }
+function rvLeftTag(n) {
+  if (!n) return "";
+  return `<span class="rvtag replay ${n <= 8 ? "soon" : ""}" title="Das Spiel behält nur die Replays der letzten etwa ${rvReplayN()} Matches. Nach ungefähr ${plural(n, "weiteren Match", "weiteren Matches")} ist dieses Replay weg.">Replay noch ~${n}</span>`;
+}
 function rvMatchHtml(x, open, L) {
   const m = x.m, got = deathTotal(m.deathCauses), d = +m.d || 0, reasons = x.reasons.length ? x.reasons : [{ k: "recent", label: "Neu", text: "Eines deiner neuesten Matches" }];
   const labels = deathOptions(m.hero).map(o => o[0]), extra = Object.keys(m.deathCauses || {}).filter(l => !labels.includes(l));
   const head = `<button type="button" class="rvmh" data-rv="open" data-id="${m.id}" aria-expanded="${open}"><span>${heroChip(m.hero)}</span><span>${resultPill(m.result)}</span>
     <span class="small muted">${fmtDate(m.date)} · ${m.k}/${m.d}/${m.a}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}${m.map ? ` · ${esc(m.map)}` : ""}</span>
-    <span class="rvtags">${reasons.filter(r => r.k !== "lost").map(r => `<span class="rvtag ${r.k}">${esc(r.label)}</span>`).join("")}</span></button>`;
+    <span class="rvtags">${reasons.filter(r => r.k !== "lost").map(r => `<span class="rvtag ${r.k}">${esc(r.label)}</span>`).join("")}${rvLeftTag(L && L.left ? L.left[m.id] : 0)}</span></button>`;
   if (!open) return `<div class="rvm" data-m="${m.id}">${head}</div>`;
   const why = reasons.filter(r => r.text).map(r => `<li>${esc(r.text)}</li>`).join("");
   const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4;
@@ -8081,13 +8101,19 @@ function rvCardHtml() {
   return `<div class="rvcard"><div class="rvhead"><b>${icon("edit")}Review: die wichtigsten Matches</b><span class="badge ${st.ok ? "ok" : ""}">${total ? `${st.done} von ${total}` : "nichts offen"}</span></div>
     ${total ? `<div class="rvdots" role="img" aria-label="${st.done} von ${total} Matches ausgewertet">${dots}</div>` : ""}
     <p class="small muted" style="margin:0">So geht es: Öffne das Replay des Matches und such deine Tode (das Spiel springt nicht direkt dorthin, du siehst nur, wann Spieler gestorben sind). Schau dir jeweils die zehn Sekunden davor an und tippe die Ursache an. Die App prüft nicht, ob du das Replay wirklich angeschaut hast. Sie verlangt aber, dass jeder Tod eine Ursache bekommt und dass du eine Stärke und einen eigenen Vorsatz nennst. Erst dann zählt das Match.</p>
-    ${total === 0 && !L.done.length ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>In den letzten ${RV_DAYS} Tagen gibt es keine Matches zum Auswerten. Sobald du Matches spielst (oder der Abgleich sie holt), erscheinen hier die wichtigsten.</div></div>` : ""}
+    <p class="small muted" style="margin:0">Das Spiel behält nur die Replays deiner letzten etwa ${rvReplayN()} Matches. Deshalb schlägt die App nur Matches vor, deren Replay noch da ist, und zeigt dir, wie lange noch («Replay noch ~12» heisst: nach etwa zwölf weiteren Matches ist es weg). Die Zahl ist geschätzt: Matches, die der Abgleich noch nicht geholt hat, fehlen in der Rechnung.</p>
+    ${L.gone ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Heute ${L.gone === 1 ? "ist ein angefangenes Match" : `sind ${L.gone} angefangene Matches`} aus dem Replay-Verlauf gerutscht. Die App hat ${L.gone === 1 ? "es" : "sie"} ohne Wechsel herausgenommen.</div></div>` : ""}
+    ${total === 0 && !L.done.length ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>In den letzten ${RV_DAYS} Tagen gibt es keine Matches, deren Replay noch da ist. Sobald du Matches spielst (oder der Abgleich sie holt), erscheinen hier die wichtigsten.</div></div>` : ""}
     ${st.ok && total ? `<div class="note good" style="margin:0"><span class="ni" aria-hidden="true">✓</span><div><b>Review für heute geschafft.</b> Du darfst gern noch weitere Matches auswerten, indem du die Zahl pro Tag erhöhst.</div></div>` : ""}
     <div class="rvlist">${items.map(x => rvMatchHtml(x, cur && x.m.id === cur.m.id, L)).join("")}</div>
     ${doneList}
     <div class="row small muted" style="gap:8px;align-items:center">Matches pro Tag:
       <button type="button" class="btn ghost small" data-rv="n-" aria-label="Eins weniger" ${L.n <= 1 ? "disabled" : ""}>−</button><b>${L.n}</b>
-      <button type="button" class="btn ghost small" data-rv="n+" aria-label="Eins mehr" ${L.n >= RV_MAX ? "disabled" : ""}>+</button></div></div>`;
+      <button type="button" class="btn ghost small" data-rv="n+" aria-label="Eins mehr" ${L.n >= RV_MAX ? "disabled" : ""}>+</button></div>
+    <div class="row small muted" style="gap:8px;align-items:center">Replays im Spiel (letzte Matches):
+      <button type="button" class="btn ghost small" data-rv="r-" aria-label="Fünf weniger" ${rvReplayN() <= RV_REPLAYS_MIN ? "disabled" : ""}>−</button><b>${rvReplayN()}</b>
+      <button type="button" class="btn ghost small" data-rv="r+" aria-label="Fünf mehr" ${rvReplayN() >= RV_REPLAYS_MAX ? "disabled" : ""}>+</button>
+      <span>Stell das ein, wenn du im Spiel mehr oder weniger Replays siehst.</span></div></div>`;
 }
 function rvPlanCardHtml(n) {
   const st = dayGet(n);
@@ -8116,6 +8142,7 @@ document.addEventListener("click", e => {
   } else if (a === "finish" && m) { if (!rvFinish(m)) return; }
   else if (a === "swap" && m) { rvSwap(m); save(); }
   else if (a === "n-" || a === "n+") { state.settings.reviewN = Math.min(RV_MAX, Math.max(1, rvN() + (a === "n+" ? 1 : -1))); save(); }
+  else if (a === "r-" || a === "r+") { state.settings.replayN = Math.min(RV_REPLAYS_MAX, Math.max(RV_REPLAYS_MIN, rvReplayN() + (a === "r+" ? 5 : -5))); save(); }
   else return;
   rvRerender();
 });
