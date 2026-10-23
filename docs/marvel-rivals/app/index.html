@@ -36,6 +36,7 @@
   --vanguard: #3b8cff;
   --duelist: #ff6b3d;
   --strategist: #22d48a;
+  --cv-van: #3b8cff; --cv-due: #ea5a2a; --cv-str: #14a872;   /* Rollenfarben für Diagramm-Markierungen (Helligkeit im Prüfband) */
   --good: #24c964;
   --good-text: #4fe08a;
   --bad: #ff4d5e;
@@ -71,6 +72,7 @@
   --vanguard: #2a74d6;
   --duelist: #e0581f;
   --strategist: #12a06a;
+  --cv-van: #2a74d6; --cv-due: #e0581f; --cv-str: #12a06a;   /* Rollenfarben für Diagramm-Markierungen (Helligkeit im Prüfband) */
   --good: #12a03c;
   --good-text: #0b7a2c;
   --bad: #d23a48;
@@ -417,12 +419,6 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .chart { position: relative; }
 .chart svg { display: block; width: 100%; overflow: visible; }
 .chart text { fill: var(--muted); font-size: 11px; }
-.tooltip {
-  position: absolute; pointer-events: none; background: var(--text); color: var(--bg); font-size: .78rem;
-  padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px));
-  opacity: 0; transition: opacity .1s; z-index: 5;
-}
-.tooltip.show { opacity: 1; }
 .empty { text-align: center; color: var(--muted); padding: 22px 10px; font-size: .9rem; }
 .empty svg.i { width: 30px; height: 30px; display: block; margin: 0 auto 6px; opacity: .6; }
 
@@ -1096,14 +1092,6 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .rs { --c: var(--muted); display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 6px; font: 600 .72rem/1 var(--font-display); letter-spacing: .03em; color: var(--text); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 45%, var(--surface-2)), color-mix(in srgb, var(--c) 22%, var(--surface-2))); white-space: nowrap; overflow: hidden; }
 .rs .ri { stroke: var(--text); filter: none; width: 13px; height: 13px; }
 .rs.Vanguard { --c: var(--vanguard); } .rs.Duelist { --c: var(--duelist); } .rs.Strategist { --c: var(--strategist); }
-/* Karten-Übersicht */
-.mstats { display: grid; gap: 10px; }
-.mstn { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; margin-bottom: 4px; }
-.mstn b { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
-.mstn span { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mstb { display: flex; gap: 2px; height: 10px; border-radius: 2px; overflow: hidden; }
-.mstb .w { background: linear-gradient(90deg, var(--good), color-mix(in srgb, var(--good) 70%, var(--surface))); }
-.mstb .l { background: color-mix(in srgb, var(--bad) 70%, var(--surface)); }
 /* Heldenkarten */
 .hero-card { --c: var(--accent); background:
   linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent), transparent 42%) top left / 100% 120px no-repeat,
@@ -1176,6 +1164,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
   --vanguard: #6aa8ff;
   --duelist: #ff8a5c;
   --strategist: #4fe0a6;
+  --cv-van: #4b8cf0; --cv-due: #e8673a; --cv-str: #1aa874;   /* Rollenfarben für Diagramm-Markierungen (Helligkeit im Prüfband) */
   --good: #3fd68a;
   --good-text: #72f0ad;
   --bad: #ff5c7a;
@@ -1210,6 +1199,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
   --vanguard: #2f7ad8;
   --duelist: #e0632f;
   --strategist: #13a873;
+  --cv-van: #2f7ad8; --cv-due: #e0632f; --cv-str: #13a873;   /* Rollenfarben für Diagramm-Markierungen (Helligkeit im Prüfband) */
   --good: #14a050;
   --good-text: #0d7a3c;
   --bad: #d6365a;
@@ -1263,12 +1253,308 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 :root[data-look="rose"] .rsplit { gap: 5px; overflow: visible; }
 :root[data-look="rose"] .bdg .em { clip-path: none; border-radius: 50%; width: 52px; height: 52px; }
 :root[data-look="rose"] .rsplit { border-radius: 999px; }
-:root[data-look="rose"] .tbb, :root[data-look="rose"] .tbb .tbv, :root[data-look="rose"] .mstb, :root[data-look="rose"] .track { border-radius: 999px; }
+:root[data-look="rose"] .tbb, :root[data-look="rose"] .tbb .tbv, :root[data-look="rose"] .track { border-radius: 999px; }
 
 @media (max-width: 900px) { .head-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; gap: 6px; padding-bottom: 2px; } .head-actions::-webkit-scrollbar { display: none; } .head-actions > * { flex: none; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* ================= Dashboard: Filterleiste, Kopf mit grosser Zahl, Karten-Raster, Diagramme ================= */
+#dashBody, #squadBody { container-type: inline-size; }
+.dfilters { display: grid; grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(110px, 1fr); gap: 12px 28px; align-items: end; padding: 14px 16px; }
+.dfilters > .dfg:nth-child(3) { grid-column: 1; grid-row: 2; }
+.dfilters > .dfg:nth-child(4) { grid-column: 2; grid-row: 2; }
+.dfilters > .dfn { grid-column: 3; grid-row: 1 / 3; }
+.dfg { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dfl { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.dfg .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dfg select { min-width: 140px; max-width: 100%; }
+.dfn { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 10px; font-size: .9rem; align-self: center; }
+.dgrid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); margin-top: 16px; }
+.dgrid > .card { margin: 0; min-width: 0; }
+.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; }
+.span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+@container (max-width: 820px) { .dgrid > .card { grid-column: span 12; } }
+
+#dashBody > #todayCard { margin-top: 16px; }
+
+/* Kopf: Winrate gross, Form, vier Kennzahlen */
+.dhead { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.6fr); gap: 18px 26px; padding: 18px 20px; margin: 16px 0 0;
+  background: radial-gradient(520px 240px at 0% 0%, var(--accent-soft), transparent 70%), linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 75%, transparent), var(--surface)); }
+@container (max-width: 820px) { .dhead { grid-template-columns: minmax(0, 1fr); } }
+.dh-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dtl { font-size: .76rem; color: var(--muted); font-weight: 600; }
+.dh-fig { font: 700 clamp(3rem, 8cqi, 4.2rem)/1 var(--font-body); letter-spacing: -.02em; margin: 2px 0; }
+.dh-rec { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-2); font-size: .9rem; }
+.dh-rec b { color: var(--text); }
+.dh-d { font-size: .86rem; }
+.dh-form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.dh-form .fstrip { flex: 1 1 200px; }
+.dh-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+.dtile { display: flex; flex-direction: column; min-width: 0; padding: 12px 14px 10px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.dtv { font: 700 1.6rem/1.15 var(--font-body); margin-top: 2px; }
+.dts { font-size: .78rem; min-height: 1.3em; margin-top: 2px; }
+.dtile svg.spark { display: block; width: 100%; height: 26px; margin-top: auto; padding-top: 6px; }
+.dtile .dmeter { margin-top: auto; }
+.dd { color: var(--muted); font-weight: 600; }
+.dd.good { color: var(--good-text); } .dd.bad { color: var(--bad); }
+.dd .dvs { font-weight: 400; color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dmeter { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.dmeter > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.dmeter.rc { background: color-mix(in srgb, var(--c) 18%, var(--surface-2)); }
+.dmeter.rc > span { background: var(--c); }
+
+/* Karten-Rahmen */
+.dcard .card-head { align-items: flex-start; flex-wrap: nowrap; }
+.dcard .card-head:has(.dca .dseg) { flex-wrap: wrap; }
+.dca { flex: none; }
+.dch { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dca { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.dca .dseg { margin: 0; }
+.dtb { font: 600 .74rem/1 var(--font-body); padding: 6px 11px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
+.dtb:hover, .dtb[aria-pressed="true"] { color: var(--text); border-color: var(--accent); }
+.dtable { margin-top: 2px; }
+.dseg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; margin-bottom: 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); max-width: 100%; }
+.dseg button { font: 600 .78rem/1 var(--font-body); padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
+.dseg button:hover { color: var(--text); }
+.dseg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.dbadge { font: 600 .66rem/1 var(--font-body); padding: 3px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-strong); white-space: nowrap; }
+.dhint { margin: 12px 0 0; font-size: .78rem; color: var(--muted); }
+.dmore { margin-top: 8px; }
+.dmore > summary { cursor: pointer; font-size: .84rem; color: var(--accent-strong); font-weight: 600; padding: 4px 0; }
+.dmore > .notes { margin-top: 8px; }
+.dempty { margin-top: 16px; padding-bottom: 22px; }
+
+/* Leistungsverlauf */
+.dchart { position: relative; min-height: 120px; }
+.dchart svg { display: block; max-width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.dchart .g { stroke: var(--grid); stroke-width: 1; }
+.dchart .ds { stroke: var(--grid); stroke-width: 1; opacity: .7; }
+.dchart .tk { fill: var(--muted); font: 500 11px var(--font-body); font-variant-numeric: tabular-nums; }
+.dchart .ref { stroke: var(--muted); stroke-width: 1; opacity: .5; }
+.dchart .raw { fill: var(--muted); opacity: .45; }
+.dchart .area { fill: var(--accent); opacity: .1; }
+.dchart .ln { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dchart .end { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.dchart .el { fill: var(--text); font: 700 12px var(--font-body); }
+.dchart .rw { fill: var(--good); stroke: var(--surface); stroke-width: 2; }
+.dchart .rl2 { fill: var(--bad); stroke: var(--surface); stroke-width: 2; }
+.dchart .xh line { stroke: var(--text-2); stroke-width: 1; opacity: .6; }
+.dchart .xh circle { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.dchart .hit { cursor: crosshair; outline: none; }
+.dchart .hit:focus-visible { stroke: var(--gold); stroke-width: 1.5; }
+.dleg { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 8px; font-size: .78rem; color: var(--text-2); }
+.dleg > span { display: inline-flex; align-items: center; gap: 6px; }
+.dleg .lk { width: 14px; height: 2px; border-radius: 2px; background: var(--accent); }
+.dleg .lk.ref { height: 1px; background: var(--muted); }
+.dleg .sw { width: 10px; height: 10px; border-radius: 3px; }
+.dk { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.dk.w { background: var(--good); } .dk.l { background: var(--bad); } .dk.raw { background: var(--muted); opacity: .6; }
+
+/* Tooltip */
+.dtip { position: fixed; z-index: 60; pointer-events: none; min-width: 140px; max-width: 260px; padding: 9px 11px; border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-3) 94%, transparent); border: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(8px); color: var(--text); font-size: .8rem; }
+.dtt { margin-bottom: 5px; font-size: .74rem; font-weight: 700; color: var(--text-2); }
+.dtr { display: flex; align-items: center; gap: 7px; line-height: 1.5; }
+.dtr i { flex: none; width: 12px; height: 2px; border-radius: 2px; background: var(--c); }
+.dtr i.nk { background: transparent; }
+.dtr b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dtr span { color: var(--muted); }
+[data-tip]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Rollen */
+.dstack { display: flex; gap: 2px; height: 12px; border-radius: 99px; overflow: hidden; }
+.dstack > span { min-width: 4px; }
+.dstack > span:hover { filter: brightness(1.15); }
+.droles { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+.drole { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; grid-template-areas: "i n v" "m m m"; gap: 6px 10px; align-items: center; }
+.drole > .ri { grid-area: i; width: 18px; height: 18px; }
+.drn { grid-area: n; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.drn b { font-weight: 600; }
+.drv { grid-area: v; font: 700 1.05rem/1 var(--font-body); }
+.drole > .dmeter { grid-area: m; }
+.drole.none { opacity: .55; }
+
+/* Helden */
+.dhlist { display: flex; flex-direction: column; gap: 3px; }
+.dhrow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(64px, 1fr) minmax(96px, 1.3fr) 46px 50px; gap: 10px; align-items: center; width: 100%;
+  padding: 7px 8px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.dhrow:not(.dhh):hover { background: var(--surface-2); }
+.dhrow.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.dhh { cursor: default; padding-block: 0 4px; font-size: .72rem; font-weight: 600; color: var(--muted); }
+.dhh small { font-weight: 400; }
+.dhh > span:nth-child(n+4), .dhk, .dhd { text-align: right; }
+.dhn { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.dhnt { display: flex; flex-direction: column; min-width: 0; }
+.dhnt b { font-size: .9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhnt small { font-size: .72rem; color: var(--muted); }
+.dhc, .dhw { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dhrow em { font-style: normal; font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dhc em { min-width: 22px; text-align: right; }
+.dhw em { min-width: 38px; text-align: right; }
+.dbar { flex: 1; height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.dbar i { display: block; height: 100%; border-radius: 0 99px 99px 0; background: var(--accent); }
+.dvb { position: relative; flex: 1; height: 8px; border-radius: 99px; background: var(--surface-3); }
+.dvb::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); opacity: .7; }
+.dvb i { position: absolute; top: 0; bottom: 0; }
+.dvb i.p { background: var(--good); border-radius: 0 4px 4px 0; }
+.dvb i.n { background: var(--bad); border-radius: 4px 0 0 4px; }
+@container (max-width: 560px) {
+  .dhrow { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr) 44px; }
+  .dhrow > .dhc, .dhrow > .dhd, .dhh > span:nth-child(2), .dhh > span:nth-child(5) { display: none; }
+}
+
+/* Spielkalender */
+.dcalwrap { display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: flex-start; }
+.dcal { display: grid; grid-template-columns: 22px repeat(12, minmax(9px, 22px)); gap: 4px; font-size: .66rem; color: var(--muted); }
+.dcm { height: 14px; white-space: nowrap; }
+.dcw { align-self: center; line-height: 1; }
+.dcc { display: block; aspect-ratio: 1; border-radius: 4px; background: var(--surface-3); }
+.dcc.l1 { background: color-mix(in oklab, var(--accent) 30%, var(--surface-2)); }
+.dcc.l2 { background: color-mix(in oklab, var(--accent) 52%, var(--surface-2)); }
+.dcc.l3 { background: color-mix(in oklab, var(--accent) 76%, var(--surface-2)); }
+.dcc.l4 { background: var(--accent); }
+.dcc.fut { background: transparent; }
+.dcc.now { box-shadow: 0 0 0 1.5px var(--text-2); }
+.dcc[data-tip]:hover { box-shadow: 0 0 0 2px var(--text); }
+.dcal-leg .dcc { display: inline-block; width: 11px; height: 11px; }
+.dcst { flex: 1 1 160px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.dcst > div { display: flex; flex-direction: column; }
+.dcst b { font: 700 1.25rem/1.1 var(--font-body); }
+.dcst span { font-size: .74rem; color: var(--muted); }
+
+/* Siege gegen Niederlagen */
+.dwls { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.dwlh { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; font-size: .84rem; }
+.dwlh b { font-weight: 600; }
+.dwlh > span { color: var(--muted); }
+.dwl.top .dwlh > span { color: var(--text-2); font-weight: 600; }
+.dwlr { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.dbell { position: relative; flex: 1; height: 14px; }
+.dbell::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--grid); }
+.dbell .cn { position: absolute; top: calc(50% - 1px); height: 2px; background: var(--muted); opacity: .6; }
+.dbell .dw, .dbell .dl { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.dbell .dw { background: var(--good); } .dbell .dl { background: var(--bad); }
+.dbell .dw:hover, .dbell .dl:hover { transform: scale(1.25); }
+.dwlv { display: flex; gap: 10px; font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dwlv > span { display: inline-flex; align-items: center; gap: 5px; min-width: 52px; justify-content: flex-end; }
+
+/* Abweichung vom Schnitt (Karten, Gegner) */
+.ddiv { display: flex; flex-direction: column; gap: 9px; }
+.ddrow, .ddax { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 56px; gap: 10px; align-items: center; }
+.ddaxb { display: flex; justify-content: center; font-size: .68rem; color: var(--muted); }
+.ddaxb em { font-style: normal; }
+.ddl { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: .84rem; line-height: 1.25; overflow-wrap: anywhere; }
+.ddl > span { min-width: 0; overflow-wrap: anywhere; }
+.ddbar { position: relative; height: 10px; }
+.ddbar::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--grid); }
+.ddbar::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--muted); opacity: .7; }
+.ddbar i { position: absolute; top: 0; bottom: 0; min-width: 2px; }
+.ddbar i.p { background: var(--good); border-radius: 0 4px 4px 0; }
+.ddbar i.n { background: var(--bad); border-radius: 4px 0 0 4px; }
+.ddbar i:hover { filter: brightness(1.15); }
+.ddv { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.ddv b { font-size: .86rem; font-variant-numeric: tabular-nums; }
+.ddv small { font-size: .7rem; color: var(--muted); }
+.ddrow.thin { opacity: .55; }
+
+/* Säulen: wievieltes Match am Tag, Tageszeit */
+.dcolw + .dcolw { margin-top: 20px; }
+.dcolh { margin-bottom: 4px; font-size: .76rem; font-weight: 600; color: var(--muted); }
+.dcols { position: relative; display: flex; align-items: flex-end; gap: 8px; height: 100px; margin: 20px 40px 0 0; border-bottom: 1px solid var(--grid); }
+.dcol { position: relative; flex: 1; height: 100%; display: flex; justify-content: center; align-items: flex-end; min-width: 0; }
+.dcb { width: min(24px, 70%); height: var(--h); border-radius: 4px 4px 0 0; background: var(--accent); }
+.dcb:hover { filter: brightness(1.15); }
+.dcv { position: absolute; left: 0; right: 0; bottom: calc(var(--h) + 3px); text-align: center; font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dcol.thin .dcb { opacity: .4; }
+.dcol.thin .dcv { color: var(--muted); font-weight: 500; }
+.dcavg { position: absolute; left: 0; right: 0; bottom: var(--avg); border-top: 1px solid var(--muted); opacity: .7; pointer-events: none; }
+.dcavg em { position: absolute; left: 100%; top: -8px; padding-left: 6px; font-style: normal; font-size: .66rem; color: var(--text-2); white-space: nowrap; }
+.dcoll { display: flex; gap: 8px; margin: 6px 40px 0 0; }
+.dcoll > span { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
+.dcoll b { font-size: .74rem; font-weight: 600; }
+.dcoll small { font-size: .66rem; color: var(--muted); }
+
+/* Handy: Filter kompakter, Kennzahl-Umschalter wischbar (am Ende, damit es die Grundregeln überschreibt) */
+@container (max-width: 760px) {
+  .dfilters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .dfilters > .dfg:nth-child(-n+2), .dfilters > .dfn { grid-column: 1 / -1; grid-row: auto; }
+  .dfilters > .dfg:nth-child(3), .dfilters > .dfg:nth-child(4) { grid-column: auto; grid-row: auto; }
+  .dfg .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 2px; }
+  .dfg .chips::-webkit-scrollbar { display: none; }
+  .dfg .chips > .chip { flex: none; }
+  .dfg select { min-width: 0; width: 100%; }
+  .dfn { margin: 0; justify-content: space-between; }
+  .dseg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .dseg::-webkit-scrollbar { display: none; }
+  .dseg button { flex: none; }
+  .ddrow, .ddax { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 50px; }
+}
+/* Heutige Session: Ergebnis-Kreise */
+.tmres { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; font-size: .8rem; font-weight: 800; }
+.tmres.w { background: rgba(255, 255, 255, .95); color: #1b6b1b; }
+.tmres.l { background: rgba(0, 0, 0, .28); color: #fff; }
+
+/* Rosé: runde Formen auch im Dashboard */
+:root[data-look="rose"] .dtile, :root[data-look="rose"] .dhrow, :root[data-look="rose"] .dtip { border-radius: 14px; }
+:root[data-look="rose"] .dseg, :root[data-look="rose"] .dseg button { border-radius: 99px; }
+:root[data-look="rose"] .dcc { border-radius: 50%; }
+:root[data-look="rose"] .dcb { border-radius: 99px 99px 0 0; }
+
+/* ================= Match-Analyse (alle 12 Spieler) und Squad ================= */
+.msbd { align-items: flex-start; overflow-y: auto; padding: max(16px, env(safe-area-inset-top, 0px)) 16px 16px; }
+.msheet { width: min(920px, 100%); margin: auto 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 24px 64px rgba(0, 0, 0, .4); }
+.mshead { display: flex; align-items: flex-start; gap: 12px; }
+.mshead > div { flex: 1; min-width: 0; }
+.mshead h2 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+.msfacts { margin: 14px 0 6px; }
+.mst h3 { margin: 16px 0 6px; font-size: .9rem; }
+.mstab td, .mstab th { white-space: nowrap; }
+.mstab tr.me td { background: var(--accent-soft); }
+.mstab tr.mate td { background: color-mix(in srgb, var(--accent-2) 10%, transparent); }
+.mstab td.best { font-weight: 700; }
+.mswho { display: flex; flex-direction: column; line-height: 1.15; }
+.mswho b { font-weight: 600; }
+.mswho small { font-size: .7rem; color: var(--muted); }
+.mstab .badge { margin-left: 6px; }
+.sqsetup .sqmates { display: flex; flex-wrap: wrap; gap: 8px; }
+.sqmate { display: inline-flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.sqmate b { font-weight: 600; }
+.sqmate small { font-size: .72rem; color: var(--good-text); }
+.sqmate.none small { color: var(--muted); }
+.sqx { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.sqx:hover { background: var(--surface-3); color: var(--text); }
+.sqx svg.i { width: 14px; height: 14px; }
+.sqadd { margin-top: 12px; gap: 8px; flex-wrap: nowrap; }
+.sqadd input { flex: 1; min-width: 0; max-width: 280px; }
+.sqhead .sqname { font-size: 1.15rem; overflow-wrap: anywhere; }
+.sqfoe .sqhelp { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: -2px 0 6px; color: var(--text-2); }
+.sqfoe .sqhelp .av { margin-left: 4px; }
+.dbell .dus { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); background: var(--accent); }
+.dbell .dthem { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); background: var(--muted); }
+.dk.dus { background: var(--accent); } .dk.dthem { background: var(--muted); }
+.dk.dw { background: var(--good); } .dk.dl { background: var(--bad); }
+.sqms { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.sqm { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sqmh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sqmheroes { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .84rem; }
+.sqm .hcstats > div { background: var(--surface); }
+.sqtus { display: flex; flex-direction: column; gap: 10px; }
+.sqtu { display: grid; grid-template-columns: auto minmax(0, 1fr) 56px; gap: 10px; align-items: center; }
+.sqtu > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; }
+.sqtu small { font-size: .74rem; }
+.sqtuh { display: flex; gap: 2px; }
+.sqtu.thin { opacity: .55; }
+.sqnh { margin: 4px 0 8px; font-size: .84rem; }
+.sqnh + .bars { margin-bottom: 14px; }
+.teambox h3 small { font-weight: 400; }
+.teambox .tbl { font-size: .78rem; color: var(--muted); margin: 8px 0 4px; }
+.logmates { font-size: .72rem; color: var(--accent-strong); }
+:root[data-look="rose"] .msheet { border-radius: 22px; }
+:root[data-look="rose"] .sqmate, :root[data-look="rose"] .sqm { border-radius: 16px; }
 </style>
 </head>
 <body>
@@ -1305,34 +1591,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 <section id="tab-today" hidden><div id="todayBody"></div></section>
 <!-- DASHBOARD -->
 <section id="tab-dashboard">
-  <div class="kpis" id="kpis"></div>
-  <div class="card" id="todayCard" hidden></div>
-  <div class="card" id="insightsCard">
-    <div class="card-head"><h2 data-icon="ai">Coach-Hinweise</h2><span class="muted small">das Wichtigste aus deinen Matches</span></div>
-    <div id="insights"></div>
-  </div>
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-head"><h2 data-icon="analysis">Winrate-Verlauf</h2><span class="muted small">letzte 30 Matches · gleitend über 5</span></div>
-      <div class="chart" id="trend"></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2 data-icon="team">Winrate nach Rolle</h2></div>
-      <div id="byRole"></div>
-    </div>
-  </div>
-  <div class="grid-2 mt">
-    <div class="card">
-      <div class="card-head"><h2 data-icon="heroes">Deine Helden</h2></div>
-      <div class="table-wrap" id="byHero"></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2 data-icon="target">Häufigste Fehler</h2><span class="muted small">letzte 20 Matches</span></div>
-      <div id="topMistakes"></div>
-    </div>
-  </div>
-  <div class="card" id="deathDashCard"><div class="card-head"><h2 data-icon="target">Woran du stirbst</h2><span class="muted small">letzte 20 Matches</span></div><div id="deathDash"></div></div>
-  <div class="card" id="mapDashCard"><div class="card-head"><h2 data-icon="map">Deine Karten</h2><span class="muted small">letzte 60 Matches · Siege und Niederlagen</span></div><div id="mapDash"></div></div>
+  <div id="dashBody"></div>
   <details class="fold" id="flexCard" data-f="dash-flex"></details>
   <details class="fold" id="pathCard" data-f="dash-path"></details>
 </section>
@@ -1442,6 +1701,12 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
     <div class="chips" id="mistakeChips"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
+    <div id="teamBox" class="teambox" hidden>
+      <h3>Als Team <small class="muted" id="teamWho"></small></h3>
+      <p class="muted small" style="margin:0">Nur wenn du mit Teammates gespielt hast. Erscheint auf der Seite «Squad».</p>
+      <div class="tbl">Was lief als Team gut?</div><div class="chips" id="teamGoodChips"></div>
+      <div class="tbl">Was hat als Team gehakt?</div><div class="chips" id="teamBadChips"></div>
+    </div>
     <div id="fqBox" hidden>
       <h3>Passend zu deinem Lernstand</h3>
       <p class="muted small" style="margin:0 0 8px" id="fqInfo"></p>
@@ -1615,6 +1880,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 <section id="tab-top" hidden><div id="topBody"></div></section>
 <section id="tab-weak" hidden><div id="weakBody"></div></section>
 <section id="tab-progress" hidden><div id="progressBody"></div></section>
+<section id="tab-squad" hidden><div id="squadBody"></div></section>
 <section id="tab-heroes" hidden>
   <div class="card">
     <div class="row between">
@@ -3549,7 +3815,8 @@ document.querySelectorAll("[data-icon]").forEach(el => el.insertAdjacentHTML("af
 
 const TITLES = {
   today: ["Heute", "Dein Tag auf einen Blick: Lektion, Training, Ziel und Matches"],
-  dashboard: ["Überblick", "Dein Fortschritt auf einen Blick"],
+  dashboard: ["Dashboard", "Alle deine Zahlen auf einen Blick"],
+  squad: ["Squad", "Mit deinen Teammates: was gut läuft und wo es hakt"],
   lessons: ["Tägliche Lektionen", "Jeden Tag ein Schritt: verstehen, üben, anwenden, reflektieren"],
   plan: ["Trainingsplan", "56 Tage vom Fundament zum Experten"],
   log: ["Match loggen", "Ergebnis, Teams und Reflexion festhalten"],
@@ -3577,11 +3844,11 @@ const TITLES = {
 const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
   { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "weak", "watch", "lexicon"] },
-  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten, im Replay auswerten und den Verlauf vergleichen", tabs: ["log", "review", "analysis", "dashboard", "progress", "top"] },
+  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten, im Replay auswerten und den Verlauf vergleichen", tabs: ["log", "review", "analysis", "dashboard", "squad", "progress", "top"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team, Counter und Meta", tabs: ["heroes", "team", "teamups", "meta"] },
   { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
 ];
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Überblick", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -4188,43 +4455,6 @@ function counterTipCell(enemy) {
   return list.length ? `<span class="row" style="gap:4px">${list.map(h => av(h, "sm")).join("")}<span class="muted small">${list.map(esc).join(", ")}</span></span>` : `<span class="muted small">–</span>`;
 }
 
-// ---------- Diagramme ----------
-function lineChart(el, values, meta) {
-  // values: Werte 0..1; meta[i]: {label, cls}
-  const W = Math.max(280, el.clientWidth || 500), H = 190, L = 40, R = 12, T = 12, B = 24;
-  const x = i => L + (values.length === 1 ? 0 : i * (W - L - R) / (values.length - 1));
-  const y = v => T + (1 - v) * (H - T - B);
-  const line = values.length > 2 ? smoothPath(values.map((v, i) => [x(i), y(v)]), y(1), y(0)) : values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const area = `${line} L${x(values.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
-  const grid = [0, 0.5, 1].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v * 100} %</text>`).join("");
-  const last = values.length - 1;
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Winrate-Verlauf, aktuell ${pct(values[last])}">
-    ${grid}
-    <path d="${area}" fill="var(--accent)" opacity=".10"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${x(last)}" cy="${y(values[last])}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-    <text x="${Math.min(x(last), W - R)}" y="${y(values[last]) - 10}" text-anchor="end" style="fill:var(--text);font-weight:600">${pct(values[last])}</text>
-    <g class="hover" style="display:none"><line y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-width="1"/><circle r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>
-    <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" class="hit"/>
-  </svg><div class="tooltip"></div>`;
-  const hover = el.querySelector(".hover"), tip = el.querySelector(".tooltip"), hit = el.querySelector(".hit");
-  const move = ev => {
-    const box = el.querySelector("svg").getBoundingClientRect();
-    const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left;
-    const i = Math.max(0, Math.min(last, Math.round((px * W / box.width - L) / ((W - L - R) / Math.max(1, last)))));
-    hover.style.display = "";
-    hover.querySelector("line").setAttribute("x1", x(i)); hover.querySelector("line").setAttribute("x2", x(i));
-    hover.querySelector("circle").setAttribute("cx", x(i)); hover.querySelector("circle").setAttribute("cy", y(values[i]));
-    tip.innerHTML = `<b>${pct(values[i])}</b> · ${meta[i].label}`;
-    tip.style.left = `${x(i) / W * box.width}px`; tip.style.top = `${y(values[i]) / H * box.height}px`;
-    tip.classList.add("show");
-  };
-  hit.addEventListener("mousemove", move); hit.addEventListener("touchstart", move, { passive: true });
-  hit.addEventListener("mouseleave", () => { hover.style.display = "none"; tip.classList.remove("show"); });
-}
-function rolling(list, size) {
-  return list.map((m, i) => { const w = list.slice(Math.max(0, i - size + 1), i + 1); return w.filter(x => x.result === "W").length / w.length; });
-}
 // ---------- Grafiken: Form-Leiste, Kennzahlen mit Verlauf, Rollen-Embleme, Karten-Übersicht ----------
 // Alles kommt aus deinen eigenen Matches; Werte pro Held über heroOnly (bei Heldenwechsel nur der Anteil des Haupthelden).
 let gfxN = 0;
@@ -4303,14 +4533,6 @@ function formHudHtml() {
     <div class="hudtop">${formStripHtml(last, 12)}<div class="hstreak ${lr === "W" ? "w" : "l"}"><b>${streak}</b><span>${lr === "W" ? (streak === 1 ? "Sieg" : "Siege") : (streak === 1 ? "Niederlage" : "Niederlagen")} in Folge</span></div></div>
     <div class="hks-grid">${tiles}</div>
     <div class="rsplit" aria-label="Rollen in den letzten ${n} Matches">${split}</div></div>`;
-}
-// Karten-Übersicht: Siege und Niederlagen pro Karte (die häufigsten sechs)
-function mapStatsHtml(list) {
-  const by = Object.entries(group(list.filter(m => m.map), m => m.map)).map(([k, l]) => [k, summary(l)]).filter(([, x]) => x.n >= 2).sort((a, b) => b[1].n - a[1].n).slice(0, 6);
-  if (!by.length) return `<p class="muted small" style="margin:0">Sobald du mindestens zwei Matches auf einer Karte hast, erscheint sie hier.</p>`;
-  const max = Math.max(...by.map(([, x]) => x.n));
-  return `<div class="mstats">${by.map(([k, x]) => `<div class="mst"><div class="mstn"><b>${esc(k)}</b><span>${x.w} S · ${x.n - x.w} N · ${pct(x.wr)}</span></div>
-    <div class="mstb" style="width:${Math.max(18, x.n / max * 100)}%"><span class="w" style="flex:${x.w}"></span><span class="l" style="flex:${x.n - x.w}"></span></div></div>`).join("")}</div>`;
 }
 function ring(ratio, label) {
   const r = 22, c = 2 * Math.PI * r, id = "rg" + (++gfxN);
@@ -4769,86 +4991,869 @@ document.addEventListener("click", e => {
 });
 
 // ---------- Dashboard ----------
+// ---------- Dashboard ----------
+// Eine Filterleiste oben steuert alles darunter (Zeitraum, Rolle, Held, Modus); alle Karten rechnen mit demselben Ausschnitt.
+// Alle Zahlen kommen aus deinen eigenen Matches (summary, heroView), es gibt kein neues Spielwissen. Diagramme: dünne Linien und
+// Balken, ein Tooltip pro Markierung (Fadenkreuz im Verlauf), zu jedem Diagramm eine Tabellenansicht mit denselben Zahlen.
+const DASH_PER = [["1", "Heute"], ["7", "7 Tage"], ["30", "30 Tage"], ["90", "90 Tage"], ["0", "Alles"]];
+const DASH_PREV = { "1": "gestern", "7": "den 7 Tagen davor", "30": "den 30 Tagen davor", "90": "den 90 Tagen davor" };
+const DASH_PREV_IN = { "1": "gestern", "7": "in den 7 Tagen davor", "30": "in den 30 Tagen davor", "90": "in den 90 Tagen davor" };
+const DASH_MODES = [["", "Alle Modi"], ["Competitive", "Ranked"], ["Quick Match", "Ungewertet"], ["Arcade / Event", "Arcade"], ["Custom / Training", "Custom"]];
+const DASH_METRICS = [["wr", "Winrate"], ["kda", "KDA"], ["d10", "Tode"], ["fh10", "Final Hits"], ["heal10", "Heilung"], ["dmg10", "Schaden"], ["block10", "Geblockt"], ["acc", "Genauigkeit"]];
+const DASH_METRIC_LONG = { wr: "Winrate", kda: "KDA", d10: "Tode pro 10 Min", fh10: "Final Hits pro 10 Min", heal10: "Heilung pro 10 Min", dmg10: "Schaden pro 10 Min", block10: "Geblockt pro 10 Min", acc: "Treffergenauigkeit" };
+const DASH_KEY = { Strategist: ["heal10", "Heilung"], Duelist: ["dmg10", "Schaden"], Vanguard: ["block10", "Geblockt"] };
+const DASH_CV = { Vanguard: "var(--cv-van)", Duelist: "var(--cv-due)", Strategist: "var(--cv-str)" };
+const dashUi = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY + "-dash")) || {}; } catch (e) { s = {}; }
+  const d = Object.assign({ per: "30", role: "", hero: "", mode: "", metric: "wr" }, s);
+  if (!DASH_PER.some(p => p[0] === d.per)) d.per = "30";
+  if (!DASH_METRICS.some(p => p[0] === d.metric)) d.metric = "wr";
+  return d;
+})();
+const dashTables = {};   // welche Karten gerade die Tabelle statt des Diagramms zeigen
+function dashSave() { try { localStorage.setItem(STORE_KEY + "-dash", JSON.stringify(dashUi)); } catch (e) {} }
+const dashRange = (per, back) => { const p = +per; if (!p) return null; const end = addDays(today(), -p * back); return [addDays(end, -(p - 1)), end]; };
+const dashIn = (m, r) => !r || (m.date >= r[0] && m.date <= r[1]);
+function dashData() {
+  const base = state.matches.filter(m => (!dashUi.role || heroRole(m.hero) === dashUi.role) && (!dashUi.mode || m.mode === dashUi.mode));
+  const r = dashRange(dashUi.per, 0), rp = dashRange(dashUi.per, 1);
+  const byHero = l => (dashUi.hero ? l.filter(m => m.hero === dashUi.hero) : l);
+  const pool = base.filter(m => dashIn(m, r));   // ohne Heldenfilter: für die Heldenliste
+  const cur = byHero(pool), prev = rp ? byHero(base.filter(m => dashIn(m, rp))) : [];
+  const view = l => (dashUi.hero ? heroOnly(l) : l);
+  return { all: byHero(base), pool, cur, prev, hv: view(cur), hp: view(prev), r };
+}
+function dashRole(list) {
+  if (dashUi.role) return dashUi.role;
+  if (dashUi.hero) return heroRole(dashUi.hero);
+  const c = group(list, m => heroRole(m.hero)), top = ROLES.slice().sort((a, b) => (c[b] || []).length - (c[a] || []).length)[0];
+  return (c[top] || []).length ? top : (mainRole() || "Strategist");
+}
+// Wert eines Matches für eine Kennzahl (null = nicht erfasst)
+function dashVal(m, k) {
+  if (k === "kda") return m.k !== null && m.k !== undefined && m.d !== null && m.d !== undefined ? kda(m) : null;
+  if (k === "acc") return m.acc > 0 ? m.acc / 100 : null;   // Treffergenauigkeit aus Rivals Data, in Prozent
+  const f = { d10: "d", heal10: "heal", dmg10: "dmg", block10: "block", k10: "k", a10: "a", fh10: "fh" }[k];
+  return f && m.dur > 0 && m[f] !== null && m[f] !== undefined ? m[f] / m.dur * 10 : null;
+}
+function dashPer10(list, f) {
+  const v = list.filter(m => m.dur > 0 && m[f] !== null && m[f] !== undefined), t = v.reduce((s, m) => s + m.dur, 0);
+  return t ? v.reduce((s, m) => s + m[f], 0) / t * 10 : NaN;
+}
+function dashFmt(k, v) {
+  if (!isFinite(v)) return "–";
+  if (k === "wr" || k === "ult" || k === "acc") return Math.round(v * 100) + " %";
+  if (k === "kda") return numDe(v.toFixed(2));
+  if (k === "d10" || k === "k10" || k === "a10" || k === "fh10") return numDe(v.toFixed(1));
+  return fmtNum(v);
+}
+function dashTick(k, v) {
+  if (k === "wr" || k === "ult" || k === "acc") return Math.round(v * 100) + " %";
+  if (Math.abs(v) >= 1000) return numDe((v / 1000).toFixed(Math.abs(v) >= 1e5 ? 0 : 1).replace(/\.0$/, "")) + "k";
+  return numDe(String(Math.round(v * 10) / 10));
+}
+function dashNiceMax(v) {
+  if (!(v > 0)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+const dashAvg = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
+// Gleitender Schnitt über die letzten `win` Werte
+const dashRoll = (vals, win) => vals.map((v, i) => dashAvg(vals.slice(Math.max(0, i - win + 1), i + 1)));
+// Veränderung mit Pfeil; better = 1 (mehr ist besser) oder -1 (weniger ist besser)
+function dashDelta(now, before, better, fmt, vs) {
+  if (!isFinite(now) || !isFinite(before)) return "";
+  const d = now - before, tol = Math.abs(before) * 0.03;
+  const tail = vs ? ` <span class="dvs">gegenüber ${esc(vs)}</span>` : "";
+  if (Math.abs(d) <= tol || (fmt(Math.abs(d)) === fmt(0))) return `<span class="dd">± gleich${tail}</span>`;
+  const good = better > 0 ? d > 0 : d < 0;
+  return `<span class="dd ${good ? "good" : "bad"}"><span aria-hidden="true">${d > 0 ? "▲" : "▼"}</span> ${d > 0 ? "+" : "−"}${fmt(Math.abs(d))}<span class="sr">${good ? " (besser)" : " (schlechter)"}</span>${tail}</span>`;
+}
+
+// ---- Tooltip: ein Element für alle Diagramme; Inhalte über textContent ----
+let DTIPS = [], dtipCur = null;
+// Liefert die Attribute für eine Markierung mit Tooltip. rows: [Wert, Bezeichnung, Farbe für den Linien-Schlüssel]
+function dtip(title, rows, focus) {
+  DTIPS.push({ title, rows: rows || [] });
+  return ` data-tip="${DTIPS.length - 1}"${focus === false ? "" : ' tabindex="0"'}`;
+}
+function dtipEl() {
+  let t = document.getElementById("dtip");
+  if (!t) { t = document.createElement("div"); t.id = "dtip"; t.className = "dtip"; t.setAttribute("role", "tooltip"); t.hidden = true; document.body.appendChild(t); }
+  return t;
+}
+function dtipFill(d) {
+  const t = dtipEl();
+  t.textContent = "";
+  const h = document.createElement("div"); h.className = "dtt"; h.textContent = d.title; t.appendChild(h);
+  d.rows.forEach(([v, l, c]) => {
+    const r = document.createElement("div"); r.className = "dtr";
+    const k = document.createElement("i"); if (c) k.style.setProperty("--c", c); else k.className = "nk"; r.appendChild(k);
+    const b = document.createElement("b"); b.textContent = v; r.appendChild(b);
+    if (l) { const s = document.createElement("span"); s.textContent = l; r.appendChild(s); }
+    t.appendChild(r);
+  });
+  t.hidden = false;
+  return t;
+}
+function dtipPlace(x, y) {
+  const t = dtipEl(), w = t.offsetWidth, h = t.offsetHeight;
+  let left = Math.max(8, Math.min(innerWidth - w - 8, x - w / 2)), top = y - h - 14;
+  if (top < 8) top = y + 18;
+  t.style.left = left + "px"; t.style.top = top + "px";
+}
+function dtipShow(el, x, y) {
+  const d = DTIPS[+el.dataset.tip];
+  if (!d) return;
+  dtipCur = el; dtipFill(d);
+  if (x === undefined) { const b = el.getBoundingClientRect(); x = b.left + b.width / 2; y = b.top; }
+  dtipPlace(x, y);
+}
+function dtipHide() { dtipCur = null; const t = document.getElementById("dtip"); if (t) t.hidden = true; }
+document.addEventListener("pointerover", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) dtipShow(el, e.clientX, e.clientY); });
+document.addEventListener("pointermove", e => { if (dtipCur && e.pointerType !== "touch" && e.target.closest && e.target.closest("[data-tip]") === dtipCur) dtipPlace(e.clientX, e.clientY); });
+document.addEventListener("pointerout", e => { if (e.pointerType === "touch") return; const el = e.target.closest && e.target.closest("[data-tip]"); if (el && el === dtipCur && !el.contains(e.relatedTarget)) dtipHide(); });
+document.addEventListener("pointerdown", e => { if (dtipCur && !(e.target.closest && e.target.closest("[data-tip]"))) dtipHide(); });
+document.addEventListener("focusin", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) dtipShow(el); });
+document.addEventListener("focusout", e => { if (e.target === dtipCur) dtipHide(); });
+window.addEventListener("scroll", () => { if (dtipCur) dtipHide(); }, { passive: true, capture: true });
+
+// ---- Karten-Rahmen: Titel, Untertitel, Schalter Diagramm/Tabelle ----
+function dcard(id, cls, title, ic, sub, body, tableHtml, extraHead) {
+  const tb = !!tableHtml && dashTables[id];
+  return `<div class="card dcard ${cls}" id="${id}"><div class="card-head"><div class="dch"><h2>${icon(ic)}${title}</h2>${sub ? `<span class="muted small">${sub}</span>` : ""}</div>
+    <div class="dca">${extraHead || ""}${tableHtml ? `<button type="button" class="dtb" data-dtable="${id}" aria-pressed="${tb}">${tb ? "Diagramm" : "Tabelle"}</button>` : ""}</div></div>
+    ${tb ? `<div class="table-wrap dtable">${tableHtml}</div>` : body}</div>`;
+}
+const dashTable = (heads, rows) => table(heads, rows, "Keine Daten im Ausschnitt.");
+
+// ---- Filterleiste ----
+function dashFiltersHtml(D) {
+  const chip = (k, v, label) => `<button type="button" class="chip ${dashUi[k] === v ? "on" : ""}" data-dfilt="${k}" data-v="${esc(v)}" aria-pressed="${dashUi[k] === v}">${esc(label)}</button>`;
+  const heroes = Object.entries(group(D.pool.concat(dashUi.hero ? [{ hero: dashUi.hero }] : []), m => m.hero)).sort((a, b) => b[1].length - a[1].length).map(([h]) => h);
+  const any = dashUi.per !== "30" || dashUi.role || dashUi.hero || dashUi.mode;
+  return `<div class="card dfilters" role="group" aria-label="Filter für das Dashboard">
+    <div class="dfg"><span class="dfl">Zeitraum</span><div class="chips">${DASH_PER.map(([v, l]) => chip("per", v, l)).join("")}</div></div>
+    <div class="dfg"><span class="dfl">Rolle</span><div class="chips">${chip("role", "", "Alle")}${ROLES.map(r => chip("role", r, ROLE_SHORT[r])).join("")}</div></div>
+    <div class="dfg"><label class="dfl" for="dHero">Held</label><select id="dHero" data-dsel="hero"><option value="">Alle Helden</option>${heroes.map(h => `<option ${h === dashUi.hero ? "selected" : ""}>${esc(h)}</option>`).join("")}</select></div>
+    <div class="dfg"><label class="dfl" for="dMode">Modus</label><select id="dMode" data-dsel="mode">${DASH_MODES.map(([v, l]) => `<option value="${esc(v)}" ${v === dashUi.mode ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="dfg dfn"><b>${plural(D.cur.length, "Match", "Matches")}</b>${any ? `<button type="button" class="linkbtn" data-dreset>Filter zurücksetzen</button>` : ""}</div></div>`;
+}
+
+// ---- Kopf: eine grosse Zahl (Winrate), Form, vier Kennzahlen ----
+function dashSpark(list, k, color) {
+  const v = list.map(m => (k === "wr" ? (m.result === "W" ? 1 : 0) : dashVal(m, k))).filter(x => x !== null && isFinite(x)).slice(-24);
+  if (v.length < 3) return "";
+  const r = dashRoll(v, 5);
+  return sparkline(k === "wr" ? r : gfxNorm(r), { color });
+}
+function dashHeadHtml(D) {
+  const s = summary(D.cur), sp = D.prev.length >= 3 ? summary(D.prev) : null, vs = DASH_PREV[dashUi.per];
+  const lr = D.cur[D.cur.length - 1].result;
+  let streak = 0;
+  for (let i = D.cur.length - 1; i >= 0 && D.cur[i].result === lr; i--) streak++;
+  const role = dashRole(D.cur), [kk, kl] = DASH_KEY[role];
+  const hvR = D.hv.filter(m => heroRole(m.hero) === role), hpR = D.hp.filter(m => heroRole(m.hero) === role);
+  const sc = summary(D.hv), sv = D.hp.length >= 3 ? summary(D.hp) : null;
+  const k10 = dashPer10(hvR, kk.replace("10", "")), k10p = hpR.length >= 3 ? dashPer10(hpR, kk.replace("10", "")) : NaN;
+  const mixed = new Set(D.cur.map(m => heroRole(m.hero))).size > 1;
+  const tile = (label, v, k, prev, better, spark, hint) => `<div class="dtile"><div class="dtl">${label}</div><div class="dtv">${dashFmt(k, v)}</div>
+    <div class="dts">${isFinite(prev) ? dashDelta(v, prev, better, x => dashFmt(k, x)) : `<span class="muted">${hint || "&nbsp;"}</span>`}</div>${spark}</div>`;
+  const noPrev = dashUi.per === "0" ? "über alle Matches" : "kein Vergleich: davor zu wenig Matches";
+  const tiles = [
+    tile("KDA", sc.kda, "kda", sv ? sv.kda : NaN, 1, dashSpark(D.hv, "kda", "var(--gold)"), noPrev),
+    tile("Tode pro 10 Min", sc.d10, "d10", sv ? sv.d10 : NaN, -1, dashSpark(D.hv, "d10", "var(--bad)"), sc.timedN ? noPrev : "ohne Matchdauer"),
+    tile(`${kl} pro 10 Min${mixed ? ` <span class="muted">· ${esc(ROLE_SHORT[role])}</span>` : ""}`, k10, kk, k10p, 1, dashSpark(hvR, kk, DASH_CV[role]), hvR.some(m => m.dur > 0) ? noPrev : "ohne Matchdauer"),
+    tile("Ult-Wirkung", sc.ultPct, "ult", sv ? sv.ultPct : NaN, 1, isFinite(sc.ultPct) ? `<div class="dmeter" aria-hidden="true"><span style="width:${Math.round(sc.ultPct * 100)}%"></span></div>` : "", sc.ultN ? noPrev : "noch keine Ults erfasst")
+  ].join("");
+  const first = D.cur[0], range = dashUi.per === "1" ? "heute" : dashUi.per === "0" ? `seit ${fmtDate(first.date)}` : `letzte ${dashUi.per} Tage`;
+  return `<div class="card dhead"><div class="dh-main">
+      <div class="dtl">Winrate · ${esc(range)}${dashUi.hero ? ` · ${esc(dashUi.hero)}` : dashUi.role ? ` · ${esc(ROLE_SHORT[dashUi.role])}` : ""}</div>
+      <div class="dh-fig">${pct(s.wr)}</div>
+      <div class="dh-rec"><span><b>${s.w}</b> ${s.w === 1 ? "Sieg" : "Siege"}</span><span><b>${s.n - s.w}</b> ${s.n - s.w === 1 ? "Niederlage" : "Niederlagen"}</span>${isFinite(s.dur) ? `<span>Ø ${numDe(s.dur.toFixed(1))} Min</span>` : ""}</div>
+      <div class="dh-d">${sp ? dashDelta(s.wr, sp.wr, 1, v => Math.round(v * 100) + " Pkt.", vs) : `<span class="muted small">${dashUi.per === "0" ? "Alle Matches im Ausschnitt" : `Kein Vergleich: ${esc(DASH_PREV_IN[dashUi.per])} zu wenig Matches`}</span>`}</div>
+      <div class="dh-form">${formStripHtml(D.cur, 14)}<div class="hstreak ${lr === "W" ? "w" : "l"}"><b>${streak}</b><span>${lr === "W" ? (streak === 1 ? "Sieg" : "Siege") : (streak === 1 ? "Niederlage" : "Niederlagen")} in Folge</span></div></div>
+    </div><div class="dh-tiles">${tiles}</div></div>`;
+}
+
+// ---- Leistungsverlauf: Match für Match, Linie = gleitender Schnitt, unten die Ergebnisse ----
+let dashTrend = null;
+function dashTrendPrep(D) {
+  const k = dashUi.metric, MAX = 60;
+  let items = D.cur.map((m, i) => ({ m, h: D.hv[i], v: k === "wr" ? (m.result === "W" ? 1 : 0) : dashVal(D.hv[i], k) })).filter(x => x.v !== null && isFinite(x.v));
+  const total = items.length, win = total >= 40 ? 10 : 5;
+  const roll = dashRoll(items.map(x => x.v), win);
+  items.forEach((x, i) => { x.avg = roll[i]; });
+  const mean = dashAvg(items.map(x => x.v));
+  items = items.slice(-MAX);
+  return { k, items, total, win, mean };
+}
+function dashTrendCard(D) {
+  const has = { wr: true, kda: D.hv.some(m => dashVal(m, "kda") !== null) };
+  ["d10", "fh10", "heal10", "dmg10", "block10", "acc"].forEach(k => { has[k] = D.hv.some(m => dashVal(m, k) !== null && (k === "d10" || dashVal(m, k) > 0)); });
+  if (!has[dashUi.metric]) dashUi.metric = "wr";
+  dashTrend = dashTrendPrep(D);
+  const T = dashTrend, ml = DASH_METRIC_LONG[T.k];
+  const seg = `<div class="dseg" role="group" aria-label="Kennzahl im Verlauf">${DASH_METRICS.filter(([k]) => has[k]).map(([k, l]) => `<button type="button" data-dmetric="${k}" aria-pressed="${k === T.k}">${esc(l)}</button>`).join("")}</div>`;
+  const sub = `${T.total > T.items.length ? `letzte ${T.items.length} von ${T.total} Matches` : plural(T.total, "Match", "Matches")} · Linie: Schnitt der letzten ${T.win}`;
+  const wrT = T.k === "wr";
+  const rows = T.items.slice(-25).reverse().map(x => [esc(fmtDate(x.m.date)), heroChip(x.m.hero), x.m.result === "W" ? "Sieg" : "Niederlage", `${x.h.k ?? "–"} / ${x.h.d ?? "–"} / ${x.h.a ?? "–"}`].concat(wrT ? [] : [dashFmt(T.k, x.v)], [dashFmt(T.k, x.avg)]));
+  const tbl = dashTable(["Datum", "Held", "Ergebnis", "K / D / A"].concat(wrT ? [] : ["#" + ml], [`#${wrT ? "Winrate" : "Schnitt"} der letzten ${T.win}`]), rows);
+  return dcard("dTrendCard", "span-8", "Leistungsverlauf", "analysis", esc(sub), `${seg}<div class="dchart" id="dTrend" aria-label="${esc(ml)} im Verlauf"></div>
+    <div class="dleg"><span><i class="lk"></i>${esc(ml)}, Schnitt der letzten ${T.win}</span><span><i class="lk ref"></i>Ø ${dashFmt(T.k, T.mean)} im Ausschnitt</span>${T.k === "wr" ? "" : `<span><i class="dk raw"></i>einzelnes Match</span>`}<span><i class="dk w"></i>Sieg</span><span><i class="dk l"></i>Niederlage</span></div>`, tbl, dashTables.dTrendCard ? seg : "");
+}
+function dashTrendDraw() {
+  const el = document.getElementById("dTrend"), D = dashTrend;
+  if (!el || !D) return;
+  if (D.items.length < 2) { el.innerHTML = empty("Für einen Verlauf brauchst du mindestens 2 Matches mit diesem Wert im Ausschnitt.", "analysis"); return; }
+  const wr = D.k === "wr", n = D.items.length;
+  const W = Math.max(280, el.clientWidth || 600), L = 46, R = 50, T = 16, PH = W < 480 ? 150 : 180, RY = T + PH + 16, H = RY + 34;
+  const x = i => L + i * (W - L - R) / (n - 1);
+  const top = wr ? 1 : dashNiceMax(Math.max(...D.items.map(p => p.v), D.mean) * 1.06);
+  const y = v => T + (1 - Math.max(0, Math.min(top, v)) / top) * PH;
+  const ticks = wr ? [0, 0.5, 1] : [0, top / 2, top];
+  const f1 = v => v.toFixed(1);
+  let svg = ticks.map(v => `<line class="g" x1="${L}" x2="${W - R}" y1="${f1(y(v))}" y2="${f1(y(v))}"/><text class="tk" x="${L - 8}" y="${f1(y(v) + 4)}" text-anchor="end">${dashTick(D.k, v)}</text>`).join("");
+  // Tage: feine Trennlinie und Datum, wo ein neuer Tag beginnt (bei «Heute» die Uhrzeit)
+  const oneDay = D.items.every(p => p.m.date === D.items[0].m.date);
+  let lastX = -1e9;
+  D.items.forEach((p, i) => {
+    const newDay = i > 0 && p.m.date !== D.items[i - 1].m.date;
+    if (newDay) svg += `<line class="ds" x1="${f1((x(i) + x(i - 1)) / 2)}" x2="${f1((x(i) + x(i - 1)) / 2)}" y1="${T}" y2="${T + PH}"/>`;
+    const lab = oneDay ? (p.m.ts ? new Date(p.m.ts).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : "") : (i === 0 || newDay ? new Date(p.m.date + "T12:00:00").toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }) : "");
+    if (lab && x(i) - lastX >= 58 && x(i) <= W - R - 10) { svg += `<text class="tk" x="${f1(x(i))}" y="${H - 2}" text-anchor="${i === 0 ? "start" : "middle"}">${esc(lab)}</text>`; lastX = x(i); }
+  });
+  // Schnitt im Ausschnitt als Bezugslinie
+  svg += `<line class="ref" x1="${L}" x2="${W - R}" y1="${f1(y(D.mean))}" y2="${f1(y(D.mean))}"/>`;
+  if (!wr) svg += D.items.map((p, i) => `<circle class="raw" cx="${f1(x(i))}" cy="${f1(y(p.v))}" r="2.6"/>`).join("");
+  const pts = D.items.map((p, i) => [x(i), y(p.avg)]);
+  const line = n > 2 ? smoothPath(pts, T, T + PH) : pts.map((p, i) => `${i ? "L" : "M"}${f1(p[0])},${f1(p[1])}`).join(" ");
+  svg += `<path class="area" d="${line} L${f1(x(n - 1))},${T + PH} L${L},${T + PH} Z"/><path class="ln" d="${line}"/>`;
+  // Ergebnis-Leiste unter dem Diagramm
+  const step = (W - L - R) / (n - 1), dense = step < 10;
+  svg += `<text class="tk" x="${L - 8}" y="${RY + 4}" text-anchor="end">S/N</text>` + D.items.map((p, i) => dense
+    ? `<rect class="${p.m.result === "W" ? "rw" : "rl2"}" x="${f1(x(i) - 1.5)}" y="${RY - 5}" width="3" height="10" rx="1.5"/>`
+    : `<circle class="${p.m.result === "W" ? "rw" : "rl2"}" cx="${f1(x(i))}" cy="${RY}" r="4"/>`).join("");
+  const last = D.items[n - 1];
+  svg += `<circle class="end" cx="${f1(x(n - 1))}" cy="${f1(y(last.avg))}" r="4.5"/><text class="el" x="${f1(x(n - 1) + 9)}" y="${f1(y(last.avg) + 4)}">${dashTick(D.k, last.avg)}</text>`;
+  svg += `<g class="xh" visibility="hidden"><line x1="0" x2="0" y1="${T}" y2="${RY + 6}"/><circle r="5" cy="0" cx="0"/></g>`;
+  svg += `<rect class="hit" x="${L - 6}" y="0" width="${W - L - R + 12}" height="${H}" fill="transparent" tabindex="0" role="img" aria-label="${esc(DASH_METRIC_LONG[D.k])}: zuletzt ${dashFmt(D.k, last.avg)} im Schnitt der letzten ${D.win}. Mit den Pfeiltasten durch die Matches gehen."/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${svg}</svg>`;
+  const s = el.querySelector("svg"), hit = s.querySelector(".hit"), xh = s.querySelector(".xh");
+  let idx = -1;
+  const show = i => {
+    idx = Math.max(0, Math.min(n - 1, i));
+    const p = D.items[idx], cx = x(idx), cy = y(p.avg), b = s.getBoundingClientRect(), sx = b.width / W;
+    xh.setAttribute("visibility", "visible");
+    xh.querySelector("line").setAttribute("x1", cx); xh.querySelector("line").setAttribute("x2", cx);
+    xh.querySelector("circle").setAttribute("cx", cx); xh.querySelector("circle").setAttribute("cy", cy);
+    const m = p.m, h = p.h, d = new Date(m.ts || m.date + "T12:00:00");
+    const rows = [[m.result === "W" ? "Sieg" : "Niederlage", m.hero + (heroSplit(m) ? " (gewechselt)" : ""), m.result === "W" ? "var(--good)" : "var(--bad)"]];
+    if (h.k !== null && h.k !== undefined) rows.push([`${h.k} / ${h.d} / ${h.a}`, "K / D / A", ""]);
+    if (!wr) rows.push([dashFmt(D.k, p.v), DASH_METRIC_LONG[D.k], ""]);
+    rows.push([dashFmt(D.k, p.avg), `${wr ? "Winrate" : "Schnitt"} der letzten ${D.win}`, "var(--accent)"]);
+    if (m.map) rows.push([m.map, "Karte", ""]);
+    dtipCur = null;
+    dtipFill({ title: `${d.toLocaleDateString("de-CH", { weekday: "short", day: "2-digit", month: "2-digit" })}${m.ts ? " · " + d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : ""}`, rows });
+    dtipPlace(b.left + cx * sx, b.top + cy * sx);
+  };
+  const hide = () => { idx = -1; xh.setAttribute("visibility", "hidden"); dtipHide(); };
+  const at = e => { const b = s.getBoundingClientRect(); return Math.round(((e.clientX - b.left) * W / b.width - L) / step); };
+  hit.addEventListener("pointermove", e => show(at(e)));
+  hit.addEventListener("pointerdown", e => show(at(e)));
+  hit.addEventListener("pointerleave", e => { if (e.pointerType !== "touch") hide(); });
+  hit.addEventListener("focus", () => show(n - 1));
+  hit.addEventListener("blur", hide);
+  hit.addEventListener("keydown", e => {
+    const k = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (k) { e.preventDefault(); show((idx < 0 ? n - 1 : idx) + k); }
+    else if (e.key === "Home") { e.preventDefault(); show(0); }
+    else if (e.key === "End") { e.preventDefault(); show(n - 1); }
+    else if (e.key === "Escape") hide();
+  });
+}
+
+// ---- Rollen: Anteil als gestapelter Balken, Winrate pro Rolle ----
+function dashRolesCard(D) {
+  const n = D.cur.length, by = group(D.cur, m => heroRole(m.hero)), rs = ROLES.filter(r => by[r]);
+  const main = mainRole();
+  const stack = `<div class="dstack" role="img" aria-label="${esc(rs.map(r => `${ROLE_SHORT[r]} ${Math.round(by[r].length / n * 100)} %`).join(", "))}">${rs.map(r =>
+    `<span style="flex:${by[r].length};background:${DASH_CV[r]}"${dtip(ROLE_DE[r], [[plural(by[r].length, "Match", "Matches"), `${Math.round(by[r].length / n * 100)} % deiner Matches`, DASH_CV[r]]], false)}></span>`).join("")}</div>
+    <div class="dleg">${rs.map(r => `<span><i class="sw" style="background:${DASH_CV[r]}"></i>${esc(ROLE_SHORT[r])} ${Math.round(by[r].length / n * 100)} %</span>`).join("")}</div>`;
+  const rows = ROLES.map(r => {
+    const s = summary(by[r] || []);
+    return `<div class="drole${s.n ? "" : " none"}" style="--c:${DASH_CV[r]}">${roleIcon(r)}<div class="drn"><b>${esc(ROLE_DE[r])}</b>${r === main ? ` <span class="dbadge">Hauptrolle</span>` : ""}<span class="muted small">${s.n ? plural(s.n, "Match", "Matches") : "noch keine"}</span></div>
+      <div class="drv">${s.n ? pct(s.wr) : "–"}</div>${s.n ? `<div class="dmeter rc" aria-hidden="true"${dtip(`${ROLE_DE[r]}: Winrate`, [[pct(s.wr), `${s.w} S · ${s.n - s.w} N`, DASH_CV[r]]], false)}><span style="width:${Math.round(s.wr * 100)}%"></span></div>` : ""}</div>`;
+  }).join("");
+  const tbl = dashTable(["Rolle", "#Matches", "#Anteil", "#Winrate"], ROLES.filter(r => by[r]).map(r => { const s = summary(by[r]); return [esc(ROLE_DE[r]), s.n, Math.round(s.n / n * 100) + " %", pct(s.wr)]; }));
+  return dcard("dRoleCard", "span-4", "Rollen", "team", "Anteil und Winrate", `${stack}<div class="droles">${rows}</div>`, tbl);
+}
+
+// ---- Helden: antippen filtert das ganze Dashboard ----
+function dashWrBar(wr, center) {
+  const c = center === undefined ? 0.5 : center, d = wr - c, w = Math.min(50, Math.abs(d) * 100);
+  return `<span class="dvb" aria-hidden="true"><i class="${d >= 0 ? "p" : "n"}" style="${d >= 0 ? `left:50%` : `right:50%`};width:${w.toFixed(1)}%"></i></span>`;
+}
+function dashHeroesCard(D) {
+  const rows = Object.entries(group(heroOnly(D.pool), m => m.hero)).map(([h, l]) => [h, summary(l), l]).sort((a, b) => b[1].n - a[1].n || b[1].wr - a[1].wr);
+  if (!rows.length) return "";
+  const top = rows.slice(0, 8), maxN = top[0][1].n;
+  if (dashUi.hero && !top.some(r => r[0] === dashUi.hero)) { const sel = rows.find(r => r[0] === dashUi.hero); if (sel) top.push(sel); }
+  const list = top.map(([h, s]) => {
+    const on = dashUi.hero === h, role = heroRole(h), [kk, kl] = DASH_KEY[role] || ["heal10", "Heilung"];
+    return `<button type="button" class="dhrow${on ? " on" : ""}" data-dhero="${esc(h)}" aria-pressed="${on}" title="${on ? "Heldenfilter lösen" : `Nur ${esc(h)} zeigen`}">
+      <span class="dhn">${av(h, "sm")}<span class="dhnt"><b>${esc(h)}</b><small>${esc(ROLE_SHORT[role] || "")}</small></span></span>
+      <span class="dhc"><span class="dbar" aria-hidden="true"><i style="width:${(s.n / maxN * 100).toFixed(1)}%"></i></span><em>${s.n}</em></span>
+      <span class="dhw">${dashWrBar(s.wr)}<em>${pct(s.wr)}</em></span>
+      <span class="dhk"><em>${dashFmt("kda", s.kda)}</em></span>
+      <span class="dhd"><em>${dashFmt("d10", s.d10)}</em></span></button>`;
+  }).join("");
+  const tbl = dashTable(["Held", "#Matches", "#Winrate", "#KDA", "#Tode / 10 Min", "#Heilung / 10 Min", "#Schaden / 10 Min"], rows.map(([h, s]) => [heroChip(h), s.n, pct(s.wr), dashFmt("kda", s.kda), dashFmt("d10", s.d10), dashFmt("heal10", s.heal10), dashFmt("dmg10", s.dmg10)]));
+  return dcard("dHeroCard", "span-7", "Deine Helden", "heroes", dashUi.hero ? `Filter: ${esc(dashUi.hero)} · nochmals antippen löst ihn` : "antippen zeigt nur diesen Helden", `<div class="dhlist">
+    <div class="dhrow dhh" aria-hidden="true"><span>Held</span><span>Matches</span><span>Winrate <small>(Mitte 50 %)</small></span><span>KDA</span><span>Tode/10</span></div>${list}</div>`, tbl);
+}
+
+// ---- Spielkalender: 12 Wochen, Farbe = Anzahl Matches pro Tag ----
+const DASH_CAL_STEPS = [[1, 2], [3, 5], [6, 9], [10, Infinity]];
+function dashCalCard(D) {
+  const WEEKS = 12, t = today(), start = addDays(progWeekStart(t), -7 * (WEEKS - 1));
+  const by = group(D.all.filter(m => m.date >= start), m => m.date);
+  const lvl = c => (c ? 1 + DASH_CAL_STEPS.findIndex(([a, b]) => c >= a && c <= b) : 0);
+  const days = Array.from({ length: WEEKS * 7 }, (_, i) => addDays(start, i));
+  const wd = ["Mo", "", "Mi", "", "Fr", "", "So"];
+  let html = `<div class="dcal" role="img" aria-label="Spielkalender der letzten 12 Wochen"><span></span>`;
+  for (let w = 0; w < WEEKS; w++) {
+    const d0 = days[w * 7], prev = w ? days[(w - 1) * 7] : null;
+    const mon = !prev || d0.slice(5, 7) !== prev.slice(5, 7) ? new Date(d0 + "T12:00:00").toLocaleDateString("de-CH", { month: "short" }).replace(".", "") : "";
+    html += `<span class="dcm">${esc(mon)}</span>`;
+  }
+  for (let r = 0; r < 7; r++) {
+    html += `<span class="dcw">${wd[r]}</span>`;
+    for (let w = 0; w < WEEKS; w++) {
+      const d = days[w * 7 + r], l = by[d] || [], s = summary(l);
+      if (d > t) { html += `<span class="dcc fut"></span>`; continue; }
+      const tip = l.length ? dtip(new Date(d + "T12:00:00").toLocaleDateString("de-CH", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
+        [[plural(l.length, "Match", "Matches"), `${s.w} S · ${l.length - s.w} N`, ""], [pct(s.wr), "Winrate", ""]]) : "";
+      html += `<span class="dcc l${lvl(l.length)}${d === t ? " now" : ""}"${tip}${l.length ? "" : ` title="${esc(fmtDate(d))}: kein Match"`}></span>`;
+    }
+  }
+  html += `</div>`;
+  const played = days.filter(d => (by[d] || []).length);
+  let best = 0, run = 0;
+  days.filter(d => d <= t).forEach(d => { run = (by[d] || []).length ? run + 1 : 0; best = Math.max(best, run); });
+  let curRun = 0;
+  for (let d = t; (by[d] || []).length; d = addDays(d, -1)) curRun++;
+  const tot = played.reduce((a, d) => a + by[d].length, 0);
+  const legend = `<div class="dleg dcal-leg"><span class="muted small">Matches pro Tag:</span>${["0", "1–2", "3–5", "6–9", "10+"].map((l, i) => `<span><i class="dcc l${i}"></i>${l}</span>`).join("")}</div>`;
+  const stats = `<div class="dcst"><div><b>${played.length}</b><span>Spieltage</span></div><div><b>${played.length ? numDe((tot / played.length).toFixed(1)) : "–"}</b><span>Ø Matches pro Spieltag</span></div><div><b>${best}</b><span>längste Serie (Tage)</span></div><div><b>${curRun}</b><span>aktuelle Serie</span></div></div>`;
+  const tbl = dashTable(["Datum", "#Matches", "#Siege", "#Winrate"], played.slice().reverse().map(d => { const s = summary(by[d]); return [esc(fmtDate(d)), s.n, s.w, pct(s.wr)]; }));
+  return dcard("dCalCard", "span-5", "Spielkalender", "today", "letzte 12 Wochen · Filter Rolle, Held und Modus gelten", `<div class="dcalwrap">${html}${stats}</div>${legend}`, tbl);
+}
+
+// ---- Siege gegen Niederlagen: was in Siegen anders ist ----
+const DASH_WL = [["d10", "Tode pro 10 Min", -1], ["kda", "KDA", 1], ["k10", "Kills pro 10 Min", 1], ["fh10", "Final Hits pro 10 Min", 1], ["a10", "Assists pro 10 Min", 1], ["dmg10", "Schaden pro 10 Min", 1], ["heal10", "Heilung pro 10 Min", 1], ["block10", "Geblockt pro 10 Min", 1], ["acc", "Treffergenauigkeit", 1], ["ult", "Ult-Wirkung", 1]];
+// Nur Matches, in denen der Wert vorkommt (Heilung 0 bei DPS zählt nicht); unter 3 Matches pro Seite gibt es keinen Wert
+function dashWlVal(list, k) {
+  if (k === "kda") { const l = list.filter(m => dashVal(m, "kda") !== null); return l.length >= 3 ? summary(l).kda : NaN; }
+  if (k === "ult") { const l = list.filter(m => m.ults > 0 && m.ultHit !== null && m.ultHit !== undefined); return l.length >= 3 ? summary(l).ultPct : NaN; }
+  if (k === "acc") { const v = list.filter(m => m.acc > 0).map(m => m.acc / 100); return v.length >= 3 ? dashAvg(v) : NaN; }
+  const f = { d10: "d", k10: "k", a10: "a", fh10: "fh", dmg10: "dmg", heal10: "heal", block10: "block" }[k];
+  const l = list.filter(m => m.dur > 0 && m[f] !== null && m[f] !== undefined && (k === "d10" || k === "k10" || k === "a10" || k === "fh10" || m[f] > 0));
+  return l.length >= 3 ? dashPer10(l, f) : NaN;
+}
+function dashWlCard(D) {
+  const W = D.hv.filter(m => m.result === "W"), Lo = D.hv.filter(m => m.result === "L");
+  const sub = `${plural(W.length, "Sieg", "Siege")} gegen ${plural(Lo.length, "Niederlage", "Niederlagen")}`;
+  if (W.length < 3 || Lo.length < 3) return dcard("dWlCard", "span-6", "Was in Siegen anders ist", "target", esc(sub), `<p class="muted small" style="margin:0">Ab je 3 Siegen und Niederlagen im Ausschnitt siehst du hier, welche Werte in Siegen anders sind.</p>`);
+  const rows = DASH_WL.map(([k, l, better]) => {
+    const w = dashWlVal(W, k), lo = dashWlVal(Lo, k);
+    if (!isFinite(w) || !isFinite(lo) || Math.max(w, lo) <= 0) return null;
+    return { k, l, better, w, lo, rel: lo ? (w - lo) / lo : null, gap: (w - lo) / Math.max(w, lo) };   // gap: -1..1, zum Sortieren
+  }).filter(Boolean).sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
+  const mixed = !dashUi.hero && new Set(D.cur.map(m => m.hero)).size > 1;
+  const body = rows.map((r, i) => {
+    const max = Math.max(r.w, r.lo) * 1.12, pw = r.w / max * 100, pl = r.lo / max * 100, a = Math.min(pw, pl), b = Math.max(pw, pl);
+    const more = r.w > r.lo, big = i === 0 && Math.abs(r.gap) >= 0.1;
+    const verdict = Math.abs(r.gap) < 0.03 ? "kaum Unterschied" : r.k === "ult" || r.k === "acc" ? `in Siegen ${Math.round(Math.abs(r.w - r.lo) * 100)} Pkt. ${more ? "mehr" : "weniger"}`
+      : r.rel === null ? "nur in Siegen" : `in Siegen ${Math.round(Math.abs(r.rel) * 100)} % ${more ? "mehr" : "weniger"}`;
+    return `<div class="dwl${big ? " top" : ""}"><div class="dwlh"><b>${esc(r.l)}</b><span>${verdict}${big ? ` <span class="dbadge">grösster Unterschied</span>` : ""}</span></div>
+      <div class="dwlr"><span class="dbell" aria-hidden="true"><i class="cn" style="left:${a.toFixed(1)}%;width:${(b - a).toFixed(1)}%"></i>
+        <i class="dw" style="left:${pw.toFixed(1)}%"${dtip(r.l, [[dashFmt(r.k, r.w), "in Siegen", "var(--good)"], [dashFmt(r.k, r.lo), "in Niederlagen", "var(--bad)"]], false)}></i>
+        <i class="dl" style="left:${pl.toFixed(1)}%"${dtip(r.l, [[dashFmt(r.k, r.lo), "in Niederlagen", "var(--bad)"], [dashFmt(r.k, r.w), "in Siegen", "var(--good)"]], false)}></i></span>
+        <span class="dwlv"><span><i class="dk w"></i>${dashFmt(r.k, r.w)}</span><span><i class="dk l"></i>${dashFmt(r.k, r.lo)}</span></span></div></div>`;
+  }).join("");
+  const tbl = dashTable(["Kennzahl", "#Siege", "#Niederlagen", "#Unterschied"], rows.map(r => [esc(r.l), dashFmt(r.k, r.w), dashFmt(r.k, r.lo), r.k === "ult" || r.k === "acc" ? `${r.w >= r.lo ? "+" : "−"}${Math.round(Math.abs(r.w - r.lo) * 100)} Pkt.` : r.rel === null ? "–" : `${r.rel >= 0 ? "+" : "−"}${Math.round(Math.abs(r.rel) * 100)} %`]));
+  return dcard("dWlCard", "span-6", "Was in Siegen anders ist", "target", esc(sub), `<div class="dleg"><span><i class="dk w"></i>Sieg</span><span><i class="dk l"></i>Niederlage</span><span class="muted small">grösster Unterschied zuerst</span></div>
+    <div class="dwls">${body || `<p class="muted small">Noch keine vergleichbaren Werte.</p>`}</div>${mixed ? `<p class="dhint">Gemischte Helden: Wähl oben einen Helden, dann vergleichst du nur Gleiches mit Gleichem (Luna Snow heilt anders als Cloak &amp; Dagger).</p>` : ""}`, tbl);
+}
+
+// ---- Abweichung vom eigenen Schnitt: Karten und Gegner ----
+function dashDivList(items, avg, empt) {
+  if (!items.length) return `<p class="muted small" style="margin:0">${empt}</p>`;
+  const maxD = Math.max(0.08, ...items.map(it => Math.abs(it.s.wr - avg)));
+  return `<div class="ddiv"><div class="ddax" aria-hidden="true"><span></span><span class="ddaxb"><em>Ø ${pct(avg)}</em></span><span></span></div>${items.map(it => {
+    const d = it.s.wr - avg, w = Math.abs(d) / maxD * 50;
+    return `<div class="ddrow${it.s.n < 3 ? " thin" : ""}"><span class="ddl">${it.label}</span><span class="ddbar"><i class="${d >= 0 ? "p" : "n"}" style="${d >= 0 ? "left" : "right"}:50%;width:${w.toFixed(1)}%"${dtip(it.title, [[pct(it.s.wr), "Winrate", d >= 0 ? "var(--good)" : "var(--bad)"], [`${it.s.w} S · ${it.s.n - it.s.w} N`, plural(it.s.n, "Match", "Matches"), ""], [`${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) * 100)} Pkt.`, "gegenüber deinem Schnitt", ""]], false)}></i></span>
+      <span class="ddv"><b>${pct(it.s.wr)}</b><small>${it.s.n}×</small></span></div>`;
+  }).join("")}</div>`;
+}
+function dashMapsCard(D) {
+  const avg = summary(D.cur).wr;
+  const items = Object.entries(group(D.cur.filter(m => m.map), m => m.map)).map(([k, l]) => ({ k, s: summary(l) })).filter(x => x.s.n >= 2)
+    .sort((a, b) => b.s.wr - a.s.wr || b.s.n - a.s.n).slice(0, 8).map(x => ({ label: `<span title="${esc(x.k)}">${esc(x.k.split(": ").pop())}</span>`, title: x.k, s: x.s }));
+  const tbl = dashTable(["Karte", "#Matches", "#Siege", "#Winrate"], items.map(it => [esc(it.title), it.s.n, it.s.w, pct(it.s.wr)]));
+  return dcard("dMapCard", "span-6", "Deine Karten", "map", "rechts besser, links schwächer als dein Schnitt · ab 2 Matches", dashDivList(items, avg, "Sobald du mindestens zwei Matches auf einer Karte hast, erscheint sie hier."), items.length ? tbl : "");
+}
+function dashEnemyCard(D) {
+  const avg = summary(D.cur).wr;
+  const all = enemyStats(D.cur).filter(x => x[1].n >= 3).sort((a, b) => b[1].wr - a[1].wr || b[1].n - a[1].n);
+  const pick = all.length <= 8 ? all : all.slice(0, 4).concat(all.slice(-4));
+  const items = pick.map(([h, s]) => ({ label: `${av(h, "sm")}<span>${esc(h)}</span>`, title: `Gegen ${h}`, s }));
+  const tbl = dashTable(["Gegner-Held", "#Matches", "#Siege", "#Winrate"], all.map(([h, s]) => [heroChip(h), s.n, s.w, pct(s.wr)]));
+  return dcard("dEnemyCard", "span-6", "Gegen diese Helden", "target", `rechts besser, links schwächer als dein Schnitt · ${all.length > 8 ? "die 4 besten und 4 schwächsten · " : ""}ab 3 Matches`, dashDivList(items, avg, "Ab 3 Matches mit Gegnerinfos zum selben Helden erscheint er hier."), all.length ? tbl : "");
+}
+
+// ---- Wann du am besten spielst: Säulen für das wievielte Match am Tag und die Tageszeit ----
+function dashCols(groups, avg, label) {
+  const items = groups.filter(g => g.s.n);
+  if (!items.length) return "";
+  const yv = v => Math.max(0, Math.min(1, v)) * 100;
+  return `<div class="dcolw"><div class="dcolh">${label}</div><div class="dcols" style="--avg:${yv(avg).toFixed(1)}%"><span class="dcavg" aria-hidden="true"><em>Ø ${pct(avg)}</em></span>${items.map(g =>
+    `<div class="dcol${g.s.n < 3 ? " thin" : ""}" style="--h:${Math.max(2, yv(g.s.wr)).toFixed(1)}%"><span class="dcv">${pct(g.s.wr)}</span><span class="dcb"${dtip(g.title, [[pct(g.s.wr), "Winrate", "var(--accent)"], [`${g.s.w} S · ${g.s.n - g.s.w} N`, plural(g.s.n, "Match", "Matches"), ""]], false)}></span></div>`).join("")}</div>
+    <div class="dcoll">${items.map(g => `<span><b>${esc(g.l)}</b><small>${g.s.n}×${g.s.n < 3 ? " wenig" : ""}</small></span>`).join("")}</div></div>`;
+}
+function dashWhenCard(D) {
+  const avg = summary(D.cur).wr, byDay = group(D.cur, m => m.date), nth = new Map();
+  Object.values(byDay).forEach(l => l.slice().sort((a, b) => matchTime(a) - matchTime(b)).forEach((m, i) => nth.set(m, i + 1)));
+  const B = [["1.", 1, 1], ["2.", 2, 2], ["3.", 3, 3], ["4.", 4, 4], ["5.", 5, 5], ["6.–8.", 6, 8], ["9.+", 9, 1e9]];
+  const g1 = B.map(([l, a, b]) => ({ l, title: `${l} Match des Tages`, s: summary(D.cur.filter(m => nth.get(m) >= a && nth.get(m) <= b)) }));
+  const hr = m => (m.ts ? new Date(m.ts).getHours() : null);
+  const TZ = [["Morgen", 6, 12, "6–12 Uhr"], ["Nachmittag", 12, 18, "12–18 Uhr"], ["Abend", 18, 23, "18–23 Uhr"], ["Nacht", 23, 30, "23–6 Uhr"]];
+  const g2 = TZ.map(([l, a, b, t]) => ({ l, title: `${l} (${t})`, s: summary(D.cur.filter(m => { let h = hr(m); if (h === null) return false; if (h < 6) h += 24; return h >= a && h < b; })) }));
+  const body = dashCols(g1, avg, "Das wievielte Match am Tag") + dashCols(g2, avg, "Tageszeit");
+  const tbl = dashTable(["Gruppe", "#Matches", "#Winrate"], g1.concat(g2).filter(g => g.s.n).map(g => [esc(g.title), g.s.n, pct(g.s.wr)]));
+  return dcard("dWhenCard", "span-6", "Wann du am besten spielst", "clock", "Säulen: Winrate · blasse Säulen: unter 3 Matches", body || `<p class="muted small" style="margin:0">Noch keine Matches im Ausschnitt.</p>`, body ? tbl : "");
+}
+
+function dashEmptyHtml(any) {
+  return `<div class="card dempty">${empty(any ? "In diesem Ausschnitt gibt es keine Matches. Wähl einen längeren Zeitraum oder löse einen Filter." : "Noch keine Matches. Logge dein erstes Match oder hol dir deine Matches automatisch, dann füllt sich das Dashboard.", "analysis")}
+    <div class="row" style="justify-content:center;gap:8px">${any ? `<button type="button" class="btn small" data-dreset>Filter zurücksetzen</button>` : `<button class="btn small" type="button" data-go="log">Match loggen</button><button class="btn small ghost" type="button" data-go="data">Daten &amp; Sync</button>`}</div></div>`;
+}
+
 function renderDashboard() {
   renderPathCard();
-  const ms = state.matches;
-  const s = summary(ms), last10 = summary(ms.slice(-10));
-  let streak = 0, streakType = "";
-  for (let i = ms.length - 1; i >= 0; i--) {
-    if (!streakType) streakType = ms[i].result;
-    if (ms[i].result !== streakType) break;
-    streak++;
+  renderFlex();
+  DTIPS = []; dtipHide();
+  const D = dashData(), el = $("#dashBody"), ms = state.matches;
+  let html = dashFiltersHtml(D);
+  if (!D.cur.length) {
+    html += dashEmptyHtml(ms.length > 0);
+    dashTrend = null;
+  } else {
+    html += dashHeadHtml(D) + `<div class="dgrid">${[
+      dashTrendCard(D), dashRolesCard(D),
+      `<div class="card dcard span-12" id="insightsCard"><div class="card-head"><div class="dch"><h2>${icon("ai")}Coach-Hinweise</h2><span class="muted small">das Wichtigste aus all deinen Matches</span></div></div><div id="insights"></div></div>`,
+      dashHeroesCard(D), dashCalCard(D),
+      dashWlCard(D), dashWhenCard(D),
+      dashMapsCard(D), dashEnemyCard(D),
+      `<div class="card dcard span-6" id="deathDashCard"><div class="card-head"><div class="dch"><h2>${icon("target")}Woran du stirbst</h2><span class="muted small">letzte 20 Matches im Ausschnitt</span></div></div><div id="deathDash"></div></div>`,
+      `<div class="card dcard span-6"><div class="card-head"><div class="dch"><h2>${icon("target")}Häufigste Fehler</h2><span class="muted small">letzte 20 Matches im Ausschnitt</span></div></div><div id="topMistakes"></div></div>`
+    ].join("")}</div>`;
   }
-  const worst = enemyStats(ms).filter(x => x[1].n >= 3).sort((a, b) => a[1].wr - b[1].wr)[0];
-  const todayN = ms.filter(m => m.date === today()).length;
-  const W = summary(ms.filter(m => m.result === "W")), Lo = summary(ms.filter(m => m.result === "L"));
-  const tiles = [
-    ["Matches", s.n, todayN ? `${todayN} heute` : "heute noch keins"],
-    ["Winrate", pct(s.wr), ms.length >= 10 ? `${deltaHtml((last10.wr - s.wr) * 100, " %")} letzte 10` : "", sparkline(rolling(ms.slice(-30), 5))],
-    ["Ø KDA", isFinite(s.kda) ? s.kda.toFixed(2) : "–", s.n ? `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}` : ""],
-    ["Ø Tode", s.n ? s.d.toFixed(1) : "–", W.n && Lo.n ? `Siege ${W.d.toFixed(1)} · Niederl. ${Lo.d.toFixed(1)}` : ""],
-    ["Serie", streak ? `${streak} ${streakType === "W" ? (streak === 1 ? "Sieg" : "Siege") : "Niederl."}` : "–", streak ? (streakType === "W" ? "weiter so" : "Pause hilft") : ""],
-    ["Angstgegner", worst && worst[1].wr < 0.5 ? `<span class="hero">${av(worst[0])}<span style="font-size:1rem">${esc(worst[0])}</span></span>` : "–",
-      worst && worst[1].wr < 0.5 ? `${pct(worst[1].wr)} in ${worst[1].n} Matches` : "ab 3 Matches mit Gegnerinfos"]
-  ];
-  if (s.timedN) tiles.push(["Pro 10 Min", `${fmtNum(s.heal10)} Heilung`, `${fmtNum(s.dmg10)} Schaden · ${fmtNum(s.block10)} geblockt`]);
-  if (s.ultN) tiles.push(["Ult-Wirkung", pct(s.ultPct), `${numDe(s.ultHit)} von ${s.ultN} Ults`]);
-  $("#kpis").innerHTML = tiles.map(([l, v, sub, extra]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${typeof v === "number" ? v : v}</div><div class="s">${sub || ""}</div>${extra || ""}</div>`).join("");
-
-  // Heutige Session / Begrüssung
-  const tm = ms.filter(m => m.date === today());
-  const goal = activeGoal();
-  const card = $("#todayCard");
+  html += `<div class="card" id="todayCard" hidden></div>`;
+  el.innerHTML = html;
+  if (D.cur.length) {
+    dashTrendDraw();
+    $("#deathDash").innerHTML = deathCardHtml(D.cur.slice(-20), true);
+    const mc = mistakeCounts(D.cur.slice(-20)), max = mc.length ? mc[0][1] : 1;
+    $("#topMistakes").innerHTML = bars(mc.slice(0, 6).map(([m, c]) => [esc(m), c / max, `${c}×`]), { empty: "Markiere beim Loggen, was schiefgelaufen ist, dann siehst du hier Muster." });
+    const ins = insights();
+    $("#insights").innerHTML = ins.length ? notes(ins.slice(0, 3)) + (ins.length > 3 ? `<details class="dmore"><summary>${plural(ins.length - 3, "weiterer Hinweis", "weitere Hinweise")}</summary>${notes(ins.slice(3))}</details>` : "") : empty("Noch keine Hinweise.", "ai");
+  }
+  renderTodayCard();
+}
+// Heutige Session (Banner), unten im Dashboard
+function renderTodayCard() {
+  const ms = state.matches, card = $("#todayCard");
+  if (!card) return;
+  const tm = ms.filter(m => m.date === today()), goal = activeGoal();
   card.className = "card hero-banner";
-  card.hidden = !tm.length && !state.matches.some(isOpenRefl);
-  if (!ms.length) {
-    card.innerHTML = `<h2>Willkommen beim Rivals Coach!</h2><p>Logge dein erstes Match oder hol dir deine Matches automatisch von Rivals Data. Ab 5 Matches erkennt der Coach erste Muster.</p>
-      <div class="row mt" style="position:relative"><button class="btn" type="button" data-go="log" style="background:#fff;color:#2b1f8f">Erstes Match loggen</button>
-      <button class="btn ghost" type="button" data-go="data" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Rivals Data synchronisieren</button>
-      <button class="btn ghost" type="button" data-go="lessons" style="color:#fff;border-color:rgba(255,255,255,.4)">Mit Lektion 1 starten</button></div>`;
-  } else if (!tm.length) {
+  card.hidden = !tm.length && !ms.some(isOpenRefl);
+  if (!tm.length) {
     card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}${(() => { const o = openTasks(goal).filter(t => t.id !== "review")[0]; return o ? `<br><span class="small">Heute dazu: ${esc(o.text)}</span>` : ""; })()}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
   } else {
     const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
     card.innerHTML = `<h2>Heutige Session</h2>
-      <p><b>${plural(ts.n, "Match", "Matches")}</b> · ${plural(ts.w, "Sieg", "Siege")} · ${plural(ts.n - ts.w, "Niederlage", "Niederlagen")} · Ø KDA ${ts.kda.toFixed(2)}</p>
-      <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span class="tmres" title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;font-weight:800;font-size:.8rem;background:${m.result === "W" ? "rgba(255,255,255,.95);color:#1b6b1b" : "rgba(0,0,0,.28);color:#fff"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
+      <p><b>${plural(ts.n, "Match", "Matches")}</b> · ${plural(ts.w, "Sieg", "Siege")} · ${plural(ts.n - ts.w, "Niederlage", "Niederlagen")} · Ø KDA ${isFinite(ts.kda) ? ts.kda.toFixed(2) : "–"}</p>
+      <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span class="tmres ${m.result === "W" ? "w" : "l"}" title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
       ${tmc ? `<p class="small">Häufigster Fehler heute: <b>${esc(tmc[0])}</b> (${tmc[1]}×)</p>` : ""}
       ${lastNext ? `<p class="small">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
-      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
+      ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b>: Eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
   }
-  const nOpen = state.matches.filter(isOpenRefl).length;
+  const nOpen = ms.filter(isOpenRefl).length;
   if (nOpen) card.insertAdjacentHTML("beforeend", `<p class="small" style="position:relative"><b>${plural(nOpen, "neues Match wartet", "neue Matches warten")} auf deine Reflexion.</b> <button class="btn small" type="button" data-go="log" data-open="refl" style="background:#fff;color:#2b1f8f">Fehler eintragen</button></p>`);
+}
+// Nach dem Neuzeichnen den Fokus auf denselben Knopf zurücksetzen (Tastatur und Bildschirmleser verlieren sonst den Platz)
+function dashRedraw(sel) {
+  dashSave(); renderDashboard();
+  const el = sel && document.querySelector(sel);
+  if (el) el.focus({ preventScroll: true });
+}
+$("#dashBody").addEventListener("click", e => {
+  const f = e.target.closest("[data-dfilt]");
+  if (f) { const k = f.dataset.dfilt, v = f.dataset.v; dashUi[k] = v; if (k === "role" && dashUi.hero && v && heroRole(dashUi.hero) !== v) dashUi.hero = ""; dashRedraw(`[data-dfilt="${k}"][data-v="${CSS.escape(v)}"]`); return; }
+  if (e.target.closest("[data-dreset]")) { Object.assign(dashUi, { per: "30", role: "", hero: "", mode: "" }); dashRedraw('[data-dfilt="per"][data-v="30"]'); return; }
+  const h = e.target.closest("[data-dhero]");
+  if (h) { const name = h.dataset.dhero; dashUi.hero = dashUi.hero === name ? "" : name; dashRedraw(`[data-dhero="${CSS.escape(name)}"]`); return; }
+  const mt = e.target.closest("[data-dmetric]");
+  if (mt) { dashUi.metric = mt.dataset.dmetric; dashRedraw(`[data-dmetric="${mt.dataset.dmetric}"]`); return; }
+  const tb = e.target.closest("[data-dtable]");
+  if (tb) { dashTables[tb.dataset.dtable] = !dashTables[tb.dataset.dtable]; dashRedraw(`[data-dtable="${tb.dataset.dtable}"]`); }
+});
+$("#dashBody").addEventListener("change", e => {
+  const s = e.target.closest("[data-dsel]");
+  if (!s) return;
+  dashUi[s.dataset.dsel] = s.value;
+  dashRedraw(`[data-dsel="${s.dataset.dsel}"]`);
+});
 
-  // Trend
-  const recent = ms.slice(-30);
-  if (recent.length < 2) $("#trend").innerHTML = empty("Logge mindestens 2 Matches, um einen Verlauf zu sehen.", "analysis");
-  else lineChart($("#trend"), rolling(recent, 5), recent.map(m => ({ label: `${esc(m.hero)} · ${m.result === "W" ? "Sieg" : "Niederlage"} · ${fmtDate(m.date)}` })));
+// ---------- Match-Analyse: alle 12 Spieler eines Matches ----------
+// Rivals Data liefert pro Match die Tabelle aller Spieler: Held, K/D/A, Final Hits, Solo-Kills, Schaden, Heilung, Geblockt,
+// Treffergenauigkeit, MVP/SVP und Bots (m.team = dein Team ohne dich, m.foes = Gegner, m.fh/m.solo/m.acc = deine Werte).
+// Den Spielablauf (wer wann wo) gibt es nicht, Replays lassen sich nur im Spiel ansehen. Mitspieler stehen nur als Kürzel
+// in den Daten (nameTag, gleich wie name_tag in rivals_sync.py); Namen zeigt die App nur für Teammates, die du einträgst.
+const DEFAULT_MATES = ""; /* PRIVATE:DEFAULT_MATES */
+function nameTag(name) {
+  const n = String(name || "").normalize("NFC").trim().toLowerCase();
+  let h = 0x811c9dc5;
+  new TextEncoder().encode(n).forEach(b => { h = Math.imul(h ^ b, 0x01000193) >>> 0; });
+  return h.toString(16).padStart(8, "0");
+}
+const hasSheet = m => !!m && Array.isArray(m.team) && Array.isArray(m.foes) && (m.team.length + m.foes.length) > 0;
+function mateNames() {
+  const s = state.settings.mates;
+  if (Array.isArray(s)) return s;
+  return (Array.isArray(DEFAULT_MATES) ? DEFAULT_MATES : String(DEFAULT_MATES || "").split(",")).map(x => String(x).trim()).filter(Boolean);
+}
+let mateCache = { key: null, map: null };
+function mateMap() {
+  const names = mateNames(), key = names.join("\n");
+  if (mateCache.key !== key) mateCache = { key, map: new Map(names.map(n => [nameTag(n), n])) };
+  return mateCache.map;
+}
+// Teammates in einem Match: [{name, h, k, d, a, …}]
+function matesIn(m) { const mm = mateMap(); return (m.team || []).filter(r => r && mm.has(r.id)).map(r => Object.assign({ name: mm.get(r.id) }, r)); }
+const sheetMe = m => ({ h: m.hero, k: m.k, d: m.d, a: m.a, fh: m.fh, solo: m.solo, dmg: m.dmg, heal: m.heal, blk: m.block, acc: m.acc, mvp: m.mvp ? 1 : 0, svp: m.svp ? 1 : 0, me: 1 });
+const sheetSum = (rows, f) => rows.reduce((s, r) => s + (+r[f] || 0), 0);
+const sheetHas = (rows, f) => rows.some(r => r[f] !== null && r[f] !== undefined);
+// Automatische Erkenntnisse zu einem Match (nur aus den Zahlen der Tabelle)
+function sheetFacts(m) {
+  const me = sheetMe(m), team = [me].concat(m.team || []), foes = m.foes || [], all = team.concat(foes), out = [];
+  const role = heroRole(m.hero), keyF = role === "Strategist" ? ["heal", "Heilung"] : role === "Vanguard" ? ["blk", "Geblockt"] : ["dmg", "Schaden"];
+  const share = f => { const t = sheetSum(team, f); return t > 0 && me[f] !== null && me[f] !== undefined ? me[f] / t : NaN; };
+  const rankIn = (rows, f) => 1 + rows.filter(r => (+r[f] || 0) > (+me[f] || 0)).length;
+  const kShare = share(keyF[0]);
+  if (isFinite(kShare)) {
+    const rt = rankIn(team, keyF[0]), ra = rankIn(all, keyF[0]);
+    out.push(["info", `Du hattest <b>${Math.round(kShare * 100)} %</b> ${keyF[0] === "heal" ? "der Heilung" : keyF[0] === "blk" ? "des geblockten Schadens" : "des Schadens"} deines Teams (Platz ${rt} von ${team.length}${ra === 1 ? ", die meisten im ganzen Match" : ""}).`]);
+  }
+  const fhs = share("fh");
+  if (isFinite(fhs) && role !== "Strategist") out.push(["info", `Final Hits: ${me.fh} von ${sheetSum(team, "fh")} deines Teams (${Math.round(fhs * 100)} %).`]);
+  if (sheetHas(team, "d")) {
+    const top = team.slice().sort((a, b) => (+b.d || 0) - (+a.d || 0))[0];
+    if (top && +top.d > 0) out.push([top.me ? "bad" : "info", top.me ? `Du bist in deinem Team am häufigsten gestorben (${top.d}×).` : `Am häufigsten gestorben in deinem Team: <b>${esc(top.name || top.h)}</b> (${top.d}×, du ${me.d}×).`]);
+  }
+  if (sheetHas(foes, "fh")) {
+    const top = foes.slice().sort((a, b) => (+b.fh || 0) - (+a.fh || 0) || (+b.k || 0) - (+a.k || 0))[0];
+    if (top && +top.fh > 0) out.push(["info", `Gefährlichster Gegner: <b>${esc(top.h)}</b> mit ${top.fh} Final Hits${top.k !== undefined ? ` und ${top.k} Kills` : ""}${top.mvp ? " (MVP)" : ""}.`]);
+  }
+  if (sheetHas(team, "d") && sheetHas(foes, "d")) {
+    const td = sheetSum(team, "d"), fd = sheetSum(foes, "d"), tdm = sheetSum(team, "dmg"), fdm = sheetSum(foes, "dmg");
+    out.push([td > fd ? "bad" : "good", `Tode: euer Team ${td}, die Gegner ${fd}.${tdm && fdm ? ` Schaden: ${fmtNum(tdm)} gegen ${fmtNum(fdm)}.` : ""}`]);
+  }
+  if (me.acc > 0) {
+    const prev = state.matches.filter(x => x !== m && x.hero === m.hero && x.acc > 0).map(x => x.acc);
+    out.push(["info", `Treffergenauigkeit: ${numDe(me.acc.toFixed(1))} %${prev.length >= 3 ? ` (dein Schnitt mit ${esc(m.hero)}: ${numDe(dashAvg(prev).toFixed(1))} %)` : ""}.`]);
+  }
+  const bots = all.filter(r => r.bot).length;
+  if (bots) out.push(["info", `${plural(bots, "Bot", "Bots")} im Match: Die Zahlen sind weniger aussagekräftig.`]);
+  const mates = matesIn(m);
+  if (mates.length) out.push(["good", `Mit dir im Team: ${mates.map(t => `<b>${esc(t.name)}</b> (${esc(t.h)})`).join(", ")}.`]);
+  return out;
+}
+function sheetTable(rows, title, best) {
+  const n = v => (v === null || v === undefined ? "–" : fmtNum(v));
+  const cell = (r, f, txt) => `<td class="num${best[f] !== undefined && +r[f] === best[f] && best[f] > 0 ? " best" : ""}">${txt}</td>`;
+  return `<div class="mst"><h3>${title}</h3><div class="table-wrap"><table class="mstab"><thead><tr><th>Spieler</th><th class="num">K / D / A</th><th class="num">Final Hits</th><th class="num">Schaden</th><th class="num">Heilung</th><th class="num">Geblockt</th><th class="num">Genau</th></tr></thead><tbody>${rows.map(r =>
+    `<tr class="${r.me ? "me" : r.name ? "mate" : ""}"><td><span class="hero">${av(r.h, "sm")}<span class="mswho"><b>${esc(r.h || "?")}</b><small>${[r.me ? "Du" : r.name ? esc(r.name) : r.bot ? "Bot" : "", r.sw ? "gewechselt" : ""].filter(Boolean).join(" · ")}</small></span>${r.mvp ? `<span class="badge ok">MVP</span>` : r.svp ? `<span class="badge">SVP</span>` : ""}</span></td>
+      <td class="num">${r.k ?? "–"} / ${r.d ?? "–"} / ${r.a ?? "–"}</td>${cell(r, "fh", r.fh ?? "–")}${cell(r, "dmg", n(r.dmg))}${cell(r, "heal", n(r.heal))}${cell(r, "blk", n(r.blk))}<td class="num">${r.acc > 0 ? numDe(r.acc.toFixed(0)) + " %" : "–"}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+function sheetHtml(m) {
+  const mates = new Map(matesIn(m).map(t => [t.id, t.name]));
+  const team = [sheetMe(m)].concat((m.team || []).map(r => Object.assign({}, r, mates.has(r.id) ? { name: mates.get(r.id) } : {})));
+  const foes = m.foes || [], all = team.concat(foes);
+  const best = {};
+  ["fh", "dmg", "heal", "blk"].forEach(f => { best[f] = Math.max(0, ...all.map(r => +r[f] || 0)); });
+  return `<div class="mshead"><div><h2 id="msTitle">${icon("analysis")}Match-Analyse</h2><p class="small muted" style="margin:2px 0 0">${esc(fmtDate(m.date))}${m.ts ? " · " + new Date(m.ts).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : ""} · ${esc(m.map || m.type || "")} · ${esc(m.mode || "")}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}</p></div>
+      <span>${resultPill(m.result)}</span><button type="button" class="btn ghost small icon" data-msclose aria-label="Schliessen">${icon("x")}</button></div>
+    <div class="msfacts">${notes(sheetFacts(m))}</div>
+    ${sheetTable(team, "Euer Team", best)}${sheetTable(foes, "Gegner", best)}
+    <p class="small muted" style="margin:10px 0 0">Quelle: Rivals Data (öffentliche Match-Daten). Fett: der höchste Wert im ganzen Match. Mitspieler ohne Namen sind nicht in deiner Teammate-Liste. Wer wann und wo gestorben ist, steht nur im Replay im Spiel.</p>`;
+}
+let sheetOpener = null;
+function openSheet(id) {
+  const m = state.matches.find(x => x.id === id);
+  if (!hasSheet(m)) return;
+  let bd = document.getElementById("msheet");
+  if (!bd) {
+    bd = document.createElement("div"); bd.id = "msheet"; bd.className = "confirm-backdrop msbd"; bd.hidden = true;
+    bd.innerHTML = `<div class="msheet" role="dialog" aria-modal="true" aria-labelledby="msTitle"></div>`;
+    document.body.appendChild(bd);
+    bd.addEventListener("click", e => { if (e.target === bd || e.target.closest("[data-msclose]")) closeSheet(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !bd.hidden) closeSheet(); });
+  }
+  sheetOpener = document.activeElement;
+  bd.firstElementChild.innerHTML = sheetHtml(m);
+  bd.hidden = false;
+  bd.firstElementChild.scrollTop = 0;
+  const c = bd.querySelector("[data-msclose]"); if (c) c.focus();
+}
+function closeSheet() {
+  const bd = document.getElementById("msheet");
+  if (bd) bd.hidden = true;
+  if (sheetOpener && sheetOpener.focus && document.contains(sheetOpener)) sheetOpener.focus();
+  sheetOpener = null;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-msheet]"); if (b) openSheet(b.dataset.msheet); });
 
-  // Rolle
-  const byRole = group(ms, m => heroRole(m.hero));
-  $("#byRole").innerHTML = ms.length ? bars(ROLES.map(r => {
-    const rs = summary(byRole[r] || []);
-    return [roleChip(r, ROLE_DE[r]), rs.n ? rs.wr : 0, rs.n ? `${pct(rs.wr)} · ${plural(rs.n, "Match", "Matches")}` : "noch keine", r];
-  })) : empty("Noch keine Matches.", "team");
-
-  renderFlex();
-
-  // Helden
-  const byHero = Object.entries(group(heroOnly(ms), m => m.hero)).map(([h, l]) => [h, summary(l)]).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
-  $("#byHero").innerHTML = table(["Held", "#Matches", "Winrate", "#Ø K/D/A"],
-    byHero.map(([h, s]) => [heroChip(h), s.n, `${wrBadge(s)}<span class="minibar"><span style="width:${s.wr * 100}%"></span></span>`, `${s.k.toFixed(1)} / ${s.d.toFixed(1)} / ${s.a.toFixed(1)}`]),
-    "Noch keine Matches geloggt.");
-
-  // Fehler
-  const mc = mistakeCounts(ms.slice(-20));
-  const max = mc.length ? mc[0][1] : 1;
-  $("#topMistakes").innerHTML = bars(mc.slice(0, 6).map(([m, c]) => [esc(m), c / max, `${c}×`]),
-    { empty: "Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster." });
-
-  $("#deathDash").innerHTML = deathCardHtml(ms.slice(-20), true);
-  $("#mapDash").innerHTML = mapStatsHtml(ms.slice(-60));
-  $("#insights").innerHTML = notes(insights()) || empty("Noch keine Hinweise.", "ai");
+// ---------- Squad: mit deinen Teammates ----------
+// Grundlage sind die Matches mit Team-Daten (m.team). Teammates erkennt die App über das Kürzel ihres Namens.
+// Alles sind Zahlen aus euren Matches plus deine eigenen Team-Notizen; wer wann wo stand, steht nicht in den Daten.
+const TEAM_GOOD = ["Gut abgesprochen", "Zusammen reingegangen", "Ults kombiniert", "Ein Fokus-Ziel", "Gegenseitig geschützt", "Rechtzeitig gewechselt"];
+const TEAM_BAD = ["Getrennt gekämpft", "Zu wenig Absprache", "Ults gleichzeitig verschwendet", "Kein gemeinsames Ziel", "Niemand hat gewechselt", "Supports allein gelassen", "Tilt im Team"];
+const squadUi = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY + "-squad")) || {}; } catch (e) { s = {}; }
+  const d = Object.assign({ per: "0", mode: "", mate: "" }, s);
+  if (!DASH_PER.some(p => p[0] === d.per)) d.per = "0";
+  return d;
+})();
+const squadTables = {};
+function squadSave() { try { localStorage.setItem(STORE_KEY + "-squad", JSON.stringify(squadUi)); } catch (e) {} }
+function squadData() {
+  const r = dashRange(squadUi.per, 0);
+  const rows = state.matches.filter(m => Array.isArray(m.team) && m.team.length && dashIn(m, r) && (!squadUi.mode || m.mode === squadUi.mode))
+    .map(m => ({ m, mates: matesIn(m) }));
+  const squad = rows.filter(x => x.mates.length && (!squadUi.mate || x.mates.some(t => t.name === squadUi.mate)));
+  const solo = rows.filter(x => !x.mates.length);
+  return { rows, squad, solo, avg: summary(rows.map(x => x.m)).wr, savg: summary(squad.map(x => x.m)).wr };
+}
+const squadM = l => l.map(x => x.m);
+// Dein ganzes Team in einem Match (du zuerst)
+const squadTeam = m => [sheetMe(m)].concat(m.team || []);
+const roleKey = heroes => { const c = { Vanguard: 0, Duelist: 0, Strategist: 0 }; heroes.forEach(h => { const r = heroRole(h); if (c[r] !== undefined) c[r]++; }); return `${c.Vanguard}-${c.Duelist}-${c.Strategist}`; };
+const roleKeyLabel = k => { const [v, d, s] = k.split("-"); return `${v} Tank · ${d} DPS · ${s} Support`; };
+function squadCard(id, cls, title, ic, sub, body, tableHtml) {
+  const tb = !!tableHtml && squadTables[id];
+  return `<div class="card dcard ${cls}" id="${id}"><div class="card-head"><div class="dch"><h2>${icon(ic)}${title}</h2>${sub ? `<span class="muted small">${sub}</span>` : ""}</div>
+    <div class="dca">${tableHtml ? `<button type="button" class="dtb" data-stable="${id}" aria-pressed="${tb}">${tb ? "Diagramm" : "Tabelle"}</button>` : ""}</div></div>
+    ${tb ? `<div class="table-wrap dtable">${tableHtml}</div>` : body}</div>`;
+}
+const squadGroup = (list, keysFn) => { const out = {}; list.forEach(x => [...new Set(keysFn(x))].forEach(k => { (out[k] = out[k] || []).push(x); })); return out; };
+const squadItems = (groups, min, labelFn, titleFn) => Object.entries(groups).map(([k, l]) => ({ k, s: summary(squadM(l)), l }))
+  .filter(x => x.s.n >= min).map(x => Object.assign(x, { label: labelFn(x.k, x), title: titleFn ? titleFn(x.k) : x.k }));
+const bestWorst = (items, n) => { const s = items.slice().sort((a, b) => b.s.wr - a.s.wr || b.s.n - a.s.n); return s.length <= n * 2 ? s : s.slice(0, n).concat(s.slice(-n)); };
+const divTable = (head, items) => dashTable([head, "#Matches", "#Siege", "#Winrate"], items.map(it => [it.title ? esc(it.title) : it.label, it.s.n, it.s.w, pct(it.s.wr)]));
+// Team-Werte pro 10 Minuten über mehrere Matches (Summe des Teams durch Summe der Spielzeit)
+function teamPer10(list, pick, f) {
+  let sum = 0, min = 0;
+  list.forEach(m => { if (!(m.dur > 0)) return; const rows = pick(m).filter(r => r[f] !== null && r[f] !== undefined); if (!rows.length) return; sum += sheetSum(rows, f); min += m.dur; });
+  return min ? sum / min * 10 : NaN;
+}
+const ofRole = role => rows => rows.filter(r => heroRole(r.h) === role);
+function squadDumbbells(rows, keys) {
+  return `<div class="dwls">${rows.map((r, i) => {
+    const max = Math.max(r.a, r.b) * 1.12 || 1, pa = r.a / max * 100, pb = r.b / max * 100, lo = Math.min(pa, pb), hi = Math.max(pa, pb);
+    return `<div class="dwl${i === 0 && r.top ? " top" : ""}"><div class="dwlh"><b>${esc(r.l)}</b><span>${r.verdict || ""}${i === 0 && r.top ? ` <span class="dbadge">grösster Unterschied</span>` : ""}</span></div>
+      <div class="dwlr"><span class="dbell" aria-hidden="true"><i class="cn" style="left:${lo.toFixed(1)}%;width:${(hi - lo).toFixed(1)}%"></i>
+        <i class="${keys[0].cls}" style="left:${pa.toFixed(1)}%"${dtip(r.l, [[r.fmt(r.a), keys[0].l, keys[0].c], [r.fmt(r.b), keys[1].l, keys[1].c]], false)}></i>
+        <i class="${keys[1].cls}" style="left:${pb.toFixed(1)}%"${dtip(r.l, [[r.fmt(r.b), keys[1].l, keys[1].c], [r.fmt(r.a), keys[0].l, keys[0].c]], false)}></i></span>
+        <span class="dwlv"><span><i class="dk ${keys[0].cls}"></i>${r.fmt(r.a)}</span><span><i class="dk ${keys[1].cls}"></i>${r.fmt(r.b)}</span></span></div></div>`;
+  }).join("")}</div>`;
+}
+function squadSetupHtml(all) {
+  const names = mateNames(), counts = {};
+  all.forEach(x => x.mates.forEach(t => { counts[t.name] = (counts[t.name] || 0) + 1; }));
+  const withData = state.matches.filter(m => Array.isArray(m.team) && m.team.length).length;
+  return `<div class="card sqsetup"><div class="card-head"><div class="dch"><h2>${icon("team")}Deine Teammates</h2><span class="muted small">genau wie im Spiel geschrieben (Gross- und Kleinschreibung egal)</span></div></div>
+    <div class="sqmates">${names.length ? names.map(n => `<span class="sqmate${counts[n] ? "" : " none"}"><b>${esc(n)}</b><small>${counts[n] ? plural(counts[n], "Match", "Matches") + " zusammen" : "noch nicht gefunden"}</small><button type="button" class="sqx" data-sqdel="${esc(n)}" aria-label="${esc(n)} entfernen" title="Entfernen">${icon("x")}</button></span>`).join("") : `<span class="muted small">Noch keine Teammates eingetragen.</span>`}</div>
+    <form class="row sqadd" data-sqadd><input type="text" name="mate" placeholder="Spielername" aria-label="Spielername eines Teammates" maxlength="40" autocomplete="off"><button class="btn small" type="submit">${icon("check")}Hinzufügen</button></form>
+    <p class="small muted" style="margin:10px 0 0">Die Namen bleiben in deiner App. Der Abgleich speichert Mitspieler nur als Kürzel und erkennt darüber deine Teammates; fremde Spieler bleiben anonym. Team-Daten gibt es für Matches, die nach diesem Update abgeglichen wurden (pro Abgleich etwa die letzten 40 bis 50 Matches): ${withData ? `bisher ${plural(withData, "Match", "Matches")}` : "noch keine, sie kommen mit dem nächsten Abgleich"}. «Noch nicht gefunden» heisst: in diesen Matches nicht dabei oder anders geschrieben.</p></div>`;
+}
+function squadFiltersHtml(D) {
+  const chip = (k, v, label) => `<button type="button" class="chip ${squadUi[k] === v ? "on" : ""}" data-sqfilt="${k}" data-v="${esc(v)}" aria-pressed="${squadUi[k] === v}">${esc(label)}</button>`;
+  const names = [...new Set(D.rows.flatMap(x => x.mates.map(t => t.name)).concat(squadUi.mate ? [squadUi.mate] : []))];
+  return `<div class="card dfilters" role="group" aria-label="Filter für die Squad-Seite">
+    <div class="dfg"><span class="dfl">Zeitraum</span><div class="chips">${DASH_PER.map(([v, l]) => chip("per", v, l)).join("")}</div></div>
+    <div class="dfg"><label class="dfl" for="sqMate">Mit</label><select id="sqMate" data-sqsel="mate"><option value="">Allen Teammates</option>${names.map(n => `<option ${n === squadUi.mate ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+    <div class="dfg"><label class="dfl" for="sqMode">Modus</label><select id="sqMode" data-sqsel="mode">${DASH_MODES.map(([v, l]) => `<option value="${esc(v)}" ${v === squadUi.mode ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+    <div class="dfg dfn"><b>${plural(D.squad.length, "Match", "Matches")} mit Teammates</b></div></div>`;
+}
+function squadHeadHtml(D) {
+  const s = summary(squadM(D.squad)), so = summary(squadM(D.solo));
+  const cnt = {}; D.squad.forEach(x => x.mates.forEach(t => { cnt[t.name] = (cnt[t.name] || 0) + 1; }));
+  const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  const diff = isFinite(s.wr) && isFinite(so.wr) && so.n >= 3 ? s.wr - so.wr : NaN;
+  return `<div class="card dhead sqhead"><div class="dh-main"><div class="dtl">Winrate mit Teammates${squadUi.mate ? ` · mit ${esc(squadUi.mate)}` : ""}</div><div class="dh-fig">${pct(s.wr)}</div>
+      <div class="dh-rec"><span><b>${s.w}</b> ${s.w === 1 ? "Sieg" : "Siege"}</span><span><b>${s.n - s.w}</b> ${s.n - s.w === 1 ? "Niederlage" : "Niederlagen"}</span></div>
+      <div class="dh-d">${isFinite(diff) ? dashDelta(s.wr, so.wr, 1, v => Math.round(v * 100) + " Pkt.", "deinen Matches ohne Teammates") : `<span class="muted small">Zum Vergleich fehlen Matches ohne Teammates.</span>`}</div></div>
+    <div class="dh-tiles"><div class="dtile"><div class="dtl">Ohne Teammates</div><div class="dtv">${pct(so.wr)}</div><div class="dts muted">${plural(so.n, "Match", "Matches")}</div></div>
+      <div class="dtile"><div class="dtl">Am häufigsten dabei</div><div class="dtv sqname">${top ? esc(top[0]) : "–"}</div><div class="dts muted">${top ? plural(top[1], "Match", "Matches") : ""}</div></div>
+      <div class="dtile"><div class="dtl">Tode pro 10 Min · ihr</div><div class="dtv">${dashFmt("d10", teamPer10(squadM(D.squad), squadTeam, "d") / 6)}</div><div class="dts muted">pro Person im Schnitt</div></div>
+      <div class="dtile"><div class="dtl">Tode pro 10 Min · Gegner</div><div class="dtv">${dashFmt("d10", teamPer10(squadM(D.squad), m => m.foes || [], "d") / 6)}</div><div class="dts muted">pro Person im Schnitt</div></div></div></div>`;
+}
+function squadInsights(D, parts) {
+  const out = [];
+  if (parts.mates.length) { const b = parts.mates.slice().sort((a, b) => b.s.wr - a.s.wr || b.s.n - a.s.n)[0]; if (b.s.n >= 3) out.push(["good", `Mit <b>${esc(b.k)}</b> gewinnst du ${pct(b.s.wr)} (${plural(b.s.n, "Match", "Matches")}).`]); }
+  if (parts.pairs.length) { const b = parts.pairs.slice().sort((a, b) => b.s.wr - a.s.wr || b.s.n - a.s.n)[0]; if (b.s.wr > D.savg) out.push(["good", `Stärkstes Helden-Paar: <b>${esc(b.title)}</b> mit ${pct(b.s.wr)} (${plural(b.s.n, "Match", "Matches")}).`]); }
+  if (parts.foes.length) { const w = parts.foes[0]; out.push(["bad", `Schwierigster Gegner für euch: <b>${esc(w.k)}</b>, nur ${pct(w.s.wr)} in ${plural(w.s.n, "Match", "Matches")}.`]); }
+  if (parts.wl.length && parts.wl[0].top) out.push(["info", `Grösster Unterschied zwischen euren Siegen und Niederlagen: <b>${esc(parts.wl[0].l)}</b> (${parts.wl[0].verdict}).`]);
+  if (parts.note) out.push(["info", `Häufigste Team-Notiz von dir: «${esc(parts.note[0])}» (${parts.note[1]}×).`]);
+  return out;
+}
+function renderSquad() {
+  DTIPS = []; dtipHide();
+  const D = squadData(), el = $("#squadBody");
+  let html = squadSetupHtml(D.rows);
+  if (!mateNames().length) { el.innerHTML = html; return; }
+  if (!D.rows.length) {
+    el.innerHTML = html + `<div class="card dempty">${empty(squadUi.per !== "0" || squadUi.mode ? "In diesem Ausschnitt gibt es keine Matches mit Team-Daten." : "Noch keine Matches mit Team-Daten. Sie kommen mit dem nächsten Abgleich von Rivals Data.", "team")}</div>`;
+    return;
+  }
+  html += squadFiltersHtml(D);
+  if (!D.squad.length) {
+    el.innerHTML = html + `<div class="card dempty">${empty("Im Ausschnitt gibt es kein Match mit deinen Teammates. Prüf die Schreibweise der Namen oder wähl einen längeren Zeitraum.", "team")}</div>`;
+    return;
+  }
+  const S = squadM(D.squad), avg = D.avg;
+  // Mit wem
+  const mates = squadItems(squadGroup(D.squad, x => x.mates.map(t => t.name)), 1, k => { const h = Object.entries(group(D.squad.flatMap(x => x.mates.filter(t => t.name === k)), t => t.h)).sort((a, b) => b[1].length - a[1].length)[0]; return `${h ? av(h[0], "sm") : ""}<span>${esc(k)}</span>`; });
+  // Gruppen (wer genau zusammen war)
+  const groups = squadItems(squadGroup(D.squad, x => [x.mates.map(t => t.name).sort((a, b) => a.localeCompare(b)).join(" + ")]), 2, k => `<span>${esc(k)}</span>`);
+  // Helden-Paare
+  const pairs = squadItems(squadGroup(D.squad, x => x.mates.map(t => `${x.m.hero}|${t.h}|${t.name}`)), 2,
+    k => { const [a, b, n] = k.split("|"); return `${av(a, "sm")}${av(b, "sm")}<span>${esc(a)} + ${esc(b)} <small class="muted">(${esc(n)})</small></span>`; },
+    k => { const [a, b, n] = k.split("|"); return `${a} + ${b} (${n})`; });
+  // Aufstellungen
+  const comps = squadItems(squadGroup(D.squad, x => [roleKey(squadTeam(x.m).map(r => r.h))]), 2, k => `<span>${esc(roleKeyLabel(k))}</span>`, roleKeyLabel);
+  // Gegner, gegen die ihr verliert, und was dagegen geklappt hat
+  const foeAll = Object.entries(groupMulti(S, m => m.enemies)).map(([h, l]) => ({ k: h, s: summary(l), l })).filter(x => x.s.n >= 3);
+  const foes = foeAll.filter(x => x.s.wr < D.savg).sort((a, b) => a.s.wr - b.s.wr || b.s.n - a.s.n).slice(0, 5);
+  const foeHtml = foes.length ? `<div class="ddiv"><div class="ddax" aria-hidden="true"><span></span><span class="ddaxb"><em>Ø ${pct(D.savg)} mit Teammates</em></span><span></span></div>${foes.map(f => {
+    const wins = Object.entries(squadGroup(f.l.map(m => ({ m })), x => squadTeam(x.m).map(r => r.h))).map(([h, l]) => [h, summary(squadM(l))]).filter(([, s]) => s.n >= 2 && s.wr >= 0.5).sort((a, b) => b[1].wr - a[1].wr || b[1].n - a[1].n).slice(0, 3);
+    const rule = countersOf(f.k).slice(0, 3);
+    const d = f.s.wr - D.savg, w = Math.min(50, Math.abs(d) / Math.max(0.08, ...foes.map(x => Math.abs(x.s.wr - D.savg))) * 50);
+    return `<div class="ddrow sqfoe"><span class="ddl">${av(f.k, "sm")}<span>${esc(f.k)}</span></span><span class="ddbar"><i class="n" style="right:50%;width:${w.toFixed(1)}%"${dtip(`Gegen ${f.k}`, [[pct(f.s.wr), "Winrate mit Teammates", "var(--bad)"], [`${f.s.w} S · ${f.s.n - f.s.w} N`, plural(f.s.n, "Match", "Matches"), ""]], false)}></i></span><span class="ddv"><b>${pct(f.s.wr)}</b><small>${f.s.n}×</small></span>
+      <span class="sqhelp small">${wins.length ? `Bei euch hat geklappt: ${wins.map(([h, s]) => `${av(h, "sm")}<span>${esc(h)} ${pct(s.wr)}</span>`).join(" ")}` : rule.length ? `<span class="muted">Faustregel (nicht aus euren Matches):</span> ${rule.map(h => `${av(h, "sm")}<span>${esc(h)}</span>`).join(" ")}` : ""}</span></div>`;
+  }).join("")}</div>` : `<p class="muted small" style="margin:0">Kein Gegner-Held mit mindestens 3 Matches liegt unter eurem Schnitt.</p>`;
+  // Siege gegen Niederlagen als Team
+  const W = S.filter(m => m.result === "W"), L = S.filter(m => m.result === "L");
+  const TEAMKEYS = [
+    ["Tode eures Teams pro 10 Min", squadTeam, "d", -1], ["Final Hits eures Teams pro 10 Min", squadTeam, "fh", 1], ["Schaden eures Teams pro 10 Min", squadTeam, "dmg", 1], ["Heilung eures Teams pro 10 Min", squadTeam, "heal", 1],
+    ["Tode eurer Tanks pro 10 Min", m => ofRole("Vanguard")(squadTeam(m)), "d", -1], ["Tode eurer DPS pro 10 Min", m => ofRole("Duelist")(squadTeam(m)), "d", -1], ["Tode eurer Supports pro 10 Min", m => ofRole("Strategist")(squadTeam(m)), "d", -1]];
+  const wl = W.length >= 3 && L.length >= 3 ? TEAMKEYS.map(([l, pick, f]) => {
+    const a = teamPer10(W, pick, f), b = teamPer10(L, pick, f);
+    if (!isFinite(a) || !isFinite(b) || Math.max(a, b) <= 0) return null;
+    const gap = (a - b) / Math.max(a, b), rel = b ? (a - b) / b : null;
+    return { l, a, b, gap, fmt: v => (f === "d" || f === "fh" ? numDe(v.toFixed(1)) : fmtNum(v)), verdict: Math.abs(gap) < 0.03 ? "kaum Unterschied" : rel === null ? "nur in Siegen" : `in Siegen ${Math.round(Math.abs(rel) * 100)} % ${a > b ? "mehr" : "weniger"}` };
+  }).filter(Boolean).sort((x, y) => Math.abs(y.gap) - Math.abs(x.gap)) : [];
+  if (wl.length && Math.abs(wl[0].gap) >= 0.1) wl[0].top = true;
+  // Rollen gegen die gegnerischen Rollen
+  const roleRows = [];
+  ROLES.forEach(r => {
+    const a = teamPer10(S, m => ofRole(r)(squadTeam(m)), "d"), b = teamPer10(S, m => ofRole(r)(m.foes || []), "d");
+    if (isFinite(a) && isFinite(b) && Math.max(a, b) > 0) roleRows.push({ l: `${ROLE_DE[r]}: Tode pro 10 Min`, a, b, fmt: v => numDe(v.toFixed(1)), verdict: Math.abs(a - b) / Math.max(a, b) < 0.05 ? "etwa gleich" : a > b ? "ihr sterbt öfter" : "ihr sterbt seltener" });
+    const fa = teamPer10(S, m => ofRole(r)(squadTeam(m)), "fh"), fb = teamPer10(S, m => ofRole(r)(m.foes || []), "fh");
+    if (isFinite(fa) && isFinite(fb) && Math.max(fa, fb) > 0) roleRows.push({ l: `${ROLE_DE[r]}: Final Hits pro 10 Min`, a: fa, b: fb, fmt: v => numDe(v.toFixed(1)), verdict: Math.abs(fa - fb) / Math.max(fa, fb) < 0.05 ? "etwa gleich" : fa > fb ? "ihr mehr" : "die Gegner mehr" });
+  });
+  // Teammates im Einzelnen
+  const mateCards = mates.slice().sort((a, b) => b.s.n - a.s.n).map(x => {
+    const rows = D.squad.flatMap(y => y.mates.filter(t => t.name === x.k).map(t => Object.assign({ dur: y.m.dur }, t)));
+    const heroes = Object.entries(group(rows, t => t.h)).sort((a, b) => b[1].length - a[1].length).slice(0, 4);
+    const avgF = f => { const v = rows.filter(t => t[f] !== null && t[f] !== undefined); return v.length ? sheetSum(v, f) / v.length : NaN; };
+    const p10 = f => { const v = rows.filter(t => t.dur > 0 && t[f] !== null && t[f] !== undefined), mn = v.reduce((s, t) => s + t.dur, 0); return mn ? sheetSum(v, f) / mn * 10 : NaN; };
+    const mainR = heroes.length ? heroRole(heroes[0][0]) : "", kf = mainR === "Strategist" ? ["heal", "Heilung"] : mainR === "Vanguard" ? ["blk", "Geblockt"] : ["dmg", "Schaden"];
+    return `<div class="sqm"><div class="sqmh"><b>${esc(x.k)}</b><span class="muted small">${plural(x.s.n, "Match", "Matches")} · ${pct(x.s.wr)}</span></div>
+      <div class="sqmheroes">${heroes.map(([h, l]) => `<span class="hero">${av(h, "sm")}<span>${esc(h)} <small class="muted">${l.length}×</small></span></span>`).join("")}</div>
+      <div class="small">Ø K/D/A <b>${isFinite(avgF("k")) ? `${numDe(avgF("k").toFixed(1))} / ${numDe(avgF("d").toFixed(1))} / ${numDe(avgF("a").toFixed(1))}` : "–"}</b></div>
+      <div class="hcstats"><div><b>${dashFmt("d10", p10("d"))}</b><span>Tode / 10 Min</span></div><div><b>${dashFmt("d10", p10("fh"))}</b><span>Final Hits / 10 Min</span></div><div><b>${dashTick("dmg10", p10(kf[0]))}</b><span>${kf[1]} / 10 Min</span></div></div></div>`;
+  }).join("");
+  // Team-Ups, die ihr gemeinsam im Team hattet
+  const tus = (typeof TU !== "undefined" && TU.teamups ? TU.teamups : []).map(t => {
+    const u = (t.helden || []).find(h => h.rolle === "Nutzer"), p = (t.helden || []).find(h => h.rolle === "Partner");
+    if (!u || !p) return null;
+    const l = S.filter(m => { const hs = squadTeam(m).map(r => r.h); return hs.includes(u.name) && hs.includes(p.name); });
+    return l.length ? { t, u: u.name, p: p.name, s: summary(l) } : null;
+  }).filter(Boolean).sort((a, b) => b.s.n - a.s.n || b.s.wr - a.s.wr).slice(0, 8);
+  // Team-Notizen
+  const tg = {}, tb = {};
+  S.forEach(m => { (m.teamGood || []).forEach(x => { tg[x] = (tg[x] || 0) + 1; }); (m.teamBad || []).forEach(x => { tb[x] = (tb[x] || 0) + 1; }); });
+  const tbs = Object.entries(tb).sort((a, b) => b[1] - a[1]), tgs = Object.entries(tg).sort((a, b) => b[1] - a[1]);
+  const noteMax = Math.max(1, ...tbs.map(x => x[1]), ...tgs.map(x => x[1]));
+  const ins = squadInsights(D, { mates, pairs, foes, wl, note: tbs[0] });
+  const KEYS_WL = [{ cls: "dw", l: "in Siegen", c: "var(--good)" }, { cls: "dl", l: "in Niederlagen", c: "var(--bad)" }];
+  const KEYS_VS = [{ cls: "dus", l: "ihr", c: "var(--accent)" }, { cls: "dthem", l: "Gegner", c: "var(--muted)" }];
+  html += squadHeadHtml(D) + `<div class="dgrid">${[
+    ins.length ? `<div class="card dcard span-12"><div class="card-head"><div class="dch"><h2>${icon("ai")}Das Wichtigste</h2><span class="muted small">aus euren gemeinsamen Matches</span></div></div>${notes(ins)}</div>` : "",
+    squadCard("sqMates", "span-6", "Mit wem du gewinnst", "team", "rechts besser, links schwächer als dein Schnitt mit Team-Daten", dashDivList(mates, avg, ""), divTable("Teammate", mates)),
+    squadCard("sqGroups", "span-6", "Eure Gruppen", "team", "wer genau zusammen war · ab 2 Matches", dashDivList(groups, avg, "Noch keine Gruppe mit mindestens 2 Matches."), groups.length ? divTable("Gruppe", groups) : ""),
+    squadCard("sqPairs", "span-6", "Helden-Paare", "heroes", `dein Held + Held eines Teammates · ab 2 Matches · Mitte: Ø ${pct(D.savg)} mit Teammates`, dashDivList(bestWorst(pairs, 4), D.savg, "Noch kein Helden-Paar mit mindestens 2 Matches."), pairs.length ? divTable("Paar", pairs) : ""),
+    squadCard("sqComps", "span-6", "Eure Aufstellungen", "list", `Rollen in eurem ganzen Team · ab 2 Matches · Mitte: Ø ${pct(D.savg)}`, dashDivList(comps.sort((a, b) => b.s.n - a.s.n), D.savg, "Noch keine Aufstellung mit mindestens 2 Matches."), comps.length ? divTable("Aufstellung", comps) : ""),
+    squadCard("sqFoes", "span-12", "Gegner, die euch Probleme machen", "target", "unter eurem Schnitt · ab 3 Matches · darunter, welche eurer Helden dagegen gewonnen haben", foeHtml, foeAll.length ? dashTable(["Gegner-Held", "#Matches", "#Siege", "#Winrate"], foeAll.sort((a, b) => a.s.wr - b.s.wr).map(f => [heroChip(f.k), f.s.n, f.s.w, pct(f.s.wr)])) : ""),
+    squadCard("sqWl", "span-6", "Was in euren Siegen anders ist", "analysis", `${plural(W.length, "Sieg", "Siege")} gegen ${plural(L.length, "Niederlage", "Niederlagen")} · ganzes Team`, wl.length ? `<div class="dleg"><span><i class="dk w"></i>Sieg</span><span><i class="dk l"></i>Niederlage</span></div>${squadDumbbells(wl, KEYS_WL)}` : `<p class="muted small" style="margin:0">Ab je 3 Siegen und Niederlagen mit Teammates (und eingetragener Dauer) siehst du hier, was in euren Siegen anders ist.</p>`, wl.length ? dashTable(["Kennzahl", "#Siege", "#Niederlagen"], wl.map(r => [esc(r.l), r.fmt(r.a), r.fmt(r.b)])) : ""),
+    squadCard("sqRoles", "span-6", "Eure Rollen gegen die Gegner", "team", "pro 10 Minuten, alle Spieler einer Rolle zusammen", roleRows.length ? `<div class="dleg"><span><i class="dk dus"></i>ihr</span><span><i class="dk dthem"></i>Gegner</span></div>${squadDumbbells(roleRows, KEYS_VS)}` : `<p class="muted small" style="margin:0">Dafür braucht es Matches mit Dauer.</p>`, roleRows.length ? dashTable(["Kennzahl", "#ihr", "#Gegner"], roleRows.map(r => [esc(r.l), r.fmt(r.a), r.fmt(r.b)])) : ""),
+    `<div class="card dcard span-12"><div class="card-head"><div class="dch"><h2>${icon("heroes")}Deine Teammates mit dir</h2><span class="muted small">Werte zum Besprechen, keine Schuldfrage: Rolle und Held prägen die Zahlen stark</span></div></div><div class="sqms">${mateCards}</div></div>`,
+    squadCard("sqTu", "span-6", "Team-Ups in eurem Team", "zap", "beide Helden gleichzeitig in eurem Team · laut Team-Up-Liste (Stand " + esc((typeof TU !== "undefined" && TU.stand) || "") + ")", tus.length ? `<div class="sqtus">${tus.map(x => `<div class="sqtu${x.s.n < 2 ? " thin" : ""}"><span class="sqtuh">${av(x.u, "sm")}${av(x.p, "sm")}</span><span><b>${esc(x.t.name)}</b><small class="muted">${esc(x.u)} mit ${esc(x.p)}</small></span><span class="ddv"><b>${pct(x.s.wr)}</b><small>${x.s.n}×</small></span></div>`).join("")}</div><p class="small muted" style="margin:10px 0 0">Seit Season 9 wirkt der verstärkte Effekt, wenn der Partner-Held im Team ist. Ob das Loadout gewählt war, steht nicht in den Daten.</p>` : `<p class="muted small" style="margin:0">In euren gemeinsamen Matches gab es noch kein Helden-Paar aus der Team-Up-Liste.</p>`, tus.length ? dashTable(["Team-Up", "Helden", "#Matches", "#Winrate"], tus.map(x => [esc(x.t.name), `${esc(x.u)} + ${esc(x.p)}`, x.s.n, pct(x.s.wr)])) : ""),
+    `<div class="card dcard span-6" id="sqNotes"><div class="card-head"><div class="dch"><h2>${icon("edit")}Eure Team-Notizen</h2><span class="muted small">was du unter «Als Team» beim Match eingetragen hast</span></div></div>${tbs.length || tgs.length ? `<h3 class="sqnh">Hat gehakt</h3>${bars(tbs.map(([k, n]) => [esc(k), n / noteMax, `${n}×`]), { empty: "Nichts eingetragen." })}<h3 class="sqnh">Lief gut</h3>${bars(tgs.map(([k, n]) => [esc(k), n / noteMax, `${n}×`]), { empty: "Nichts eingetragen." })}` : `<p class="muted small" style="margin:0">Noch keine Team-Notizen. Beim Loggen oder Bearbeiten eines Matches gibt es den Abschnitt «Als Team».</p>`}</div>`
+  ].join("")}</div>`;
+  el.innerHTML = html;
+}
+function squadRedraw(sel) { squadSave(); renderSquad(); const el = sel && document.querySelector(sel); if (el) el.focus({ preventScroll: true }); }
+$("#squadBody").addEventListener("click", e => {
+  const f = e.target.closest("[data-sqfilt]");
+  if (f) { squadUi[f.dataset.sqfilt] = f.dataset.v; squadRedraw(`[data-sqfilt="${f.dataset.sqfilt}"][data-v="${CSS.escape(f.dataset.v)}"]`); return; }
+  const t = e.target.closest("[data-stable]");
+  if (t) { squadTables[t.dataset.stable] = !squadTables[t.dataset.stable]; squadRedraw(`[data-stable="${t.dataset.stable}"]`); return; }
+  const d = e.target.closest("[data-sqdel]");
+  if (d) { state.settings.mates = mateNames().filter(n => n !== d.dataset.sqdel); if (squadUi.mate === d.dataset.sqdel) squadUi.mate = ""; save(); squadRedraw('[data-sqadd] input'); }
+});
+$("#squadBody").addEventListener("submit", e => {
+  const f = e.target.closest("[data-sqadd]");
+  if (!f) return;
+  e.preventDefault();
+  const name = f.mate.value.trim();
+  if (!name) return;
+  const names = mateNames();
+  if (names.some(n => n.toLowerCase() === name.toLowerCase())) { toast(`${name} ist schon eingetragen`); return; }
+  state.settings.mates = names.concat(name); save(); squadRedraw('[data-sqadd] input');
+  toast(`${name} hinzugefügt`);
+});
+$("#squadBody").addEventListener("change", e => {
+  const s = e.target.closest("[data-sqsel]");
+  if (!s) return;
+  squadUi[s.dataset.sqsel] = s.value;
+  squadRedraw(`[data-sqsel="${s.dataset.sqsel}"]`);
+});
+// Team-Notizen im Match-Log: nur sichtbar, wenn Teammates eingetragen sind
+function renderTeamBox(m) {
+  const box = $("#teamBox");
+  if (!box) return;
+  box.hidden = !mateNames().length;
+  const mates = m ? matesIn(m) : [];
+  $("#teamWho").textContent = mates.length ? `mit ${mates.map(t => t.name).join(", ")}` : "";
+  setChips($("#teamGoodChips"), (m && m.teamGood) || []);
+  setChips($("#teamBadChips"), (m && m.teamBad) || []);
 }
 
 function insights() {
@@ -5039,6 +6044,7 @@ function renderLog() {
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
   renderMistakeChips(); renderRuleBox(); renderFqBox(); renderTaskBox(); renderDeathBox();
+  $("#teamBox").hidden = !mateNames().length;
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
@@ -5046,13 +6052,13 @@ function renderLog() {
   $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Ergebnis</th><th class="num">K/D/A</th><th>Map / Modus</th><th>Gegner</th><th>Reflexion</th><th></th></tr></thead><tbody>
     ${rows.map(m => `<tr>
       <td class="small">${fmtDate(m.date)}${planStarted() ? `<br><span class="muted" data-dayfor="${m.date}">${planDayOf(m.date) ? "Tag " + planDayOf(m.date) : "freies Spiel"}</span>` : ""}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
-      <td>${heroChip(m.hero)}${mixTag(m)}</td>
+      <td>${heroChip(m.hero)}${mixTag(m)}${(() => { const t = matesIn(m); return t.length ? `<div class="logmates">mit ${esc(t.map(x => x.name).join(", "))}</div>` : ""; })()}</td>
       <td><button class="pill-btn" type="button" data-flip="${m.id}" title="Ergebnis ändern (Sieg ↔ Niederlage)" aria-label="Ergebnis ändern, aktuell ${m.result === "W" ? "Sieg" : "Niederlage"}">${resultPill(m.result)}</button></td>
       <td class="num">${m.k}/${m.d}/${m.a}${matchExtra(m)}</td>
       <td class="small">${esc(m.map || m.type)}<br><span class="muted">${esc(m.mode)}</span></td>
       <td><span class="row" style="gap:3px;flex-wrap:nowrap">${m.enemies.map(e => `<span${e === m.nemesis ? ' style="outline:2px solid var(--bad);border-radius:50%"' : ""}>${av(e, "sm")}</span>`).join("") || '<span class="muted small">–</span>'}</span></td>
       <td class="small">${(m.mistakes || []).length ? esc(m.mistakes.slice(0, 2).join(", ")) + (m.mistakes.length > 2 ? " …" : "") : (m.notes ? esc(m.notes.slice(0, 40)) : (deathTotal(m.deathCauses) ? "" : '<span class="muted">offen</span>'))}${deathTotal(m.deathCauses) ? `<br><span class="muted">${plural(deathTotal(m.deathCauses), "Tod", "Tode")} erfasst</span>` : ""}</td>
-      <td style="white-space:nowrap"><button class="btn ghost small" data-edit="${m.id}" type="button" title="Alle Angaben ändern oder Reflexion ergänzen">${icon("edit")}Bearbeiten</button>
+      <td style="white-space:nowrap">${hasSheet(m) ? `<button class="btn ghost small" data-msheet="${m.id}" type="button" title="Alle 12 Spieler dieses Matches mit automatischer Auswertung">${icon("analysis")}Analyse</button> ` : ""}<button class="btn ghost small" data-edit="${m.id}" type="button" title="Alle Angaben ändern oder Reflexion ergänzen">${icon("edit")}Bearbeiten</button>
         <button class="btn danger small icon" data-del="${m.id}" type="button" aria-label="Löschen" title="Löschen">${icon("trash")}</button></td></tr>`).join("")}
     </tbody></table><p class="muted small mt">Falsch eingetragen? Tippe auf das Ergebnis, um Sieg und Niederlage zu tauschen, oder auf „Bearbeiten“ für alle Angaben (auch das Datum).</p>` : empty("Noch keine Matches. Fülle das Formular oben aus oder importiere deine Matches von Rivals Data.", "list");
   $("#matchTable").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
@@ -5117,7 +6123,7 @@ function clearForm() {
   setMapValue("");
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   deathState = {};
-  renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []);
+  renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []); renderTeamBox(null);
   renderRuleBox({}); renderFqBox({}); renderTaskBox({});
   renderDeathBox();
   updateNemesis();
@@ -5147,7 +6153,7 @@ function startEdit(id) {
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {});
-  renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []);
+  renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []); renderTeamBox(m);
   renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks));
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
@@ -5384,6 +6390,10 @@ $("#matchForm").addEventListener("submit", e => {
     tasks: taskValues(),
     deathCauses: Object.assign({}, deathState)
   };
+  if (!$("#teamBox").hidden) {
+    fields.teamGood = [...document.querySelectorAll("#teamGoodChips .chip.on")].map(c => c.dataset.v);
+    fields.teamBad = [...document.querySelectorAll("#teamBadChips .chip.on")].map(c => c.dataset.v);
+  }
   if (!fields.hero) { toast("Bitte deinen Helden wählen"); return; }
   if (fields.dur !== null && !(fields.dur > 0)) fields.dur = null;
   if (fields.ults !== null) fields.ults = Math.max(0, Math.round(fields.ults));
@@ -6362,7 +7372,8 @@ $("#syncCmdCopy").addEventListener("click", () => copyText(syncCommand(), "Befeh
 $("#copyScript").addEventListener("click", () => copyText($("#syncScriptSrc").textContent.replace(/^\n/, ""), "Skript kopiert – als rivals_sync.py speichern"));
 document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copyText(b.dataset.copy, "Befehl kopiert!")));
 
-const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "swapped", "heroes", "mvp", "svp", "ts", "date"];
+// team/foes: alle anderen Spieler des Matches (Mitspieler nur als Kürzel), fh/solo/acc: deine Final Hits, Solo-Kills, Treffergenauigkeit, dv: Stand der Details
+const SYNC_FIELDS = ["hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "swapped", "heroes", "mvp", "svp", "ts", "date", "fh", "solo", "acc", "team", "foes", "dv"];
 function importSync(data) {
   if (!data || data.format !== "rivals-coach-sync" || !Array.isArray(data.matches)) throw new Error("Keine Rivals-Data-Sync-Datei");
   const byExt = new Map(state.matches.filter(m => m.extId).map(m => [m.extId, m]));
@@ -8942,6 +9953,7 @@ function rvMatchHtml(x, open, L) {
   const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4;
   return `<div class="rvm open" data-m="${m.id}">${head}<div class="rvb">
     ${why ? `<ul class="wl small" style="margin:0">${why}</ul>` : ""}
+    ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
     ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
     <div class="rvs"><h4><span class="rvn">1</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
@@ -10558,6 +11570,8 @@ function appSeen(k, once) {
   if (n < 6) save();   // nur die ersten Besuche speichern, spätere Zähler gehen beim nächsten Speichern mit
 }
 const PAGE_HELP = {
+  dashboard: ["Dashboard", ["Oben wählst du Zeitraum, Rolle, Held und Modus. Die Filter gelten für alle Karten darunter.", "Die grosse Zahl ist deine Winrate im Ausschnitt, die Pfeile vergleichen mit dem gleich langen Zeitraum davor.", "Fahr mit dem Finger über ein Diagramm, dann siehst du die genauen Werte. «Tabelle» zeigt dieselben Zahlen als Liste.", "Tipp: Tippe unter «Deine Helden» einen Helden an. Dann vergleichst du nur Matches mit diesem Helden."]],
+  squad: ["Squad", ["Trag oben deine Teammates ein, genau wie im Spiel geschrieben. Die App erkennt sie in deinen abgeglichenen Matches.", "Die Karten vergleichen Matches mit und ohne Teammates: mit wem, mit welchen Helden, gegen welche Gegner und wie eure Rollen gegen die gegnerischen abschneiden.", "Im Match-Verlauf öffnet «Analyse» die Tabelle aller 12 Spieler eines Matches.", "Mit wenigen Matches schwanken die Zahlen stark. Blasse Zeilen beruhen auf weniger als 3 Matches."]],
   today: ["Heute", ["Oben siehst du, wie weit dein Tag ist. «Heute zu tun» hat vier Schritte: Lektion, Training, Wochenziel, Spielen.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«App-Übungen» führt dich Schritt für Schritt durch die App, immer nur ein bis zwei Übungen.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach)."]],
   plan: ["Trainingsplan", ["Wähle oben den Tag. Jeder Tag hat Start, Blöcke und eine Notiz am Ende.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
   log: ["Match loggen", ["Pflicht sind nur Held, Ergebnis und K/D/A. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten: Todesursachen, Fehler, Stärken, die Grundregel-Fragen und, wenn du ein Bootcamp begonnen hast, die Bootcamp-Aufgabe. Je mehr du einträgst, desto genauer die Auswertung.", "Matches, die die App von Rivals Data geholt hat, stehen oben unter «Reflexion offen». Dort trägst du nur noch Fehler und Stärken ein."]],
@@ -12400,16 +13414,19 @@ Object.assign(FIGS, {
 // ---------- Render ----------
 renderMistakeChips([], ""); renderDeathBox();
 chipGroup($("#goodChips"), GOODS);
+chipGroup($("#teamGoodChips"), TEAM_GOOD);
+chipGroup($("#teamBadChips"), TEAM_BAD);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 function render() {
   applyPoolToPlan();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, watch: renderWatch, review: renderReview, top: renderTop, weak: renderWeak, progress: renderProgress })[currentTab()]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, watch: renderWatch, review: renderReview, top: renderTop, weak: renderWeak, progress: renderProgress, squad: renderSquad })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
-window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (currentTab() === "dashboard") renderDashboard(); }, 150); });
+let resizeW = innerWidth;
+window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (innerWidth === resizeW) return; resizeW = innerWidth; if (currentTab() === "dashboard") dashTrendDraw(); }, 150); });
 let startTab = "today";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "today"; } catch (e) {}
 if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });

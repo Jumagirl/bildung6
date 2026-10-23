@@ -33,6 +33,9 @@ from typing import Any, Iterable, Mapping
 
 FORMAT = "rivals-coach-sync"
 VERSION = 1
+# Stand der Match-Details: 2 = alle 12 Spieler mit Werten (team/foes), eigene Final Hits, Solo-Kills und Treffergenauigkeit.
+# Ältere Matches werden beim nächsten Abgleich einmal neu geholt.
+DETAIL_VERSION = 2
 
 # Namen, die in der App anders heissen als in rivals-api
 NAME_FIXES = {
@@ -46,6 +49,17 @@ MODES = {1: "Quick Match", 2: "Competitive", 3: "Custom / Training", 4: "Arcade 
 GAME_TYPES = ("Domination", "Convoy", "Convergence", "Doom Match", "Conquest")
 
 
+def name_tag(name: Any) -> str:
+    """Kürzel eines Spielernamens (FNV-1a über den Namen in Kleinbuchstaben). Muss exakt zu nameTag() in der App passen.
+    Mitspieler stehen nur als Kürzel in den Daten: Die App erkennt so die Teammates, die du einträgst, ohne dass fremde
+    Spielernamen gespeichert werden."""
+    n = unicodedata.normalize("NFC", str(name or "")).strip().lower()
+    h = 0x811C9DC5
+    for byte in n.encode("utf-8"):
+        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
+    return f"{h:08x}"
+
+
 def player_slug(name: Any) -> str:
     """Dateiname für einen Spieler im Gratis-Abgleich (GitHub). Muss exakt zu playerSlug() in der App passen:
     Kleinbuchstaben ohne Akzente, alles ausser a–z und 0–9 wird zu «-», dahinter ein Prüfwert (FNV-1a) des genauen Namens,
@@ -53,10 +67,7 @@ def player_slug(name: Any) -> str:
     n = unicodedata.normalize("NFC", str(name or "")).strip().lower()
     plain = re.sub("[\u0300-\u036f]", "", unicodedata.normalize("NFKD", n))
     base = re.sub("[^a-z0-9]+", "-", plain).strip("-")[:24].strip("-")
-    h = 0x811C9DC5
-    for byte in n.encode("utf-8"):
-        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
-    return f"{base or 'spieler'}-{h:08x}"
+    return f"{base or 'spieler'}-{name_tag(n)}"
 
 
 # ---------- Hilfsfunktionen (ohne Netzwerk, testbar) ----------
@@ -188,6 +199,36 @@ def number(value: Any) -> int | None:
         return None
 
 
+def player_stats(player: Mapping[str, Any]) -> dict:
+    """Werte eines Match-Teilnehmers in Kurzform: Held (am längsten gespielt), K/D/A, Final Hits, Solo-Kills, Schaden,
+    Heilung, Geblockt, Treffergenauigkeit in Prozent (nur wenn grösser als 0), MVP/SVP und Bot. Fehlende Werte fehlen."""
+    hero, swapped = main_hero(player)
+    row: dict[str, Any] = {"h": hero}
+    for key, src in (("k", "kills"), ("d", "deaths"), ("a", "assists"), ("fh", "final_hits")):
+        v = to_int(player.get(src))
+        if v is not None:
+            row[key] = v
+    for key, src in (("dmg", "damage"), ("heal", "healing"), ("blk", "blocked")):
+        v = number(player.get(src))
+        if v is not None:
+            row[key] = v
+    solos = [to_int(h.get("solos")) for h in values(player.get("heroes")) if isinstance(h, Mapping)]
+    if any(v is not None for v in solos):
+        row["solo"] = sum(v or 0 for v in solos)
+    try:
+        acc = float(player.get("accuracy_percent", player.get("accuracy")))
+        if 0 < acc <= 100:
+            row["acc"] = round(acc, 1)
+    except (TypeError, ValueError):
+        pass
+    if swapped:
+        row["sw"] = 1
+    for key, src in (("mvp", "is_mvp"), ("svp", "is_svp"), ("bot", "ai")):
+        if player.get(src) is True:
+            row[key] = 1
+    return row
+
+
 DURATION_SECONDS_KEYS = ("duration_seconds", "match_play_duration", "match_duration_seconds")
 
 
@@ -268,14 +309,30 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
                 match["dmg"] = number(player.get("damage"))
                 match["heal"] = number(player.get("healing"))
                 match["block"] = number(player.get("blocked"))
+                mine = player_stats(player)
+                for key in ("fh", "solo", "acc"):
+                    if key in mine:
+                        match[key] = mine[key]
     if me_team is None:
         return
+    team: list[dict] = []
+    foes: list[dict] = []
     for camp, player in entries:
         if str(player.get("uid", player.get("player_uid"))) == str(uid):
             continue
-        hero, _ = main_hero(player)
-        if hero:
-            (match["allies"] if str(camp) == str(me_team) else match["enemies"]).append(hero)
+        row = player_stats(player)
+        if not row["h"]:
+            continue
+        if str(camp) == str(me_team):
+            match["allies"].append(row["h"])
+            row["id"] = name_tag(player.get("name", player.get("nick_name")))   # nur das Kürzel, nie der Name
+            team.append(row)
+        else:
+            match["enemies"].append(row["h"])
+            foes.append(row)
+    match["team"] = team
+    match["foes"] = foes
+    match["dv"] = DETAIL_VERSION
 
 
 def percent(value: Any) -> float | None:
@@ -358,7 +415,7 @@ def sync(args: argparse.Namespace) -> dict:
         for i, row in enumerate(rows, 1):
             old = known.get(str(getattr(row, "match_uid", "")))
             # Gewechselte Matches ohne Aufteilung pro Held einmal neu holen (ältere Abgleiche kannten sie noch nicht)
-            if old is not None and (old.get("enemies") or not args.details) and (not old.get("swapped") or old.get("heroes") or not args.details):
+            if old is not None and (not args.details or (old.get("dv", 0) >= DETAIL_VERSION and old.get("enemies"))):
                 result["matches"].append(old)   # Details waren schon da, Ergebnisse ändern sich nicht
                 reused += 1
                 print(f"\rMatches: {i}/{len(rows)}", end="", flush=True)
