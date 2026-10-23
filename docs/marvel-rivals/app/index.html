@@ -4,84 +4,80 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rivals Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap">
 <style>
+/* Gaming-Look: dunkle Spiel-Oberfläche als Grundlage, Violett als Aktionsfarbe, Gold für Belohnungen,
+   Rollenfarben (Tank blau, DPS orange, Support grün) als Code für alles, was mit Helden zu tun hat.
+   Schräge Kanten wie in Spiel-Menüs, ruhige Flächen, damit es übersichtlich bleibt. Hell nur auf ausdrücklichen Wunsch. */
 :root {
-  color-scheme: light;
-  --bg: #f3f4f8;
-  --surface: #ffffff;
-  --surface-2: #f2f3f8;
-  --surface-3: #e7e9f2;
-  --text: #12141c;
-  --text-2: #4b5063;
-  --muted: #767b8f;
-  --border: rgba(18, 20, 28, 0.10);
-  --grid: #e6e7ee;
-  --accent: #5b4cf0;
-  --accent-strong: #4a3bd8;
-  --accent-text: #ffffff;
-  --accent-soft: rgba(91, 76, 240, 0.10);
-  --gold: #f5b82e;
-  --vanguard: #2a78d6;
-  --duelist: #eb6834;
-  --strategist: #1baf7a;
-  --good: #0ca30c;
-  --good-text: #006300;
-  --bad: #d03b3b;
-  --warn: #c98500;
-  --shadow: 0 1px 2px rgba(16, 18, 30, 0.05), 0 6px 20px rgba(16, 18, 30, 0.06);
-  --hero-grad: linear-gradient(135deg, #5b4cf0 0%, #8b5cf6 55%, #c026d3 100%);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #0b0d14;
-    --surface: #151925;
-    --surface-2: #1c2130;
-    --surface-3: #262c3f;
-    --text: #eceef6;
-    --text-2: #b7bccd;
-    --muted: #8a90a6;
-    --border: rgba(255, 255, 255, 0.08);
-    --grid: #252a39;
-    --accent: #8b7dff;
-    --accent-strong: #a397ff;
-    --accent-text: #0b0d14;
-    --accent-soft: rgba(139, 125, 255, 0.14);
-    --vanguard: #3987e5;
-    --duelist: #d95926;
-    --strategist: #199e70;
-    --good: #0ca30c;
-    --good-text: #3fc35a;
-    --bad: #e05252;
-    --warn: #fab219;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-    --hero-grad: linear-gradient(135deg, #3b2fb8 0%, #6d3fd6 55%, #9d1fb0 100%);
-  }
-}
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0d14;
-  --surface: #151925;
-  --surface-2: #1c2130;
-  --surface-3: #262c3f;
-  --text: #eceef6;
-  --text-2: #b7bccd;
-  --muted: #8a90a6;
-  --border: rgba(255, 255, 255, 0.08);
-  --grid: #252a39;
-  --accent: #8b7dff;
-  --accent-strong: #a397ff;
-  --accent-text: #0b0d14;
-  --accent-soft: rgba(139, 125, 255, 0.14);
-  --vanguard: #3987e5;
-  --duelist: #d95926;
-  --strategist: #199e70;
-  --good: #0ca30c;
-  --good-text: #3fc35a;
-  --bad: #e05252;
-  --warn: #fab219;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-  --hero-grad: linear-gradient(135deg, #3b2fb8 0%, #6d3fd6 55%, #9d1fb0 100%);
+  --bg: #090b12;
+  --bg-glow-1: rgba(123, 97, 255, 0.16);
+  --bg-glow-2: rgba(34, 212, 138, 0.06);
+  --tex: rgba(150, 165, 230, 0.035);
+  --surface: #11151f;
+  --surface-2: #171c2a;
+  --surface-3: #232a3d;
+  --text: #eef0f8;
+  --text-2: #b8bfd4;
+  --muted: #8189a3;
+  --border: rgba(150, 165, 230, 0.13);
+  --grid: #1f2535;
+  --accent: #7b61ff;
+  --accent-2: #d63fb0;
+  --accent-strong: #a593ff;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(123, 97, 255, 0.17);
+  --glow: rgba(123, 97, 255, 0.55);
+  --gold: #ffc23d;
+  --gold-soft: rgba(255, 194, 61, 0.16);
+  --vanguard: #3b8cff;
+  --duelist: #ff6b3d;
+  --strategist: #22d48a;
+  --good: #24c964;
+  --good-text: #4fe08a;
+  --bad: #ff4d5e;
+  --warn: #ffb020;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px rgba(0, 0, 0, 0.38);
+  --hero-grad: linear-gradient(115deg, #17123f 0%, #2a1a72 38%, #4b1f8f 68%, #7d1c7c 100%);
+  --hero-text: #ffffff;
+  --font-display: "Chakra Petch", "Bahnschrift", "DIN Alternate", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eceff6;
+  --bg-glow-1: rgba(91, 63, 240, 0.09);
+  --bg-glow-2: rgba(18, 160, 106, 0.05);
+  --tex: rgba(16, 19, 28, 0.03);
+  --surface: #ffffff;
+  --surface-2: #f4f5fa;
+  --surface-3: #e3e7f1;
+  --text: #10131c;
+  --text-2: #454c62;
+  --muted: #6c7389;
+  --border: rgba(16, 19, 28, 0.12);
+  --grid: #e2e5ee;
+  --accent: #5b3ff0;
+  --accent-2: #c02a98;
+  --accent-strong: #4a2fd6;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(91, 63, 240, 0.10);
+  --glow: rgba(91, 63, 240, 0.30);
+  --gold: #b97c00;
+  --gold-soft: rgba(201, 138, 0, 0.13);
+  --vanguard: #2a74d6;
+  --duelist: #e0581f;
+  --strategist: #12a06a;
+  --good: #12a03c;
+  --good-text: #0b7a2c;
+  --bad: #d23a48;
+  --warn: #b97800;
+  --shadow: 0 1px 2px rgba(16, 18, 30, 0.06), 0 8px 24px rgba(16, 18, 30, 0.08);
+  --hero-grad: linear-gradient(115deg, #1d1650 0%, #33208a 38%, #5426a3 68%, #8a2189 100%);
+  --hero-text: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -949,6 +945,213 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .heute { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: .92rem; line-height: 1.5; margin-top: 8px; }
 .pstep .ptxt ul { margin: 4px 0 0; padding-left: 18px; }
 .pstep .ptxt li { margin: 3px 0; }
+
+/* ================= Gaming-Look: Gestaltungsebene über den Grundbausteinen ================= */
+body {
+  font-family: var(--font-body); font-size: 15.5px; line-height: 1.5;
+  background:
+    radial-gradient(1100px 560px at 88% -12%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(900px 520px at -12% 112%, var(--bg-glow-2), transparent 60%),
+    repeating-linear-gradient(0deg, var(--tex) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(90deg, var(--tex) 0 1px, transparent 1px 48px),
+    var(--bg);
+  background-attachment: fixed;
+}
+h1, h2, h3, h4, .brand b, .kpi .v, .page-head h1, .card h2, .fold > summary h2 { font-family: var(--font-display); text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Kopf und Navigation */
+.page-head h1 { font-size: 1.85rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; display: flex; align-items: center; gap: 12px; }
+.page-head h1::before { content: ""; flex: none; width: 9px; height: .85em; background: linear-gradient(180deg, var(--accent), var(--accent-2)); transform: skewX(-18deg); box-shadow: 0 0 12px var(--glow); }
+.sidebar { background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(10px); }
+.brand b { font-size: 1.15rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+nav.tabs button { font-family: var(--font-display); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: .92rem; border-radius: 6px; }
+nav.tabs button[aria-selected="true"] { background: linear-gradient(90deg, var(--accent-soft), transparent 90%); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+nav.tabs button[aria-selected="true"] svg.i { stroke: var(--accent-strong); filter: drop-shadow(0 0 6px var(--glow)); }
+.subnav button { font-family: var(--font-display); letter-spacing: .03em; border-radius: 4px; background: var(--surface-2); }
+.subnav button[aria-selected="true"] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: var(--accent-text); box-shadow: 0 4px 16px var(--accent-soft); }
+.bottombar { background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(12px); }
+.bottombar button { font-family: var(--font-display); letter-spacing: .03em; text-transform: uppercase; font-size: .64rem; border-radius: 6px; }
+.bottombar button[aria-selected="true"] { color: var(--text); background: linear-gradient(180deg, var(--accent-soft), transparent); box-shadow: inset 0 2px 0 var(--accent); }
+.bottombar button[aria-selected="true"] svg.i { stroke: var(--accent-strong); filter: drop-shadow(0 0 6px var(--glow)); }
+
+/* Karten und Flächen */
+.card, .fold, .kpi, .kpi-chart {
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), transparent 46%) top left / 100% 1px no-repeat,
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 75%, transparent), var(--surface));
+}
+.card h2 { font-size: 1.02rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.card h3 { font-family: var(--font-display); letter-spacing: .08em; }
+.fold > summary h2 { letter-spacing: .03em; text-transform: uppercase; }
+.hero-banner {
+  background: var(--hero-grad); color: var(--hero-text); border: 1px solid rgba(255, 255, 255, .08); box-shadow: 0 18px 40px rgba(20, 8, 60, .45);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+}
+.hero-banner::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .055) 0 2px, transparent 2px 16px); }
+.hero-banner::after { right: -40px; top: -80px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255, 194, 61, .28), transparent 65%); }
+.hero-banner h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .03em; color: var(--hero-text); }
+.hero-banner > * { position: relative; }
+.note { border-radius: 8px; border: 1px solid var(--border); }
+.toast { font-family: var(--font-display); letter-spacing: .02em; border-radius: 6px; background: var(--surface-3); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 0 18px var(--accent-soft); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 900px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }
+
+/* Knöpfe: schräge Ecken wie im Spiel-Menü */
+.btn {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .86rem;
+  border-radius: 3px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-text);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  transition: transform .1s, filter .15s;
+}
+.btn:hover { background: linear-gradient(135deg, var(--accent), var(--accent-2)); filter: brightness(1.15) saturate(1.1); box-shadow: none; }
+.btn.small { font-size: .76rem; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+.btn.ghost { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent-strong); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.btn.ghost:hover { background: var(--accent-soft); filter: none; }
+.btn.danger { background: transparent; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.btn.danger:hover { background: color-mix(in srgb, var(--bad) 12%, transparent); filter: none; }
+.btn.icon, .linkbtn { clip-path: none; }
+.btn:focus-visible { clip-path: none; outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn:disabled { filter: grayscale(.6) brightness(.8); }
+
+/* Auswahl, Chips, Abzeichen */
+.chip { border-radius: 4px; }
+.chip.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; box-shadow: 0 0 14px var(--accent-soft); }
+.badge { border-radius: 4px; font-family: var(--font-display); letter-spacing: .03em; }
+.tag { border-radius: 3px; }
+.seg { border-radius: 6px; }
+.seg label { border-radius: 4px; font-family: var(--font-display); letter-spacing: .02em; }
+.seg input:checked + label { background: var(--surface-3); box-shadow: inset 0 -2px 0 var(--accent); }
+input, select, textarea { border-radius: 6px; }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 16px var(--accent-soft); }
+.save-chip, .level-chip { border-radius: 4px; font-family: var(--font-display); letter-spacing: .03em; }
+
+/* Ergebnis-Pillen */
+.pill { border-radius: 3px; font-family: var(--font-display); letter-spacing: .04em; text-transform: uppercase; font-size: .72rem; }
+.pill.win { background: color-mix(in srgb, var(--good) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 45%, transparent); }
+.pill.loss { background: color-mix(in srgb, var(--bad) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 45%, transparent); }
+
+/* Helden-Avatare als Sechsecke mit Rollenfarbe */
+.av {
+  border-radius: 0; box-shadow: none;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 62%, var(--surface)), color-mix(in srgb, var(--c) 22%, var(--surface)));
+  color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
+.av.sm { box-shadow: none; }
+.av.pic, .av.pic.sm { border: 0; padding: 2px; background: var(--c); }
+.av.pic img { clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%); background: var(--surface-3); }
+.role::before { width: 9px; height: 9px; border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+
+/* Kennzahlen */
+.kpi { padding: 14px 16px 12px; }
+.kpi .l { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .07em; font-size: .72rem; }
+.kpi .v { font-weight: 700; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+th { font-family: var(--font-display); letter-spacing: .07em; }
+tbody tr:hover { background: var(--accent-soft); }
+td.num, th.num { font-variant-numeric: tabular-nums; }
+
+/* Fortschritt: Balken und Ringe leuchten */
+.track > span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 10px var(--accent-soft); }
+.ring circle:nth-child(2) { filter: drop-shadow(0 0 4px var(--glow)); }
+.ring text { font-family: var(--font-display); }
+
+/* Plan, Review, Abzeichen */
+.day-tile { border-radius: 6px; }
+.day-tile.today { box-shadow: 0 0 0 1px var(--accent), 0 0 18px var(--accent-soft); }
+.nextstep { border-left: 0; box-shadow: inset 3px 0 0 var(--gold), var(--shadow); }
+.rvm { border-radius: 8px; }
+.bdg { border-radius: 8px; }
+.bdg.on { background: radial-gradient(circle at 50% 0, var(--gold-soft), transparent 70%), var(--surface-2); box-shadow: 0 0 0 1px var(--gold), 0 0 18px var(--gold-soft); }
+
+
+/* ---------- Grafiken ---------- */
+.ri { --c: var(--muted); width: 15px; height: 15px; flex: none; fill: none; stroke: var(--c); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 50%, transparent)); }
+.ri.Vanguard { --c: var(--vanguard); } .ri.Duelist { --c: var(--duelist); } .ri.Strategist { --c: var(--strategist); }
+.role.ico::before { display: none; }
+.role.ico { font-family: var(--font-display); letter-spacing: .03em; }
+/* Form-Leiste */
+.fstrip { display: flex; gap: 4px; align-items: flex-end; min-width: 0; flex: 1; }
+.fcell { --c: var(--muted); flex: 1 1 0; max-width: 30px; min-width: 10px; height: 34px; display: grid; place-items: center; border-radius: 3px; font: 700 .68rem/1 var(--font-display); color: #fff; box-shadow: inset 0 -3px 0 var(--c); }
+.fcell.w { background: linear-gradient(180deg, var(--good), color-mix(in srgb, var(--good) 55%, var(--surface))); }
+.fcell.l { background: linear-gradient(180deg, color-mix(in srgb, var(--bad) 80%, var(--surface)), color-mix(in srgb, var(--bad) 40%, var(--surface))); height: 26px; }
+.fcell.Vanguard { --c: var(--vanguard); } .fcell.Duelist { --c: var(--duelist); } .fcell.Strategist { --c: var(--strategist); }
+/* Heute: Deine Form */
+.hudtop { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.hstreak { display: flex; align-items: baseline; gap: 6px; padding: 6px 12px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); white-space: nowrap; }
+.hstreak b { font: 700 1.5rem/1 var(--font-display); }
+.hstreak span { font-size: .8rem; color: var(--muted); }
+.hstreak.w b { color: var(--good-text); } .hstreak.l b { color: var(--bad); }
+.hks-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.hk { --c: var(--accent); position: relative; min-width: 0; padding: 10px 12px 4px; border-radius: 6px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 12%, var(--surface-2)), var(--surface-2)); border: 1px solid color-mix(in srgb, var(--c) 30%, var(--border)); }
+.hk.bad { --c: var(--bad); } .hk.gold { --c: var(--gold); } .hk.Vanguard { --c: var(--vanguard); } .hk.Duelist { --c: var(--duelist); } .hk.Strategist { --c: var(--strategist); }
+.hkl { font: 600 .68rem/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); overflow-wrap: anywhere; }
+.hkv { font: 700 1.6rem/1.15 var(--font-display); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.hks { font-size: .76rem; min-height: 1.2em; }
+.hk svg.spark { display: block; width: 100%; height: 30px; margin-top: 2px; }
+.gd { color: var(--muted); font-weight: 600; }
+.gd.good { color: var(--good-text); } .gd.bad { color: var(--bad); }
+.rsplit { display: flex; gap: 3px; margin-top: 12px; height: 26px; border-radius: 4px; overflow: hidden; }
+.rs { --c: var(--muted); display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 6px; font: 600 .72rem/1 var(--font-display); letter-spacing: .03em; color: var(--text); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 45%, var(--surface-2)), color-mix(in srgb, var(--c) 22%, var(--surface-2))); white-space: nowrap; overflow: hidden; }
+.rs .ri { stroke: var(--text); filter: none; width: 13px; height: 13px; }
+.rs.Vanguard { --c: var(--vanguard); } .rs.Duelist { --c: var(--duelist); } .rs.Strategist { --c: var(--strategist); }
+/* Karten-Übersicht */
+.mstats { display: grid; gap: 10px; }
+.mstn { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; margin-bottom: 4px; }
+.mstn b { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.mstn span { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mstb { display: flex; gap: 2px; height: 10px; border-radius: 2px; overflow: hidden; }
+.mstb .w { background: linear-gradient(90deg, var(--good), color-mix(in srgb, var(--good) 70%, var(--surface))); }
+.mstb .l { background: color-mix(in srgb, var(--bad) 70%, var(--surface)); }
+/* Heldenkarten */
+.hero-card { --c: var(--accent); background:
+  linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent), transparent 42%) top left / 100% 120px no-repeat,
+  linear-gradient(90deg, var(--c), transparent 60%) top left / 100% 2px no-repeat,
+  linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 75%, transparent), var(--surface)); }
+.hero-card.Vanguard { --c: var(--vanguard); } .hero-card.Duelist { --c: var(--duelist); } .hero-card.Strategist { --c: var(--strategist); }
+.hero-card-head { align-items: center; }
+.hero-card-head .hch { flex: 1; min-width: 0; }
+.hero-card-head h2 { font-size: 1.25rem; text-transform: uppercase; letter-spacing: .03em; margin: 2px 0 0; }
+.hcr { --c: inherit; display: flex; align-items: center; gap: 6px; font: 600 .7rem/1 var(--font-display); text-transform: uppercase; letter-spacing: .08em; color: var(--c); }
+.hcr .ri { --c: inherit; stroke: currentColor; }
+.hcm { display: flex; flex-direction: column; align-items: center; gap: 1px; font: 600 .62rem/1 var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hcm .ring { width: 46px; height: 46px; }
+.hcstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hcstats > div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; min-width: 0; }
+.hcstats b { font: 700 1.05rem/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+.hcstats span { font-size: .7rem; color: var(--muted); }
+.av.xl { width: 64px; height: 64px; font-size: 1.1rem; }
+.av.pic.xl { padding: 3px; }
+.lesson-stats .ring circle:nth-child(2) { stroke: var(--gold); filter: drop-shadow(0 0 5px rgba(255, 194, 61, .6)); }
+
+
+/* ---------- Belohnungen und Fortschritt ---------- */
+.fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
+.flame { display: inline-block; }
+.flame.on { animation: flame 1.6s ease-in-out infinite; transform-origin: 50% 90%; filter: drop-shadow(0 0 6px rgba(255, 150, 40, .7)); }
+@keyframes flame { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.18) rotate(3deg); } }
+.bdg .em { width: 50px; height: 56px; display: grid; place-items: center; font-size: 1.45rem; margin-bottom: 4px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(160deg, var(--surface-3), var(--surface-2)); filter: grayscale(1); opacity: .7; }
+.bdg.on .em { background: linear-gradient(160deg, var(--gold), color-mix(in srgb, var(--gold) 45%, var(--accent-2))); filter: drop-shadow(0 0 10px var(--gold-soft)); opacity: 1; }
+.bdg b { font-family: var(--font-display); letter-spacing: .03em; }
+.tbb { position: relative; height: 10px; margin-top: 6px; min-width: 120px; border-radius: 2px; background: var(--surface-3); }
+.tbb .tbr { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--gold) 22%, transparent); }
+.tbb .tbv { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 1px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 8px var(--accent-soft); }
+.tbb.s2 .tbv { background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 75%, var(--accent-2))); }
+.tbb.s0 .tbv { background: linear-gradient(90deg, color-mix(in srgb, var(--bad) 80%, var(--surface)), var(--bad)); }
+.tbb i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; }
+.tbb .tbe, .tbleg .tbe { background: var(--gold); }
+.tbb .tbc, .tbleg .tbc { background: var(--muted); }
+.tbleg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.tbleg .tbv, .tbleg .tbr { display: inline-block; width: 14px; height: 8px; border-radius: 1px; }
+.tbleg .tbv { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.tbleg .tbr { background: color-mix(in srgb, var(--gold) 30%, transparent); }
+.tbleg i { display: inline-block; width: 2px; height: 12px; }
+
+@media (max-width: 900px) { .head-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; gap: 6px; padding-bottom: 2px; } .head-actions::-webkit-scrollbar { display: none; } .head-actions > * { flex: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
 </style>
 </head>
 <body>
@@ -1011,6 +1214,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
     </div>
   </div>
   <div class="card" id="deathDashCard"><div class="card-head"><h2 data-icon="target">Woran du stirbst</h2><span class="muted small">letzte 20 Matches</span></div><div id="deathDash"></div></div>
+  <div class="card" id="mapDashCard"><div class="card-head"><h2 data-icon="map">Deine Karten</h2><span class="muted small">letzte 60 Matches · Siege und Niederlagen</span></div><div id="mapDash"></div></div>
   <details class="fold" id="flexCard" data-f="dash-flex"></details>
   <details class="fold" id="pathCard" data-f="dash-path"></details>
 </section>
@@ -1149,6 +1353,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
   </form>
   <div class="card">
     <div class="card-head"><h2 data-icon="list">Match-Verlauf</h2><span class="muted small" id="matchCount"></span></div>
+    <div id="logStrip" style="margin-bottom:12px"></div>
     <div class="table-wrap" id="matchTable"></div>
   </div>
 </section>
@@ -3685,7 +3890,7 @@ function av(name, size) {
   return `<span class="av ${role} ${size || ""}${src ? " pic" : ""}" title="${esc(name)} · ${esc(role)}" aria-hidden="true">${src ? `<img src="${src}" alt="" decoding="async">` : esc(initials(name))}</span>`;
 }
 function heroChip(name) { return `<span class="hero">${av(name, "sm")}<b>${esc(name)}</b></span>`; }
-function roleChip(role, label) { return `<span class="role ${role}">${esc(label || role)}</span>`; }
+function roleChip(role, label) { const ic = typeof roleIcon === "function" ? roleIcon(role) : ""; return `<span class="role ${role}${ic ? " ico" : ""}">${ic}${esc(label || role)}</span>`; }
 function wrBadge(s) {
   const cls = s.n >= 2 ? (s.wr >= 0.55 ? "good" : s.wr < 0.45 ? "bad" : "") : "";
   const arrow = cls === "good" ? "▲" : cls === "bad" ? "▼" : "";
@@ -3901,17 +4106,87 @@ function lineChart(el, values, meta) {
 function rolling(list, size) {
   return list.map((m, i) => { const w = list.slice(Math.max(0, i - size + 1), i + 1); return w.filter(x => x.result === "W").length / w.length; });
 }
-function sparkline(values) {
+// ---------- Grafiken: Form-Leiste, Kennzahlen mit Verlauf, Rollen-Embleme, Karten-Übersicht ----------
+// Alles kommt aus deinen eigenen Matches; Werte pro Held über heroOnly (bei Heldenwechsel nur der Anteil des Haupthelden).
+let gfxN = 0;
+const ROLE_GLYPH = {
+  Vanguard: '<path d="M12 3l7 3v5c0 4.6-3 8.2-7 10-4-1.8-7-5.4-7-10V6z"/><path d="M12 7v10"/>',
+  Duelist: '<circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/>',
+  Strategist: '<path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>'
+};
+function roleIcon(role, cls) {
+  const g = ROLE_GLYPH[role];
+  return g ? `<svg class="ri ${role}${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${g}</svg>` : "";
+}
+// Verlauf als Fläche mit Linie; values zwischen 0 und 1
+function sparkline(values, o) {
   if (values.length < 2) return "";
-  const W = 120, H = 28;
-  const pts = values.map((v, i) => `${(i * W / (values.length - 1)).toFixed(1)},${(H - 3 - v * (H - 6)).toFixed(1)}`);
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+  const W = 120, H = 30, id = "spk" + (++gfxN), col = (o && o.color) || "var(--accent)";
+  const pts = values.map((v, i) => `${(i * W / (values.length - 1)).toFixed(1)},${(H - 3 - Math.max(0, Math.min(1, v)) * (H - 7)).toFixed(1)}`);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,${H} ${pts.join(" ")} ${W},${H}" fill="url(#${id})"/>
+    <polyline points="${pts.join(" ")}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${col};stop-opacity:.38"/><stop offset="1" style="stop-color:${col};stop-opacity:0"/></linearGradient></defs></svg>`;
+}
+const gfxNorm = vals => { const lo = Math.min(...vals), hi = Math.max(...vals); return vals.map(v => (hi > lo ? (v - lo) / (hi - lo) : 0.5)); };
+// Letzte Matches als Leiste: S = Sieg, N = Niederlage, unten die Rollenfarbe
+function formStripHtml(list, n) {
+  const ms = list.slice(-(n || 12));
+  if (!ms.length) return "";
+  const w = ms.filter(m => m.result === "W").length;
+  return `<div class="fstrip" role="img" aria-label="Letzte ${ms.length} Matches: ${w} Siege, ${ms.length - w} Niederlagen">${ms.map(m =>
+    `<span class="fcell ${m.result === "W" ? "w" : "l"} ${esc(heroRole(m.hero))}" title="${esc(m.hero)} · ${m.result === "W" ? "Sieg" : "Niederlage"} · ${m.k}/${m.d}/${m.a} · ${esc(fmtDate(m.date))}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>`;
+}
+// Veränderung gegenüber den 20 Matches davor
+function gfxDelta(now, before, better, fmt) {
+  if (!isFinite(now) || !isFinite(before)) return "";
+  const d = now - before, tol = Math.abs(before) * 0.03;
+  if (Math.abs(d) <= tol) return `<span class="gd">± gleich</span>`;
+  const good = better > 0 ? d > 0 : d < 0;
+  return `<span class="gd ${good ? "good" : "bad"}">${d > 0 ? "▲" : "▼"} ${fmt(Math.abs(d))}</span>`;
+}
+function formHudHtml() {
+  const all = state.matches;
+  if (all.length < 3) return "";
+  const last = all.slice(-20), prev = all.slice(-40, -20), hv = heroOnly(last), hp = heroOnly(prev);
+  const lr = last[last.length - 1].result;
+  let streak = 0;
+  for (let i = last.length - 1; i >= 0 && last[i].result === lr; i--) streak++;
+  const s = summary(last), sp = prev.length >= 5 ? summary(prev) : null;
+  const roll = last.map((m, i) => { const w = last.slice(Math.max(0, i - 4), i + 1); return w.filter(x => x.result === "W").length / w.length; });
+  const dOf = l => l.filter(m => m.dur > 0 && m.d !== null && m.d !== undefined).map(m => m.d / m.dur * 10);
+  const d10 = dOf(hv), d10p = dOf(hp), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
+  const role = mainRole(), [kf, kl] = rvKeyStat({ hero: (allHeroes().find(h => h.role === role) || {}).name });
+  const kOf = l => l.filter(m => heroRole(m.hero) === role && m.dur > 0 && m[kf] !== null && m[kf] !== undefined).map(m => m[kf] / m.dur * 10);
+  const k10 = kOf(hv), k10p = kOf(hp);
+  const kd = last.filter(m => m.k !== null && m.d !== null).map(kda);
+  const tile = (label, val, delta, spark, cls) => `<div class="hk ${cls || ""}"><div class="hkl">${label}</div><div class="hkv">${val}</div><div class="hks">${delta || "&nbsp;"}</div>${spark}</div>`;
+  const tiles = [
+    tile("Winrate", pct(s.wr), sp ? gfxDelta(s.wr, sp.wr, 1, v => Math.round(v * 100) + " Pkt.") : "", sparkline(roll), "acc"),
+    d10.length >= 2 ? tile("Tode pro 10 Min", numDe(avg(d10).toFixed(1)), d10p.length >= 3 ? gfxDelta(avg(d10), avg(d10p), -1, v => numDe(v.toFixed(1))) : "", sparkline(gfxNorm(d10), { color: "var(--bad)" }), "bad") : "",
+    k10.length >= 2 ? tile(`${kl} pro 10 Min · ${esc(ROLE_SHORT[role])}`, fmtNum(avg(k10)), k10p.length >= 3 ? gfxDelta(avg(k10), avg(k10p), 1, v => fmtNum(v)) : "", sparkline(gfxNorm(k10), { color: `var(--${role.toLowerCase()})` }), role) : "",
+    kd.length >= 2 ? tile("KDA", numDe(avg(kd).toFixed(2)), sp && isFinite(sp.kda) ? gfxDelta(avg(kd), sp.kda, 1, v => numDe(v.toFixed(2))) : "", sparkline(gfxNorm(kd), { color: "var(--gold)" }), "gold") : ""
+  ].filter(Boolean).join("");
+  const byR = group(last, m => heroRole(m.hero)), n = last.length;
+  const split = ROLES.filter(r => byR[r]).map(r => `<span class="rs ${r}" style="flex:${byR[r].length}" title="${esc(ROLE_DE[r])}: ${byR[r].length} von ${n}">${byR[r].length / n >= 0.3 ? `${roleIcon(r)}${esc(ROLE_SHORT[r])} ${Math.round(byR[r].length / n * 100)} %` : byR[r].length / n >= 0.12 ? roleIcon(r) : ""}</span>`).join("");
+  return `<div class="card hud"><div class="card-head"><h2>${icon("analysis")}Deine Form</h2><span class="muted small">letzte ${plural(n, "Match", "Matches")}${prev.length >= 5 ? " · Pfeile: Vergleich mit den 20 davor" : ""}</span></div>
+    <div class="hudtop">${formStripHtml(last, 12)}<div class="hstreak ${lr === "W" ? "w" : "l"}"><b>${streak}</b><span>${lr === "W" ? (streak === 1 ? "Sieg" : "Siege") : (streak === 1 ? "Niederlage" : "Niederlagen")} in Folge</span></div></div>
+    <div class="hks-grid">${tiles}</div>
+    <div class="rsplit" aria-label="Rollen in den letzten ${n} Matches">${split}</div></div>`;
+}
+// Karten-Übersicht: Siege und Niederlagen pro Karte (die häufigsten sechs)
+function mapStatsHtml(list) {
+  const by = Object.entries(group(list.filter(m => m.map), m => m.map)).map(([k, l]) => [k, summary(l)]).filter(([, x]) => x.n >= 2).sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  if (!by.length) return `<p class="muted small" style="margin:0">Sobald du mindestens zwei Matches auf einer Karte hast, erscheint sie hier.</p>`;
+  const max = Math.max(...by.map(([, x]) => x.n));
+  return `<div class="mstats">${by.map(([k, x]) => `<div class="mst"><div class="mstn"><b>${esc(k)}</b><span>${x.w} S · ${x.n - x.w} N · ${pct(x.wr)}</span></div>
+    <div class="mstb" style="width:${Math.max(18, x.n / max * 100)}%"><span class="w" style="flex:${x.w}"></span><span class="l" style="flex:${x.n - x.w}"></span></div></div>`).join("")}</div>`;
 }
 function ring(ratio, label) {
-  const r = 22, c = 2 * Math.PI * r;
+  const r = 22, c = 2 * Math.PI * r, id = "rg" + (++gfxN);
   return `<svg class="ring" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="6"/>
-    <circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(ratio || 0) * c} ${c}" transform="rotate(-90 27 27)"/>
-    <text x="27" y="31" text-anchor="middle" style="fill:var(--text);font-size:12px;font-weight:700">${label}</text></svg>`;
+    <circle cx="27" cy="27" r="${r}" fill="none" stroke="url(#${id})" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(ratio || 0) * c} ${c}" transform="rotate(-90 27 27)"/>
+    <text x="27" y="31" text-anchor="middle" style="fill:var(--text);font-size:12px;font-weight:700">${label}</text>
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient></defs></svg>`;
 }
 
 // ---------- Tabs ----------
@@ -3932,7 +4207,7 @@ $("#quickLog").addEventListener("click", () => { showTab("log"); window.scrollTo
 
 // ---------- Theme ----------
 document.querySelectorAll(".theme-toggle").forEach(b => b.addEventListener("click", () => {
-  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const cur = document.documentElement.dataset.theme || "dark";   // Gaming-Look: dunkel, solange nichts anderes gewählt ist
   const next = cur === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem(STORE_KEY + "-theme", next); } catch (e) {}
@@ -4291,7 +4566,7 @@ function renderToday() {
   const doneN = items.filter(x => x.done).length;
   const hero = `<div class="card hero-banner lesson-hero"><div style="flex:1;min-width:240px"><div class="small" style="opacity:.85;position:relative">${esc(dateTxt)}</div>
     <h2 style="font-size:1.35rem;margin-top:4px">${doneN === items.length ? "Alles erledigt für heute 🎉" : `Dein Tag in ${["", "einem", "zwei", "drei", "vier", "fünf", "sechs"][items.length] || items.length} Schritten`}</h2>
-    <p>${started && cur <= 56 ? `Trainingsplan: Tag ${cur} von 56 · ` : ""}Stufe ${currentLevel()} · ${lessonsN} von ${LESSONS.length} Lektionen · 🔥 ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} Training in Folge</p></div>
+    <p>${started && cur <= 56 ? `Trainingsplan: Tag ${cur} von 56 · ` : ""}Stufe ${currentLevel()} · ${lessonsN} von ${LESSONS.length} Lektionen · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} Training in Folge</p></div>
     <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>`;
   const list = `<div class="card"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}<div class="ts">${x.s}</div></div><div class="ta">${x.a || ""}</div></div>`).join("")}</div>`;
   // Fokus fürs nächste Match
@@ -4326,7 +4601,7 @@ function renderToday() {
     ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
-  el.innerHTML = hero + nextStepHtml() + list + missionsCardHtml() + tbTodayHtml() + focus + rulesCardHtml() + tourCardHtml() + newsCard + first + guide;
+  el.innerHTML = hero + formHudHtml() + nextStepHtml() + list + missionsCardHtml() + tbTodayHtml() + focus + rulesCardHtml() + tourCardHtml() + newsCard + first + guide;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -4425,6 +4700,7 @@ function renderDashboard() {
     { empty: "Markiere beim Loggen, was schiefgelaufen ist – hier siehst du dann Muster." });
 
   $("#deathDash").innerHTML = deathCardHtml(ms.slice(-20), true);
+  $("#mapDash").innerHTML = mapStatsHtml(ms.slice(-60));
   $("#insights").innerHTML = notes(insights()) || empty("Noch keine Hinweise.", "ai");
 }
 
@@ -4619,6 +4895,7 @@ function renderLog() {
 
   const rows = state.matches.slice().reverse();
   $("#matchCount").textContent = rows.length ? plural(rows.length, "Match", "Matches") : "";
+  $("#logStrip").innerHTML = state.matches.length ? formStripHtml(state.matches, 20) : "";
   $("#matchTable").innerHTML = rows.length ? `<table><thead><tr><th>Datum</th><th>Held</th><th>Ergebnis</th><th class="num">K/D/A</th><th>Map / Modus</th><th>Gegner</th><th>Reflexion</th><th></th></tr></thead><tbody>
     ${rows.map(m => `<tr>
       <td class="small">${fmtDate(m.date)}${planStarted() ? `<br><span class="muted" data-dayfor="${m.date}">${planDayOf(m.date) ? "Tag " + planDayOf(m.date) : "freies Spiel"}</span>` : ""}${m.source === "rivalsdata" ? `<br><span class="badge" title="Von Rivals Data importiert">RD</span>` : ""}</td>
@@ -5421,11 +5698,14 @@ function renderHeroes() {
     const tags = heroTags(h.name);
     const pc = personalCounters(h.name);
     const g = meta.get(h.name), r = rd.get(h.name);
-    return `<div class="card hero-card">
-      <div class="hero-card-head">${av(h.name, "lg")}<div><h2>${esc(h.name)}</h2>${roleChip(h.role)}${heroAliases(h.name).length ? `<div class="small muted">auch: ${esc(heroAliases(h.name).join(", "))}</div>` : ""}</div></div>
+    const hs = summary(heroOnly(stats[h.name] || []));
+    return `<div class="card hero-card ${h.role}">
+      <div class="hero-card-head">${av(h.name, "xl")}<div class="hch"><div class="hcr">${roleIcon(h.role)}${esc(ROLE_DE[h.role] || h.role)}</div><h2>${esc(h.name)}</h2>${heroAliases(h.name).length ? `<div class="small muted">auch: ${esc(heroAliases(h.name).join(", "))}</div>` : ""}</div>
+        ${s.n ? `<div class="hcm" title="${s.n} Matches, ${pct(s.wr)} Siege">${ring(Math.min(1, s.n / 20), String(s.n))}<span>Matches</span></div>` : ""}</div>
+      ${s.n ? `<div class="hcstats"><div><b>${pct(s.wr)}</b><span>Winrate</span></div><div><b>${isFinite(hs.kda) ? numDe(hs.kda.toFixed(2)) : "–"}</b><span>KDA</span></div><div><b>${isFinite(hs.d10) ? numDe(hs.d10.toFixed(1)) : "–"}</b><span>Tode/10 Min</span></div></div>` : ""}
       <div>${tags.map(t => `<span class="tag" title="${esc(TAGS[t] || "")}">${esc(t)}</span>`).join("") || `<span class="muted small">Keine Tags</span>`}</div>
       <div class="stat-line">
-        ${s.n ? `<span>Gespielt <b>${s.n}×</b> · <b>${pct(s.wr)}</b> WR · KDA <b>${s.kda.toFixed(2)}</b></span>` : "<span>Noch nicht gespielt</span>"}
+        ${s.n ? "" : "<span>Noch nicht gespielt</span>"}
         ${vs.n ? `<span>Als Gegner <b>${vs.n}×</b> · deine WR <b>${pct(vs.wr)}</b></span>` : ""}
         ${r ? `<span>Rivals Data: <b>${isFinite(r.winrate) ? Math.round(r.winrate) + " %" : "–"}</b> in ${r.games} Matches</span>` : ""}
         ${g && isFinite(g.winrate) ? `<span>Global: <b>${g.winrate.toFixed(1)} %</b> WR${isFinite(g.pickrate) ? ` · ${g.pickrate.toFixed(1)} % Pick` : ""}</span>` : ""}
@@ -6690,6 +6970,7 @@ function completeLesson(l, p) {
   state.lessons.done[l.id] = { date: today(), ts: Date.now(), score: own, total: l.quiz.length, answered: qs.filter(x => p.answers[x.key] !== undefined).length, reflection: p.reflection.trim() };
   state.lessons.activeFocus = l.id;
   delete state.lessons.progress[l.id];
+  celebrate();
   // Routine-Punkt „Tägliche Lektion …“ automatisch abhaken
   const item = state.routine.find(r => r.toLowerCase().startsWith("tägliche lektion"));
   if (item) state.routineDone[today()] = [...new Set((state.routineDone[today()] || []).concat(item))];
@@ -8017,10 +8298,49 @@ function tbStatus(key, v, e, c) {
   return 0;
 }
 const TB_CHIP = { 2: ["Eternity-Niveau", "ok"], 1: ["Auf dem Weg", ""], 0: ["Noch darunter", "bad"] };
+// ---------- Feier-Effekt ----------
+// Kurzer Konfetti-Regen beim Abschliessen (Tag, Review, Lektion, Mission, Abzeichen). Aus bei «weniger Bewegung» im System
+// und mit dem Schalter bei den Abzeichen (state.settings.noFx). Blockiert nichts: die Fläche lässt alle Klicks durch.
+const fxOn = () => !(state.settings && (state.settings.noFx || state.settings.noGame)) && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+function celebrate(big) {
+  if (!fxOn() || document.hidden) return;
+  const cv = document.createElement("canvas"), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+  cv.className = "fx"; cv.width = W * dpr; cv.height = H * dpr; cv.setAttribute("aria-hidden", "true");
+  document.body.appendChild(cv);
+  const ctx = cv.getContext("2d");
+  if (!ctx) { cv.remove(); return; }
+  ctx.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement), col = ["--accent", "--accent-2", "--gold", "--strategist", "--vanguard", "--duelist"].map(v => css.getPropertyValue(v).trim() || "#fff");
+  const n = big ? 140 : 70, parts = Array.from({ length: n }, () => ({
+    x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: H * 0.35, vx: (Math.random() - 0.5) * (big ? 14 : 10), vy: -Math.random() * (big ? 13 : 10) - 4,
+    s: 4 + Math.random() * 5, r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3, c: col[Math.floor(Math.random() * col.length)]
+  }));
+  const t0 = performance.now(), dur = big ? 1800 : 1300;
+  const step = t => {
+    const k = (t - t0) / dur;
+    ctx.clearRect(0, 0, W, H);
+    parts.forEach(p => {
+      p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.lineTo(p.s * 0.6, 0); ctx.lineTo(0, p.s); ctx.lineTo(-p.s * 0.6, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+    });
+    if (k < 1) requestAnimationFrame(step); else cv.remove();
+  };
+  requestAnimationFrame(step);
+}
+// Vergleich mit den Besten als Balken: dein Wert, die mittlere Hälfte der Eternity+-Spieler, die Mitte von Eternity+ (gold) und Celestial (grau)
+function tbBullet(key, mine, e, c) {
+  const q = e && e[key];
+  if (!q || !isFinite(mine)) return "";
+  const cm = c && c[key] ? c[key][1] : null, max = Math.max(mine, q[2], cm || 0) * 1.12 || 1;
+  const P = v => Math.max(0, Math.min(100, v / max * 100));
+  const st = tbStatus(key, mine, e, c);
+  return `<div class="tbb s${st === null ? "x" : st}" aria-hidden="true"><span class="tbr" style="left:${P(q[0]).toFixed(1)}%;width:${(P(q[2]) - P(q[0])).toFixed(1)}%"></span><span class="tbv" style="width:${P(mine).toFixed(1)}%"></span>${cm !== null ? `<i class="tbc" style="left:${P(cm).toFixed(1)}%"></i>` : ""}<i class="tbe" style="left:${P(q[1]).toFixed(1)}%"></i></div>`;
+}
 function tbRowHtml(key, mine, e, c) {
   const m = TB_METRICS[key], q = e && e[key], st = tbStatus(key, mine, e, c);
   const rng = a => a ? `${m.fmt(a[0])} – ${m.fmt(a[2])}` : "–";
-  return `<tr><td>${m.label}</td><td class="num"><b>${isFinite(mine) ? m.fmt(mine) : "–"}</b></td><td class="num">${q ? m.fmt(q[1]) : "–"}<div class="muted small">${rng(q)}</div></td>
+  return `<tr><td>${m.label}${tbBullet(key, mine, e, c)}</td><td class="num"><b>${isFinite(mine) ? m.fmt(mine) : "–"}</b></td><td class="num">${q ? m.fmt(q[1]) : "–"}<div class="muted small">${rng(q)}</div></td>
     <td class="num">${c && c[key] ? m.fmt(c[key][1]) : "–"}</td><td>${st === null ? '<span class="muted small">–</span>' : `<span class="badge ${TB_CHIP[st][1]}">${TB_CHIP[st][0]}</span>`}</td></tr>`;
 }
 // «So spielen die Besten» für einen Helden: eigene Werte (letzte 12 Matches mit dem Helden) neben Eternity+ und Celestial
@@ -8034,6 +8354,7 @@ function tbHeroHtml(h, opts) {
   return `<div class="table-wrap"><table class="tbt"><thead><tr><th>pro 10 Min</th><th class="num">Du</th><th class="num">Eternity+<div class="muted small">Mitte, 25–75 %</div></th><th class="num">Celestial</th><th>Stand</th></tr></thead><tbody>${rows}
     <tr><td>MVP oder SVP</td><td class="num"><b>${myCarry}</b></td><td class="num">${carry(b.e)}</td><td class="num">${carry(b.c)}</td><td></td></tr></tbody></table></div>
     ${b.mates && b.mates.length ? `<p class="small" style="margin:8px 0 0"><b>Häufigste Mitspieler in Top-Lobbys</b> (Celestial und höher; Anzahl Matches, Winrate dieses Paars): ${b.mates.map(m => `${esc(m[0])} (${m[1]}×, ${m[2]} %)`).join(", ")}. Das ist, was gespielt wird, nicht unbedingt, was am besten passt.</p>` : ""}
+    <p class="small muted tbleg" style="margin:6px 0 0"><span class="tbv"></span> du <span class="tbr"></span> mittlere Hälfte der Eternity+-Spieler <i class="tbe"></i> Eternity+-Mitte <i class="tbc"></i> Celestial-Mitte</p>
     <p class="small muted" style="margin:6px 0 0">Aus ${b.e.n} Datenpunkten von ${b.e.p} Eternity+-Spielern${b.c ? ` und ${b.c.n} von Celestial` : ""} mit ${esc(h)} (Stand ${TB_STAND()}). ${mine.length ? `Deine Werte: ${plural(mine.length, "Match", "Matches")} mit Dauer.` : "Du hast noch keine Matches mit diesem Helden."} Die Werte zeigen, was die Besten erreichen, nicht wie. «Eternity-Niveau» heisst: mindestens so gut wie deren Mitte.</p>`;
 }
 // Meta nach Rangband
@@ -8435,6 +8756,7 @@ function rvFinish(m) {
   save();
   const st = rvStatus();
   toast(st.ok ? `Review geschafft: ${st.done} von ${st.need} ✓` : `Match ausgewertet (${st.done} von ${st.need})`);
+  if (st.ok) celebrate();
   return true;
 }
 function rvSwap(m) {
@@ -8701,6 +9023,7 @@ function wkSync() {
     if (p.have >= mis.n) {
       mis.status = p.ok ? "done" : "missed"; mis.res = p.value; mis.at = today();
       out.push(p.ok ? `Mission geschafft: ${mis.hero}, ${wkMissionText(mis)} 🎉` : `Mission mit ${mis.hero} diesmal nicht geschafft (${wkValueText(mis, p.value)}). Versuch es gern noch einmal.`);
+      if (p.ok) celebrate();
     }
   });
   if (out.length) saveCore();
@@ -8815,7 +9138,7 @@ const BADGES = [
 function bdSync() {
   const rv = rvState(), out = [];
   BADGES.forEach(b => { if (!rv.badges[b.id] && b.ok()) { rv.badges[b.id] = today(); out.push(`Neues Abzeichen: ${b.t} ${b.em}`); } });
-  if (out.length) saveCore();
+  if (out.length) { saveCore(); celebrate(); }
   return out;
 }
 function badgesHtml() {
@@ -8823,12 +9146,18 @@ function badgesHtml() {
   if (state.settings.noGame) return `<p class="small muted">Abzeichen sind ausgeblendet. <button class="linkbtn" type="button" data-bd="on">Wieder einblenden</button></p>`;
   return foldHtml("badges", "Abzeichen und Serie", `<p class="lead" style="margin:0 0 8px">${rvStreak() ? `🔥 ${rvStreak()} ${rvStreak() === 1 ? "Tag" : "Tage"} in Folge mit mindestens einem ausgewerteten Match. ` : ""}Abzeichen sind eine kleine Belohnung zum Dranbleiben. Dass sie dein Spiel besser machen, ist nicht belegt; belegt ist eher der Nutzen vom Zurückblicken.</p>
     <div class="bdgs">${BADGES.map(b => `<div class="bdg ${rv.badges[b.id] ? "on" : ""}" title="${esc(b.d)}"><span class="em" aria-hidden="true">${rv.badges[b.id] ? b.em : "🔒"}</span><b>${esc(b.t)}</b><span class="small muted">${rv.badges[b.id] ? "am " + fmtDate(rv.badges[b.id]) : esc(b.d)}</span></div>`).join("")}</div>
-    <p class="small" style="margin:8px 0 0"><button class="linkbtn" type="button" data-bd="off">Abzeichen ausblenden</button></p>`, { icon: "zap", sub: `${n} von ${BADGES.length}` });
+    <p class="small" style="margin:8px 0 0"><button class="linkbtn" type="button" data-bd="off">Abzeichen ausblenden</button> · <button class="linkbtn" type="button" data-fx="${state.settings.noFx ? "on" : "off"}">Feier-Effekte ${state.settings.noFx ? "einschalten" : "ausschalten"}</button></p>`, { icon: "zap", sub: `${n} von ${BADGES.length}` });
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-bd]");
   if (!b) return;
   state.settings.noGame = b.dataset.bd === "off"; save(); rvRerender();
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fx]");
+  if (!b) return;
+  state.settings.noFx = b.dataset.fx === "off"; save(); rvRerender();
+  if (!state.settings.noFx) celebrate();
 });
 
 // ---------- Der nächste kleine Schritt ----------
@@ -10229,6 +10558,7 @@ function completeDay(n) {
   const openL = dayLessons(n).slice(0, 1).filter(id => !lessonsDone()[id]).map(id => lessonById(id).title)[0];
   const mvTxt = moved.length ? ` ${plural(moved.length, "offener Block wurde", "offene Blöcke wurden")} ${moved.every(c => c.to > 0) ? "auf " + [...new Set(moved.map(c => "Tag " + c.to))].join(", ") + " verschoben" : "zum Nachholen eingeplant"}.` : "";
   toast((after > before ? `Stufe ${after} erreicht: ${lvInfo(after).name}! 🎉` : n < 56 ? `Tag ${n} geschafft! 🎉${openL ? ` Die Lektion „${openL}“ ist noch offen.` : ""}` : "Plan abgeschlossen! 🏆") + mvTxt);
+  celebrate(true);
   renderPlan(); renderLevelChip();
 }
 function weeklyPackageText() {

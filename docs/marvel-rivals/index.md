@@ -26,6 +26,18 @@ Die App hat **fünf Bereiche**, damit du den Überblick behältst. Am Handy steh
 
 Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden (auch unter Spitznamen), Lektionen, Begriffe, Team-Ups und Patch-Einträge. Lange Seiten wie der Trainingsplan haben **einklappbare Karten**: Offen ist, was du jetzt brauchst (zum Beispiel die aktuelle Phase), der Rest bleibt zu. Die App merkt sich, was du geöffnet hast.
 
+## Aussehen
+
+Die App ist im **Gaming-Look** gestaltet: dunkle Spiel-Oberfläche, Violett für Aktionen, Gold für Belohnungen und die Rollenfarben (Tank blau, DPS orange, Support grün) überall, wo es um Helden geht. Knöpfe und Banner haben schräge Ecken wie in Spiel-Menüs, Helden erscheinen als Sechsecke mit Rollenfarbe. Ohne eigene Wahl ist die App dunkel; mit «Hell / Dunkel» (Seitenleiste oder Mond-Symbol am Handy) wechselst du auf das helle Design.
+
+**Grafiken:**
+- **Heute → «Deine Form»:** die letzten zwölf Matches als Leiste (S = Sieg, N = Niederlage, unten die Rollenfarbe), deine aktuelle Serie, vier Kennzahlen mit Verlaufslinie (Winrate, Tode pro 10 Minuten, die Hauptkennzahl deiner Hauptrolle pro 10 Minuten, KDA; Pfeile vergleichen mit den 20 Matches davor) und die Rollenverteilung.
+- **Match-Verlauf:** dieselbe Leiste über den letzten 20 Matches.
+- **Überblick → «Deine Karten»:** Siege und Niederlagen auf deinen häufigsten Karten.
+- **Helden-Guide:** Heldenkarten mit Rollenfarbe, Rollen-Emblem, Matches als Ring und Winrate, KDA und Tode pro 10 Minuten (Werte pro Held nur aus dem Anteil des Haupthelden).
+- **Eternity-Weg:** Unter jeder Kennzahl ein Balken: dein Wert, die mittlere Hälfte der Eternity+-Spieler, die Mitte von Eternity+ (gold) und von Celestial (grau).
+- **Belohnungen:** Abzeichen als Sechseck-Medaillen, eine flackernde Flamme bei deiner Trainingsserie und ein kurzer Konfetti-Regen, wenn du einen Trainingstag, das Review, eine Lektion, eine Mission oder ein Abzeichen schaffst. Der Effekt lässt sich bei den Abzeichen ausschalten und läuft nicht, wenn dein Gerät «weniger Bewegung» eingestellt hat.
+
 ## Was die App kann
 
 | Bereich | Wofür |
