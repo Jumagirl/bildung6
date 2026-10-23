@@ -26,6 +26,18 @@ Die App hat **fünf Bereiche**, damit du den Überblick behältst. Am Handy steh
 
 Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden (auch unter Spitznamen), Lektionen, Begriffe, Team-Ups und Patch-Einträge. Lange Seiten wie der Trainingsplan haben **einklappbare Karten**: Offen ist, was du jetzt brauchst (zum Beispiel die aktuelle Phase), der Rest bleibt zu. Die App merkt sich, was du geöffnet hast.
 
+## Aussehen
+
+Die App ist im **Gaming-Look** gestaltet: dunkle Spiel-Oberfläche, Violett für Aktionen, Gold für Belohnungen und die Rollenfarben (Tank blau, DPS orange, Support grün) überall, wo es um Helden geht. Knöpfe und Banner haben schräge Ecken wie in Spiel-Menüs, Helden erscheinen als Sechsecke mit Rollenfarbe. Ohne eigene Wahl ist die App dunkel; mit «Hell / Dunkel» (Seitenleiste oder Mond-Symbol am Handy) wechselst du auf das helle Design. Es gibt zwei **Stile**: «Neon» (der Gaming-Look oben) und «Rosé» (Beere, Pink und Lavendel, Roségold für Belohnungen, runde Formen, eine runde Schrift, Formleiste als Perlen, Konfetti als Sternchen). Umschalten mit «Stil» in der Seitenleiste oder dem Funkel-Symbol am Handy; die Wahl merkt sich der Browser. Die private Version startet mit «Rosé» (`DEFAULT_LOOK` in `private.json`), alle anderen mit «Neon».
+
+**Grafiken:**
+- **Heute → «Deine Form»:** die letzten zwölf Matches als Leiste (S = Sieg, N = Niederlage, unten die Rollenfarbe), deine aktuelle Serie, vier Kennzahlen mit Verlaufslinie (Winrate, Tode pro 10 Minuten, die Hauptkennzahl deiner Hauptrolle pro 10 Minuten, KDA; Pfeile vergleichen mit den 20 Matches davor) und die Rollenverteilung.
+- **Match-Verlauf:** dieselbe Leiste über den letzten 20 Matches.
+- **Überblick → «Deine Karten»:** Siege und Niederlagen auf deinen häufigsten Karten.
+- **Helden-Guide:** Heldenkarten mit Rollenfarbe, Rollen-Emblem, Matches als Ring und Winrate, KDA und Tode pro 10 Minuten (Werte pro Held nur aus dem Anteil des Haupthelden).
+- **Eternity-Weg:** Unter jeder Kennzahl ein Balken: dein Wert, die mittlere Hälfte der Eternity+-Spieler, die Mitte von Eternity+ (gold) und von Celestial (grau).
+- **Belohnungen:** Abzeichen als Sechseck-Medaillen, eine flackernde Flamme bei deiner Trainingsserie und ein kurzer Konfetti-Regen, wenn du einen Trainingstag, das Review, eine Lektion, eine Mission oder ein Abzeichen schaffst. Der Effekt lässt sich bei den Abzeichen ausschalten und läuft nicht, wenn dein Gerät «weniger Bewegung» eingestellt hat.
+
 ## Was die App kann
 
 | Bereich | Wofür |
@@ -55,7 +67,7 @@ Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden
 | **Training** | Tägliche Routine mit Serien-Zähler, Übungen passend zu deinen häufigsten Fehlern und Problem-Gegnern, Aufwärm-Timer |
 | **Lernziele** | Wochenziele in eigenen Worten (zum Beispiel „Weniger sterben“). Die App erkennt das Thema, wählt passende Lektionen aus, stellt Aufgaben für die Woche zusammen und zeigt deinen Fortschritt aus den Matches (Tode, Heilung pro 10 Minuten, Ult-Wirkung, Rollen-Flex). Das Ziel erscheint auch im Trainingstag, im Dashboard und im Training; Vorschläge kommen aus deinen häufigsten Fehlern. Nach dem 3-Phasen-Modell: Planen, Durchführen, Reflektieren |
 | **KI-Coach** | Erstellt aus deinen Daten einen fertigen Prompt für einen KI-Chatbot |
-| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches alle zwei Stunden (10 bis 24 Uhr) und legt sie in deiner App-Datenbank ab, die App übernimmt sie sofort oder beim Öffnen; Backup als JSON, Export der Matches als CSV |
+| **Daten & Sync** | Abgleich mit Rivals Data: In der Online-Version holt ein Sync-Helfer in Claude die Matches jede Stunde (10 bis 24 Uhr) und legt sie in deiner App-Datenbank ab, die App übernimmt sie sofort oder beim Öffnen; Backup als JSON, Export der Matches als CSV |
 
 !!! info "Wo werden deine Daten gespeichert?"
     - **Online-Version** ([Rivals Coach auf claude.ai](https://claude.ai/artifact/A9BXPWjMR5zztNTyABsKnw)):
@@ -125,13 +137,13 @@ Statt jedes Match von Hand einzutragen, kannst du deine öffentlichen Matches vo
 [Rivals Data](https://rivalsdata.com) übernehmen. Rivals Data hat keine offizielle Schnittstelle und
 blockiert direkte Abfragen aus dem Browser. Deshalb holt ein kleines Python-Skript die Daten ab:
 
-**In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine geplante Claude-Sitzung, alle zwei Stunden von 10 bis 24 Uhr,
+**In der Online-Version** läuft das automatisch: Ein Sync-Helfer (eine geplante Claude-Sitzung, jede Stunde von 10 bis 24 Uhr,
 jeweils sieben Minuten nach der vollen Stunde) ruft das Skript mit `--inbox` auf und legt das fertige Ergebnis mit dem Werkzeug ArtifactData
 im Dokument `sync-inbox` deiner App-Datenbank ab. Die App übernimmt es sofort, solange sie offen ist, sonst beim nächsten Öffnen,
 trägt die neuen Matches ein und leert den Eingang. Der Helfer schreibt nur dieses eine Dokument, die Daten tippt er nie selbst ab (er übergibt die Datei).
 Unter **Daten & Sync** steht, wann zuletzt abgeglichen wurde und welches Match das neueste ist; auf «Heute» erscheint tagsüber ein Hinweis, wenn seit über
 drei Stunden nichts angekommen ist. Ein Fehler des Helfers (zum Beispiel eine Sperre bei Rivals Data) wird beim Öffnen als Meldung angezeigt.
-**Grenze:** Rivals Data und die zweite Quelle (Rivals Tracker) tragen Matches teils erst nach einigen Stunden ein. Was dort noch fehlt, kann auch der
+**Zum Aktualisieren nach unten ziehen:** Ganz oben auf einer Seite mit dem Finger nach unten ziehen (oder unter Daten «Jetzt abgleichen») startet den Sync-Helfer sofort: Die App ruft über den Connector «Claude Code Remote» das Werkzeug `fire_trigger` mit der Kennung des geplanten Helfers auf (Kennung `SYNC_TRIGGER` in `private.json`, nicht im Repo). Die neuen Matches erscheinen nach ein bis zwei Minuten von selbst; höchstens alle 5 Minuten, weil jeder Lauf eine Claude-Sitzung startet (mit Haiku etwa 0,01 US-Dollar). Sperrt das Konto das Werkzeug für Seiten, zeigt die App das mit Link zu den Connector-Einstellungen; dort lässt sich «fire_trigger» bei den Tool-Berechtigungen erlauben. In der Datei- oder Webseiten-Version holt dieselbe Geste sofort die neueste Datei von GitHub. **Grenze:** Rivals Data und die zweite Quelle (Rivals Tracker) tragen Matches teils erst nach einigen Stunden ein. Was dort noch fehlt, kann auch der
 Sync-Helfer nicht holen. Trag es dann von Hand ein: Die App führt es später mit dem Match aus Rivals Data zusammen (gleicher Tag, Held, Ergebnis, K/D/A).
 Die App merkt sich ab dem zweiten Abgleich, wann sie ein neues Match abgerufen hat, und zeigt den mittleren Abstand zum Spielende an.
 **Warum nicht über einen Connector:** Ein früherer Entwurf las das Protokoll des Helfers über den Connector «Claude Code Remote». In einer echten Ansicht stellt dieser
