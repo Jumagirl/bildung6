@@ -10367,6 +10367,11 @@ function rvLeftTag(n, m) {
   const t = n <= 8 ? `Replay noch ~${n} Matches` : until === d ? "Replay nur noch heute" : until === addDays(d, 1) ? "Replay bis morgen" : `Replay bis ${fmtDate(until)}`;
   return `<span class="rvtag replay ${n <= 8 || until === d ? "soon" : ""}" title="Das Spiel behält nur Replays ${rvReplayDaysLabel(rvReplayDays())} und höchstens etwa die letzten ${rvReplayN()} Matches. Dieses Replay ist nach ungefähr ${plural(n, "weiteren Match", "weiteren Matches")} weg, spätestens nach dem ${fmtDate(until)}.">${t}</span>`;
 }
+// Ults im Review nachtragen: eingesetzt in ganzen Schritten, mit Wirkung in halben (teilweise Wirkung = ½)
+function rvUltStep(m, f, label) {
+  const v = m[f];
+  return `<span class="qnstep"><span class="small">${label}</span><button type="button" data-rv="u-" data-f="${f}" data-id="${m.id}" aria-label="${label}: weniger" ${v ? "" : "disabled"}>−</button><b aria-live="polite">${v === null || v === undefined ? "–" : numDe(v)}</b><button type="button" data-rv="u+" data-f="${f}" data-id="${m.id}" aria-label="${label}: mehr">+</button></span>`;
+}
 function rvMatchHtml(x, open, L) {
   const m = x.m, got = deathTotal(m.deathCauses), d = +m.d || 0, reasons = x.reasons.length ? x.reasons : [{ k: "recent", label: "Neu", text: "Eines deiner neuesten Matches" }];
   const labels = deathOptions(m.hero).map(o => o[0]), extra = Object.keys(m.deathCauses || {}).filter(l => !labels.includes(l));
@@ -10385,9 +10390,12 @@ function rvMatchHtml(x, open, L) {
       ${d ? `<div class="deathgrid">${labels.concat(extra).map(l => { const n = (m.deathCauses || {})[l] || 0;
         return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; }).join("")}</div>` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit Schritt 2.</p>`}
     </div>
-    <div class="rvs"><h4><span class="rvn">2</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
+    <div class="rvs"><h4><span class="rvn">2</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}</span></h4>
+      <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
+      <details class="small" style="margin-top:4px"><summary>Wann zählt eine Ult «mit Wirkung»?</summary><p style="margin:4px 0 0">${esc(PLAN.notes.ultIntro)}</p><ul class="wl" style="margin:4px 0 0">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Teilweise Wirkung zählt ½. Keine Ult eingesetzt? Dann trag 0 ein.</p></details></div>
+    <div class="rvs"><h4><span class="rvn">3</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
-    <div class="rvs"><h4><span class="rvn">3</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
+    <div class="rvs"><h4><span class="rvn">4</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
       <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
       ${(() => { const ideas = fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …"); return ideas.length ? `<details class="small" style="margin-top:4px"><summary>Ideen aus deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
@@ -10445,6 +10453,14 @@ document.addEventListener("click", e => {
     save();
   } else if (a === "dec" && m) {
     const c = m.deathCauses || {}; if (c[b.dataset.l]) { c[b.dataset.l]--; if (c[b.dataset.l] <= 0) delete c[b.dataset.l]; } save();
+  } else if ((a === "u+" || a === "u-") && m) {
+    const f = b.dataset.f, step = f === "ultHit" ? 0.5 : 1, has = m[f] !== null && m[f] !== undefined;
+    const v = a === "u+" ? (has ? m[f] + step : step) : Math.max(0, (has ? m[f] : 0) - step);
+    m[f] = v;
+    if (f === "ultHit" && (m.ults ?? 0) < v) m.ults = Math.ceil(v);
+    if (f === "ults" && m.ultHit !== null && m.ultHit !== undefined && m.ultHit > v) m.ultHit = v;
+    if (f === "ults" && (m.ultHit === null || m.ultHit === undefined)) m.ultHit = 0;
+    save();
   } else if (a === "good" && m) {
     const g = b.dataset.g, list = m.goods || (m.goods = []); const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); save();
   } else if (a === "finish" && m) { if (!rvFinish(m)) return; }
