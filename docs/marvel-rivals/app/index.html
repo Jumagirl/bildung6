@@ -992,7 +992,8 @@ nav.tabs button[aria-selected="true"] svg.i { stroke: var(--accent-strong); filt
 .hero-banner::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .055) 0 2px, transparent 2px 16px); }
 .hero-banner::after { right: -40px; top: -80px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255, 194, 61, .28), transparent 65%); }
 .hero-banner h2 { font-family: var(--font-display); letter-spacing: .03em; color: var(--hero-text); }
-.hero-banner > * { position: relative; }
+.hero-banner::before, .hero-banner::after { pointer-events: none; z-index: 0; }
+.hero-banner > * { position: relative; z-index: 1; }
 .note { border-radius: 8px; border: 1px solid var(--border); }
 .toast { font-family: var(--font-display); letter-spacing: .02em; border-radius: 6px; background: var(--surface-3); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 0 18px var(--accent-soft); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 @media (max-width: 900px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }
