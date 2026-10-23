@@ -20,7 +20,7 @@ Die App hat **fünf Bereiche**, damit du den Überblick behältst. Am Handy steh
 |---|---|
 | **Heute** | Dein Tag in vier bis fünf Schritten: Lektion, Training, Wochenziel, Review, Spielen. Ganz oben steht **ein** nächster kleiner Schritt, dazu deine offenen Missionen, Neues bei deinen Helden und „Erste Schritte“ für Neue |
 | **Lernen** | Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Schwächen, Zuschauen, Lexikon (mit den Spielregeln) |
-| **Spielen** | Match loggen, Review, Auswertung, Dashboard, Verlauf, Eternity-Weg |
+| **Spielen** | Match loggen, Review, Auswertung, Dashboard, Squad, Verlauf, Eternity-Weg |
 | **Helden** | Helden-Guide, Team & Counter, Team-Ups, Meta & Patch |
 | **Coach** | Lernziele, Training, KI-Coach, Daten & Sync |
 
@@ -55,6 +55,28 @@ Unter **Spielen → Dashboard** stehen alle deine Zahlen auf einer Seite. Alles 
 - **Tabelle:** Jede Diagramm-Karte hat oben rechts «Tabelle». Dort stehen dieselben Zahlen zum Nachlesen, ohne Diagramm.
 
 Die Diagramme folgen festen Regeln: dünne Linien und Balken, Grün und Rot nur für Sieg und Niederlage, Rollenfarben nur für Rollen, keine zwei Skalen in einem Diagramm. Die Rollenfarben der Diagramme sind im dunklen Modus etwas dunkler als sonst in der App, damit sie auch bei Farbschwäche unterscheidbar bleiben (geprüft mit einem Farbsehschwäche-Test).
+
+## Match-Analyse und Squad
+
+**Was geht und was nicht:** Replays lassen sich nur im Spiel anschauen. Einen Weg, sie herunterzuladen oder auszulesen, gibt es nach unserer Recherche nicht (Stand Oktober 2026). Laufwege, Positionen, Fights und Ult-Zeitpunkte kann die App deshalb nicht auswerten. Über die Match-ID liefert Rivals Data aber die Tabelle aller 12 Spieler: Held (mit Spielzeit), K/D/A, Final Hits, Solo-Kills, Schaden, Heilung, Geblockt, Treffergenauigkeit, MVP/SVP und ob es ein Bot war. Seit diesem Update holt der Abgleich diese Tabelle für jedes Match mit (Felder `team`, `foes`, `fh`, `solo`, `acc`; Matches von früher werden beim nächsten Abgleich einmal neu geholt, soweit sie noch in der Match-History von Rivals Data stehen, das sind etwa die letzten 40 bis 50).
+
+**Mitspieler bleiben anonym:** Von deinen Mitspielern speichert der Abgleich nur ein Kürzel des Namens (FNV-1a, acht Zeichen), nie den Namen selbst. Die App bildet dasselbe Kürzel aus den Namen deiner Teammates und erkennt sie so. Fremde Spieler erscheinen nur mit ihrem Helden. Gegner bekommen gar kein Kürzel.
+
+**Match-Analyse:** Im Match-Verlauf hat jedes Match mit diesen Daten den Knopf «Analyse», im Review den Knopf «Match-Tabelle». Er öffnet beide Teams mit allen Werten (du und deine Teammates hervorgehoben, der höchste Wert im ganzen Match fett) und automatische Hinweise: dein Anteil an der Heilung, am Schaden oder am geblockten Schaden deines Teams (mit Platz im Team und im ganzen Match), deine Final Hits im Team, wer in deinem Team am häufigsten gestorben ist, der gefährlichste Gegner (meiste Final Hits), Tode und Schaden beider Teams, deine Treffergenauigkeit im Vergleich zu deinem Schnitt mit dem Helden, Bots im Match und welche Teammates dabei waren. Im Dashboard gibt es dazu im Leistungsverlauf und bei «Was in Siegen anders ist» die Kennzahlen Final Hits pro 10 Minuten und Treffergenauigkeit.
+
+**Squad (Spielen → Squad):** Oben trägst du deine Teammates ein, genau wie im Spiel geschrieben (Gross- und Kleinschreibung egal). Neben jedem Namen steht, in wie vielen Matches er gefunden wurde; «noch nicht gefunden» heisst: in den Matches mit Team-Daten nicht dabei oder anders geschrieben. Darunter, mit Filtern für Zeitraum, Teammate und Modus:
+- **Kopf:** deine Winrate mit Teammates, verglichen mit deinen Matches ohne, wer am häufigsten dabei ist und die Tode pro 10 Minuten pro Person bei euch und bei den Gegnern.
+- **Das Wichtigste:** bis zu fünf Hinweise (bester Teammate, stärkstes Helden-Paar, schwierigster Gegner, grösster Unterschied zwischen euren Siegen und Niederlagen, häufigste Team-Notiz).
+- **Mit wem du gewinnst** und **Eure Gruppen** (wer genau zusammen war), jeweils gegenüber deinem Schnitt.
+- **Helden-Paare** (dein Held mit dem Helden eines Teammates) und **Eure Aufstellungen** (Rollen im ganzen Team, zum Beispiel 2 Tank · 2 DPS · 2 Support).
+- **Gegner, die euch Probleme machen:** Gegner-Helden unter eurem Schnitt (ab 3 Matches). Darunter steht, welche eurer Helden in diesen Matches trotzdem gewonnen haben; gibt es keine, nennt die Karte die Counter-Faustregel und schreibt dazu, dass sie nicht aus euren Matches stammt.
+- **Was in euren Siegen anders ist:** Team-Werte pro 10 Minuten in Siegen und Niederlagen (Tode, Final Hits, Schaden, Heilung, Tode pro Rolle).
+- **Eure Rollen gegen die Gegner:** Tode und Final Hits pro 10 Minuten eurer Tanks, DPS und Supports gegen die gegnerischen.
+- **Deine Teammates mit dir:** pro Person die Helden, Ø K/D/A, Tode, Final Hits und die Hauptkennzahl der Rolle pro 10 Minuten. Die Zahlen sind zum Besprechen gedacht, nicht als Schuldfrage: Rolle und Held prägen sie stark.
+- **Team-Ups in eurem Team:** Team-Ups aus der Team-Up-Liste, bei denen beide Helden gleichzeitig in eurem Team waren, mit Winrate. Ob das Loadout gewählt war, steht nicht in den Daten.
+- **Eure Team-Notizen:** Im Match-Log gibt es den Abschnitt «Als Team» (nur sichtbar, wenn Teammates eingetragen sind) mit «Was lief als Team gut?» und «Was hat als Team gehakt?». Die Squad-Seite zählt, was du dort ankreuzt.
+
+Jede Diagramm-Karte hat wie im Dashboard eine Tabellenansicht. Die Freunde-Versionen haben dieselbe Seite: Jede Person trägt ihre eigenen Teammates ein. In deiner privaten Version sind deine Teammates vorausgefüllt (`DEFAULT_MATES` in `private.json`), solange du die Liste nicht selbst änderst.
 
 ## Was die App kann
 
