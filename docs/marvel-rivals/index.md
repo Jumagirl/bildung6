@@ -14,17 +14,21 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 ## So ist die App aufgebaut
 
-Die App hat **fünf Bereiche**, damit du den Überblick behältst. Am Handy stehen sie als Leiste unten, am Computer oben, darunter die Unterseiten des jeweiligen Bereichs.
+Die App hat **fünf Bereiche**, damit du den Überblick behältst. Am Handy stehen sie als Leiste unten, am Computer oben, darunter die Unterseiten des jeweiligen Bereichs. Pro Bereich stehen nur die zwei bis vier wichtigsten Unterseiten direkt da, die übrigen unter **«Mehr»** (zum Beispiel Quiz, Schwächen, Zuschauen und Lexikon im Bereich Lernen).
 
 | Bereich | Unterseiten |
 |---|---|
-| **Heute** | Dein Tag in vier bis fünf Schritten: Lektion, Training, Wochenziel, Review, Spielen. Ganz oben steht **ein** nächster kleiner Schritt, dazu deine offenen Missionen, Neues bei deinen Helden und „Erste Schritte“ für Neue |
+| **Heute** | Ganz oben **«Jetzt dran»**: genau ein Schritt mit einem Knopf (zum Beispiel die Lektion des Tages). Darunter «Heute zu tun» als kurze Liste (Lektion, Training, Wochenziel, Review, Spielen; der aktuelle Schritt ist markiert), dann Missionen, Grundregeln, Neues bei deinen Helden, «Erste Schritte» für Neue und deine Form. Eternity-Weg, App-Übungen und der Wegweiser stecken zugeklappt unter «Mehr für heute» |
 | **Lernen** | Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Schwächen, Zuschauen, Lexikon (mit den Spielregeln) |
-| **Spielen** | Match loggen, Review, Auswertung, Dashboard, Squad, Verlauf, Eternity-Weg |
+| **Spielen** | Matches (mit den Bereichen «Offen», «Eintragen», «Verlauf»), Review, Dashboard, Squad, Auswertung, Verlauf, Eternity-Weg |
 | **Helden** | Helden-Guide, Team & Counter, Team-Ups, Meta & Patch |
 | **Coach** | Lernziele, Training, KI-Coach, Daten & Sync |
 
 Mit der **Suche** (Lupe oben oder Taste `/`, `Strg+K`) findest du Seiten, Helden (auch unter Spitznamen), Lektionen, Begriffe, Team-Ups und Patch-Einträge. Lange Seiten wie der Trainingsplan haben **einklappbare Karten**: Offen ist, was du jetzt brauchst (zum Beispiel die aktuelle Phase), der Rest bleibt zu. Die App merkt sich, was du geöffnet hast.
+
+- **Ein Trainingstag Schritt für Schritt:** Ein Tag hat Abschnitte: Vorbereitung (Worauf es heute ankommt, Lektion, Wochenziel, Nachlesen, Start), Block 1 bis 4, gegebenenfalls Nachholen, Abschluss (Aufschreiben, Matches des Tages, Wissens-Check, Rückblick, Tag abschliessen). Offen ist nur der Abschnitt, der jetzt dran ist; sobald du ihn abhakst, klappt er zu und der nächste auf. Unter dem Titel springen runde Knöpfe zu jedem Abschnitt, «Alle Schritte zeigen» klappt alle auf (das merkt sich das Gerät). Das Schwächen-Training steht in Block 3, Matchlänge und Übungszeit pro Block unter «Ablauf und Matchlänge» in der Vorbereitung.
+- **Plan-Übersicht:** oben der nächste Trainingstag, darunter «Alle Trainingstage» (die Phasen), dann «Einstellungen» (Pool und Hauptrolle, Lernpfad) und «Nachschlagen» (Eternity, So bleibt alles hängen, Alle Rollen, Themen-Tracker, Drills, Regeln, Wochenpaket), alles zugeklappt.
+- **Matches:** drei Reiter. «Offen» zeigt die von Rivals Data geholten Matches, zu denen noch Fehler und Stärken fehlen (die Zahl steht am Reiter); «Eintragen» ist das Formular, auch zum Bearbeiten; «Verlauf» ist die Liste aller Matches mit der Match-Analyse. Wartet etwas, öffnet die Seite bei «Offen». Nach dem Bearbeiten kommst du dorthin zurück, wo du warst.
 
 ## Aussehen
 
@@ -227,7 +231,7 @@ vergleicht die App unter **Auswertung** deine Winrate pro Held mit dem Schnitt a
 
 Die App ist gross. Damit sie am Anfang nicht überfordert, führt sie dich in kleinen Schritten:
 
-- **«So liest du diese Seite»** steht oben auf Heute, Trainingsplan, Match loggen, Auswertung, Team & Counter, Helden-Guide und Quiz. Bei den ersten zwei Besuchen ist die Karte offen, danach klappt sie von selbst zu (jederzeit wieder zu öffnen).
+- **«So liest du diese Seite»** steht oben auf Heute, Trainingsplan, Matches, Auswertung, Team & Counter, Helden-Guide und Quiz. Bei den ersten zwei Besuchen ist die Karte offen, danach klappt sie von selbst zu (jederzeit wieder zu öffnen).
 - **App-Übungen** auf «Heute»: zwölf kleine Aufgaben, immer nur die nächste und die übernächste sichtbar (erstes Match loggen, Fehler und Stärken festhalten, Team & Counter Schritt 1 bis 3, Held nachschlagen, fünf Quizfragen, Grundregeln beantworten, Bootcamp-Station 1, Bootcamp-Aufgabe im Match auswerten, Auswertung lesen, Backup). Die App erkennt selbst, was du schon gemacht hast; mit «Überspringen» oder «Übungen ausblenden» schaltest du sie ab.
 - **Team & Counter in vier Schritten** (siehe oben).
 

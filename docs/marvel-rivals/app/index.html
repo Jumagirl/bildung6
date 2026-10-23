@@ -158,10 +158,15 @@ section[hidden] { display: none; }
 .subnav button { border: 1px solid var(--border); background: var(--surface); color: var(--text-2); padding: 6px 14px; border-radius: 999px; font: inherit; font-size: .86rem; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
 .subnav button:hover { border-color: var(--accent); color: var(--text); }
 .subnav button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.subnav .submore { border-style: dashed; color: var(--muted); }
+.subnav .submore.on { border-style: solid; border-color: var(--accent); color: var(--text); }
+.subnav .subrow2 { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.subnav .subrow2[hidden] { display: none; }
+.subnav .subrow2 button { font-size: .8rem; padding: 5px 12px; }
 .bottombar { display: none; }
 @media (max-width: 900px) {
   #areaNav { display: none; }
-  .subnav { padding: 10px 16px 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .subnav { padding: 10px 16px 0; flex-wrap: wrap; scrollbar-width: none; }
   .subnav::-webkit-scrollbar { display: none; }
   .subnav button { white-space: nowrap; }
   .bottombar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; gap: 2px; background: var(--surface); border-top: 1px solid var(--border); padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); }
@@ -780,7 +785,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fold > summary .ft { min-width: 0; flex: 1; }
-.fold > summary h2 { margin: 0; font-size: 1.05rem; }
+.fold > summary h2 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.fold > summary h2 svg.i { color: var(--accent); flex: none; }
 .fold > summary .fs { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; font-weight: 400; }
 .fold > summary .fr { display: flex; gap: 6px; align-items: center; flex: none; }
 .fold > summary .chev { width: 18px; height: 18px; flex: none; color: var(--muted); transition: transform .15s; }
@@ -1555,6 +1561,56 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .logmates { font-size: .72rem; color: var(--accent-strong); }
 :root[data-look="rose"] .msheet { border-radius: 22px; }
 :root[data-look="rose"] .sqmate, :root[data-look="rose"] .sqm { border-radius: 16px; }
+
+/* ================= Übersicht: Heute mit «Jetzt dran», kompakte Liste ================= */
+.nowcard .nowtop { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.nowcard .nowtop .small { opacity: .9; padding-top: 4px; }
+.nowcard .nowtop .lesson-stats { flex: none; }
+.nowcard .nowlbl { margin-top: 4px; font-size: .78rem; font-weight: 700; letter-spacing: .04em; opacity: .9; }
+.nowcard h2 { font-size: 1.35rem; margin: 4px 0; }
+.nowcard p { margin: 0 0 12px; opacity: .95; }
+.nowcard .nowact { display: flex; flex-wrap: wrap; gap: 8px; }
+.nowcard .nowact .btn { background: #fff; color: #2b1f8f; border-color: transparent; }
+.daylist .todo { padding: 9px 6px; }
+.daylist .todo.done .tt { color: var(--muted); font-weight: 500; }
+.todo.now { background: var(--accent-soft); border-radius: 12px; border-top-color: transparent; }
+.rmore { margin-top: 6px; }
+.rmore > summary { cursor: pointer; color: var(--accent-strong); }
+.tmorebody > .card { margin-bottom: 12px; box-shadow: none; }
+
+/* ================= Übersicht: Trainingstag Schritt für Schritt ================= */
+.dsteps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.dstep { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.dstep > span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); color: var(--muted); font-size: .7rem; font-weight: 800; }
+.dstep.done { color: var(--good-text); }
+.dstep.done > span { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good-text); }
+.dstep.cur { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+.dstep.cur > span { background: var(--accent); color: #fff; }
+.dstep:hover { border-color: var(--accent); }
+.dstepbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; margin-top: 10px; }
+.dstage { scroll-margin-top: 84px; }
+.dstage > summary .snum { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none; background: var(--surface-3); color: var(--muted); font-weight: 800; font-size: .85rem; }
+.dstage.scur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.dstage.scur > summary .snum { background: var(--accent); color: #fff; }
+.dstage.sdone > summary .snum { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good-text); }
+.dstage.sdone > summary h2 { color: var(--text-2); }
+.dstage > .fbody { display: flex; flex-direction: column; gap: 12px; }
+.dstage > .fbody > .card, .dstage > .fbody > .fold { margin: 0; background: var(--surface-2); box-shadow: none; }
+.dstage > .fbody > .fold.nugfold { background: color-mix(in srgb, var(--accent) 6%, var(--surface-2)); }
+.dstage > .fbody > .rvwrap > .card { margin: 0; box-shadow: none; }
+.dstage .psteps > .pstep:first-child { padding-top: 0; }
+.dstage .dend > label:first-child, .dstage .dend > .field:first-child { margin-top: 0; }
+/* Matches: drei Bereiche */
+.lvtabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
+.lvtabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 6px 10px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; }
+.lvtabs button:hover { color: var(--text); }
+.lvtabs button.on { background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.lvtabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lvtabs .lvn { min-width: 1.5em; padding: 1px 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); font-size: .74rem; }
+.lvtabs .lvn:empty { display: none; }
+#lvtOpen .lvn { background: var(--accent); color: #fff; }
+.psec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 22px 2px 10px; }
+.psec h3 { margin: 0; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); }
 </style>
 </head>
 <body>
@@ -1610,8 +1666,17 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 <!-- LOG -->
 <section id="tab-log" hidden>
-  <div class="edit-banner" id="editBanner"><span id="editText">Match bearbeiten</span><button class="btn ghost small" type="button" id="editCancel">Abbrechen</button></div>
+  <div class="lvtabs" id="logTabs" role="tablist" aria-label="Bereiche der Seite Matches">
+    <button type="button" role="tab" data-logview="open" id="lvtOpen" aria-controls="lvOpen">Offen <span class="lvn" id="lvOpenN"></span></button>
+    <button type="button" role="tab" data-logview="add" id="lvtAdd" aria-controls="lvAdd">Eintragen</button>
+    <button type="button" role="tab" data-logview="list" id="lvtList" aria-controls="lvList">Verlauf <span class="lvn" id="lvListN"></span></button>
+  </div>
+  <div id="lvOpen" data-lv="open" role="tabpanel" aria-labelledby="lvtOpen">
   <div class="card" id="openRefl" hidden></div>
+  <div class="card lvempty" id="openNone" hidden></div>
+  </div>
+  <div id="lvAdd" data-lv="add" role="tabpanel" aria-labelledby="lvtAdd">
+  <div class="edit-banner" id="editBanner"><span id="editText">Match bearbeiten</span><button class="btn ghost small" type="button" id="editCancel">Abbrechen</button></div>
   <form id="matchForm">
   <div class="card focus-card" id="focusCard" hidden></div>
   <div class="card">
@@ -1734,10 +1799,13 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
     </div>
   </div>
   </form>
+  </div>
+  <div id="lvList" data-lv="list" role="tabpanel" aria-labelledby="lvtList">
   <div class="card">
     <div class="card-head"><h2 data-icon="list">Match-Verlauf</h2><span class="muted small" id="matchCount"></span></div>
     <div id="logStrip" style="margin-bottom:12px"></div>
     <div class="table-wrap" id="matchTable"></div>
+  </div>
   </div>
 </section>
 
@@ -3819,7 +3887,7 @@ const TITLES = {
   squad: ["Squad", "Mit deinen Teammates: was gut läuft und wo es hakt"],
   lessons: ["Tägliche Lektionen", "Jeden Tag ein Schritt: verstehen, üben, anwenden, reflektieren"],
   plan: ["Trainingsplan", "56 Tage vom Fundament zum Experten"],
-  log: ["Match loggen", "Ergebnis, Teams und Reflexion festhalten"],
+  log: ["Matches", "Offene Matches reflektieren, ein Match eintragen, alle Matches ansehen"],
   analysis: ["Auswertung", "Muster in deinen Matches erkennen"],
   team: ["Team & Counter", "Counter-Picks für die Heldenauswahl"],
   quiz: ["Quiz", "Counter und Wissen abfragen – die Fragen werden mit deiner Stufe schwerer"],
@@ -3840,15 +3908,17 @@ const TITLES = {
 };
 
 // ---------- Bereiche und Navigation ----------
-// Fünf Bereiche statt dreizehn Reiter. Jeder Bereich hat Unterseiten; die Seiten selbst (tab-…) bleiben unverändert.
+// Fünf Bereiche statt dreizehn Reiter. Jeder Bereich zeigt nur seine wichtigsten Seiten (core); die übrigen stehen unter «Mehr».
+// Die Seiten selbst (tab-…) bleiben unverändert.
 const AREAS = [
-  { id: "today", label: "Heute", icon: "home", info: "Dein Tag: Lektion, Training, Ziel", tabs: ["today"] },
-  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "quiz", "bootcamp", "weak", "watch", "lexicon"] },
-  { id: "play", label: "Spielen", icon: "play", info: "Matches festhalten, im Replay auswerten und den Verlauf vergleichen", tabs: ["log", "review", "analysis", "dashboard", "squad", "progress", "top"] },
-  { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide, Team, Counter und Meta", tabs: ["heroes", "team", "teamups", "meta"] },
-  { id: "coach", label: "Coach", icon: "goals", info: "Ziele, Training, KI-Coach und Daten", tabs: ["goals", "training", "ai", "data"] }
+  { id: "today", label: "Heute", icon: "home", info: "Dein Tag: was jetzt dran ist", tabs: ["today"] },
+  { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen und Helden-Bootcamp; unter «Mehr»: Quiz, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "bootcamp", "quiz", "weak", "watch", "lexicon"], core: 3 },
+  { id: "play", label: "Spielen", icon: "play", info: "Matches, Review, Dashboard und Squad; unter «Mehr»: Auswertung, Verlauf und Eternity-Weg", tabs: ["log", "review", "dashboard", "squad", "analysis", "progress", "top"], core: 4 },
+  { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide und Team & Counter; unter «Mehr»: Team-Ups und Meta", tabs: ["heroes", "team", "teamups", "meta"], core: 2 },
+  { id: "coach", label: "Coach", icon: "goals", info: "Lernziele und Daten & Sync; unter «Mehr»: Training und KI-Coach", tabs: ["goals", "data", "training", "ai"], core: 2 }
 ];
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Match loggen", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const subMore = {};   // welcher Bereich seine «Mehr»-Zeile gerade offen hat
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Matches", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -3859,15 +3929,18 @@ function renderNav(name) {
   $("#bottomNav").innerHTML = AREAS.map(btn).join("");
   const sub = $("#subNav");
   sub.hidden = area.tabs.length < 2;
-  sub.innerHTML = area.tabs.map(t => `<button type="button" role="tab" data-tab="${t}" aria-selected="${t === name}">${esc(NAV_LABEL[t] || TITLES[t][0])}</button>`).join("");
-  const on = sub.querySelector('[aria-selected="true"]');
-  if (on && on.scrollIntoView && sub.scrollWidth > sub.clientWidth) { try { sub.scrollLeft = Math.max(0, on.offsetLeft - 16); } catch (e) {} }
+  const tb = t => `<button type="button" role="tab" data-tab="${t}" aria-selected="${t === name}">${esc(NAV_LABEL[t] || TITLES[t][0])}</button>`;
+  const core = area.tabs.slice(0, area.core || area.tabs.length), more = area.tabs.slice(core.length), inMore = more.includes(name), open = inMore || !!subMore[area.id];
+  sub.innerHTML = core.map(tb).join("") + (more.length ? `<button type="button" class="submore${inMore ? " on" : ""}" data-submore="${area.id}" aria-expanded="${open}" aria-controls="subRow2">Mehr ${open ? "▴" : "▾"}</button>
+    <div class="subrow2" id="subRow2"${open ? "" : " hidden"}>${more.map(tb).join("")}</div>` : "");
 }
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-area]");
   if (a) { const ar = AREAS.find(x => x.id === a.dataset.area); showTab(areaLast[ar.id] || ar.tabs[0]); window.scrollTo({ top: 0 }); return; }
   const t = e.target.closest("#subNav [data-tab]");
-  if (t) { showTab(t.dataset.tab); window.scrollTo({ top: 0 }); }
+  if (t) { showTab(t.dataset.tab); window.scrollTo({ top: 0 }); return; }
+  const m = e.target.closest("[data-submore]");
+  if (m) { subMore[m.dataset.submore] = m.getAttribute("aria-expanded") !== "true"; renderNav(currentTab()); const b = document.querySelector("[data-submore]"); if (b) b.focus(); }
 });
 
 // ---------- Speicher ----------
@@ -4933,11 +5006,15 @@ function renderToday() {
   else if (tm.length) items.push({ done: true, t: `${plural(tm.length, "Match", "Matches")} heute`, s: `${plural(w, "Sieg", "Siege")} · ${plural(tm.length - w, "Niederlage", "Niederlagen")} · Block: ${tm.length} von ${blockMatches()} Matches`, a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
   else items.push({ done: false, t: "Spielen und festhalten", s: "Nach jedem Match 20 Sekunden fürs Log: Ergebnis, Held und ein Fehler.", a: `<button class="btn small" type="button" data-go="log">Match loggen</button>` });
   const doneN = items.filter(x => x.done).length;
-  const hero = `<div class="card hero-banner lesson-hero"><div style="flex:1;min-width:240px"><div class="small" style="opacity:.85;position:relative">${esc(dateTxt)}</div>
-    <h2 style="font-size:1.35rem;margin-top:4px">${doneN === items.length ? "Alles erledigt für heute 🎉" : `Dein Tag in ${["", "einem", "zwei", "drei", "vier", "fünf", "sechs"][items.length] || items.length} Schritten`}</h2>
-    <p>${started && cur <= 56 ? `Trainingsplan: Tag ${cur} von 56 · ` : ""}Stufe ${currentLevel()} · ${lessonsN} von ${LESSONS.length} Lektionen · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} Training in Folge</p></div>
-    <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>`;
-  const list = `<div class="card"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}<div class="ts">${x.s}</div></div><div class="ta">${x.a || ""}</div></div>`).join("")}</div>`;
+  // «Jetzt dran»: der erste offene Schritt gross, darunter alle Schritte des Tages kurz
+  const nowIdx = items.findIndex(x => !x.done), now = items[nowIdx];
+  const big = a => String(a || "").replace(/class="btn small( ghost)?"/g, 'class="btn"');
+  const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= 56 ? ` · Trainingsplan Tag ${cur} von 56` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
+      <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>
+    ${now ? `<div class="nowlbl">Jetzt dran · Schritt ${nowIdx + 1} von ${items.length}</div><h2>${now.t}</h2><p>${now.s}</p><div class="nowact">${big(now.a)}</div>`
+      : (() => { const x = todayExtra(); return x ? `<div class="nowlbl">Alles erledigt für heute 🎉 · Wenn du magst</div><h2>${x.t}</h2><p>${x.s}</p><div class="nowact">${big(x.a)}</div>`
+        : `<div class="nowlbl">Heute</div><h2>Alles erledigt für heute 🎉</h2><p>Stark. Morgen geht es mit dem nächsten Schritt weiter.</p>`; })()}</div>`;
+  const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2><span class="badge">${doneN} von ${items.length}</span></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}${i === nowIdx ? " now" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}${x.done || i === nowIdx ? "" : `<div class="ts">${x.s}</div>`}</div><div class="ta">${i === nowIdx ? `<span class="badge">jetzt</span>` : x.a || ""}</div></div>`).join("")}</div>`;
   // Fokus fürs nächste Match
   const fl = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
   const focus = fl ? `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Dein Fokus fürs nächste Match</h2><button class="linkbtn small" type="button" data-lesson="${fl.id}">Lektion ${lessonNo(fl.id)}</button></div>
@@ -4970,7 +5047,11 @@ function renderToday() {
     ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
-  el.innerHTML = hero + formHudHtml() + nextStepHtml() + list + missionsCardHtml() + tbTodayHtml() + focus + rulesCardHtml() + tourCardHtml() + newsCard + first + guide;
+  // Seltener Gebrauchtes steht eingeklappt unter «Mehr für heute» (die App merkt sich, ob es offen ist)
+  const tbH = tbTodayHtml(), tourH = tourCardHtml(), more = [tbH, tourH, guide].filter(Boolean).join("");
+  const moreSub = [tbH && "Eternity-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
+  const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
+  el.innerHTML = hero + list + missionsCardHtml() + focus + rulesCardHtml() + newsCard + first + formHudHtml() + moreFold;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -4980,8 +5061,7 @@ document.addEventListener("click", e => {
   if (b.dataset.open === "refl") {
     const open = state.matches.filter(isOpenRefl);
     if (open.length === 1) { startEdit(open[0].id); return; }
-    const el = $("#openRefl");
-    if (el && !el.hidden) { el.scrollIntoView({ block: "start" }); return; }
+    setLogView("open");
   }
   window.scrollTo({ top: 0 });
 });
@@ -6010,9 +6090,36 @@ function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)]
 // Von Rivals Data geholte Matches der letzten 14 Tage, zu denen du noch keine Reflexion eingetragen hast
 const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !(m.mistakes || []).length && !deathTotal(m.deathCauses) && !(m.goods || []).length && !m.notes
   && (m.mood === null || m.mood === undefined) && (m.date || "") >= new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+// Die Seite «Matches» hat drei Bereiche: Offen (Reflexion fehlt), Eintragen (Formular), Verlauf (alle Matches).
+// Ohne eigene Wahl startet sie bei «Offen», wenn dort etwas wartet, sonst bei «Eintragen».
+const logUi = { view: null };
+function logView() { return logUi.view || (state.matches.some(isOpenRefl) ? "open" : "add"); }
+function setLogView(v) { logUi.view = v; applyLogView(); }
+function applyLogView() {
+  const v = logView(), nOpen = state.matches.filter(isOpenRefl).length;
+  document.querySelectorAll("#tab-log [data-lv]").forEach(x => { x.hidden = x.dataset.lv !== v; });
+  document.querySelectorAll("#logTabs [data-logview]").forEach(b => { const on = b.dataset.logview === v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+  $("#lvOpenN").textContent = nOpen || ""; $("#lvListN").textContent = state.matches.length || "";
+}
+$("#logTabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-logview]"); if (!b) return;
+  setLogView(b.dataset.logview); window.scrollTo({ top: 0 });
+});
+$("#logTabs").addEventListener("keydown", e => {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  const bs = [...document.querySelectorAll("#logTabs [data-logview]")], i = bs.findIndex(b => b.dataset.logview === logView());
+  const nx = bs[(i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length];
+  setLogView(nx.dataset.logview); nx.focus(); e.preventDefault();
+});
 function renderOpenRefl() {
   const el = $("#openRefl"), open = state.matches.filter(isOpenRefl).reverse();
   el.hidden = !open.length;
+  const none = $("#openNone");
+  none.hidden = !!open.length;
+  if (!open.length) none.innerHTML = `<div class="card-head"><h2>${icon("check")}Keine offenen Matches</h2></div>
+    <p class="lead" style="margin:0 0 10px">Hier erscheinen Matches, die die App von Rivals Data geholt hat und zu denen du noch nichts eingetragen hast. Gerade wartet keins.</p>
+    <div class="row"><button class="btn small" type="button" data-logview-go="add">${icon("log")}Match eintragen</button><button class="btn ghost small" type="button" data-logview-go="list">Alle Matches ansehen</button></div>`;
+  applyLogView();
   if (!open.length) return;
   el.innerHTML = `<div class="card-head"><h2>${icon("edit")}Neue Matches: Reflexion offen</h2><span class="badge">${open.length}</span></div>
     <p class="lead">Diese Matches hat die App automatisch von Rivals Data geholt. Trag nur noch ein, was schiefgelaufen ist oder gut lief.</p>
@@ -6022,6 +6129,7 @@ function renderOpenRefl() {
       <button class="btn ghost small" type="button" data-odone="${m.id}" title="Nichts Besonderes: aus der Liste nehmen">Nichts eintragen</button></div>`).join("")}
     ${open.length > 6 ? `<div class="row mt"><span class="muted small">und ${open.length - 6} weitere</span><button class="btn ghost small" type="button" data-oall="1">Alle als erledigt markieren</button></div>` : ""}`;
 }
+document.addEventListener("click", e => { const b = e.target.closest("[data-logview-go]"); if (b) { setLogView(b.dataset.logviewGo); window.scrollTo({ top: 0 }); } });
 $("#openRefl").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
@@ -6140,7 +6248,8 @@ function startEdit(id) {
   const m = state.matches.find(x => x.id === id);
   if (!m) return;
   editingId = id;
-  showTab("log");
+  if (currentTabSafe() === "log" && logView() !== "add") logUi.back = logView();
+  showTab("log"); setLogView("add");
   const f = $("#matchForm");
   f.hero.value = m.hero; f.mode.value = m.mode; f.type.value = m.type; setMapValue(m.map || "");
   f.date.value = m.date || today();
@@ -6165,7 +6274,7 @@ function startEdit(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function cancelEdit() {
-  editingId = null;
+  editingId = null; logUi.back = null;
   $("#editBanner").classList.remove("show");
   $("#saveBtn").lastChild.textContent = "Match speichern";
   clearForm();
@@ -6353,7 +6462,7 @@ function renderMatchHints() {
 }));
 ["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
 $("#takeTeams").addEventListener("click", () => setTimeout(renderMatchHints, 0));
-$("#editCancel").addEventListener("click", cancelEdit);
+$("#editCancel").addEventListener("click", () => { const back = logUi.back; cancelEdit(); if (back) setLogView(back); });
 $("#mapSelect").addEventListener("change", e => {
   const v = e.target.value;
   $("#mapOtherWrap").hidden = v !== "__other";
@@ -6409,7 +6518,8 @@ $("#matchForm").addEventListener("submit", e => {
     // Uhrzeit nur behalten, solange sie zum Datum passt (sonst verfälscht sie die Tageszeit-Auswertung)
     if (target.ts && new Date(target.ts).toISOString().slice(0, 10) !== fields.date) delete target.ts;
     state.matches.sort((a, b) => matchTime(a) - matchTime(b));
-    save(); cancelEdit(); render(); toast("Match aktualisiert");
+    const back = logUi.back;
+    save(); cancelEdit(); if (back) setLogView(back); render(); toast("Match aktualisiert");
     return;
   }
   const m = Object.assign({ id: newId(), ts: Date.now() }, fields);
@@ -8544,7 +8654,7 @@ const modeText = d => (d.mode || "").replace(/\b(R|U|K|Custom|solo)\b/g, t => MO
 const UIFOLD = (() => { try { const o = JSON.parse(localStorage.getItem(STORE_KEY + "-folds") || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } })();
 const planUi = { day: null, read: new Set(), drill: null, fold: UIFOLD };
 function foldInner(title, body, o = {}) {
-  return `<summary><span class="ft"><h2>${o.icon ? icon(o.icon) : ""}${title}</h2>${o.sub ? `<span class="fs">${o.sub}</span>` : ""}</span><span class="fr">${o.right || ""}<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary><div class="fbody">${body}</div>`;
+  return `<summary>${o.pre || ""}<span class="ft"><h2>${o.icon ? icon(o.icon) : ""}${title}</h2>${o.sub ? `<span class="fs">${o.sub}</span>` : ""}</span><span class="fr">${o.right || ""}<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary><div class="fbody">${body}</div>`;
 }
 function foldHtml(key, title, body, o = {}) {
   const open = key in UIFOLD ? UIFOLD[key] : !!o.open;
@@ -8557,7 +8667,9 @@ function foldFill(el, title, body, o = {}) {
 }
 document.addEventListener("click", e => {
   const sm = e.target.closest && e.target.closest(".fold > summary"); if (!sm) return;
-  const d = sm.parentElement; if (!d.dataset.f) return;
+  const d = sm.parentElement;
+  if (d.dataset.stage && planUi.day) { planUi.stOpen[planUi.day + ":" + d.dataset.stage] = !d.open; return; }
+  if (!d.dataset.f) return;
   UIFOLD[d.dataset.f] = !d.open;
   try { localStorage.setItem(STORE_KEY + "-folds", JSON.stringify(UIFOLD)); } catch (err) {}
 });
@@ -8574,7 +8686,7 @@ function renderPlan() {
   el.innerHTML = planUi.day ? planDayHtml(planUi.day) : planHomeHtml();
   if (planUi.day === null && planUi.drill) {
     const d = $("#drillBox");
-    if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "start" }), 30); }
+    if (d) { d.open = true; const f = d.closest("details.fold"); if (f) f.open = true; setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "start" }), 30); }
     planUi.drill = null;
   }
 }
@@ -8672,13 +8784,11 @@ function planHomeHtml() {
       <div class="lesson-stats"><div>${ring(dn / 56, `${dn}/56`)}<span>Tage</span></div></div></div>`;
   }
   const lvAuto = autoLevel();
-  const poolCard = poolCardHtml() + carryOverflowHtml() + tbPlanNoteHtml();
-  const path = `<div class="card"><div class="card-head"><h2>${icon("target")}Dein Lernpfad</h2>${levelBadge(L)}</div>
-    <p class="lead">Am Anfang lernst du die Grundlagen, am Ende Expertenwissen – und wirst danach abgefragt. Deine Stufe wächst mit den Trainingstagen und den Lektionen (die höhere der beiden zählt).</p>
+  const path = foldHtml("path", "Dein Lernpfad", `<p class="lead">Am Anfang lernst du die Grundlagen, am Ende Expertenwissen – und wirst danach abgefragt. Deine Stufe wächst mit den Trainingstagen und den Lektionen (die höhere der beiden zählt).</p>
     ${stagesHtml(false)}
     <div class="row mt"><label class="inline-label">Lernstufe <select id="planLevel" style="width:auto">
       <option value="0" ${!state.plan.level ? "selected" : ""}>Automatisch (aktuell Stufe ${lvAuto})</option>
-      ${LEVELS.map(l => `<option value="${l.n}" ${state.plan.level === l.n ? "selected" : ""}>Stufe ${l.n} · ${l.name}</option>`).join("")}</select></label></div></div>`;
+      ${LEVELS.map(l => `<option value="${l.n}" ${state.plan.level === l.n ? "selected" : ""}>Stufe ${l.n} · ${l.name}</option>`).join("")}</select></label></div>`, { icon: "target", sub: `Stufe ${L} · ${esc(lvInfo(L).name)}`, right: levelBadge(L) });
   const phases = PLAN.phases.map(ph => {
     const ds = PLAN.days.filter(d => d.n >= ph.from && d.n <= ph.to);
     const pd = ds.filter(d => dayGet(d.n).done).length;
@@ -8688,8 +8798,12 @@ function planHomeHtml() {
       <div class="plan-grid">${ds.map(d => dayTile(d, cur)).join("")}</div>`,
       { open: inPh || (!started && ph.id === PLAN.phases[0].id), sub: `Tag ${ph.from}–${ph.to}${inPh ? " · hier bist du" : ""}`, right: `${levelBadge(levelOfDay(ph.from))}<span class="badge">${pd}/${ds.length}</span>` });
   }).join("");
-  const legend = `<p class="muted small" style="margin:0 0 12px">${esc(PLAN.legend.replace(/^📖[^.]*\.\s*/, ""))} ★ = Kennzahlen-Tag mit Vergleich deiner Werte.</p>`;
-  return banner + poolCard + path + legend + phases
+  const legend = `<details class="small muted rmore" style="margin:0 2px 12px"><summary>Was bedeuten R, U, K und ★?</summary>${esc(PLAN.legend.replace(/^📖[^.]*\.\s*/, ""))} ★ = Kennzahlen-Tag mit Vergleich deiner Werte.</details>`;
+  const sec = (t, sub) => `<div class="psec"><h3>${t}</h3>${sub ? `<span class="small muted">${sub}</span>` : ""}</div>`;
+  return banner + carryOverflowHtml()
+    + sec("Alle Trainingstage", "Tippe auf einen Tag, um ihn zu öffnen") + legend + phases
+    + sec("Einstellungen", "Dein Pool und deine Lernstufe") + poolCardHtml() + path
+    + sec("Nachschlagen", "Hintergrund und Regeln, wenn du sie brauchst") + tbPlanNoteHtml()
     + foldHtml("hang", "So bleibt alles hängen", `<p class="lead">Du musst nicht alles auf einmal im Kopf haben. Der Plan baut sich langsam auf:</p>
       <ul class="wl">
         <li><b>Wenig Neues pro Tag.</b> Pro Tag kommen höchstens zwei Themen dazu, an vielen Tagen gar keins.</li>
@@ -8711,18 +8825,16 @@ function planHomeHtml() {
       <div class="dchips">${flexRoleDays().map(d => `<button type="button" class="dchip" data-pact="day" data-n="${d.n}" title="${esc(d.title)}">Tag ${d.n}</button>`).join("")}</div>
       <div class="row mt"><button type="button" class="btn ghost small" data-pact="tab" data-tab="dashboard">Flex-Fortschritt im Dashboard</button></div>`, { icon: "team", sub: `${FLEX_ROLES.map(r => ROLE_SHORT[r]).join(" und ")} als Notfall-Rolle` })
     + foldHtml("tracker", "Themen-Tracker", `<p class="lead">${esc(PLAN.session.repeat)} Tippe auf eine Zahl, um den Tag zu öffnen.</p><div class="table-wrap">${trackerHtml(cur)}</div>`, { icon: "list", sub: "Wann welches Thema neu ist und wiederkommt" })
-    + `<div class="card"><div class="card-head"><h2>${icon("training")}Trainingsbereich: die Drills</h2></div>
-      <p class="lead">${esc(PLAN.drills.intro)}</p>
+    + foldHtml("drills", "Trainingsbereich: die Drills", `<p class="lead">${esc(PLAN.drills.intro)}</p>
       <details class="wiss" id="drillBox"><summary><span class="num">A–F</span><b>Alle sechs Drills anzeigen</b></summary><div class="wbody">
         ${PLAN.drills.list.map(drillHtml).join("")}
         <div class="table-wrap">${table(["Im Tagesplan steht", "Das machst du"], PLAN.drills.map.map(r => r.map(c => linkify(esc(c)))))}</div>
-        <p style="margin:0">${esc(PLAN.drills.note)}</p></div></details></div>`
+        <p style="margin:0">${esc(PLAN.drills.note)}</p></div></details>`, { icon: "training", sub: "Sechs Übungen im Trainingsbereich des Spiels" })
     + foldHtml("rules", "Regeln für jede Session", rulesHtml(), { icon: "book", sub: "Die Spielregeln für dein Training" })
     + baselineHtml()
-    + `<div class="card"><div class="card-head"><h2>${icon("ai")}Wochenpaket für Claude</h2></div>
-      <p class="lead">${esc(PLAN.weekly)}</p>
+    + foldHtml("weekly", "Wochenpaket für Claude", `<p class="lead">${esc(PLAN.weekly)}</p>
       <div class="row"><button class="btn" type="button" data-pact="weekly">${icon("copy")}Wochenpaket kopieren</button>
-      ${started ? `<button class="btn danger small" type="button" data-pact="reset">Plan zurücksetzen</button>` : ""}</div></div>`;
+      ${started ? `<button class="btn danger small" type="button" data-pact="reset">Plan zurücksetzen</button>` : ""}</div>`, { icon: "ai", sub: "Deine Woche als Text für Claude, Plan zurücksetzen" });
 }
 // Matchlänge: standardmässig 7 bis 12 Minuten (Quick Matches), in der Plan-Ansicht änderbar
 const MATCH_LEN_DEFAULT = [7, 12];
@@ -8873,6 +8985,52 @@ function dayLessonCardHtml(n) {
     <p class="lead">Die Lektion erklärt das Thema von heute. Lies sie vor dem Spielen, dann hast du im Match einen klaren Fokus.${ids.length > 1 ? " Die weiteren Lektionen sind freiwillig." : ""}</p>
     ${ids.map(row).join("")}</div>`;
 }
+// ---------- Ein Trainingstag, Schritt für Schritt ----------
+// Der Tag ist in Abschnitte geteilt: Vorbereitung, die Blöcke, Nachholen, Abschluss. Offen ist nur der Abschnitt, der jetzt dran ist,
+// erledigte klappen zu. «Alle Schritte zeigen» klappt alle auf (gespeichert auf diesem Gerät).
+const DAYALL_KEY = STORE_KEY + "-dayall";
+let dayAll = (() => { try { return localStorage.getItem(DAYALL_KEY) === "1"; } catch (e) { return false; } })();
+planUi.stOpen = {};   // von Hand auf- oder zugeklappt: "Tag:Abschnitt" → offen; gilt, bis ein Abschnitt fertig wird
+function dayStages(n) {
+  const d = PLAN.days[n - 1], st = dayGet(n), on = k => !!(st.steps || {})[k];
+  const blocks = d.steps.filter(x => /^b\d$/.test(x.key)), carry = carryFor(n);
+  const out = [{ key: "prep", label: "Vorbereitung", done: !!st.done || !!st.prepOk || on("start") || blocks.some(x => on(x.key)) }];
+  blocks.forEach(x => out.push({ key: x.key, label: x.key === "b4" ? "Block 4+" : "Block " + x.key[1], done: on(x.key), step: x }));
+  if (carry.length) out.push({ key: "carry", label: "Nachholen", done: carry.every(c => c.done) });
+  out.push({ key: "end", label: "Abschluss", done: !!st.done });
+  const cur = st.done ? null : out.find(x => !x.done);
+  out.forEach(x => { x.cur = x === cur; });
+  return out;
+}
+const dayStageCur = n => (dayStages(n).find(x => x.cur) || {}).key || "";
+const stageOpen = (n, s) => dayAll || (n + ":" + s.key in planUi.stOpen ? planUi.stOpen[n + ":" + s.key] : s.cur);
+function stageResetOpen(n) { Object.keys(planUi.stOpen).forEach(k => { if (k.startsWith(n + ":")) delete planUi.stOpen[k]; }); }
+function stageJump(key) {
+  const el = document.getElementById("stage-" + key);
+  if (el) { el.open = true; setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 30); }
+}
+// Nach einem Häkchen: Ist ein Abschnitt fertig geworden, klappt der nächste auf und kommt ins Bild
+function stageAfterChange(n, before) {
+  const after = dayStageCur(n);
+  if (after === before) { renderPlan(); return; }
+  stageResetOpen(n); renderPlan();
+  if (after) stageJump(after);
+}
+function stageHtml(n, s, i, body, sub) {
+  const right = s.done ? '<span class="badge ok">✓ erledigt</span>' : s.cur ? '<span class="badge">jetzt dran</span>' : "";
+  return `<details class="fold dstage${s.done ? " sdone" : ""}${s.cur ? " scur" : ""}" data-stage="${s.key}" id="stage-${s.key}" ${stageOpen(n, s) ? "open" : ""}>${foldInner(esc(s.label), body, { sub, right, pre: `<span class="snum" aria-hidden="true">${s.done ? "✓" : i + 1}</span>` })}</details>`;
+}
+function dayStepperHtml(n, stages) {
+  const cur = stages.find(x => x.cur), i = stages.indexOf(cur);
+  return `<nav class="dsteps" aria-label="Abschnitte des Tages">${stages.map((s, j) => `<button type="button" class="dstep${s.done ? " done" : ""}${s.cur ? " cur" : ""}" data-pact="stage" data-k="${s.key}"${s.cur ? ' aria-current="step"' : ""}><span aria-hidden="true">${s.done ? "✓" : j + 1}</span>${esc(s.label)}</button>`).join("")}</nav>
+    <div class="dstepbar"><span class="small muted">${cur ? `Jetzt dran: <b>${esc(cur.label)}</b> · Schritt ${i + 1} von ${stages.length}` : dayGet(n).done ? "Dieser Tag ist abgeschlossen ✓" : ""}</span>
+      <button type="button" class="linkbtn small" data-pact="dayall" aria-pressed="${dayAll}">${dayAll ? "Nur den aktuellen Schritt offen" : "Alle Schritte zeigen"}</button></div>`;
+}
+// Untertitel eines Blocks: was in Klammern steht, dazu Modus und Anzahl Matches
+function blockSub(n, s) {
+  const d = PLAN.days[n - 1], par = (/\(([^)]*)\)/.exec(s.label) || [])[1], bm = blockMode(d, s.key);
+  return [par, bm && bm.t, s.key !== "b4" ? blockText() : ""].filter(Boolean).map(esc).join(" · ");
+}
 function planDayHtml(n) {
   const d = PLAN.days[n - 1], st = dayGet(n), ph = phaseOf(n), lv = levelOfDay(n), cur = planDay();
   const readIds = d.l.map(x => "L" + x);
@@ -8885,39 +9043,48 @@ function planDayHtml(n) {
   const dm = dayMatches(n);
   const ds = summary(dm.ms);
   const qCount = knowledgePool(readIds).length;
-  return `<div class="daynav"><button class="btn ghost small" type="button" data-pact="home">← Alle Tage</button>
+  const stages = dayStages(n), stepOf = k => d.steps.find(x => x.key === k);
+  const blocks = stages.filter(x => x.step), weakAt = (blocks.find(x => x.key === "b3") || blocks[blocks.length - 1] || {}).key || "prep";
+  const head = `<div class="daynav"><button class="btn ghost small" type="button" data-pact="home">← Alle Tage</button>
       <div class="row"><button class="btn ghost small" type="button" data-pact="day" data-n="${n - 1}" ${n <= 1 ? "disabled" : ""}>‹ Tag ${n - 1}</button>
       <button class="btn ghost small" type="button" data-pact="day" data-n="${n + 1}" ${n >= 56 ? "disabled" : ""}>Tag ${n + 1} ›</button></div></div>
-    <div class="card"><div class="card-head"><div><div class="muted small">Tag ${n} von 56 · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
+    <div class="card dayhead"><div class="card-head"><div><div class="muted small">Tag ${n} von 56 · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
       <div class="row">${levelBadge(lv)}${d.mode ? `<span class="tag">${esc(modeText(d))}</span>` : ""}${d.kennzahlen ? '<span class="badge">★ Kennzahlen-Tag</span>' : ""}${st.role && st.role !== "none" ? `<span class="tag">+ ${ROLE_SHORT[st.role]}</span>` : ""}${st.done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ erledigt ${fmtDate(st.done)}</span>` : n === cur ? '<span class="badge">nächster Tag</span>' : ""}</div></div>
       ${d.heute ? `<div class="heute"><b>Worum geht es heute?</b> ${linkify(esc(d.heute), seenD)}</div>` : ""}
-      ${d.intro.map(t => `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div>${richLines(t, seenD)}</div></div>`).join("")}
-    </div>
-    ${focusCardHtml(n)}
-    ${dayLessonCardHtml(n)}
-    ${wkDayCardHtml(n)}
-    ${goalDayCardHtml(n)}
-    ${carryCardHtml(n)}
-    ${foldHtml("d-read", "Nachlesen beim Start", `<div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
+      ${dayStepperHtml(n, stages)}
+    </div>`;
+  const prepS = stages[0], start = stepOf("start"), nextLabel = (stages[1] || {}).label || "";
+  const prep = d.intro.map(t => `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>${richLines(t, seenD)}</div></div>`).join("")
+    + focusCardHtml(n) + dayLessonCardHtml(n) + goalDayCardHtml(n) + (weakAt === "prep" ? wkDayCardHtml(n) : "")
+    + foldHtml("d-read", "Nachlesen beim Start", `<div class="row">${readIds.map(id => { const w = wissenById(id); return `<button type="button" class="chip ${planUi.read.has(id) ? "on" : ""}" data-pact="read" data-k="${id}">${id} ${esc(w ? w.title : "")}</button>`; }).join("")}
         ${d.d.map(x => `<button type="button" class="chip ${planUi.read.has("D:" + x) ? "on" : ""}" data-pact="read" data-k="D:${x}">Drill ${x}</button>`).join("")}</div>
       ${reads}
-      ${!readIds.length && !d.d.length ? '<p class="muted small">Heute gibt es nichts nachzulesen.</p>' : ""}`, { icon: "book", open: planUi.read.size > 0, sub: readIds.length || d.d.length ? "Kurz-Wissen zum Thema von heute" : "Heute nichts" })}
-    <div class="card"><div class="card-head"><h2>${icon("training")}Ablauf</h2><span class="muted small">${blockText()}</span></div>
-      ${matchLenHtml()}
-      <details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>
-      ${d.steps.map(s => nugBefore(n, s, d) + stepHtml(n, s, seenD) + nugAfter(n, s, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "")).join("")}</div>
-    ${foldHtml("d-matches", "Deine Matches an diesem Tag", `<div class="row" style="margin-bottom:8px"><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
+      ${!readIds.length && !d.d.length ? '<p class="muted small">Heute gibt es nichts nachzulesen.</p>' : ""}`, { icon: "book", open: planUi.read.size > 0, sub: readIds.length || d.d.length ? "Kurz-Wissen zum Thema von heute" : "Heute nichts" })
+    + (start ? `<div class="psteps">${stepHtml(n, start, seenD)}</div>` : "")
+    + foldHtml("d-len", "Ablauf und Matchlänge", `<details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>${matchLenHtml()}`, { icon: "training", sub: blockText() })
+    + (!start && !prepS.done && nextLabel ? `<div class="row"><button class="btn" type="button" data-pact="prep-ok" data-n="${n}">Bereit, weiter zu ${esc(nextLabel)} →</button></div>` : "");
+  const blockBody = s => (s.key === weakAt ? wkDayCardHtml(n) : "")
+    + nugBefore(n, s.step, d) + `<div class="psteps">${stepHtml(n, s.step, seenD)}</div>` + nugAfter(n, s.step, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "");
+  const note = stepOf("note");
+  const end = (note ? `<div class="psteps">${stepHtml(n, note, seenD)}</div>` : "")
+    + foldHtml("d-matches", "Deine Matches an diesem Tag", `<div class="row" style="margin-bottom:8px"><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
       ${dm.date ? (dm.ms.length ? `<p style="margin:0">${fmtDate(dm.date)}: <b>${plural(dm.ms.length, "Match", "Matches")}</b> · ${dm.ms.filter(m => m.result === "W").length} Siege, ${dm.ms.filter(m => m.result === "L").length} Niederlagen · Ø Tode ${ds.d.toFixed(1)} · Ø KDA ${ds.kda.toFixed(1)}${ds.ultN ? ` · Ult-Wirkung ${pct(ds.ultPct)}` : ""}</p>` : `<p class="muted small" style="margin:0">Für ${fmtDate(dm.date)} sind noch keine Matches geloggt.</p>`)
-        : '<p class="muted small" style="margin:0">Sobald du diesen Tag abgeschlossen hast, siehst du hier die Matches dieses Datums.</p>'}`, { icon: "analysis", open: dm.ms.length > 0, sub: dm.ms.length ? plural(dm.ms.length, "Match", "Matches") : "noch keine" })}
-    ${d.kennzahlen ? foldHtml("d-kpi", "Kennzahlen-Vergleich", `<p class="lead">Aus deinen geloggten Matches am jeweiligen Trainingstag. Solo und Stack trennst du in deinen Notizen.</p>${kpiCharts(n)}<div class="table-wrap">${kpiTable(n)}</div>`, { icon: "analysis", open: true, sub: "Deine Werte an den Kennzahlen-Tagen" }) : ""}
-    ${foldHtml("d-check", "Wissens-Check", `<p class="lead">Teste dich zu den Themen von heute – ${qCount ? `bis zu fünf Fragen aus ${readIds.join(", ")}, dazu ein paar aus früheren Tagen` : "für diesen Tag gibt es keine passenden Fragen"}. Das Mischen ist Absicht: So übst du, Wissen abzurufen, nicht nur das Thema von heute. Die Schwierigkeit passt sich deiner Stufe an.</p>
-      <button class="btn" type="button" data-pact="check-day" data-n="${n}" ${qCount ? "" : "disabled"}>Tages-Check starten</button>`, { icon: "quiz", sub: qCount ? "Bis zu fünf Fragen zu heute" : "Keine Fragen für diesen Tag", right: levelBadge(currentLevel()) })}
-    <div class="card"><div class="card-head"><h2>${icon("edit")}Abschluss</h2></div>
-      ${autoRateHtml(n)}
+        : '<p class="muted small" style="margin:0">Sobald du diesen Tag abgeschlossen hast, siehst du hier die Matches dieses Datums.</p>'}`, { icon: "analysis", open: dm.ms.length > 0, sub: dm.ms.length ? plural(dm.ms.length, "Match", "Matches") : "noch keine" })
+    + (d.kennzahlen ? foldHtml("d-kpi", "Kennzahlen-Vergleich", `<p class="lead">Aus deinen geloggten Matches am jeweiligen Trainingstag. Solo und Stack trennst du in deinen Notizen.</p>${kpiCharts(n)}<div class="table-wrap">${kpiTable(n)}</div>`, { icon: "analysis", open: true, sub: "Deine Werte an den Kennzahlen-Tagen" }) : "")
+    + foldHtml("d-check", "Wissens-Check", `<p class="lead">Teste dich zu den Themen von heute – ${qCount ? `bis zu fünf Fragen aus ${readIds.join(", ")}, dazu ein paar aus früheren Tagen` : "für diesen Tag gibt es keine passenden Fragen"}. Das Mischen ist Absicht: So übst du, Wissen abzurufen, nicht nur das Thema von heute. Die Schwierigkeit passt sich deiner Stufe an.</p>
+      <button class="btn" type="button" data-pact="check-day" data-n="${n}" ${qCount ? "" : "disabled"}>Tages-Check starten</button>`, { icon: "quiz", sub: qCount ? "Bis zu fünf Fragen zu heute" : "Keine Fragen für diesen Tag", right: levelBadge(currentLevel()) })
+    + `<div class="dend">${autoRateHtml(n)}
       ${reflectionHtml(n)}
       <label class="mt">Zwei Sätze: Was lief gut? Was kommt morgen wieder?<textarea id="dayNote" data-n="${n}" placeholder="Deine Notiz …">${esc(st.note)}</textarea></label>
       <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${n < 56 ? `<button class="btn" type="button" data-pact="day" data-n="${n + 1}">Weiter zu Tag ${n + 1} →</button>` : ""}`
         : `<button class="btn" type="button" data-pact="complete" data-n="${n}">${icon("check")}Tag ${n} abschliessen</button>`}</div></div>`;
+  const body = stages.map((s, i) => {
+    if (s.key === "prep") return stageHtml(n, s, i, prep, "Worauf es heute ankommt, Lektion, Start");
+    if (s.step) return stageHtml(n, s, i, blockBody(s), blockSub(n, s.step));
+    if (s.key === "carry") { const items = carryFor(n); return stageHtml(n, s, i, `<p class="lead" style="margin:0">Diese Blöcke sind von früheren Tagen offen geblieben und automatisch hier eingeplant.</p><div class="psteps">${items.map(carryStepHtml).join("")}</div>`, `${plural(items.length, "Block", "Blöcke")} aus früheren Tagen`); }
+    return stageHtml(n, s, i, end, "Aufschreiben, Wissens-Check, Rückblick, Tag abschliessen");
+  }).join("");
+  return head + body;
 }
 
 // ---------- Eigener Pool: Heldennamen im Plan ----------
@@ -9153,9 +9320,9 @@ function rulesCardHtml() {
   if (!rs.length) return "";
   const kw = fadeLevel(Math.min(56, planDay())) >= 2, shown = new Set();
   return `<div class="card today-card"><div class="card-head"><h2>${icon("check")}Deine Grundregeln fürs nächste Match</h2><span class="badge">${rs.length}</span></div>
-    <p class="lead" style="margin:0 0 6px">${kw ? "Nur noch Stichworte, du kennst sie. " : ""}Sie laufen im Hintergrund mit, du musst nicht ständig an alle denken. Nach dem Match fragt dich die App, ob du daran gedacht hast, ohne es dir vorzunehmen.</p>
+    <p class="lead" style="margin:0 0 6px">${kw ? "Nur noch Stichworte, du kennst sie. " : ""}Sie laufen im Hintergrund mit, du musst nicht ständig an alle denken.</p>
     <ul class="wl">${rs.map(r => { let tx = kw ? "" : ruleText(r.t); if (tx && shown.has(tx)) tx = ""; shown.add(tx); return `<li><b>${esc(r.t.topic)}</b>${r.spot ? ' <span class="badge">Stichprobe</span>' : ""} ${ruleDots(r.t)}${tx ? `<br><span class="small">${esc(tx)}</span>` : ""}</li>`; }).join("")}</ul>
-    <p class="small muted" style="margin:6px 0 0">Eine Regel verschwindet aus der Liste, sobald sie in den letzten Matches meist von selbst geklappt hat. Alte Regeln fragt die App ab und zu als Stichprobe wieder ab.</p></div>`;
+    <details class="small muted rmore"><summary>So funktionieren die Grundregeln</summary>Nach dem Match fragt dich die App, ob du daran gedacht hast, ohne es dir vorzunehmen. Eine Regel verschwindet aus der Liste, sobald sie in den letzten Matches meist von selbst geklappt hat. Alte Regeln fragt die App ab und zu als Stichprobe wieder ab.</details></div>`;
 }
 // Fragen im Match-Log
 function renderRuleBox(selected) {
@@ -9642,8 +9809,8 @@ document.addEventListener("click", e => {
 function tbPlanNoteHtml() {
   if (!TB()) return "";
   const n = POOL_ROLES.reduce((s, r) => s + tbMilestones(r).filter(m => m.ok).length, 0);
-  return `<div class="card"><div class="card-head"><h2>${icon("target")}Und danach: Eternity</h2><button class="linkbtn small" type="button" data-go="top">Zum Eternity-Weg</button></div>
-    <p class="small" style="margin:0">Der Plan führt zu Celestial. Für Eternity vergleichst du dich mit den Besten: Auf «Spielen → Eternity-Weg» stehen deine Werte pro Rolle neben deren Werten, dazu fünf Meilensteine pro Rolle (jetzt ${n} von 15 erreicht).</p></div>`;
+  return foldHtml("eternity", "Und danach: Eternity", `<p class="small" style="margin:0 0 8px">Der Plan führt zu Celestial. Für Eternity vergleichst du dich mit den Besten: Auf «Spielen → Eternity-Weg» stehen deine Werte pro Rolle neben deren Werten, dazu fünf Meilensteine pro Rolle (jetzt ${n} von 15 erreicht).</p>
+    <button class="btn ghost small" type="button" data-go="top">Zum Eternity-Weg</button>`, { icon: "target", sub: `${n} von 15 Meilensteinen erreicht` });
 }
 // Kleine Karte auf «Heute»: wie viele der Meilensteine auf dem Weg nach Eternity sind erreicht
 function tbTodayHtml() {
@@ -10004,6 +10171,8 @@ function rvPlanCardHtml(n) {
 }
 function rvJump() {
   const el = document.querySelector("main > section:not([hidden]) .rvwrap");
+  const stg = el && el.closest("details.dstage");
+  if (stg && !stg.open) { stg.open = true; if (planUi.day) planUi.stOpen[planUi.day + ":" + stg.dataset.stage] = true; }
   if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 document.addEventListener("click", e => {
@@ -10322,21 +10491,15 @@ document.addEventListener("click", e => {
   if (!state.settings.noFx) celebrate();
 });
 
-// ---------- Der nächste kleine Schritt ----------
-// Ein einziger Vorschlag statt einer Liste: das Nächste, was jetzt dran ist.
-function nextStepHtml() {
-  const st = rvStatus(), card = (title, sub, btn) => `<div class="card today-card nextstep"><div class="small muted">Dein nächster kleiner Schritt</div><div class="row" style="justify-content:space-between;gap:10px;align-items:center"><div style="min-width:0"><b>${title}</b><div class="small muted">${sub}</div></div>${btn}</div></div>`;
-  if (st.need && !st.ok) {
-    const x = st.L.open[0];
-    if (x) return card(`Ein Match auswerten: ${esc(x.hero)} ${x.result === "W" ? "(Sieg)" : "(Niederlage)"}`, `${st.done} von ${st.need} Review-Matches sind fertig. Tode zuordnen, eine Stärke, ein Vorsatz.`, `<button class="btn small" type="button" data-rv-go="${x.id}">Los</button>`);
-  }
+// Zusatzschritt, wenn «Heute zu tun» erledigt ist: laufende Mission, fällige Fragen, sonst eine Mission wählen
+function todayExtra() {
   const mis = rvState().missions.filter(x => x.status === "open")[0];
-  if (mis) { const p = wkProgress(mis); return card(`Mission mit ${esc(mis.hero)}: noch ${plural(Math.max(0, mis.n - p.have), "Match", "Matches")}`, esc(wkMissionText(mis)), `<button class="btn small ghost" type="button" data-go="weak">Mission ansehen</button>`); }
+  if (mis) { const p = wkProgress(mis); return { t: `Mission mit ${esc(mis.hero)}: noch ${plural(Math.max(0, mis.n - p.have), "Match", "Matches")}`, s: esc(wkMissionText(mis)), a: `<button class="btn small" type="button" data-go="weak">Mission ansehen</button>` }; }
   const dueN = dueQs(false).length + dueHs().length;
-  if (dueN) return card(`${plural(Math.min(5, dueN), "Frage", "Fragen")} wiederholen`, "Kurz abrufen, dann bleibt es hängen.", `<button class="btn small" type="button" data-pact="due-start">Los</button>`);
+  if (dueN) return { t: `${plural(Math.min(5, dueN), "Frage", "Fragen")} wiederholen`, s: "Kurz abrufen, dann bleibt es hängen.", a: `<button class="btn small" type="button" data-pact="due-start">Los</button>` };
   const w = wkHeroes().map(h => wkFind(h).filter(x => x.mission)[0]).filter(Boolean).sort((a, b) => b.sev - a.sev)[0];
-  if (w) return card(`Eine Mission wählen: ${esc(w.hero)}`, esc(w.title), `<button class="btn small ghost" type="button" data-go="weak">Ansehen</button>`);
-  return "";
+  if (w) return { t: `Eine Mission wählen: ${esc(w.hero)}`, s: esc(w.title), a: `<button class="btn small" type="button" data-go="weak">Ansehen</button>` };
+  return null;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-rv-go]");
@@ -11572,9 +11735,9 @@ function appSeen(k, once) {
 const PAGE_HELP = {
   dashboard: ["Dashboard", ["Oben wählst du Zeitraum, Rolle, Held und Modus. Die Filter gelten für alle Karten darunter.", "Die grosse Zahl ist deine Winrate im Ausschnitt, die Pfeile vergleichen mit dem gleich langen Zeitraum davor.", "Fahr mit dem Finger über ein Diagramm, dann siehst du die genauen Werte. «Tabelle» zeigt dieselben Zahlen als Liste.", "Tipp: Tippe unter «Deine Helden» einen Helden an. Dann vergleichst du nur Matches mit diesem Helden."]],
   squad: ["Squad", ["Trag oben deine Teammates ein, genau wie im Spiel geschrieben. Die App erkennt sie in deinen abgeglichenen Matches.", "Die Karten vergleichen Matches mit und ohne Teammates: mit wem, mit welchen Helden, gegen welche Gegner und wie eure Rollen gegen die gegnerischen abschneiden.", "Im Match-Verlauf öffnet «Analyse» die Tabelle aller 12 Spieler eines Matches.", "Mit wenigen Matches schwanken die Zahlen stark. Blasse Zeilen beruhen auf weniger als 3 Matches."]],
-  today: ["Heute", ["Oben siehst du, wie weit dein Tag ist. «Heute zu tun» hat vier Schritte: Lektion, Training, Wochenziel, Spielen.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«App-Übungen» führt dich Schritt für Schritt durch die App, immer nur ein bis zwei Übungen.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach)."]],
-  plan: ["Trainingsplan", ["Wähle oben den Tag. Jeder Tag hat Start, Blöcke und eine Notiz am Ende.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
-  log: ["Match loggen", ["Pflicht sind nur Held, Ergebnis und K/D/A. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten: Todesursachen, Fehler, Stärken, die Grundregel-Fragen und, wenn du ein Bootcamp begonnen hast, die Bootcamp-Aufgabe. Je mehr du einträgst, desto genauer die Auswertung.", "Matches, die die App von Rivals Data geholt hat, stehen oben unter «Reflexion offen». Dort trägst du nur noch Fehler und Stärken ein."]],
+  today: ["Heute", ["Ganz oben steht, was jetzt dran ist: ein Schritt, ein Knopf. Mehr musst du im Moment nicht tun.", "«Heute zu tun» zeigt alle Schritte des Tages. Erledigtes hakt sich von selbst ab.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«Mehr für heute» ganz unten ist zugeklappt: Eternity-Weg, App-Übungen und ein Wegweiser durch die App.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach). Seltener Benutztes steckt dort unter «Mehr»."]],
+  plan: ["Trainingsplan", ["Wähle oben den Tag. Ein Tag hat Abschnitte: Vorbereitung, Blöcke, Abschluss. Offen ist nur der Abschnitt, der jetzt dran ist. Sobald er abgehakt ist, klappt der nächste auf.", "Die runden Knöpfe unter dem Titel springen zu jedem Abschnitt. «Alle Schritte zeigen» klappt alle auf einmal auf.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
+  log: ["Matches", ["Die Seite hat drei Bereiche: «Offen» (geholte Matches, zu denen noch Fehler und Stärken fehlen), «Eintragen» (ein Match selbst eintragen oder bearbeiten) und «Verlauf» (alle Matches).", "Beim Eintragen sind nur Held, Ergebnis und K/D/A Pflicht. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten im Formular: Todesursachen, Fehler, Stärken, die Grundregel-Fragen und, wenn du ein Bootcamp begonnen hast, die Bootcamp-Aufgabe. Je mehr du einträgst, desto genauer die Auswertung."]],
   analysis: ["Auswertung", ["Oben filterst du Zeitraum, Modus und Rolle.", "Darunter stehen Schaden, Heilung und Geblockt pro 10 Minuten, deine Winrate gegen jeden Gegner-Helden, Maps und Tageszeit.", "Fang mit einer Zahl an und frag dich, was du dagegen tun kannst. Mit wenigen Matches sind die Zahlen noch unsicher."]],
   team: ["Team & Counter", ["Die Seite geht in vier Schritten: 1 Eintragen, 2 Lage lesen, 3 Wechsel prüfen, 4 Nachschlagen. Es ist immer nur ein Schritt offen.", "Beginne mit Schritt 1 und trag zwei Gegner ein. Mehr brauchst du am Anfang nicht.", "«Alles zeigen» blendet alle Karten gleichzeitig ein, wenn du die Seite schon kennst.", "Die Vorschläge sind Denkhilfen mit Begründung, keine Garantie."]],
   heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
@@ -11689,11 +11852,6 @@ function carryStepHtml(c) {
   const src = PLAN.days[c.from - 1], s = src.steps.find(x => x.key === c.key);
   return s ? stepHtml(c.from, s, new Set(), { carry: c, label: `${s.label.replace(/\s*\(.*\)/, "")} von Tag ${c.from}: ${src.title}` }) : "";
 }
-function carryCardHtml(n) {
-  const items = carryFor(n);
-  if (!items.length) return "";
-  return foldHtml("d-carry", "Nachholen", items.map(carryStepHtml).join(""), { icon: "clock", open: true, sub: `${plural(items.length, "Block", "Blöcke")} aus früheren Tagen, automatisch eingeplant`, right: `<span class="badge">${items.length}</span>` });
-}
 function carryOverflowHtml() {
   const items = planCarry().filter(c => c.to === 0 && !c.done);
   if (!items.length) return "";
@@ -11780,7 +11938,10 @@ function planAction(act, b) {
     case "read": { const k = b.dataset.k; planUi.read.has(k) ? planUi.read.delete(k) : planUi.read.add(k); renderPlan(); break; }
     case "start": startPlan(); break;
     case "complete": completeDay(+b.dataset.n); break;
-    case "reopen": { dayEnsure(+b.dataset.n).done = null; save(); renderPlan(); renderLevelChip(); break; }
+    case "reopen": { const n = +b.dataset.n; dayEnsure(n).done = null; save(); stageResetOpen(n); renderPlan(); renderLevelChip(); break; }
+    case "stage": { const n = planUi.day, k = b.dataset.k; if (!n) break; planUi.stOpen[n + ":" + k] = true; const el = document.getElementById("stage-" + k); if (el) stageJump(k); break; }
+    case "dayall": { dayAll = !dayAll; try { localStorage.setItem(DAYALL_KEY, dayAll ? "1" : "0"); } catch (e) {} if (planUi.day) stageResetOpen(planUi.day); renderPlan(); break; }
+    case "prep-ok": { const n = +b.dataset.n, before = dayStageCur(n); dayEnsure(n).prepOk = true; save(); stageAfterChange(n, before); break; }
     case "weekly": copyText(weeklyPackageText(), "Wochenpaket kopiert – schick es Claude"); break;
     case "reset": askConfirm("Trainingsplan zurücksetzen? Deine abgehakten Tage und Notizen im Plan werden gelöscht.", "Zurücksetzen", true).then(ok => { if (!ok) return; state.plan = { start: null, days: {}, topics: {}, level: 0 }; save(); renderPlan(); renderLevelChip(); toast("Plan zurückgesetzt"); }); break;
     case "check-refresh": startKnow({ ids: refreshIds(+b.dataset.n), label: `Tag ${b.dataset.n} · Auffrischen`, back: +b.dataset.n }); break;
@@ -11802,9 +11963,9 @@ $("#planBody").addEventListener("change", e => {
   if (t.matches("[data-pstep]")) {
     const step = PLAN.days[planUi.day - 1].steps.find(x => x.key === t.dataset.pstep), lock = t.checked && step ? rvLock(planUi.day, step) : "";
     if (lock) { toast(lock); renderPlan(); return; }
-    const st = dayEnsure(planUi.day); st.steps[t.dataset.pstep] = t.checked; save(); renderPlan();
+    const n = planUi.day, before = dayStageCur(n), st = dayEnsure(n); st.steps[t.dataset.pstep] = t.checked; save(); stageAfterChange(n, before);
   }
-  else if (t.matches("[data-pcarry]")) { const c = planCarry().find(x => x.id === t.dataset.pcarry); if (c) { c.done = t.checked ? today() : null; save(); renderPlan(); } }
+  else if (t.matches("[data-pcarry]")) { const c = planCarry().find(x => x.id === t.dataset.pcarry); if (c) { const n = planUi.day, before = n ? dayStageCur(n) : ""; c.done = t.checked ? today() : null; save(); if (n) stageAfterChange(n, before); else renderPlan(); } }
   else if (t.matches("[data-poolslot]")) {
     UIFOLD.pool = true;
     const by = {}; document.querySelectorAll("#planBody [data-poolslot]").forEach(x => { if (x.value) (by[x.dataset.poolslot.split(":")[0]] = by[x.dataset.poolslot.split(":")[0]] || []).push(x.value); });
