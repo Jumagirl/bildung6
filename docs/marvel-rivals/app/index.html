@@ -6,7 +6,7 @@
 <title>Rivals Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Exo+2:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
 <style>
 /* Gaming-Look: dunkle Spiel-Oberfläche als Grundlage, Violett als Aktionsfarbe, Gold für Belohnungen,
    Rollenfarben (Tank blau, DPS orange, Support grün) als Code für alles, was mit Helden zu tun hat.
@@ -1182,7 +1182,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
   --warn: #ffbe5c;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 14px 34px rgba(10, 0, 20, 0.42);
   --hero-grad: linear-gradient(120deg, #3b1452 0%, #7a1f78 42%, #cc3f80 74%, #ff8c7a 100%);
-  --font-display: "Exo 2", "Trebuchet MS", system-ui, sans-serif;
+  --font-display: "Quicksand", "Nunito", "Trebuchet MS", system-ui, sans-serif;
   --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 :root[data-look="rose"][data-theme="light"] {
@@ -1251,7 +1251,16 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 :root[data-look="rose"] .av { clip-path: circle(49%); border-radius: 50%; }
 :root[data-look="rose"] .av.pic img { clip-path: circle(49%); border-radius: 50%; }
 :root[data-look="rose"] .role::before { clip-path: none; border-radius: 50%; }
-:root[data-look="rose"] .fcell { border-radius: 8px; }
+:root[data-look="rose"] .fcell, :root[data-look="rose"] .fcell.l { border-radius: 50%; height: auto; aspect-ratio: 1; max-width: 26px; font-size: .6rem; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 85%, transparent); }
+:root[data-look="rose"] .tmres { border-radius: 50% !important; }
+:root[data-look="rose"] .fstrip { align-items: center; gap: 5px; flex: 1 1 100%; }
+:root[data-look="rose"] .fcell { font-size: .66rem; }
+:root[data-look="rose"] .hk { border-radius: 18px; }
+:root[data-look="rose"] .hk .hkv, :root[data-look="rose"] .kpi .v, :root[data-look="rose"] .hcstats b, :root[data-look="rose"] .hstreak b { font-weight: 700; letter-spacing: 0; }
+:root[data-look="rose"] .hkl, :root[data-look="rose"] .hcr, :root[data-look="rose"] .hcm, :root[data-look="rose"] .kpi .l, :root[data-look="rose"] th, :root[data-look="rose"] .card h3 { text-transform: none; letter-spacing: .02em; }
+:root[data-look="rose"] .hkl { font-size: .74rem; }
+:root[data-look="rose"] .rs { border-radius: 999px; }
+:root[data-look="rose"] .rsplit { gap: 5px; overflow: visible; }
 :root[data-look="rose"] .bdg .em { clip-path: none; border-radius: 50%; width: 52px; height: 52px; }
 :root[data-look="rose"] .rsplit { border-radius: 999px; }
 :root[data-look="rose"] .tbb, :root[data-look="rose"] .tbb .tbv, :root[data-look="rose"] .mstb, :root[data-look="rose"] .track { border-radius: 999px; }
@@ -4185,7 +4194,7 @@ function lineChart(el, values, meta) {
   const W = Math.max(280, el.clientWidth || 500), H = 190, L = 40, R = 12, T = 12, B = 24;
   const x = i => L + (values.length === 1 ? 0 : i * (W - L - R) / (values.length - 1));
   const y = v => T + (1 - v) * (H - T - B);
-  const line = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const line = values.length > 2 ? smoothPath(values.map((v, i) => [x(i), y(v)]), y(1), y(0)) : values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   const area = `${line} L${x(values.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
   const grid = [0, 0.5, 1].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v * 100} %</text>`).join("");
   const last = values.length - 1;
@@ -4228,13 +4237,25 @@ function roleIcon(role, cls) {
   const g = ROLE_GLYPH[role];
   return g ? `<svg class="ri ${role}${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${g}</svg>` : "";
 }
-// Verlauf als Fläche mit Linie; values zwischen 0 und 1
+// Weiche Kurve durch alle Punkte (Catmull-Rom als Bézier); die Kontrollpunkte bleiben im Bereich lo..hi, damit nichts überschiesst
+function smoothPath(pts, lo, hi) {
+  if (pts.length < 2) return "";
+  const c = v => Math.max(lo, Math.min(hi, v)), f = n => n.toFixed(1);
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(c(p1[1] + (p2[1] - p0[1]) / 6))} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(c(p2[1] - (p3[1] - p1[1]) / 6))} ${f(p2[0])},${f(p2[1])}`;
+  }
+  return d;
+}
+// Verlauf als Fläche mit weicher Linie; values zwischen 0 und 1
 function sparkline(values, o) {
   if (values.length < 2) return "";
   const W = 120, H = 30, id = "spk" + (++gfxN), col = (o && o.color) || "var(--accent)";
-  const pts = values.map((v, i) => `${(i * W / (values.length - 1)).toFixed(1)},${(H - 3 - Math.max(0, Math.min(1, v)) * (H - 7)).toFixed(1)}`);
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,${H} ${pts.join(" ")} ${W},${H}" fill="url(#${id})"/>
-    <polyline points="${pts.join(" ")}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+  const pts = values.map((v, i) => [i * W / (values.length - 1), H - 3 - Math.max(0, Math.min(1, v)) * (H - 7)]);
+  const line = smoothPath(pts, 1, H - 1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${line} L${W},${H} L0,${H} Z" fill="url(#${id})"/>
+    <path d="${line}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
     <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${col};stop-opacity:.38"/><stop offset="1" style="stop-color:${col};stop-opacity:0"/></linearGradient></defs></svg>`;
 }
 const gfxNorm = vals => { const lo = Math.min(...vals), hi = Math.max(...vals); return vals.map(v => (hi > lo ? (v - lo) / (hi - lo) : 0.5)); };
@@ -4791,7 +4812,7 @@ function renderDashboard() {
     const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
     card.innerHTML = `<h2>Heutige Session</h2>
       <p><b>${plural(ts.n, "Match", "Matches")}</b> · ${plural(ts.w, "Sieg", "Siege")} · ${plural(ts.n - ts.w, "Niederlage", "Niederlagen")} · Ø KDA ${ts.kda.toFixed(2)}</p>
-      <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;font-weight:800;font-size:.8rem;background:${m.result === "W" ? "rgba(255,255,255,.95);color:#1b6b1b" : "rgba(0,0,0,.28);color:#fff"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
+      <div class="row mt" style="position:relative;gap:6px">${tm.map(m => `<span class="tmres" title="${esc(m.hero)} – ${m.result === "W" ? "Sieg" : "Niederlage"}" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;font-weight:800;font-size:.8rem;background:${m.result === "W" ? "rgba(255,255,255,.95);color:#1b6b1b" : "rgba(0,0,0,.28);color:#fff"}">${m.result === "W" ? "S" : "N"}</span>`).join("")}</div>
       ${tmc ? `<p class="small">Häufigster Fehler heute: <b>${esc(tmc[0])}</b> (${tmc[1]}×)</p>` : ""}
       ${lastNext ? `<p class="small">Dein Vorsatz: <i>${esc(lastNext.next)}</i></p>` : ""}
       ${tm.length >= 2 && tm.slice(-2).every(m => m.result === "L") ? `<p class="small"><b>2 Niederlagen in Folge</b> – eine kurze Pause hilft oft mehr als das nächste Match.</p>` : ""}${lessonBannerHtml(true)}`;
