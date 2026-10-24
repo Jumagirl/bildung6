@@ -444,7 +444,8 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .nugrate { gap: 8px; }
 .conf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; }
 .calhint { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
-.autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; }
+.autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; max-width: 100%; }
+@media (max-width: 600px) { .autotag { white-space: normal; overflow-wrap: anywhere; border-radius: 10px; } }
 .autotag.ok { color: var(--good-text); border-color: var(--good); }
 .note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .9rem; }
 .note .ni { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; margin-top: 1px; }
@@ -3919,7 +3920,7 @@ const TITLES = {
   dashboard: ["Dashboard", "Alle deine Zahlen auf einen Blick"],
   squad: ["Squad", "Mit deinen Teammates: was gut läuft und wo es hakt"],
   lessons: ["Tägliche Lektionen", "Jeden Tag ein Schritt: verstehen, üben, anwenden, reflektieren"],
-  plan: ["Trainingsplan", "56 Tage vom Fundament zum Experten"],
+  plan: ["Trainingsplan", "112 Tage in 16 Wochen vom Fundament zum Experten"],
   log: ["Matches", "Offene Matches reflektieren, ein Match eintragen, alle Matches ansehen"],
   analysis: ["Auswertung", "Muster in deinen Matches erkennen"],
   team: ["Team & Counter", "Counter-Picks für die Heldenauswahl"],
@@ -3990,6 +3991,17 @@ function loadState(raw) {
   }, s || {});
   st.plan = Object.assign({ start: null, days: {}, topics: {}, level: 0, dayByDate: {} }, st.plan);
   st.plan.dayByDate = st.plan.dayByDate || {};   // Plantag pro Datum, den du selbst festgelegt hast (0 = freies Spiel)
+  // Plan mit 112 statt 56 Tagen (Version 2): Der alte Tag k ist jetzt Tag 2k−1 (Einführung), Tag 2k vertieft ihn. Erledigte alte Tage zählen für beide.
+  if ((st.plan.v || 1) < 2) {
+    if (st.plan.start) {
+      const od = st.plan.days || {}, nd = {};
+      Object.keys(od).forEach(k => { const n = +k; if (!(n >= 1 && n <= 56)) return; nd[2 * n - 1] = od[k]; if (od[k] && od[k].done) nd[2 * n] = { done: od[k].done, steps: {}, note: "" }; });
+      st.plan.days = nd;
+      Object.keys(st.plan.dayByDate).forEach(d => { const v = +st.plan.dayByDate[d]; if (v > 0) st.plan.dayByDate[d] = 2 * v - 1; });
+      if (Array.isArray(st.plan.carry)) st.plan.carry.forEach(c => { if (c.from > 0) c.from = 2 * c.from - 1; if (c.to > 0) c.to = 2 * c.to - 1; });
+    }
+    st.plan.v = 2;
+  }
   st.quiz = Object.assign({ asked: 0, correct: 0, wrong: {} }, st.quiz);
   st.app = Object.assign({ seen: {}, tour: {} }, st.app);   // App kennenlernen: besuchte Seiten, erledigte Übungen
   st.app.seen = st.app.seen || {}; st.app.tour = st.app.tour || {};
@@ -5019,8 +5031,8 @@ function renderToday() {
   } else items.push({ done: true, t: !info ? "Alle Lektionen geschafft" : info.why === "noLesson" ? "Heute keine neue Lektion" : "Lektion erledigt", s: info && info.why === "noLesson" ? "Testtag: zeig, was du schon kannst." : "Gut gemacht.", a: "" });
   // 2) Training
   const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy);
-  if (!started) items.push({ done: false, t: "Trainingsplan starten", s: "56 Tage vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
-  else if (cur > 56) items.push({ done: true, t: "Trainingsplan abgeschlossen", s: "Alle 56 Tage geschafft.", a: "" });
+  if (!started) items.push({ done: false, t: "Trainingsplan starten", s: "112 Tage in 16 Wochen vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
+  else if (cur > PLAN_N) items.push({ done: true, t: "Trainingsplan abgeschlossen", s: `Alle ${PLAN_N} Tage geschafft.`, a: "" });
   else if (trainedToday) items.push({ done: true, t: "Training heute erledigt", s: `Nächster Trainingstag: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Tag ${cur} ansehen</button>` });
   else items.push({ done: false, t: `Training: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, s: `${esc(modeText(PLAN.days[cur - 1]) || "Ausgangswerte")} · ${blockText()}${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Tag öffnen</button>` });
   // 3) Wochenziel
@@ -5043,7 +5055,7 @@ function renderToday() {
   // «Jetzt dran»: der erste offene Schritt gross, darunter alle Schritte des Tages kurz
   const nowIdx = items.findIndex(x => !x.done), now = items[nowIdx];
   const big = a => String(a || "").replace(/class="btn small( ghost)?"/g, 'class="btn"');
-  const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= 56 ? ` · Trainingsplan Tag ${cur} von 56` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
+  const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= PLAN_N ? ` · Trainingsplan Tag ${cur} von ${PLAN_N}` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
       <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>
     ${now ? `<div class="nowlbl">Jetzt dran · Schritt ${nowIdx + 1} von ${items.length}</div><h2>${now.t}</h2><p>${now.s}</p><div class="nowact">${big(now.a)}</div>`
       : (() => { const x = todayExtra(); return x ? `<div class="nowlbl">Alles erledigt für heute 🎉 · Wenn du magst</div><h2>${x.t}</h2><p>${x.s}</p><div class="nowact">${big(x.a)}</div>`
@@ -6187,7 +6199,7 @@ const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, mini: "", stack: 
 const qnToday = () => state.qnotes.filter(q => q.date === today());
 // «Zusatz des Tages» aus dem Aufschreiben-Schritt des heutigen Plantags
 function qnExtraLabel() {
-  const n = planStarted() ? planDayOf(today()) : 0, s = n >= 1 && n <= 56 ? PLAN.days[n - 1].steps.find(x => x.key === "note") : null;
+  const n = planStarted() ? planDayOf(today()) : 0, s = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.find(x => x.key === "note") : null;
   return s ? s.t.split("\n").map(x => x.trim()).filter(x => /^Zusatz/.test(x)).map(x => x.replace(/^Zusatz[^:]*:\s*/, "")).join(" · ") : "";
 }
 function qnMatchFor(q) {
@@ -8004,7 +8016,7 @@ async function takeInbox(box) {
     // Plantage pro Datum (zum Beispiel von Claude gesetzt): {planDays: {"2026-10-17": 6}}, 0 = freies Spiel
     if (box.planDays && typeof box.planDays === "object") {
       state.plan.dayByDate = state.plan.dayByDate || {};
-      Object.entries(box.planDays).forEach(([d, n]) => { if (/^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isInteger(+n) && +n >= 0 && +n <= 56) state.plan.dayByDate[d] = +n; });
+      Object.entries(box.planDays).forEach(([d, n]) => { if (/^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isInteger(+n) && +n >= 0 && +n <= PLAN_N) state.plan.dayByDate[d] = +n; });
       save(); render();
     }
     if (box.payload) {
@@ -8762,33 +8774,78 @@ const DAY_LESSONS = {
   41: ["l24", "l25"], 42: [], 43: ["l04", "l31"], 44: ["l05", "l27"], 45: ["l26", "l27"], 46: ["l28", "l29"], 47: ["l15", "l12"], 48: ["l05"], 49: [],
   50: ["l37", "l11"], 51: ["l15", "l37"], 52: ["l38", "l32"], 53: ["l35", "l36"], 54: ["l34", "l02"], 55: ["l34", "l37"], 56: ["l35"]
 };
+// ---------- Trainingsplan mit 112 Tagen (16 Wochen) ----------
+// Der Plan war für 56 Tage geschrieben. Auf Wunsch der Nutzerin (16 Wochen, kleinschrittiger, am Ende Experten-Wissen) folgt jedem Tag ein zweiter:
+// Tag 2k−1 ist der ursprüngliche Tag k (Einführung), Tag 2k vertieft dasselbe Thema: Abruf, Experten-Stufe im Lexikon, gezielte Übung mit messbarem Ziel,
+// Mischen mit den Grundregeln, ab der Experten-Stufe ein Block mit Bootcamp-Stufe 3 oder 4. Spielinhalte stammen weiter nur aus dem Plan und den Profilen.
+const PLAN_OLD_N = 56;
+const planNewDay = k => 2 * k - 1;
+// Tagesnummern in den Plantexten umrechnen: «Tag 7» heisst jetzt Tag 13, «bis 32» endet beim Vertiefen-Tag 64
+function planRenumber(t) {
+  return String(t).replace(/\b(Tag(?:e|en)?) (\d{1,2}(?:(?:, | und | bis |–)\d{1,2})*)/g, (all, w, nums) =>
+    `${w} ` + nums.replace(/(bis |–)?(\d{1,2})/g, (m, b, n) => (+n >= 1 && +n <= PLAN_OLD_N ? `${b || ""}${b ? 2 * +n : planNewDay(+n)}` : m)));
+}
+(function expandPlan() {
+  if (PLAN.days.length !== PLAN_OLD_N) return;
+  const old = PLAN.days, days = [];
+  const ren = d => Object.assign({}, d, { title: planRenumber(d.title), heute: d.heute ? planRenumber(d.heute) : d.heute, intro: (d.intro || []).map(planRenumber), steps: d.steps.map(st => Object.assign({}, st, { t: planRenumber(st.t) })) });
+  old.forEach((d, i) => {
+    const k = i + 1, A = ren(d);
+    A.n = planNewDay(k); A.base = k;
+    const neu = PLAN.tracker.filter(t => t.neu.includes(k)), again = PLAN.tracker.filter(t => t.refresh.includes(k) && !t.neu.includes(k));
+    const focus = neu[0] || again[0] || null, topic = focus ? focus.topic : d.title, test = /test/i.test(d.title), expert = k >= 36;
+    const lex = d.l.length ? d.l.map(x => "L" + x).join(", ") : "";
+    const B = { n: 2 * k, base: k, deep: true, phase: d.phase, mode: d.mode, kennzahlen: false, l: d.l.slice(), d: d.d.slice(), intro: [],
+      title: test ? `Nach dem Test: Lücken schliessen` : `Vertiefen: ${A.title}`,
+      heute: test ? `Gestern war Testtag. Heute übst du gezielt, was im Test oder in deinen Matches noch nicht sass. Neues kommt heute nicht dazu.`
+        : `Gestern hast du «${topic}» kennengelernt. Heute vertiefst du es: Abruf aus dem Kopf, die nächsthöhere Stufe im Lexikon, eine gezielte Übung mit messbarem Ziel. Neues kommt heute nicht dazu.`,
+      steps: [
+        { key: "start", label: "Start (5 Min)", t: `Ohne nachzuschauen: Was war gestern dein Thema, und wie lautet dein Vorsatz? Schreib es in zwei Sätzen auf.${lex ? `\nDann lies unter «Nachlesen beim Start» die nächsthöhere Stufe zu ${lex}.` : ""}` },
+        { key: "b1", label: "Block 1 (gezielt üben)", t: `Match 1 bis 3: Gezielte Übung${test ? "" : ` zu «${topic}»`}. Aufgabe, messbares Ziel und passende Helden stehen direkt darunter.`, practice: test || !focus ? "auto" : focus.id },
+        expert ? { key: "b2", label: "Block 2 (Experte)", t: `Match 4 bis 6: Experten-Block. Öffne im Helden-Bootcamp deinen wichtigsten Pool-Helden und mach eine Station der Stufe 3 oder 4 (Ult-Duelle, Zahlen der Besten). Spiel danach mit dem messbaren Ziel dieser Stufe. Danach: Review (Karte unten).` }
+          : { key: "b2", label: "Block 2 (mischen)", t: `Match 4 bis 6: Mischen. Spiel mit deinen Grundregeln im Kopf und achte zusätzlich auf «${topic}». Danach: Review (Karte unten).` },
+        { key: "b3", label: "Block 3", t: "Match 7 bis 9: Dein Mini-Ziel wählst du unten selbst: am besten ein Thema, das noch nicht von allein läuft." },
+        { key: "b4", label: "Block 4+ (nebenbei, ein Gedanke pro Match)", t: `Ab Match 10: Denk nur an eins: «${topic}». Oder schau ein Replay aus dem Review und vergleiche mit «So spielen die Besten» im Helden-Guide.` },
+        { key: "note", label: "Aufschreiben", t: `Nach jedem Match schreibst du die Standardzeile (= Kurznotiz in der Ladezeit, 20 Sekunden): Hero, Sieg oder Niederlage, Tode, Ults (Anzahl / davon mit Wirkung).\nAm Ende: Sitzt «${topic}» jetzt besser als gestern? Schreib einen Satz, woran du das merkst.` }
+      ] };
+    days.push(A, B);
+  });
+  PLAN.days = days;
+  PLAN.phases.forEach(ph => { ph.from = planNewDay(ph.from); ph.to = 2 * ph.to; ph.focus = planRenumber(ph.focus); if (ph.intro) ph.intro = planRenumber(ph.intro); });
+  PLAN.tracker.forEach(t => { const neu = t.neu.map(planNewDay), deep = t.neu.map(n => 2 * n); t.refresh = [...new Set([...deep, ...t.refresh.map(r => 2 * r)])].sort((a, b) => a - b); t.neu = neu; });
+  LEVELS.forEach(l => { l.from = planNewDay(l.from); l.to = 2 * l.to; });
+  const dl = {}; Object.keys(DAY_LESSONS).forEach(k => { dl[planNewDay(+k)] = DAY_LESSONS[k]; dl[2 * +k] = []; });
+  Object.keys(DAY_LESSONS).forEach(k => delete DAY_LESSONS[k]); Object.assign(DAY_LESSONS, dl);
+  PLAN.subtitle = String(PLAN.subtitle).replace(/8 Wochen, 56 Trainingstage/, "16 Wochen, 112 Trainingstage");
+})();
+const PLAN_N = PLAN.days.length;
 const dayLessons = n => (DAY_LESSONS[n] || []).filter(id => lessonById(id));
 const lessonDays = id => Object.keys(DAY_LESSONS).map(Number).filter(n => DAY_LESSONS[n].includes(id));
 // Lektionen aus früheren Tagen, die noch offen sind (jeweils beim ersten Tag, an dem sie vorkommen)
 function missedLessons() {
   if (!planStarted()) return [];
-  const cur = Math.min(56, planDay()), done = lessonsDone(), out = [];
+  const cur = Math.min(PLAN_N, planDay()), done = lessonsDone(), out = [];
   for (let n = 1; n < cur; n++) { const id = dayLessons(n)[0]; if (id && !done[id] && !out.some(o => o.id === id)) out.push({ id, day: n }); }
   return out;
 }
 // Tageslektion: Läuft der Plan, bestimmt der aktuelle Trainingstag die Lektion, sonst die Reihenfolge des Kurses
 function todayLessonInfo() {
-  if (!planStarted() || planDay() > 56) { const l = nextLesson(); return l ? { lesson: l, why: "course" } : null; }
+  if (!planStarted() || planDay() > PLAN_N) { const l = nextLesson(); return l ? { lesson: l, why: "course" } : null; }
   const n = planDay(), mine = dayLessons(n), done = lessonsDone(), open = mine.find(id => !done[id]);
   if (open) return { lesson: lessonById(open), why: "plan", day: n, main: mine[0] === open };
   return { lesson: null, why: mine.length ? "dayDone" : "noLesson", day: n };
 }
 const lvInfo = n => LEVELS[Math.min(3, Math.max(1, n)) - 1];
-function levelOfDay(n) { return n <= 21 ? 1 : n <= 35 ? 2 : 3; }
+function levelOfDay(n) { return n <= LEVELS[0].to ? 1 : n <= LEVELS[1].to ? 2 : 3; }
 function levelBadge(n) { return `<span class="lvl lvl${n}">Stufe ${n} · ${lvInfo(n).name}</span>`; }
 function dayGet(n) { return state.plan.days[n] || { done: null, steps: {}, note: "" }; }
 function dayEnsure(n) { return state.plan.days[n] || (state.plan.days[n] = { done: null, steps: {}, note: "" }); }
 function planStarted() { return !!state.plan.start; }
-function planDay() { for (let n = 1; n <= 56; n++) if (!dayGet(n).done) return n; return 57; }
-function planDoneCount() { let c = 0; for (let n = 1; n <= 56; n++) if (dayGet(n).done) c++; return c; }
+function planDay() { for (let n = 1; n <= PLAN_N; n++) if (!dayGet(n).done) return n; return PLAN_N + 1; }
+function planDoneCount() { let c = 0; for (let n = 1; n <= PLAN_N; n++) if (dayGet(n).done) c++; return c; }
 function phaseOf(n) { return PLAN.phases.find(p => n >= p.from && n <= p.to) || PLAN.phases[PLAN.phases.length - 1]; }
 function autoLevel() {
-  const fromPlan = planStarted() ? levelOfDay(Math.min(56, planDay())) : 1;
+  const fromPlan = planStarted() ? levelOfDay(Math.min(PLAN_N, planDay())) : 1;
   const nl = nextLesson();
   return Math.max(fromPlan, nl ? LESSON_LEVEL[nl.module] : 3);
 }
@@ -8805,7 +8862,7 @@ function renderLevelChip() {
 // Verweise im Text: „Tag 18“, „L7“, „Drill A“ werden zu Links
 function linkifyBase(h) {
   return h
-    .replace(/\bTag(e?) (\d{1,2}(?:(?:, | und )\d{1,2})*)\b/g, (m, e, nums) => `Tag${e} ` + nums.replace(/\d{1,2}/g, n => (+n >= 1 && +n <= 56 ? `<button type="button" class="linkbtn" data-pact="day" data-n="${n}">${n}</button>` : n)))
+    .replace(/\bTag(e?) (\d{1,3}(?:(?:, | und )\d{1,3})*)\b/g, (m, e, nums) => `Tag${e} ` + nums.replace(/\d{1,3}/g, n => (+n >= 1 && +n <= PLAN_N ? `<button type="button" class="linkbtn" data-pact="day" data-n="${n}">${n}</button>` : n)))
     .replace(/\b(Drills? )([A-F](?:(?:, | und )[A-F])*)\b/g, (m, p, ls) => p + ls.replace(/[A-F]/g, x => `<button type="button" class="linkbtn" data-pact="drill" data-d="${x}">${x}</button>`))
     .replace(/\bL(\d{1,2})\b/g, (m, n) => (+n >= 1 && +n <= 30 ? `<button type="button" class="linkbtn" data-pact="wissen" data-l="L${n}">L${n}</button>` : m));
 }
@@ -8838,11 +8895,11 @@ document.addEventListener("click", e => {
 });
 let PlanExtra = null;   // persönliche Ausgangslage, von Claude im Konto abgelegt (plan-baseline)
 function openPlanHome() { planUi.day = null; showTab("plan"); window.scrollTo({ top: 0 }); }
-function openPlanDay(n) { planUi.day = Math.min(56, Math.max(1, n)); planUi.read = new Set(); showTab("plan"); window.scrollTo({ top: 0 }); }
+function openPlanDay(n) { planUi.day = Math.min(PLAN_N, Math.max(1, n)); planUi.read = new Set(); showTab("plan"); window.scrollTo({ top: 0 }); }
 function calendarDay() {
   if (!planStarted()) return null;
   const n = Math.floor((Date.parse(today() + "T12:00:00") - Date.parse(state.plan.start + "T12:00:00")) / 864e5) + 1;
-  return n >= 1 && n <= 56 ? n : null;
+  return n >= 1 && n <= PLAN_N ? n : null;
 }
 function renderPlan() {
   const el = $("#planBody");
@@ -8927,14 +8984,14 @@ function planHomeHtml() {
   const started = planStarted(), cur = planDay(), dn = planDoneCount(), L = currentLevel();
   let banner;
   if (!started) {
-    banner = `<div class="card hero-banner"><h2>Dein 8-Wochen-Trainingsplan</h2>
-      <p>56 Trainingstage in 5 Phasen: vom Fundament zum Experten. Jeder Tag hat eine Vorbereitung, Spielblöcke mit Mini-Zielen, ein Review und Notizen. Mit dem Plan steigt auch deine Lernstufe – Lexikon und Quiz werden Schritt für Schritt anspruchsvoller.</p>
+    banner = `<div class="card hero-banner"><h2>Dein 16-Wochen-Trainingsplan</h2>
+      <p>112 Trainingstage in 16 Wochen und 5 Phasen: vom Fundament zum Experten. Jedem Thema folgt ein Vertiefen-Tag, damit es sitzt, bevor das nächste kommt. Jeder Tag hat eine Vorbereitung, Spielblöcke mit Mini-Zielen, ein Review und Notizen. Mit dem Plan steigt auch deine Lernstufe – Lexikon und Quiz werden Schritt für Schritt anspruchsvoller.</p>
       <div class="row mt" style="position:relative;gap:14px">
         <label class="inline-label" style="color:#fff">Start am <input type="date" id="planStartDate" value="${today()}" max="${today()}" style="width:auto"></label>
         <label class="inline-label" style="color:#fff"><input type="checkbox" id="planDay1Done"> Tag 1 (Baseline) habe ich schon gespielt</label>
         <button class="btn" type="button" data-pact="start" style="background:#fff;color:#2b1f8f">Plan starten</button></div></div>`;
-  } else if (cur > 56) {
-    banner = `<div class="card hero-banner"><h2>Plan abgeschlossen 🎉</h2><p>Alle 56 Tage sind geschafft. Sieh dir deine Kennzahlen an und lege neue Ziele fest.</p></div>`;
+  } else if (cur > PLAN_N) {
+    banner = `<div class="card hero-banner"><h2>Plan abgeschlossen 🎉</h2><p>Alle ${PLAN_N} Tage sind geschafft. Sieh dir deine Kennzahlen an und lege neue Ziele fest.</p></div>`;
   } else {
     const d = PLAN.days[cur - 1], ph = phaseOf(cur), cal = calendarDay();
     const gap = cal ? cal - cur : 0;
@@ -8944,7 +9001,7 @@ function planHomeHtml() {
       <p>${esc(modeText(d) || "Ausgangswerte")}${cal && gap !== 0 ? ` · Laut Startdatum wäre heute Tag ${cal} (${gap > 0 ? `${gap} Tag${gap === 1 ? "" : "e"} im Rückstand` : `${-gap} Tag${gap === -1 ? "" : "e"} voraus`})` : ""}</p>
       ${(() => { const id = dayLessons(cur)[0]; if (!id) return ""; const l = lessonById(id), dn = lessonsDone()[id]; return `<p class="small" style="position:relative">📘 Lektion dazu: <b>${esc(l.title)}</b> (ca. ${l.minutes} Min.) · ${dn ? "erledigt ✓" : "noch offen"}</p>`; })()}
       <div class="row mt" style="position:relative"><button class="btn" type="button" data-pact="day" data-n="${cur}" style="background:#fff;color:#2b1f8f">Tag ${cur} öffnen →</button></div></div>
-      <div class="lesson-stats"><div>${ring(dn / 56, `${dn}/56`)}<span>Tage</span></div></div></div>`;
+      <div class="lesson-stats"><div>${ring(dn / PLAN_N, `${dn}/${PLAN_N}`)}<span>Tage</span></div></div></div>`;
   }
   const lvAuto = autoLevel();
   const path = foldHtml("path", "Dein Lernpfad", `<p class="lead">Am Anfang lernst du die Grundlagen, am Ende Expertenwissen – und wirst danach abgefragt. Deine Stufe wächst mit den Trainingstagen und den Lektionen (die höhere der beiden zählt).</p>
@@ -8970,8 +9027,9 @@ function planHomeHtml() {
     + foldHtml("hang", "So bleibt alles hängen", `<p class="lead">Du musst nicht alles auf einmal im Kopf haben. Der Plan baut sich langsam auf:</p>
       <ul class="wl">
         <li><b>Wenig Neues pro Tag.</b> Pro Tag kommen höchstens zwei Themen dazu, an vielen Tagen gar keins.</li>
-        <li><b>Alles kommt wieder.</b> Jedes Thema kehrt nach etwa 1, 3 und 7 Tagen zurück. Im Tagesplan steht unter „Heute zählt nur das“, was heute dran ist und wann der Rest wiederkommt.</li>
-        <li><b>Später wird kombiniert.</b> Ab Tag 7 mischen die Tage Themen, die du schon kennst, zum Beispiel „Heal und Ult + Schaden“. Dazu kommen Zwischentests.</li>
+        <li><b>Erst kennenlernen, dann vertiefen.</b> Jedem Thema folgt ein Vertiefen-Tag: Abruf aus dem Kopf, die nächsthöhere Stufe im Lexikon und eine gezielte Übung mit messbarem Ziel. Neues kommt an diesem Tag nicht dazu.</li>
+        <li><b>Alles kommt wieder.</b> Jedes Thema kehrt am Vertiefen-Tag und danach nach etwa 2, 6 und 14 Tagen zurück. Im Tagesplan steht unter „Heute zählt nur das“, was heute dran ist und wann der Rest wiederkommt.</li>
+        <li><b>Später wird kombiniert.</b> Ab Tag 13 mischen die Tage Themen, die du schon kennst, zum Beispiel „Heal und Ult + Schaden“. Dazu kommen Zwischentests.</li>
         <li><b>Du bestimmst, wann es sitzt.</b> Am Tagesende bewertest du jedes Thema: „muss ich noch denken“, „klappt meistens“ oder „läuft von allein“. Was noch nicht von allein läuft, bekommt dein Mini-Ziel in Block 3.</li>
         <li><b>Regelmässig statt Marathon.</b> In Spielerdaten aus StarCraft 2 lernten Spieler am schnellsten, die regelmässig spielten und keine langen Pausen machten (Beobachtung, kein Beweis). Darum ein Trainingstag nach dem anderen, kurz und oft.</li>
         <li><b>Abrufen statt nachlesen.</b> Bei den Zwischenstopps zwischen den Blöcken überlegst du erst, schreibst deine Antwort auf und schaust dann nach. Dieses Abrufen bringt für das Gedächtnis mehr als nochmaliges Lesen.</li>
@@ -9125,10 +9183,10 @@ function focusCardHtml(n) {
   if (notYet.length) items.push(`<li><b>Noch nicht von allein:</b> ${notYet.slice(0, 3).map(t => `${esc(t.topic)} (${AUTO_LABEL[topicAuto(t)]})`).join(", ")}. Wähle eins davon unter Block 3 als dein Mini-Ziel.</li>`);
   { const ms2 = modeSummaryLine(n); if (ms2) items.push(ms2); const mc = modeCheckLine(n); if (mc) items.push(mc); }
   if (fadeLevel(n) >= 1) items.push(`<li><b>Weniger Hilfe ab jetzt.</b> Die Aufgabentexte sind gekürzt${fadeLevel(n) >= 2 ? " und teils unter «Weitere Hinweise» eingeklappt" : ""}. Versuch es erst aus dem Kopf, «mehr» zeigt den ganzen Text. <button type="button" class="linkbtn" data-pact="fade-off">Immer ausführlich</button></li>`);
-  else if (state.settings.fadeOff && n >= 43) items.push(`<li><b>Hilfen sind ausführlich.</b> Ab Tag 43 würden die Texte gekürzt. <button type="button" class="linkbtn" data-pact="fade-on">Wieder kürzen</button></li>`);
+  else if (state.settings.fadeOff && n >= FADE_1) items.push(`<li><b>Hilfen sind ausführlich.</b> Ab Tag ${FADE_1} würden die Texte gekürzt. <button type="button" class="linkbtn" data-pact="fade-on">Wieder kürzen</button></li>`);
   if (later.length) items.push(`<li><b>Alles andere darfst du heute loslassen.</b> Es kommt von selbst wieder: ${later.map(([t, x]) => `${esc(t.topic)} ${dayChip(x)}`).join(", ")}</li>`);
   return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Heute zählt nur das</h2></div>
-    <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt nach etwa 1, 3 und 7 Tagen zurück, und die App sagt dir, wann.</p>
+    <p class="lead">Konzentrier dich auf heute. Was du an früheren Tagen gelernt hast, geht nicht verloren: Jedes Thema kommt am Vertiefen-Tag und danach nach etwa 2, 6 und 14 Tagen zurück, und die App sagt dir, wann.</p>
     <ul class="wl">${items.join("")}</ul>
     ${dayRoleHtml(n)}
     ${prev ? `<div class="note info" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div><b>Dein Abschluss von Tag ${prev[0]}:</b> „${esc(prev[1])}“ Das ist aufgeschrieben, du musst es nicht im Kopf behalten.</div></div>` : ""}
@@ -9138,7 +9196,7 @@ function focusCardHtml(n) {
 function dayLessonCardHtml(n) {
   const ids = dayLessons(n), d = PLAN.days[n - 1], done = lessonsDone();
   if (!ids.length) return `<div class="card"><div class="card-head"><h2>${icon("book")}Lektion zum Tag</h2></div>
-    <p class="muted small" style="margin:0">${/test/i.test(d.title) ? "Heute ist ein Testtag: keine neue Lektion. Der Test zeigt, was von den Lektionen hängen geblieben ist." : "Zu diesem Tag gibt es keine eigene Lektion."}</p></div>`;
+    <p class="muted small" style="margin:0">${d.deep ? "Heute keine neue Lektion: Du vertiefst das Thema von gestern. Lies dafür unter «Nachlesen beim Start» die nächsthöhere Stufe im Lexikon." : /test/i.test(d.title) ? "Heute ist ein Testtag: keine neue Lektion. Der Test zeigt, was von den Lektionen hängen geblieben ist." : "Zu diesem Tag gibt es keine eigene Lektion."}</p></div>`;
   const row = (id, i) => {
     const l = lessonById(id), dn = done[id], started = state.lessons.progress[id];
     return `<div class="orow"><div class="sp"><b>${dn ? "✓ " : ""}Lektion ${lessonNo(id)}: ${esc(l.title)}</b>
@@ -9202,7 +9260,8 @@ function planDayHtml(n) {
   const reads = [...planUi.read].map(k => {
     if (k.startsWith("D:")) { const dr = PLAN.drills.list.find(x => x.id === k.slice(2)); return dr ? drillHtml(dr) : ""; }
     const w = wissenById(k);
-    return w ? `<div class="readbox"><div><b>${w.id} – ${esc(w.title)}</b> ${levelBadge(currentLevel())}</div>${wissenEntryHtml(w, currentLevel())}</div>` : "";
+    const lv = d.deep ? Math.min(3, currentLevel() + 1) : currentLevel();   // am Vertiefen-Tag eine Stufe höher
+    return w ? `<div class="readbox"><div><b>${w.id} – ${esc(w.title)}</b> ${levelBadge(lv)}</div>${wissenEntryHtml(w, lv)}</div>` : "";
   }).join("");
   const dm = dayMatches(n);
   const ds = summary(dm.ms);
@@ -9211,8 +9270,8 @@ function planDayHtml(n) {
   const blocks = stages.filter(x => x.step), weakAt = (blocks.find(x => x.key === "b3") || blocks[blocks.length - 1] || {}).key || "prep";
   const head = `<div class="daynav"><button class="btn ghost small" type="button" data-pact="home">← Alle Tage</button>
       <div class="row"><button class="btn ghost small" type="button" data-pact="day" data-n="${n - 1}" ${n <= 1 ? "disabled" : ""}>‹ Tag ${n - 1}</button>
-      <button class="btn ghost small" type="button" data-pact="day" data-n="${n + 1}" ${n >= 56 ? "disabled" : ""}>Tag ${n + 1} ›</button></div></div>
-    <div class="card dayhead"><div class="card-head"><div><div class="muted small">Tag ${n} von 56 · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
+      <button class="btn ghost small" type="button" data-pact="day" data-n="${n + 1}" ${n >= PLAN_N ? "disabled" : ""}>Tag ${n + 1} ›</button></div></div>
+    <div class="card dayhead"><div class="card-head"><div><div class="muted small">Tag ${n} von ${PLAN_N} · Woche ${Math.ceil(n / 7)} · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
       <div class="row">${levelBadge(lv)}${d.mode ? `<span class="tag">${esc(modeText(d))}</span>` : ""}${d.kennzahlen ? '<span class="badge">★ Kennzahlen-Tag</span>' : ""}${st.role && st.role !== "none" ? `<span class="tag">+ ${ROLE_SHORT[st.role]}</span>` : ""}${st.done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ erledigt ${fmtDate(st.done)}</span>` : n === cur ? '<span class="badge">nächster Tag</span>' : ""}</div></div>
       ${d.heute ? `<div class="heute"><b>Worum geht es heute?</b> ${linkify(esc(d.heute), seenD)}</div>` : ""}
       ${dayStepperHtml(n, stages)}
@@ -9240,7 +9299,7 @@ function planDayHtml(n) {
     + `<div class="dend">${autoRateHtml(n)}
       ${reflectionHtml(n)}
       <label class="mt">Zwei Sätze: Was lief gut? Was kommt morgen wieder?<textarea id="dayNote" data-n="${n}" placeholder="Deine Notiz …">${esc(st.note)}</textarea></label>
-      <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${n < 56 ? `<button class="btn" type="button" data-pact="day" data-n="${n + 1}">Weiter zu Tag ${n + 1} →</button>` : ""}`
+      <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${n < PLAN_N ? `<button class="btn" type="button" data-pact="day" data-n="${n + 1}">Weiter zu Tag ${n + 1} →</button>` : ""}`
         : `<button class="btn" type="button" data-pact="complete" data-n="${n}">${icon("check")}Tag ${n} abschliessen</button>`}</div></div>`;
   const body = stages.map((s, i) => {
     if (s.key === "prep") return stageHtml(n, s, i, prep, "Worauf es heute ankommt, Lektion, Start");
@@ -9308,7 +9367,7 @@ function poolCardHtml() {
     return `<div class="poolrow"><div class="small"><b>${roleChip(r, ROLE_SHORT[r])}</b>${r === main ? ' <span class="muted">Hauptrolle</span>' : ""} <span class="muted">${mine.length} von ${POOL_PER_ROLE}</span></div><div class="flexset">${slots}</div></div>`;
   }).join("");
   const listed = pool.map(h => `${h} (${ROLE_SHORT[heroRole(h)] || "?"})`).join(", ");
-  return foldHtml("pool", "Dein Pool und deine Hauptrolle", `<p class="lead">Wähle deine Hauptrolle und pro Rolle bis zu ${POOL_PER_ROLE} Helden, die du regelmässig spielst. Die Heldentage im Plan (Tag 22 bis 32) und die Beispiele im Text nennen dann deine Helden, die der Hauptrolle zuerst. Die beiden anderen Rollen übst du als Notfall-Rolle (Flex); ein Pool-Held aus dieser Rolle ist dort schon vorgewählt.</p>
+  return foldHtml("pool", "Dein Pool und deine Hauptrolle", `<p class="lead">Wähle deine Hauptrolle und pro Rolle bis zu ${POOL_PER_ROLE} Helden, die du regelmässig spielst. Die Heldentage im Plan (Tag 43 bis 64) und die Beispiele im Text nennen dann deine Helden, die der Hauptrolle zuerst. Die beiden anderen Rollen übst du als Notfall-Rolle (Flex); ein Pool-Held aus dieser Rolle ist dort schon vorgewählt.</p>
     <div class="row" style="gap:6px;margin-bottom:10px"><b class="small">Hauptrolle:</b>${POOL_ROLES.map(r => `<button type="button" class="chip ${main === r ? "on" : ""}" data-pact="mainrole" data-r="${r}">${ROLE_SHORT[r]}</button>`).join("")}</div>
     ${rows}
     <p class="small muted" style="margin:10px 0 0">${pool.length ? `Der Plan nennt jetzt: ${esc(planPool().slice(0, 7).join(", "))}${planPool().length > 7 ? ` (die Heldentage im Plan nutzen die ersten sieben)` : ""}.` : "Noch kein Pool gewählt: Der Plan zeigt seine Beispiel-Helden (Cloak &amp; Dagger, Jubilee, Gambit …)."}${main !== "Strategist" ? " Der Plan ist für Support geschrieben. Die Grundlagen gelten für jede Rolle, bei Heil-Themen denk dir deine Rolle dazu." : ""}</p>`,
@@ -9371,7 +9430,7 @@ function noteStepHtml(n, s, seen) {
 function stepBodyCore(n, s, seen, entries) {
   const lines = entries.map(e => e[0]), idx = entries.map(e => e[1]), fields = dayGet(n).fields || {}, lvl = fadeLevel(n);
   const field = (t, j) => { const i = idx[j]; return WRITE_RE.test(t) ? `<textarea class="pfield" rows="2" data-pf="${n}|${s.key}|${i}" placeholder="Hier eintragen …" aria-label="Dein Eintrag zu dieser Aufgabe">${esc(fields[s.key + ":" + i] || "")}</textarea>` : ""; };
-  // Weniger Hilfe in den letzten Wochen: Aufgaben mit Eintragsfeld bleiben ganz, sonst nur der erste Satz; ab Tag 50 steht der Rest gesammelt unter «Weitere Hinweise»
+  // Weniger Hilfe in den letzten Wochen: Aufgaben mit Eintragsfeld bleiben ganz, sonst nur der erste Satz; ab Tag FADE_2 steht der Rest gesammelt unter «Weitere Hinweise»
   const shortOf = t => { const m = /^(.+?[.!?])(\s|$)/.exec(t); return m && m[1].length < t.length - 12 ? m[1] : t; };
   const item = (t, i) => {
     const sh = lvl >= 1 && !WRITE_RE.test(t) ? shortOf(t) : t;
@@ -9455,12 +9514,19 @@ function prBase() {
   const ms = state.matches.filter(m => m.date < today()).slice(-20), t = ms.filter(m => m.dur > 0 && m.dmg !== null && m.dmg !== undefined), acc = ms.filter(m => m.acc > 0);
   return { d: ms.length >= 5 ? ms.reduce((a, m) => a + (+m.d || 0), 0) / ms.length : null, dmg10: t.length >= 5 ? t.reduce((a, m) => a + m.dmg, 0) / t.reduce((a, m) => a + m.dur, 0) * 10 : null, acc: acc.length >= 5 ? acc.reduce((a, m) => a + m.acc, 0) / acc.length : null };
 }
-const block3Matches = () => { const B = blockMatches(); return state.matches.filter(m => m.date === today()).slice().sort((a, b) => matchTime(a) - matchTime(b)).slice(2 * B, 3 * B); };
+const blockMatchesToday = bi => { const B = blockMatches(); return state.matches.filter(m => m.date === today()).slice().sort((a, b) => matchTime(a) - matchTime(b)).slice(bi * B, (bi + 1) * B); };
+const block3Matches = () => blockMatchesToday(2);
+// Thema für «gezielt üben» am Vertiefen-Tag ohne festes Thema (nach Tests): das gelernte Thema, das am wenigsten von allein läuft
+function practiceAuto(n) {
+  const learned = PLAN.tracker.filter(t => t.neu.some(x => x < n) && PRACTICE[t.id] && PRACTICE[t.id].per);
+  const prio = t => { const v = topicAuto(t); return v === 0 ? 1.5 : v; };
+  return (learned.sort((a, b) => prio(a) - prio(b))[0] || PLAN.tracker[1]).id;
+}
 // Wie läuft das Ziel in Block 3? Matches ohne Messwert (etwa ohne eingetragene Ursachen) zählen nicht mit.
-function practiceEval(id) {
+function practiceEval(id, bi = 2) {
   const P = PRACTICE[id], B = blockMatches();
   if (!P || !P.per) return null;
-  const base = prBase(), ms = block3Matches();
+  const base = prBase(), ms = blockMatchesToday(bi);
   const usable = ms.filter(m => (!P.needCause || deathTotal(m.deathCauses) > 0 || m.d === 0) && (!P.needUlt || m.ults > 0)).map(m => P.per(m, base)).filter(v => v !== null && v !== undefined);
   const need = Math.ceil(B * 2 / 3), have = usable.filter(Boolean).length;
   return { have, need, done: have >= need, played: ms.length, measured: usable.length, B };
@@ -9475,10 +9541,10 @@ function practiceHeroes(id) {
   [...new Set([...planPool(), ...played, ...main])].forEach(h => { if (out.length >= 3 || !PROF[h]) return; const why = P.hero(h); if (why) out.push({ h, why, mine: planPool().includes(h) }); });
   return out;
 }
-function practiceHtml(n, id, fromPlan) {
-  const P = PRACTICE[id], t = PLAN.tracker.find(x => x.id === id), ev = n === planDay() ? practiceEval(id) : null, hs = practiceHeroes(id), B = blockMatches();
+function practiceHtml(n, id, fromPlan, bi = 2) {
+  const P = PRACTICE[id], t = PLAN.tracker.find(x => x.id === id), ev = n === planDay() ? practiceEval(id, bi) : null, hs = practiceHeroes(id), B = blockMatches();
   return `<div class="practice"><p style="margin:0 0 6px"><b>${fromPlan ? `Thema von heute: ${esc(t.topic)}` : esc(t.topic)}</b><br>${esc(P.task)}</p>
-    ${P.per ? `<p class="small" style="margin:0 0 6px"><b>Messbar:</b> In mindestens ${Math.ceil(B * 2 / 3)} der ${B} Matches von Block 3 ${esc(P.goal)}.${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>${ev.played && ev.measured < ev.played ? ` <span class="muted">${ev.played - ev.measured} ${ev.played - ev.measured === 1 ? "Match" : "Matches"} ohne Messwert${P.needCause ? " (Todesursachen in der Notiz antippen)" : P.needUlt ? " (Ults in der Notiz eintragen)" : ""}</span>` : ""}` : ""}</p>` : ""}
+    ${P.per ? `<p class="small" style="margin:0 0 6px"><b>Messbar:</b> In mindestens ${Math.ceil(B * 2 / 3)} der ${B} Matches von Block ${bi + 1} ${esc(P.goal)}.${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>${ev.played && ev.measured < ev.played ? ` <span class="muted">${ev.played - ev.measured} ${ev.played - ev.measured === 1 ? "Match" : "Matches"} ohne Messwert${P.needCause ? " (Todesursachen in der Notiz antippen)" : P.needUlt ? " (Ults in der Notiz eintragen)" : ""}</span>` : ""}` : ""}</p>` : ""}
     ${hs.length ? `<div class="small"><b>Damit übst du es am besten:</b><ul class="wl">${hs.map(x => `<li><button type="button" class="linkbtn" data-pact="hq-hero" data-h="${esc(x.h)}">${esc(x.h)}</button>${x.mine ? ' <span class="badge">Pool</span>' : ""}: ${esc(x.why)}</li>`).join("")}</ul></div>` : ""}</div>`;
 }
 function stepHtml(n, s, seen, o = {}) {
@@ -9487,7 +9553,7 @@ function stepHtml(n, s, seen, o = {}) {
   const auto = autoTagHtml(o.carry ? autoStepEval(o.carry.to, s, carryFor(o.carry.to).findIndex(x => x.id === o.carry.id)) : autoStepEval(n, s, -1), done);
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""} ${lock ? "disabled" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice && !o.carry ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
 const swapHintHtml = s => /Swap|Komposition|Gegnerteam aus/.test(s.t || "") ? `<div class="small" style="margin-top:6px"><button type="button" class="linkbtn" data-pact="swap-open">Dabei hilft dir der Support-Wechsel-Berater im Tab Team &amp; Counter</button></div>` : "";
@@ -9508,7 +9574,8 @@ function ruleEvidence(t) {
   const a = l.filter(x => x === "auto").length, ok = l.filter(x => x !== "nein").length;
   return a / l.length >= 0.8 ? 3 : ok / l.length >= 0.6 ? 2 : 1;
 }
-const fadeLevel = n => (state.settings && state.settings.fadeOff) ? 0 : n >= 50 ? 2 : n >= 43 ? 1 : 0;
+const FADE_1 = planNewDay(43), FADE_2 = planNewDay(50);   // Tag 85 und 99 (früher 43 und 50)
+const fadeLevel = n => (state.settings && state.settings.fadeOff) ? 0 : n >= FADE_2 ? 2 : n >= FADE_1 ? 1 : 0;
 function ruleText(t) {
   const id = dayLessons(Math.min(...t.neu))[0], l = id && lessonById(id);
   return l && l.focus ? l.focus : "";
@@ -9520,13 +9587,13 @@ function ruleText(t) {
 const blocksTicked = n => { const bs = (PLAN.days[n - 1].steps || []).filter(x => /^b\d/.test(x.key)), st = dayGet(n).steps || {}; return bs.length > 0 && bs.every(x => st[x.key]); };
 function guessPlanDay(date) {
   if (!planStarted() || !date || date < state.plan.start) return 0;
-  const laterDone = n => { for (let k = n + 1; k <= 56; k++) if (dayGet(k).done) return true; return false; };
-  for (let n = 1; n <= 56; n++) {
+  const laterDone = n => { for (let k = n + 1; k <= PLAN_N; k++) if (dayGet(k).done) return true; return false; };
+  for (let n = 1; n <= PLAN_N; n++) {
     const d = dayGet(n).done;
     if (d) {
       if (d < date) continue;
       let m = n;
-      if (d === date) while (m < 56 && dayGet(m + 1).done === d) m++;   // an einem Tag mehrere Tage erledigt: der letzte zählt
+      if (d === date) while (m < PLAN_N && dayGet(m + 1).done === d) m++;   // an einem Tag mehrere Tage erledigt: der letzte zählt
       return m;
     }
     if (blocksTicked(n) && laterDone(n)) continue;
@@ -9568,7 +9635,7 @@ function rulesCardHtml() {
   if (!planStarted()) return "";
   const rs = activeRules();
   if (!rs.length) return "";
-  const kw = fadeLevel(Math.min(56, planDay())) >= 2, shown = new Set();
+  const kw = fadeLevel(Math.min(PLAN_N, planDay())) >= 2, shown = new Set();
   return `<div class="card today-card"><div class="card-head"><h2>${icon("check")}Deine Grundregeln fürs nächste Match</h2><span class="badge">${rs.length}</span></div>
     <p class="lead" style="margin:0 0 6px">${kw ? "Nur noch Stichworte, du kennst sie. " : ""}Sie laufen im Hintergrund mit, du musst nicht ständig an alle denken.</p>
     <ul class="wl">${rs.map(r => { let tx = kw ? "" : ruleText(r.t); if (tx && shown.has(tx)) tx = ""; shown.add(tx); return `<li><b>${esc(r.t.topic)}</b>${r.spot ? ' <span class="badge">Stichprobe</span>' : ""} ${ruleDots(r.t)}${tx ? `<br><span class="small">${esc(tx)}</span>` : ""}</li>`; }).join("")}</ul>
@@ -9625,7 +9692,7 @@ const fqFirst = t => { const x = String(t || "").trim().split(/(?<=[.!?])\s+/)[0
 const fqWissen = n => (n && PLAN.days[n - 1] ? PLAN.days[n - 1].l || [] : []).map(k => WISSEN.find(w => w.n === k)).filter(Boolean);
 // Zuletzt gelernter Plantag mit Lexikon-Themen (für freies Spiel)
 function fqLastDay() {
-  for (let n = Math.min(56, planDay()); n >= 1; n--) if (dayGet(n).done && fqWissen(n).length) return n;
+  for (let n = Math.min(PLAN_N, planDay()); n >= 1; n--) if (dayGet(n).done && fqWissen(n).length) return n;
   return 0;
 }
 function fqContext(date) {
@@ -9768,7 +9835,7 @@ function stepFieldKeys(n, s) {
   return scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean).map((t, i) => WRITE_RE.test(t) && !(s.key === "note" && QN_LINE.test(t)) ? s.key + ":" + i : null).filter(Boolean);
 }
 function autoStepEval(n, s, carryIdx) {
-  if (!planStarted() || !(n >= 1 && n <= 56) || n !== planDay()) return null;
+  if (!planStarted() || !(n >= 1 && n <= PLAN_N) || n !== planDay()) return null;
   const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
@@ -9817,7 +9884,7 @@ function autoSync() {
     if (rd.size !== (state.routineDone[td] || []).length) state.routineDone[td] = [...rd];
     // Trainingsplan: heutiger Tag
     const n = planDay();
-    if (planStarted() && n <= 56) {
+    if (planStarted() && n <= PLAN_N) {
       const d = PLAN.days[n - 1];
       d.steps.forEach(s => {
         const cur = dayGet(n).steps[s.key];
@@ -10317,9 +10384,9 @@ function rvStatus() {
   const L = rvList(), need = L.done.length + L.open.length;
   return { n: L.n, done: L.done.length, need, ok: L.done.length >= need, L };
 }
-// Der Block, in dem das Review steht (Text mit «Review»), sonst der letzte Block des Tages. Tag 1 (nur Aufschreiben) hat keins.
+// Der Block, in dem das Review steht (Text mit «Review», Themennamen in «…» zählen nicht), sonst der letzte Block des Tages. Tag 1 (nur Aufschreiben) hat keins.
 function rvAnchor(d) {
-  const blocks = d.steps.filter(x => /^b\d$/.test(x.key)), hit = blocks.find(x => /Review/.test(x.t));
+  const blocks = d.steps.filter(x => /^b\d$/.test(x.key)), hit = blocks.find(x => /Review/.test(x.t.replace(/«[^»]*»/g, "")));
   const s = hit || blocks[blocks.length - 1] || d.steps.find(x => x.key !== "note");
   return s ? s.key : "";
 }
@@ -10779,7 +10846,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-rv-go]");
   if (!b) return;
   rvUi.open = b.dataset.rvGo;
-  if (planStarted() && planDay() <= 56 && rvAnchor(PLAN.days[planDay() - 1])) { openPlanDay(planDay()); setTimeout(rvJump, 60); }
+  if (planStarted() && planDay() <= PLAN_N && rvAnchor(PLAN.days[planDay() - 1])) { openPlanDay(planDay()); setTimeout(rvJump, 60); }
   else { showTab("review"); window.scrollTo({ top: 0 }); }
 });
 
@@ -12253,8 +12320,8 @@ function scheduleCarry(n) {
   const load = day => list.filter(c => c.to === day && !c.done).length;
   list.filter(c => c.to === -1).forEach(c => {
     let day = n + 1;
-    while (day <= 56 && (dayGet(day).done || load(day) >= 1)) day++;
-    c.to = day <= 56 ? day : 0; moved.push(c);
+    while (day <= PLAN_N && (dayGet(day).done || load(day) >= 1)) day++;
+    c.to = day <= PLAN_N ? day : 0; moved.push(c);
   });
   return moved;
 }
@@ -12265,7 +12332,7 @@ function carryStepHtml(c) {
 function carryOverflowHtml() {
   const items = planCarry().filter(c => c.to === 0 && !c.done);
   if (!items.length) return "";
-  return foldHtml("carry-over", "Noch offene Blöcke", `<p class="lead">Diese Blöcke fanden in den 56 Tagen keinen Platz mehr. Hol sie nach, wann du magst.</p>${items.map(carryStepHtml).join("")}`, { icon: "clock", open: true, sub: `${plural(items.length, "Block", "Blöcke")}, der Plan ist damit länger als 56 Tage`, right: `<span class="badge">${items.length}</span>` });
+  return foldHtml("carry-over", "Noch offene Blöcke", `<p class="lead">Diese Blöcke fanden in den ${PLAN_N} Tagen keinen Platz mehr. Hol sie nach, wann du magst.</p>${items.map(carryStepHtml).join("")}`, { icon: "clock", open: true, sub: `${plural(items.length, "Block", "Blöcke")}, der Plan ist damit länger als 56 Tage`, right: `<span class="badge">${items.length}</span>` });
 }
 
 function startPlan() {
@@ -12289,7 +12356,7 @@ function completeDay(n) {
   const after = currentLevel();
   const openL = dayLessons(n).slice(0, 1).filter(id => !lessonsDone()[id]).map(id => lessonById(id).title)[0];
   const mvTxt = moved.length ? ` ${plural(moved.length, "offener Block wurde", "offene Blöcke wurden")} ${moved.every(c => c.to > 0) ? "auf " + [...new Set(moved.map(c => "Tag " + c.to))].join(", ") + " verschoben" : "zum Nachholen eingeplant"}.` : "";
-  toast((after > before ? `Stufe ${after} erreicht: ${lvInfo(after).name}! 🎉` : n < 56 ? `Tag ${n} geschafft! 🎉${openL ? ` Die Lektion „${openL}“ ist noch offen.` : ""}` : "Plan abgeschlossen! 🏆") + mvTxt);
+  toast((after > before ? `Stufe ${after} erreicht: ${lvInfo(after).name}! 🎉` : n < PLAN_N ? `Tag ${n} geschafft! 🎉${openL ? ` Die Lektion „${openL}“ ist noch offen.` : ""}` : "Plan abgeschlossen! 🏆") + mvTxt);
   celebrate(true);
   renderPlan(); renderLevelChip();
 }
@@ -12300,7 +12367,7 @@ function weeklyPackageText() {
   const recent = PLAN.days.filter(d => dayGet(d.n).done && dayGet(d.n).done >= sinceIso);
   return [
     "Wochenpaket – Rivals Coach",
-    `Plan: ${cur > 56 ? "abgeschlossen" : `nächster Tag ${cur} von 56`} · Stufe ${currentLevel()} (${lvInfo(currentLevel()).name}) · ${planDoneCount()} Tage erledigt`,
+    `Plan: ${cur > PLAN_N ? "abgeschlossen" : `nächster Tag ${cur} von ${PLAN_N}`} · Stufe ${currentLevel()} (${lvInfo(currentLevel()).name}) · ${planDoneCount()} Tage erledigt`,
     `Letzte 7 Tage: ${plural(ms.length, "Match", "Matches")}${ms.length ? `, ${ms.filter(m => m.result === "W").length} Siege / ${ms.filter(m => m.result === "L").length} Niederlagen, Ø Tode ${s.d.toFixed(1)}, Ø KDA ${s.kda.toFixed(1)}` : ""}`,
     ...(s.timedN ? [`Pro 10 Minuten (${plural(s.timedN, "Match", "Matches")} mit Dauer): Heilung ${fmtNum(s.heal10)}, Schaden ${fmtNum(s.dmg10)}, Geblockt ${fmtNum(s.block10)}, Tode ${s.d10.toFixed(1)}`] : []),
     ...(s.ultN ? [`Ult-Wirkung: ${pct(s.ultPct)} (${numDe(s.ultHit)} von ${s.ultN} Ults)`] : []),
@@ -12587,7 +12654,7 @@ function renderPathCard() {
   const started = planStarted(), cur = planDay();
   foldFill(el, "Dein Lernpfad", `${stagesHtml(true)}
     <div class="row mt"><button class="btn small" type="button" data-pact="home">Trainingsplan öffnen</button>
-      ${started && cur <= 56 ? `<button class="btn ghost small" type="button" data-pact="day" data-n="${cur}">Heute: Tag ${cur}</button>` : ""}
+      ${started && cur <= PLAN_N ? `<button class="btn ghost small" type="button" data-pact="day" data-n="${cur}">Heute: Tag ${cur}</button>` : ""}
       <button class="btn ghost small" type="button" data-pact="check-all">Wissens-Check</button></div>`,
     { icon: "target", sub: "Von den Grundlagen zum Experten", right: levelBadge(currentLevel()) });
 }
