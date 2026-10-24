@@ -446,6 +446,13 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .calhint { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
 .autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; max-width: 100%; }
 @media (max-width: 600px) { .autotag { white-space: normal; overflow-wrap: anywhere; border-radius: 10px; } }
+.pbd { margin: 6px 0 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--surface); }
+.pbd > summary { cursor: pointer; }
+.pbgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 12px; margin: 8px 0 4px; }
+.pbgrid label { display: grid; gap: 3px; min-width: 0; }
+.pbgrid input, .pbgrid textarea, .fxwhy input { width: 100%; }
+.fxwhy { display: grid; gap: 3px; flex-basis: 100%; margin-top: 4px; }
+.pbsum { margin: 0 0 10px; }
 .fxbox { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .fxrow .rl .badge { margin-bottom: 2px; }
 .fxdet { margin-top: 8px; }
@@ -1829,6 +1836,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
     <h3>Was lief schief?</h3>
     <p class="muted small" style="margin:0 0 8px" id="mistakeHint"></p>
     <div class="chips" id="mistakeChips"></div>
+    <div id="probBox"></div>
     <h3>Was lief gut?</h3>
     <div class="chips" id="goodChips"></div>
     <div id="teamBox" class="teambox" hidden>
@@ -6083,6 +6091,8 @@ const DEATH_CAT = {
   "Vom Team getrennt": ["Allein gestanden, Team zu weit weg", "Allein geflankt", "Ohne Support oder Team vorne", "Ohne Team reingegangen"]
 };
 const deathCat = l => DEATH_CAT[l] ? l : Object.keys(DEATH_CAT).find(c => DEATH_CAT[c].includes(l)) || "Sonstiges";
+// Passende Fehler-Marken zu einer Ursache; bei einer Gruppe aus der Notiz (z. B. «Position») die aller Ursachen dieser Gruppe
+const deathMistakesOf = l => [...new Set((DEATH_CAT[l] || [l]).map(deathMistake).filter(Boolean))];
 function deathMainCat(list) {
   const c = {};
   list.forEach(m => Object.entries(m.deathCauses || {}).forEach(([l, n]) => { const k = deathCat(l); c[k] = (c[k] || 0) + (+n || 0); }));
@@ -6243,6 +6253,7 @@ function renderMistakeChips(selected, hero) {
   const opts = mistakeOptions(h), base = [...opts, ...sel.filter(x => !opts.includes(x))], list = [...hot.filter(x => !base.includes(x)), ...base].sort((a, b) => hot.includes(b) - hot.includes(a));
   chipGroup($("#mistakeChips"), list); setChips($("#mistakeChips"), sel);
   $("#mistakeChips").querySelectorAll(".chip").forEach(c => { if (hot.includes(c.dataset.v)) { c.classList.add("hot"); c.title = "Passt zu deinem Lernstand"; } });
+  renderProbBox();
   const r = roleOfHero(h);
   $("#mistakeHint").textContent = (h ? `Die Auswahl passt zu ${r ? ROLE_DE[r] : "deinem Helden"}${h ? " und " + h : ""}.` : "Wähle oben deinen Helden, dann passt die App die Auswahl an Rolle und Held an.") + (hot.length ? " Vorne mit Stern: Fehler, um die es in deinen aktuellen Lektionen geht." : "");
 }
@@ -6417,11 +6428,12 @@ function fxForMatch(m) {
     .filter(it => it.src !== "task" || (() => { const x = taskByKey(fxId(it.key)); return !x || !m.hero || x.k === m.hero || x.k === "R:" + heroRole(m.hero); })());
 }
 // Bewertungszeilen, gleich aufgebaut wie die Fragen im Match-Log
-function fxRowsHtml(items, vals, attr) {
+function fxRowsHtml(items, vals, attr, extra) {
   return items.map(it => { const cur = vals[it.key];
     return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span></span>
-      <span class="chips">${it.scale.map(([v, label]) => `<button type="button" class="chip ${String(cur) === String(v) ? "on" : ""}" ${attr(it, v)} aria-pressed="${String(cur) === String(v)}">${label}</button>`).join("")}</span></div>`; }).join("");
+      <span class="chips">${it.scale.map(([v, label]) => `<button type="button" class="chip ${String(cur) === String(v) ? "on" : ""}" ${attr(it, v)} aria-pressed="${String(cur) === String(v)}">${label}</button>`).join("")}</span>${extra ? extra(it, cur) : ""}</div>`; }).join("");
 }
+const fxMissed = v => ["nein", "teils", "1", "2"].includes(String(v));
 // Auswahl: Chips zum An- und Abwählen, dazu ein eigenes Ziel
 function fxPickHtml(ctx) {
   const all = fxAll(today()), chosen = fxSelKeys(all), groups = [["Für heute", ["mini", "focus", "goal", "own"]], ["Grundregeln und Thema des Tages", ["rule"]], ["Bootcamp-Aufgaben", ["task"]]];
@@ -6506,6 +6518,73 @@ document.addEventListener("click", e => {
   if (!e.target.closest("[data-fxgo]")) return;
   showTab("goals"); setTimeout(() => { const el = document.getElementById("fxPickW"); if (el) { el.open = true; el.scrollIntoView({ block: "start", behavior: "smooth" }); } }, 60);
 });
+// ---------- Probleme genauer festhalten (Review und Match loggen) ----------
+// Beim Spielen notierst du kurz (Notiz), im Review schaust du genauer hin: Zu jedem Problem aus «Was lief schief?» (dasselbe Feld m.mistakes wie
+// im Match-Log) hältst du fest, wann es war (Zeit im Replay), was passiert ist, warum (Ursache) und was du nächstes Mal machst (Wenn-dann).
+// Gespeichert in m.probs = {Problem: {at, what, why, fix}}. Warum-Fragen und Wenn-dann-Pläne stammen aus dem Lerndesign; die Inhalte schreibst du selbst.
+const PB_FIELDS = [["at", "Wann im Replay", "z. B. 04:12", "input"], ["what", "Was ist passiert?", "Kurz beschreiben, was du im Replay siehst", "area"], ["why", "Warum?", "Was war die Ursache? Position, Info gefehlt, zu gierig …", "area"], ["fix", "Nächstes Mal", "Wenn …, dann …", "input"]];
+const pbHas = p => !!p && PB_FIELDS.some(([k]) => String(p[k] || "").trim());
+function pbEditorHtml(labels, probs, attr, openSet) {
+  return labels.map(l => { const p = probs[l] || {}, has = pbHas(p);
+    return `<details class="pbd" ${has || (openSet && openSet.has(l)) ? "open" : ""}><summary><b>${esc(l)}</b> <span class="small muted">${has ? "festgehalten ✓" : "genauer festhalten"}</span></summary>
+      <div class="pbgrid">${PB_FIELDS.map(([k, lab, ph, kind]) => `<label class="small">${lab}${kind === "area" ? `<textarea rows="2" ${attr(l, k)} placeholder="${esc(ph)}">${esc(p[k] || "")}</textarea>` : `<input type="text" ${attr(l, k)} value="${esc(p[k] || "")}" placeholder="${esc(ph)}" maxlength="${k === "at" ? 20 : 200}">`}</label>`).join("")}</div></details>`; }).join("");
+}
+// Match loggen: unter «Was lief schief?» zu jedem gewählten Problem
+const probOpen = new Set();
+function probFormValues() {
+  const o = {};
+  document.querySelectorAll("#probBox [data-fpb]").forEach(x => { const v = x.value.trim(); if (v) (o[x.dataset.fpb] = o[x.dataset.fpb] || {})[x.dataset.k] = v; });
+  return o;
+}
+function renderProbBox(probs) {
+  const box = $("#probBox"); if (!box) return;
+  const vals = probs || probFormValues(), sel = [...document.querySelectorAll("#mistakeChips .chip.on")].map(c => c.dataset.v);
+  box.innerHTML = sel.length ? `<p class="small muted" style="margin:8px 0 4px">Genauer festhalten ist freiwillig, das geht auch später im Review: wann, was, warum und was du nächstes Mal machst.</p>${pbEditorHtml(sel, vals, (l, k) => `data-fpb="${esc(l)}" data-k="${k}"`, probOpen)}` : "";
+}
+const probChipChanged = c => { if (c.classList.contains("on")) probOpen.add(c.dataset.v); setTimeout(() => renderProbBox(), 0); };
+document.addEventListener("click", e => { const c = e.target.closest("#mistakeChips .chip"); if (c) probChipChanged(c); });
+document.addEventListener("keydown", e => { const c = e.target.closest && e.target.closest("#mistakeChips .chip"); if (c && (e.key === " " || e.key === "Enter")) probChipChanged(c); });
+// Review: Schritt «Was lief schief? Genauer festhalten» mit denselben Problemen wie im Match-Log
+function rvProbStepHtml(m, num) {
+  const sel = m.mistakes || [], fromDeaths = [...new Set(Object.keys(m.deathCauses || {}).flatMap(deathMistakesOf))];
+  const opts = mistakeOptions(m.hero), main = [...new Set([...fromDeaths, ...sel, ...opts.slice(0, 6)])], rest = opts.filter(x => !main.includes(x));
+  const chip = x => { const on = sel.includes(x), hot = fromDeaths.includes(x); return `<button type="button" class="chip ${on ? "on" : ""} ${hot ? "hot" : ""}" data-rv="mis" data-id="${m.id}" data-g="${esc(x)}" aria-pressed="${on}"${hot ? ' title="Passt zu deinen Todesursachen"' : ""}>${esc(x)}</button>`; };
+  return `<div class="rvs"><h4><span class="rvn">${num}</span>Was lief schief? Genauer festhalten <span class="small muted">freiwillig, je genauer, desto mehr nimmst du mit</span></h4>
+    <div class="chips">${main.map(chip).join("")}</div>
+    ${rest.length ? `<details class="small" style="margin-top:4px"><summary>Weitere Probleme (${rest.length})</summary><div class="chips" style="margin-top:6px">${rest.map(chip).join("")}</div></details>` : ""}
+    ${fromDeaths.length ? `<p class="small muted" style="margin:4px 0 0">Vorne markiert: passt zu den Todesursachen oben.</p>` : ""}
+    <div class="row" style="gap:6px;margin-top:6px;flex-wrap:nowrap"><input type="text" class="pfield" data-rv-own="${m.id}" placeholder="Anderes Problem in eigenen Worten" maxlength="60" style="flex:1;min-width:0" aria-label="Anderes Problem"><button type="button" class="btn small ghost" data-rv="misown" data-id="${m.id}">Dazu</button></div>
+    ${sel.length ? `<div class="pblist">${pbEditorHtml(sel, m.probs || {}, (l, k) => `data-rvpb="${m.id}" data-l="${esc(l)}" data-k="${k}"`, rvUi.pbOpen)}</div>` : ""}</div>`;
+}
+// Review: oben, was du beim Spielen notiert hast (Notiz), als Ausgangspunkt fürs Replay
+function rvNoteHtml(m) {
+  const q = m.qn || {};
+  if (!q.noted) return "";
+  const fx = fxForMatch(m).map(it => { const v = fxGet(m, it); return v === undefined || v === "" ? "" : `${it.tag}: ${fxLabel(it.key, v)}`; }).filter(Boolean);
+  const bits = [...fx, q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra || ""].filter(Boolean);
+  return `<div class="note info rvnoted" style="margin:0"><span class="ni" aria-hidden="true">✎</span><div><b>Das hast du beim Spielen notiert</b>${bits.length ? `<br>${esc(bits.join(" · "))}` : ""}${m.notes ? `<br>«${esc(m.notes)}»` : ""}
+    <br><span class="small muted">Tode und Ults aus der Notiz stehen unten schon drin. Schau dir im Replay die Stellen genauer an und ergänze, was dir auffällt.</span></div></div>`;
+}
+// Review-Seite: alle Problem-Notizen nach Problem sortiert
+function rvProbCardHtml() {
+  const g = {};
+  state.matches.slice(-60).forEach(m => Object.entries(m.probs || {}).forEach(([l, p]) => { if (pbHas(p) && (m.mistakes || []).includes(l)) (g[l] = g[l] || []).push({ m, p }); }));
+  const rows = Object.entries(g).sort((a, b) => b[1].length - a[1].length);
+  if (!rows.length) return "";
+  return foldHtml("rv-probs", "Deine Problem-Notizen", `<p class="lead">Was du genauer festgehalten hast, nach Problem sortiert (die letzten 60 Matches). So siehst du, ob dieselbe Ursache immer wieder kommt.</p>
+    ${rows.map(([l, list]) => `<div class="pbsum"><b>${esc(l)}</b> <span class="badge">${list.length}×</span><ul class="wl small" style="margin:4px 0 0">${list.slice(-3).reverse().map(({ m, p }) => `<li>${fmtDate(m.date)} · ${esc(m.hero)}${p.at ? ` · ${esc(p.at)}` : ""}${p.what ? `<br>${esc(p.what)}` : ""}${p.why ? `<br><span class="muted">Warum:</span> ${esc(p.why)}` : ""}${p.fix ? `<br><span class="muted">Nächstes Mal:</span> ${esc(p.fix)}` : ""}</li>`).join("")}</ul></div>`).join("")}`,
+    { icon: "edit", sub: plural(rows.length, "Problem", "Probleme") });
+}
+// Eingaben im Review speichern, ohne neu zu zeichnen (wie beim Vorsatz)
+let rvPbT = 0;
+document.addEventListener("input", e => {
+  const t = e.target.closest ? e.target.closest("[data-rvpb],[data-rvfxwhy]") : null; if (!t) return;
+  const m = state.matches.find(x => x.id === (t.dataset.rvpb || t.dataset.rvfxwhy)); if (!m) return;
+  if (t.dataset.rvpb) { m.probs = Object.assign({}, m.probs); m.probs[t.dataset.l] = Object.assign({}, m.probs[t.dataset.l], { [t.dataset.k]: t.value }); }
+  else { m.qn = Object.assign({}, m.qn); m.qn.fxWhy = Object.assign({}, m.qn.fxWhy, { [t.dataset.k]: t.value }); }
+  clearTimeout(rvPbT); rvPbT = setTimeout(() => saveCore(), 500);
+});
+document.addEventListener("change", e => { if (e.target.closest && e.target.closest("[data-rvpb],[data-rvfxwhy]")) { clearTimeout(rvPbT); save(); } });
 // ---------- Schnellnotiz nach dem Match ----------
 // Nach jedem Match tippst du in der Ladezeit eine kurze Notiz: Ults, Todesursachen (die fünf Gruppen des Plans), Mini-Ziel, Solo oder Stack, Voice,
 // den Zusatz des Tages und einen Satz. Held, Ergebnis und Tode holt der Abgleich selbst, so musst du am Tagesende nicht jedes Match nachtragen.
@@ -6548,6 +6627,7 @@ function qnApply(q, m) {
     items.forEach(it => { const v = (q.fx || {})[it.key], has = fxGet(m, it); if (v && (has === undefined || has === "")) fxSet(m, it, v); });
     fxMark(m, items);
   }
+  m.qn = Object.assign({}, m.qn, { noted: q.ts || Date.now() });
   q.match = m.id;
 }
 // Ordnet sichere Notizen zu und nimmt sie aus der Warteliste. Gibt true zurück, wenn sich etwas geändert hat.
@@ -6774,7 +6854,7 @@ function startEdit(id) {
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {}); ultState = Object.assign({}, m.ultDeaths || {});
-  renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []); renderTeamBox(m);
+  renderMistakeChips(m.mistakes || [], m.hero); renderProbBox(Object.assign({}, m.probs)); setChips($("#goodChips"), m.goods || []); renderTeamBox(m);
   renderFxBox(fxVals(m, fxForMatch(m))); renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks)); renderFocusCard();
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
@@ -7012,6 +7092,7 @@ $("#matchForm").addEventListener("submit", e => {
     deathCauses: Object.assign({}, deathState),
     ultDeaths: ultTrim(Object.assign({}, ultState), ultDeathN(deathState))
   };
+  { const pv = probFormValues(); fields.probs = Object.fromEntries(Object.entries(pv).filter(([l]) => fields.mistakes.includes(l))); }
   if (!$("#teamBox").hidden) {
     fields.teamGood = [...document.querySelectorAll("#teamGoodChips .chip.on")].map(c => c.dataset.v);
     fields.teamBad = [...document.querySelectorAll("#teamBadChips .chip.on")].map(c => c.dataset.v);
@@ -7991,6 +8072,9 @@ function buildPrompt() {
   if (mc.length) lines.push("", "## Häufigste Fehler (letzte 20 Matches)", ...mc.map(([m, c]) => `- ${m}: ${c}×`));
   const nts = ms.slice(-5).filter(m => m.notes).map(m => `- ${m.hero}, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.enemies.length ? ` gegen ${m.enemies.join(", ")}` : ""}: ${m.notes}`);
   if (nts.length) lines.push("", "## Notizen aus den letzten Matches", ...nts);
+  // Problem-Notizen aus dem Review (ohne Namen von Mitspielenden, nur deine eigenen Sätze)
+  const pbs = ms.slice(-15).flatMap(m => Object.entries(m.probs || {}).filter(([l, x]) => pbHas(x) && (m.mistakes || []).includes(l)).map(([l, x]) => `- ${m.hero}, ${l}${x.what ? `: ${x.what}` : ""}${x.why ? ` · Warum: ${x.why}` : ""}${x.fix ? ` · Nächstes Mal: ${x.fix}` : ""}`)).slice(-6);
+  if (pbs.length) lines.push("", "## Probleme, die ich im Review genauer festgehalten habe", ...pbs);
   const lessonFocus = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
   if (lessonFocus) lines.push("", "## Mein aktueller Trainingsfokus", `- Lektion „${lessonFocus.title}“ (${Object.keys(state.lessons.done).length}/${LESSONS.length} Lektionen abgeschlossen)`, `- Fokus: ${lessonFocus.focus}`);
   const openGoals = state.goals.filter(g => !g.done);
@@ -10655,7 +10739,7 @@ const rvDone = m => !!(m && m.review && m.review.on);
 const rvTotal = () => state.matches.filter(rvDone).length;
 const rvWords = t => (String(t || "").match(/[\p{L}\d]{2,}/gu) || []).length;
 const rvNorm = t => String(t || "").toLowerCase().replace(/[^\p{L}\d]+/gu, " ").trim();
-const rvUi = { open: null };
+const rvUi = { open: null, pbOpen: new Set() };
 // Was fehlt, bevor ein Match als ausgewertet gilt?
 function rvMissing(m) {
   const miss = [], d = +m.d || 0, got = deathTotal(m.deathCauses);
@@ -10871,6 +10955,7 @@ function rvMatchHtml(x, open, L) {
     ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
     ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
+    ${rvNoteHtml(m)}
     <div class="rvs"><h4><span class="rvn">1</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
       ${d ? `<div class="deathgrid">${labels.concat(extra).map(l => { const n = (m.deathCauses || {})[l] || 0;
         return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; }).join("")}</div>${ultPickHtml("r:" + m.id, ultDeathN(m.deathCauses), m.ultDeaths || {}, m.enemies)}` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit Schritt 2.</p>`}
@@ -10878,13 +10963,15 @@ function rvMatchHtml(x, open, L) {
     <div class="rvs"><h4><span class="rvn">2</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}</span></h4>
       <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
       <details class="small" style="margin-top:4px"><summary>Wann zählt eine Ult «mit Wirkung»?</summary><p style="margin:4px 0 0">${esc(PLAN.notes.ultIntro)}</p><ul class="wl" style="margin:4px 0 0">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Teilweise Wirkung zählt ½. Keine Ult eingesetzt? Dann trag 0 ein.</p></details></div>
-    ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">3</span>Dein Fokus <span class="small muted">freiwillig, dieselben Punkte wie in der Notiz</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`)}</div>` : ""}
-    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 4 : 3}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
+    ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">3</span>Dein Fokus <span class="small muted">freiwillig, dieselben Punkte wie in der Notiz</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
+      (it, cur) => fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
+    ${rvProbStepHtml(m, fxIt.length ? 4 : 3)}
+    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 5 : 4}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
-    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 5 : 4}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
+    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 6 : 5}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
       <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
-      ${(() => { const ideas = fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …"); return ideas.length ? `<details class="small" style="margin-top:4px"><summary>Ideen aus deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
+      ${(() => { const own = Object.entries(m.probs || {}).filter(([l]) => (m.mistakes || []).includes(l)).map(([, p]) => String(p.fix || "").trim()).filter(Boolean), ideas = [...new Set([...own, ...fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …")])]; return ideas.length ? `<details class="small" style="margin-top:4px" ${own.length ? "open" : ""}><summary>Ideen aus ${own.length ? "deinen Problem-Notizen und " : ""}deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
     <div class="rvfoot rvs" data-foot="${m.id}">${rvFootHtml(m, L)}</div></div></div>`;
 }
 function rvCardHtml() {
@@ -10950,6 +11037,14 @@ document.addEventListener("click", e => {
   } else if (a === "fx" && m) {
     const it = fxForMatch(m).find(x => x.key === b.dataset.k);
     if (it) { fxSet(m, it, String(fxGet(m, it)) === b.dataset.v ? null : b.dataset.v); fxMark(m, [it]); save(); }
+  } else if (a === "mis" && m) {
+    const g = b.dataset.g, list = m.mistakes || (m.mistakes = []), i = list.indexOf(g);
+    if (i >= 0) list.splice(i, 1); else { list.push(g); rvUi.pbOpen.add(g); }
+    save();
+  } else if (a === "misown" && m) {
+    const inp = document.querySelector(`[data-rv-own="${m.id}"]`), v = inp ? inp.value.trim() : "";
+    if (!v) { toast("Schreib das Problem zuerst in das Feld."); return; }
+    const list = m.mistakes || (m.mistakes = []); if (!list.includes(v)) list.push(v); rvUi.pbOpen.add(v); save();
   } else if (a === "good" && m) {
     const g = b.dataset.g, list = m.goods || (m.goods = []); const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); save();
   } else if (a === "finish" && m) { if (!rvFinish(m)) return; }
@@ -10981,6 +11076,7 @@ function renderReview() {
     <div class="lesson-stats"><div>${ring(st.need ? st.done / st.need : 1, `${st.done}/${st.need}`)}<span>heute</span></div></div></div>
     <div class="card">${rvCardHtml()}</div>
     ${rvCauseCardHtml()}
+    ${rvProbCardHtml()}
     ${badgesHtml()}`;
 }
 // Woran du in den ausgewerteten Matches stirbst
