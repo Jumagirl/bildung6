@@ -446,6 +446,16 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .calhint { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
 .autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; max-width: 100%; }
 @media (max-width: 600px) { .autotag { white-space: normal; overflow-wrap: anywhere; border-radius: 10px; } }
+.funcard { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.funcard .funem { font-size: 1.8rem; line-height: 1; flex: none; }
+.funcard .funbody { flex: 1; min-width: 0; }
+.funcard .funhead { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+.funcard.ok .funem { filter: saturate(1.2); }
+.funlist { margin-top: 10px; }
+.funplan { margin: 10px 0 0; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 12px; }
+.dfig { margin: 0 0 12px; min-width: 0; }
+.dfig .fig { margin: 0; }
+.figcover { display: grid; place-items: center; gap: 4px; aspect-ratio: 16 / 10; max-width: 100%; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); text-align: center; padding: 12px; }
 .ultpick { margin: 10px 0 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; display: grid; gap: 6px; min-width: 0; }
 .ultpick select { max-width: 100%; justify-self: start; }
 .ultpick .deathgrid { margin: 0; }
@@ -5102,7 +5112,8 @@ function renderToday() {
   const tbH = tbTodayHtml(), tourH = tourCardHtml(), more = [tbH, tourH, guide].filter(Boolean).join("");
   const moreSub = [tbH && "Eternity-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
-  el.innerHTML = hero + list + missionsCardHtml() + focus + rulesCardHtml() + newsCard + first + formHudHtml() + moreFold;
+  funCheck();
+  el.innerHTML = hero + list + missionsCardHtml() + focus + rulesCardHtml() + funFoldHtml() + newsCard + first + formHudHtml() + moreFold;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -9324,6 +9335,33 @@ function focusCardHtml(n) {
     ${vor ? `<div class="note good" style="margin:8px 0"><span class="ni" aria-hidden="true">✓</span><div><b>Dein Vorsatz von Tag ${vor[0]}:</b> „${esc(vor[1])}“ Probier ihn heute im ersten Match aus.</div></div>` : ""}
     <p class="muted small" style="margin:0">Fällt dir beim Spielen etwas von gestern ein? Nicht jetzt klären. Schreib es unten bei „Abschluss“ auf, dann ist es sicher abgelegt.</p></div>`;
 }
+// ---------- Lernbilder im Trainingstag ----------
+// Kennenlernen-Tag: die Lexikon-Bilder zum Thema offen zeigen. Vertiefen-Tag: Bild-Abruf. Das Bild ist erst verdeckt (Fassung ohne Lösung,
+// wo es eine gibt, sonst ganz zugedeckt); du erklärst es dir in einem Satz und deckst dann auf (Abruf mit Kontrolle). Dazu die Bildfragen zu diesen Themen.
+planUi.figShown = {};
+function dayFigs(d) { return [...new Set(d.l.map(x => "L" + x))].filter(id => WISSEN_FIG[id] && FIGS[WISSEN_FIG[id]] && wissenById(id)).slice(0, 3).map(id => ({ id, k: WISSEN_FIG[id], w: wissenById(id) })); }
+const figAskable = () => new Set(WQ.filter(q => q.fig).map(q => q.fig));
+const dayFigQs = d => { const ids = dayFigs(d).map(f => f.id); return WQ.filter(q => q.fig && ids.includes(q.l)); };
+function dayFigHtml(n) {
+  const d = PLAN.days[n - 1], fs = dayFigs(d);
+  if (!fs.length) return "";
+  const qs = dayFigQs(d), qBtn = qs.length ? `<div class="row"><button type="button" class="btn small ghost" data-pact="fig-quiz" data-n="${n}">${icon("quiz")}Bildfragen dazu (${qs.length})</button><span class="small muted">Erst antworten, dann siehst du die Lösung mit Begründung.</span></div>` : "";
+  if (!d.deep) return foldHtml("d-fig", "Bilder zum Thema", `<p class="lead" style="margin:0 0 8px">Schau dir die Bilder vor dem ersten Match an. ${n < PLAN_N && PLAN.days[n].deep ? "Morgen am Vertiefen-Tag erklärst du sie aus dem Kopf." : ""}</p>
+    ${fs.map(f => `<div class="dfig">${FIGS[f.k]("teach")}<p class="small" style="margin:4px 0 0"><b>${f.id} – ${esc(f.w.title)}:</b> ${esc(f.w.einfach)}</p></div>`).join("")}${qBtn}`, { icon: "book", open: true, sub: plural(fs.length, "Lernbild", "Lernbilder") + " aus dem Lexikon" });
+  const ask = figAskable(), open = fs.filter(f => planUi.figShown[n + ":" + f.k]).length;
+  return foldHtml("d-figq", "Bild-Abruf", `<p class="lead" style="margin:0 0 8px">Die Bilder von gestern, diesmal ohne Lösung. Erklär dir jedes zuerst in einem Satz, dann deck auf und vergleiche.</p>
+    ${fs.map(f => { const shown = planUi.figShown[n + ":" + f.k], canAsk = ask.has(f.k);
+      return `<div class="dfig">${shown ? FIGS[f.k]("teach") : canAsk ? FIGS[f.k]("ask") : `<div class="figcover" role="img" aria-label="Bild verdeckt"><span>${f.id}</span><b>${esc(f.w.title)}</b><span class="small muted">Bild verdeckt</span></div>`}
+        ${shown ? `<p class="small" style="margin:4px 0 0"><b>${f.id} – ${esc(f.w.title)}:</b> ${esc(f.w.einfach)}</p>`
+          : `<p class="small muted" style="margin:4px 0 6px">${canAsk ? "Was fehlt im Bild, und warum?" : `Was zeigt das Bild zu «${esc(f.w.title)}»?`} Sag es dir in einem Satz.</p><button type="button" class="btn small" data-pact="fig-show" data-n="${n}" data-k="${f.k}">Aufdecken</button>`}</div>`; }).join("")}${qBtn}`,
+    { icon: "quiz", open: true, sub: `${open} von ${plural(fs.length, "Bild", "Bildern")} aufgedeckt` });
+}
+function startFigQuiz(n) {
+  const qs = shuffle(dayFigQs(PLAN.days[n - 1]).slice()).slice(0, 5);
+  if (!qs.length) { toast("Zu diesen Bildern gibt es keine Bildfragen"); return; }
+  kqSession = { qs, i: 0, correct: 0, label: `Tag ${n} · Bildfragen`, back: n };
+  kq = null; quizMode = "wissen"; showTab("quiz"); window.scrollTo({ top: 0 });
+}
 function dayLessonCardHtml(n) {
   const ids = dayLessons(n), d = PLAN.days[n - 1], done = lessonsDone();
   if (!ids.length) return `<div class="card"><div class="card-head"><h2>${icon("book")}Lektion zum Tag</h2></div>
@@ -9414,11 +9452,13 @@ function planDayHtml(n) {
         ${d.d.map(x => `<button type="button" class="chip ${planUi.read.has("D:" + x) ? "on" : ""}" data-pact="read" data-k="D:${x}">Drill ${x}</button>`).join("")}</div>
       ${reads}
       ${!readIds.length && !d.d.length ? '<p class="muted small">Heute gibt es nichts nachzulesen.</p>' : ""}`, { icon: "book", open: planUi.read.size > 0, sub: readIds.length || d.d.length ? "Kurz-Wissen zum Thema von heute" : "Heute nichts" })
+    + dayFigHtml(n)
     + (start ? `<div class="psteps">${stepHtml(n, start, seenD)}</div>` : "")
     + foldHtml("d-len", "Ablauf und Matchlänge", `<details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>${matchLenHtml()}`, { icon: "training", sub: blockText() })
     + (!start && !prepS.done && nextLabel ? `<div class="row"><button class="btn" type="button" data-pact="prep-ok" data-n="${n}">Bereit, weiter zu ${esc(nextLabel)} →</button></div>` : "");
   const blockBody = s => (n === cur ? qnPlanHtml() : "") + (s.key === weakAt ? wkDayCardHtml(n) : "")
-    + nugBefore(n, s.step, d) + `<div class="psteps">${stepHtml(n, s.step, seenD)}</div>` + nugAfter(n, s.step, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "");
+    + nugBefore(n, s.step, d) + `<div class="psteps">${stepHtml(n, s.step, seenD)}</div>` + nugAfter(n, s.step, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "")
+    + (funDay(n) && blocks.length && s.key === blocks[blocks.length - 1].key ? funPlanHtml(n) : "");
   const note = stepOf("note");
   const end = (note ? `<div class="psteps">${stepHtml(n, note, seenD)}</div>` : "")
     + foldHtml("d-matches", "Deine Matches an diesem Tag", `<div class="row" style="margin-bottom:8px"><button class="btn small" type="button" data-go="log">${icon("log")}Match loggen</button></div>
@@ -10939,8 +10979,135 @@ const BADGES = [
   { id: "tb1", em: "🧭", t: "Auf dem Weg nach Eternity", d: "Zwei Meilensteine in einer Rolle erreicht", ok: () => TB() && POOL_ROLES.some(r => tbMilestones(r).filter(m => m.ok).length >= 2) },
   { id: "tb2", em: "🏔️", t: "Eternity-Werte", d: "Alle vier Wert-Meilensteine in einer Rolle erreicht", ok: () => TB() && POOL_ROLES.some(r => tbMilestones(r).slice(0, 4).every(m => m.ok)) },
   { id: "tb3", em: "👑", t: "Alle Rollen", d: "In jeder Rolle mindestens zwei Meilensteine", ok: () => TB() && POOL_ROLES.every(r => tbMilestones(r).filter(m => m.ok).length >= 2) },
-  { id: "cause", em: "🛡️", t: "Ursache entschärft", d: "Eine Mission zu einer Todesursache geschafft", ok: () => rvState().missions.some(x => x.status === "done" && x.metric.startsWith("cause:")) }
+  { id: "cause", em: "🛡️", t: "Ursache entschärft", d: "Eine Mission zu einer Todesursache geschafft", ok: () => rvState().missions.some(x => x.status === "done" && x.metric.startsWith("cause:")) },
+  { id: "fun1", em: "🎲", t: "Zum Spass", d: "Eine Challenge geschafft", ok: () => new Set(((state.fun || {}).done || []).map(x => x.id)).size >= 1 },
+  { id: "fun5", em: "🎪", t: "Challenge-Fan", d: "Fünf verschiedene Challenges geschafft", ok: () => new Set(((state.fun || {}).done || []).map(x => x.id)).size >= 5 }
 ];
+// ---------- Challenges zum Spass und Entspannen ----------
+// Jede Woche (Planwoche, ohne Plan die Kalenderwoche) eine kleine Challenge: locker, ohne Druck, zählt nicht zum Abhaken und blockiert nichts.
+// Würfeln geht jederzeit. Die App erkennt die meisten selbst (Matches ab dem Start der Challenge, Quiz, Zuschauen), den Rest hakst du ab.
+// Inhalte nur aus Daten der App (Helden, Rollen, Modi, Team-Ups, Heldenprofile); Ziele richten sich nach deinen eigenen Werten.
+const funMine = () => state.matches.filter(m => m.hero);
+const funFav = () => { const c = {}; funMine().forEach(m => { c[m.hero] = (c[m.hero] || 0) + 1; }); const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0]; return top && top[1] >= 3 ? top[0] : ""; };
+const funAvgD = l => l.length ? l.reduce((a, m) => a + (+m.d || 0), 0) / l.length : 0;
+const funHash = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const FUN = [
+  { id: "random", em: "🎲", t: "Zufallsheld", text: F => `Die App hat ${esc(F.h)} für dich gewürfelt. Spiel ein Match damit, einfach zum Ausprobieren. Ergebnis egal.`,
+    pick: F => { const often = Object.entries(group(funMine(), m => m.hero)).sort((a, b) => b[1].length - a[1].length).slice(0, 3).map(x => x[0]); const l = Object.keys(PROF).filter(h => heroByName(h) && !often.includes(h)); return l[funHash(F.key + (F.rolls || 0)) % l.length]; },
+    info: F => PROF[F.h] ? `<p class="small" style="margin:4px 0 0">${heroChip(F.h)} · Ult: <b>${esc(PROF[F.h].ult.n)}</b>${PROF[F.h].tipps && PROF[F.h].tipps[0] ? `<br><span class="muted">Tipp aus dem Heldenprofil: ${esc(PROF[F.h].tipps[0])}</span>` : ""}</p>` : "",
+    prog: (ms, b, F) => ({ have: ms.filter(m => m.hero === F.h).length, need: 1 }) },
+  { id: "newhero", em: "🆕", t: "Neuer Held", text: () => "Spiel ein Match mit einem Helden, den du noch nie gespielt hast. Ergebnis egal.", prog: (ms, b) => ({ have: ms.filter(m => !b.some(x => x.hero === m.hero)).length ? 1 : 0, need: 1 }) },
+  { id: "role", em: "🔄", t: "Rollentausch", text: () => `Spiel ein Match in einer anderen Rolle als ${esc(ROLE_DE[mainRole()] || mainRole())}.`, prog: ms => ({ have: ms.filter(m => roleOfHero(m.hero) && roleOfHero(m.hero) !== mainRole()).length ? 1 : 0, need: 1 }) },
+  { id: "trio", em: "🎭", t: "Alle drei Rollen", text: () => "Spiel an einem Tag je ein Match als Vanguard, Duelist und Strategist.",
+    prog: ms => ({ have: Math.max(0, ...Object.values(group(ms, m => m.date)).map(l => ROLES.filter(r => l.some(m => roleOfHero(m.hero) === r)).length)), need: 3 }) },
+  { id: "assist", em: "🤝", t: "Assist-Party", text: () => "Ein Match mit mindestens doppelt so vielen Assists wie Kills.", prog: ms => ({ have: ms.some(m => (+m.a || 0) >= 2 * Math.max(1, +m.k || 0)) ? 1 : 0, need: 1 }) },
+  { id: "survive", em: "🫧", t: "Überlebenskunst", text: F => `Ein Match mit weniger Toden als dein Schnitt${F.v ? ` (Ø ${numDe(F.v.toFixed(1))})` : ""}.`,
+    pick: () => "", setup: F => { F.v = funAvgD(funMine().slice(-20)) || 5; }, prog: (ms, b, F) => ({ have: ms.some(m => (+m.d || 0) < (F.v || 5)) ? 1 : 0, need: 1 }) },
+  { id: "teamup", em: "⚡", t: "Team-Up-Party", text: () => "Spiel ein Match, in dem dein Held mit einem Partner im eigenen Team ein Team-Up hat. Die App erkennt es, wenn dein Team im Match bekannt ist (Abgleich oder Eintrag).",
+    prog: ms => ({ have: ms.some(m => (m.allies || []).length && teamUpsIn([m.hero, ...m.allies]).some(t => t.helden.some(x => x.name === tuName(m.hero)))) ? 1 : 0, need: 1 }) },
+  { id: "map", em: "🗺️", t: "Map-Tourist", text: () => "Spiel auf einer Map, auf der du in den letzten 30 Tagen nicht warst.",
+    prog: (ms, b) => { const seen = new Set(b.filter(x => x.date >= addDays(today(), -30)).map(x => x.map).filter(Boolean)); return { have: ms.some(m => m.map && !seen.has(m.map)) ? 1 : 0, need: 1 }; } },
+  { id: "qm3", em: "🍿", t: "Quick-Match-Abend", text: () => "Drei Quick Matches nur zum Spass: kein Mini-Ziel, kein Review, einfach spielen.", prog: ms => ({ have: ms.filter(m => m.mode === "Quick Match").length, need: 3 }) },
+  { id: "arcade", em: "🎡", t: "Arcade-Runde", text: () => "Spiel ein Match im Arcade- oder Event-Modus.", prog: ms => ({ have: ms.filter(m => m.mode === "Arcade / Event").length ? 1 : 0, need: 1 }) },
+  { id: "ult2", em: "🎆", t: "Ult-Feuerwerk", text: () => "Ein Match mit mindestens zwei Ults mit Wirkung. Trag die Ults im Log, im Review oder in der Notiz ein.", prog: ms => ({ have: ms.some(m => (+m.ultHit || 0) >= 2) ? 1 : 0, need: 1 }) },
+  { id: "best", em: "📈", t: "Persönlicher Rekord", text: () => "Mach mit einem Helden mehr Schaden oder mehr Heilung als in jedem Match davor mit ihm (zählt ab drei Matches mit diesem Helden).",
+    ok: () => Object.values(group(funMine(), m => m.hero)).some(l => l.length >= 3),
+    prog: (ms, b) => ({ have: ms.some(m => { const p = b.filter(x => x.hero === m.hero); return p.length >= 3 && ((+m.dmg || 0) > Math.max(...p.map(x => +x.dmg || 0)) || (+m.heal || 0) > Math.max(...p.map(x => +x.heal || 0))); }) ? 1 : 0, need: 1 }) },
+  { id: "fav", em: "💜", t: "Lieblingsheld", text: F => `Ein Match mit deinem meistgespielten Helden (${esc(F.h)}), ganz ohne Mini-Ziel.`, ok: () => !!funFav(), pick: () => funFav(), prog: (ms, b, F) => ({ have: ms.filter(m => m.hero === F.h).length ? 1 : 0, need: 1 }) },
+  { id: "quiz5", em: "🧠", t: "Quiz-Serie", text: () => "Beantworte fünf Quizfragen hintereinander richtig.", quiz: true, go: `<button type="button" class="btn small" data-pact="check-all">Zum Quiz</button>`, prog: (ms, b, F) => ({ have: (F.prog || {}).best || 0, need: 5 }) },
+  { id: "pic3", em: "🖼️", t: "Bilderrätsel", text: () => "Löse drei Bildfragen richtig.", quiz: true, go: `<button type="button" class="btn small" data-fun="picquiz">Bildfragen starten</button>`, prog: (ms, b, F) => ({ have: (F.prog || {}).n || 0, need: 3 }) },
+  { id: "ultq", em: "💥", t: "Ult-Kenner", text: () => "Beantworte vier Fragen zu Ults richtig: Wie heisst sie, wer kontert sie?", quiz: true, go: `<button type="button" class="btn small" data-fun="ultquiz">Ult-Fragen starten</button>`, prog: (ms, b, F) => ({ have: (F.prog || {}).n || 0, need: 4 }) },
+  { id: "watch", em: "📺", t: "Zuschauen und chillen", text: () => "Schau einen Stream oder ein Video und erledige eine Aufgabe auf der Seite «Zuschauen».", go: `<button type="button" class="btn small" data-go="watch">Zum Zuschauen</button>`,
+    prog: (ms, b, F) => ({ have: ((state.watch && state.watch.log) || []).filter(x => (x.d || "") >= F.from && x.v !== "nein").length ? 1 : 0, need: 1 }) },
+  { id: "range", em: "🎯", t: "Practice Range", text: () => "Zehn Minuten im Practice Range mit einem Helden herumprobieren, den du selten spielst.", self: true },
+  { id: "pings", em: "📍", t: "Nur Pings", text: () => "Ein Match, in dem du dich nur mit Pings verständigst.", self: true },
+  { id: "nice", em: "🌟", t: "Nett sein", text: () => "Lob nach einem Match einen guten Spielzug aus deinem Team, zum Beispiel mit einem kurzen «nice» im Chat.", self: true },
+  { id: "pause", em: "🍵", t: "Pause mit Absicht", text: () => "Nach drei Matches fünf Minuten Pause: aufstehen, Wasser trinken, kurz raus.", self: true }
+];
+const funState = () => { const F = state.fun || (state.fun = {}); if (!Array.isArray(F.done)) F.done = []; return F; };
+function funWeekKey() {
+  if (planStarted()) return "p" + Math.ceil(Math.min(planDay(), PLAN_N) / 7);
+  const d = new Date(today() + "T12:00:00"), y = d.getFullYear(), j1 = new Date(y, 0, 1);
+  return "w" + y + "-" + Math.ceil(((d - j1) / 864e5 + j1.getDay() + 1) / 7);
+}
+function funPick(key, exclude) {
+  const F = funState(), doneIds = F.done.map(x => x.id), avail = FUN.filter(c => (!c.ok || c.ok()) && c.id !== exclude);
+  const fresh = avail.filter(c => !doneIds.includes(c.id)), pool = fresh.length ? fresh : avail;
+  return pool[funHash(key + ":" + (F.rolls || 0)) % pool.length];
+}
+function funAssign(c, key) {
+  const F = funState();
+  Object.assign(F, { key, id: c.id, from: today(), prog: {}, ok: null, h: "", v: null });
+  if (c.pick) F.h = c.pick(F) || "";
+  if (c.setup) c.setup(F);
+}
+function funCur() {
+  const F = funState(), key = funWeekKey();
+  if (F.key !== key || !FUN.some(c => c.id === F.id)) { F.rolls = 0; funAssign(funPick(key), key); saveCore(); }
+  return { F, c: FUN.find(c => c.id === F.id) };
+}
+function funProg(c, F) {
+  if (c.self) return { done: !!F.ok, txt: F.ok ? "geschafft" : "selbst abhaken" };
+  const ms = state.matches.filter(m => (m.date || "") >= F.from), b = state.matches.filter(m => (m.date || "") < F.from), r = c.prog(ms, b, F);
+  return { done: !!F.ok || r.have >= r.need, txt: `${Math.min(r.have, r.need)} von ${r.need}` };
+}
+function funWin(F, c) {
+  F.ok = today(); F.done.push({ id: c.id, d: today() }); saveCore();
+  toast(`Challenge geschafft: ${c.t} ${c.em}`); celebrate();
+}
+function funCheck() {
+  const { F, c } = funCur();
+  if (!F.ok && !c.self && funProg(c, F).done) funWin(F, c);
+}
+// Quiz-Challenges zählen mit, sobald eine Frage beantwortet ist
+function funQuizHook(q, ok) {
+  const F = state.fun; if (!F || !F.id || F.ok) return;
+  const p = F.prog || (F.prog = {});
+  if (F.id === "quiz5") { p.run = ok ? (p.run || 0) + 1 : 0; p.best = Math.max(p.best || 0, p.run); }
+  else if (F.id === "pic3" && ok && q.fig) p.n = (p.n || 0) + 1;
+  else if (F.id === "ultq" && ok && /^H:(ult|konter)\|/.test(q.id || "")) p.n = (p.n || 0) + 1;
+  else return;
+  const c = FUN.find(x => x.id === F.id);
+  if (c && funProg(c, F).done) funWin(F, c);
+}
+function funCardHtml(compact) {
+  const { F, c } = funCur(), p = funProg(c, F), doneN = new Set(F.done.map(x => x.id)).size;
+  const how = c.self ? "Das prüft die App nicht, du hakst selbst ab." : c.quiz ? "Zählt im Quiz, ab jetzt." : `Die App erkennt es aus deinen Matches ab dem ${fmtDate(F.from)}.`;
+  return `<div class="funcard ${p.done ? "ok" : ""}"><div class="funem" aria-hidden="true">${c.em}</div><div class="funbody">
+      <div class="funhead"><b>${esc(c.t)}</b><span class="badge ${p.done ? "ok" : ""}">${p.done ? "geschafft ✓" : esc(p.txt)}</span></div>
+      <p style="margin:4px 0 0">${c.text(F)}</p>${c.info ? c.info(F) : ""}
+      <p class="small muted" style="margin:6px 0 0">${how}</p>
+      <div class="row" style="gap:6px;margin-top:8px">${p.done ? "" : `${c.go || ""}<button type="button" class="btn small ${c.self ? "" : "ghost"}" data-fun="ok">${c.self ? "Geschafft ✓" : "Selbst abhaken"}</button>`}<button type="button" class="btn small ghost" data-fun="roll">🎲 ${p.done ? "Noch eine" : "Andere Challenge"}</button></div></div></div>
+    ${compact ? "" : `<details class="small funlist"><summary>Geschafft: ${doneN} von ${FUN.length}</summary><div class="chips" style="margin-top:6px">${FUN.map(x => { const on = F.done.some(y => y.id === x.id); return `<span class="chip ${on ? "on" : ""}">${on ? x.em : "·"} ${esc(x.t)}</span>`; }).join("")}</div></details>
+    <p class="small muted" style="margin:6px 0 0">Nur zum Spass und zum Abschalten: zählt nicht zum Trainingsplan und blockiert nichts. Jede Woche kommt eine neue, würfeln kannst du jederzeit.</p>`}`;
+}
+function funFoldHtml() {
+  const { F, c } = funCur(), p = funProg(c, F);
+  return foldHtml("fun", "Challenge der Woche", funCardHtml(false), { icon: "zap", open: !p.done, sub: `${c.em} ${c.t} · ${p.done ? "geschafft ✓" : p.txt}` });
+}
+// Im Trainingsplan am letzten Tag jeder Woche: der letzte Block darf locker sein
+const funDay = n => n % 7 === 0;
+function funPlanHtml(n) {
+  if (n !== planDay()) return `<p class="small muted" style="margin:8px 0 0">🎲 Spass-Block: Am letzten Tag jeder Woche darfst du hier die Challenge der Woche spielen.</p>`;
+  return `<div class="funplan"><p class="small" style="margin:0 0 6px"><b>🎲 Spass-Block zum Wochenende:</b> Heute darf es locker sein. Wenn du magst, spiel statt des Denkauftrags die Challenge der Woche.</p>${funCardHtml(true)}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fun]"); if (!b) return;
+  const { F, c } = funCur(), a = b.dataset.fun;
+  if (a === "ok") { if (!F.ok) funWin(F, c); }
+  else if (a === "roll") { F.rolls = (F.rolls || 0) + 1; funAssign(funPick(F.key, F.id), F.key); saveCore(); }
+  else if (a === "picquiz") {
+    const qs = shuffle(WQ.filter(q => q.fig && q.lvl <= Math.max(1, currentLevel())).slice()).slice(0, 5);
+    if (!qs.length) { toast("Gerade gibt es keine Bildfragen"); return; }
+    kqSession = { qs, i: 0, correct: 0, label: "Challenge · Bilderrätsel", back: null }; kq = null; quizMode = "wissen"; showTab("quiz"); window.scrollTo({ top: 0 }); return;
+  } else if (a === "ultquiz") {
+    const mine = poolHeroes(), ids = hqIds().filter(id => /^(ult|konter)\|/.test(id)), pref = ids.filter(id => mine.includes(id.split("|")[1]));
+    const qs = shuffle([...shuffle(pref.slice()).slice(0, 3), ...shuffle(ids.slice()).slice(0, 6)]).map(hqGen).filter(Boolean).slice(0, 6);
+    if (!qs.length) { toast("Gerade gibt es keine Ult-Fragen"); return; }
+    kqSession = { qs, i: 0, correct: 0, label: "Challenge · Ult-Kenner", back: null }; kq = null; quizMode = "wissen"; showTab("quiz"); window.scrollTo({ top: 0 }); return;
+  } else return;
+  rvRerender();
+});
 function bdSync() {
   const rv = rvState(), out = [];
   BADGES.forEach(b => { if (!rv.badges[b.id] && b.ok()) { rv.badges[b.id] = today(); out.push(`Neues Abzeichen: ${b.t} ${b.em}`); } });
@@ -12531,6 +12698,8 @@ function planAction(act, b) {
     case "due-start": startDue(); break;
     case "hq-hero": openHeroSearch(b.dataset.h); break;
     case "ult-quiz": startUltQuiz(); break;
+    case "fig-show": planUi.figShown[b.dataset.n + ":" + b.dataset.k] = true; renderPlan(); break;
+    case "fig-quiz": startFigQuiz(+b.dataset.n); break;
     case "ult-boot": openBootcamp(b.dataset.h); bootUi.st = 7; renderBootcamp(); break;
     case "ult-card": showTab("analysis"); setTimeout(() => { const el = $("#ultKillWrap"); if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 60); break;
     case "hq-map": lexTab = "rules"; $("#lexSearch").value = b.dataset.m; showTab("lexicon"); window.scrollTo({ top: 0 }); break;
@@ -12765,6 +12934,7 @@ function knowRecord(q, ok, conf) {
   actInc("know"); leitner(q.id, ok ? 3 : 1); calRecord(conf, ok);
   if (ok) { k.correct++; if (k.wrong[q.id]) k.wrong[q.id]--; }
   else k.wrong[q.id] = (k.wrong[q.id] || 0) + 1;
+  funQuizHook(q, ok);
 }
 function showKnowResult() {
   const q = kq.q, ok = kq.answered === q.a;
