@@ -446,6 +446,9 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .calhint { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
 .autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; max-width: 100%; }
 @media (max-width: 600px) { .autotag { white-space: normal; overflow-wrap: anywhere; border-radius: 10px; } }
+.fxlive { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; flex-basis: 100%; margin-top: 2px; }
+.fxlive .btn { min-width: 52px; justify-content: center; }
+.qnfab.has::after { content: ""; position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--surface); }
 .pbd { margin: 6px 0 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--surface); }
 .pbd > summary { cursor: pointer; }
 .pbgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 12px; margin: 8px 0 4px; }
@@ -6549,7 +6552,9 @@ function rvProbStepHtml(m, num) {
   const sel = m.mistakes || [], fromDeaths = [...new Set(Object.keys(m.deathCauses || {}).flatMap(deathMistakesOf))];
   const opts = mistakeOptions(m.hero), main = [...new Set([...fromDeaths, ...sel, ...opts.slice(0, 6)])], rest = opts.filter(x => !main.includes(x));
   const chip = x => { const on = sel.includes(x), hot = fromDeaths.includes(x); return `<button type="button" class="chip ${on ? "on" : ""} ${hot ? "hot" : ""}" data-rv="mis" data-id="${m.id}" data-g="${esc(x)}" aria-pressed="${on}"${hot ? ' title="Passt zu deinen Todesursachen"' : ""}>${esc(x)}</button>`; };
-  return `<div class="rvs"><h4><span class="rvn">${num}</span>Was lief schief? Genauer festhalten <span class="small muted">freiwillig, je genauer, desto mehr nimmst du mit</span></h4>
+  const bad = rvBad(m), ok = rvWhyOk(m);
+  return `<div class="rvs"><h4><span class="rvn">${num}</span>Was lief schief? Genauer festhalten <span class="small muted">${bad ? (ok ? "Pflicht erfüllt ✓" : "Pflicht bei diesem Match") : "freiwillig, je genauer, desto mehr nimmst du mit"}</span></h4>
+    ${bad ? `<p class="small ${ok ? "muted" : ""}" style="margin:0 0 6px">${ok ? "" : "<b>Schlechtes Match, nimm es genauer auseinander:</b> "}${esc(bad.map(r => r.label).join(", "))}. ${ok ? "Gut, die Ursache ist festgehalten." : "Wähl mindestens ein Problem und schreib bei «Warum» die Ursache auf (mindestens drei Wörter)."}</p>` : ""}
     <div class="chips">${main.map(chip).join("")}</div>
     ${rest.length ? `<details class="small" style="margin-top:4px"><summary>Weitere Probleme (${rest.length})</summary><div class="chips" style="margin-top:6px">${rest.map(chip).join("")}</div></details>` : ""}
     ${fromDeaths.length ? `<p class="small muted" style="margin:4px 0 0">Vorne markiert: passt zu den Todesursachen oben.</p>` : ""}
@@ -6560,7 +6565,8 @@ function rvProbStepHtml(m, num) {
 function rvNoteHtml(m) {
   const q = m.qn || {};
   if (!q.noted) return "";
-  const fx = fxForMatch(m).map(it => { const v = fxGet(m, it); return v === undefined || v === "" ? "" : `${it.tag}: ${fxLabel(it.key, v)}`; }).filter(Boolean);
+  const tl = k => { const t = (q.tally || {})[k]; return t && (t.ok || t.no) ? ` (✓${t.ok} ✗${t.no})` : ""; };
+  const fx = fxForMatch(m).map(it => { const v = fxGet(m, it); return v === undefined || v === "" ? "" : `${it.tag}: ${fxLabel(it.key, v)}${tl(it.key)}`; }).filter(Boolean);
   const bits = [...fx, q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra || ""].filter(Boolean);
   return `<div class="note info rvnoted" style="margin:0"><span class="ni" aria-hidden="true">✎</span><div><b>Das hast du beim Spielen notiert</b>${bits.length ? `<br>${esc(bits.join(" · "))}` : ""}${m.notes ? `<br>«${esc(m.notes)}»` : ""}
     <br><span class="small muted">Tode und Ults aus der Notiz stehen unten schon drin. Schau dir im Replay die Stellen genauer an und ergänze, was dir auffällt.</span></div></div>`;
@@ -6583,6 +6589,8 @@ document.addEventListener("input", e => {
   if (t.dataset.rvpb) { m.probs = Object.assign({}, m.probs); m.probs[t.dataset.l] = Object.assign({}, m.probs[t.dataset.l], { [t.dataset.k]: t.value }); }
   else { m.qn = Object.assign({}, m.qn); m.qn.fxWhy = Object.assign({}, m.qn.fxWhy, { [t.dataset.k]: t.value }); }
   clearTimeout(rvPbT); rvPbT = setTimeout(() => saveCore(), 500);
+  const foot = t.closest(".rvm") && t.closest(".rvm").querySelector("[data-foot]");
+  if (foot) foot.innerHTML = rvFootHtml(m, { swapsLeft: RV_SWAPS - ((rvState().pins[today()] || {}).swaps || 0) });
 });
 document.addEventListener("change", e => { if (e.target.closest && e.target.closest("[data-rvpb],[data-rvfxwhy]")) { clearTimeout(rvPbT); save(); } });
 // ---------- Schnellnotiz nach dem Match ----------
@@ -6596,10 +6604,27 @@ let qnDraft = null;
 const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, ultDeaths: {}, fx: {}, mini: "", stack: "", voice: "", extra: "", text: "" });
 const fxPickOpen = { q: false, w: false };   // Auswahl «Worauf achtest du?» aufgeklappt (q: Notiz, w: Reiter «Woche»), bleibt beim Neuzeichnen offen
 // Dein Fokus in der Notiz: dieselben Punkte und Knöpfe wie beim Eintragen und im Review
+// Während des Matches: Striche pro Fokus-Punkt (✓ geklappt, ✗ nicht geklappt), zum Beispiel beim Respawn. Ohne eigene Bewertung schlägt
+// die App sie aus den Strichen vor und speichert sie so: nur ✓ = Ja, beides = Teilweise, nur ✗ = Nein (Grundregel: mehr ✓ = bewusst, sonst nein).
+const qnTal = (d, k) => (d.tally || {})[k] || { ok: 0, no: 0, log: [] };
+function fxTallyRating(it, t) {
+  if (!t || (!t.ok && !t.no)) return "";
+  if (it.src === "rule") return t.ok > t.no ? "bewusst" : "nein";
+  const v = t.ok && !t.no ? 0 : t.ok && t.no ? 1 : 2;
+  return it.src === "focus" ? ["3", "2", "1"][v] : ["ja", "teils", "nein"][v];
+}
+function qnLiveHtml(d, it, cur) {
+  const t = qnTal(d, it.key), sug = !cur ? fxTallyRating(it, t) : "";
+  return `<div class="fxlive"><span class="small muted">Im Match:</span>
+    <button type="button" class="btn small ghost" data-qntally="${esc(it.key)}" data-t="ok" aria-label="Geklappt, einen Strich mehr">✓ <b>${t.ok}</b></button>
+    <button type="button" class="btn small ghost" data-qntally="${esc(it.key)}" data-t="no" aria-label="Nicht geklappt, einen Strich mehr">✗ <b>${t.no}</b></button>
+    ${(t.log || []).length ? `<button type="button" class="linkbtn small" data-qntally-undo="${esc(it.key)}">↶ zurück</button>` : ""}
+    ${sug ? `<span class="small muted">Vorschlag: <b>${esc(fxLabel(it.key, sug))}</b> (gilt, wenn du nichts wählst)</span>` : ""}</div>`;
+}
 function qnFxHtml(d) {
   const items = fxChosen(today()), fx = d.fx || {};
-  return `<div class="qnrow"><b class="small">Dein Fokus: Hat es geklappt?</b>
-    ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`)}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
+  return `<div class="qnrow"><b class="small">Dein Fokus: Denkst du dran? Klappt es?</b><span class="small muted">Während des Matches mit ✓ und ✗ mitzählen, danach bewerten.</span>
+    ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
     <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
 }
 document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".fxdet")) fxPickOpen[e.target.closest("#qnSheet") ? "q" : "w"] = e.target.open; }, true);
@@ -6627,6 +6652,7 @@ function qnApply(q, m) {
     items.forEach(it => { const v = (q.fx || {})[it.key], has = fxGet(m, it); if (v && (has === undefined || has === "")) fxSet(m, it, v); });
     fxMark(m, items);
   }
+  if (q.tally) { const T = Object.assign({}, (m.qn || {}).tally); Object.entries(q.tally).forEach(([k, t]) => { const o = T[k] || { ok: 0, no: 0 }; T[k] = { ok: o.ok + (t.ok || 0), no: o.no + (t.no || 0) }; }); m.qn = Object.assign({}, m.qn, { tally: T }); }
   m.qn = Object.assign({}, m.qn, { noted: q.ts || Date.now() });
   q.match = m.id;
 }
@@ -6638,13 +6664,13 @@ function qnAssignAll() {
   if (ch) state.qnotes = state.qnotes.filter(q => !q.match);
   return ch;
 }
-const qnSummary = q => [q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+const qnSummary = q => [q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
 function qnSheetHtml() {
   const d = qnDraft, n = qnToday().length + state.matches.filter(m => m.date === today() && !state.qnotes.some(q => q.match === m.id)).length, extra = qnExtraLabel();
   const seg = (k, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${d[k] === v ? "on" : ""}" data-qn="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${l}</button>`).join("")}</div>`;
   const step = (k, label) => `<span class="qnstep"><span class="small">${label}</span><button type="button" data-qnstep="${k}" data-d="-1" aria-label="${label}: weniger">−</button><b aria-live="polite">${d[k] ?? "–"}</b><button type="button" data-qnstep="${k}" data-d="1" aria-label="${label}: mehr">+</button></span>`;
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
-    <p class="small muted" style="margin:0 0 10px">Held, Ergebnis und Tode holt der Abgleich. Die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
+    <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
     <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
     <div class="qnrow"><b class="small">Tode: woran lag es?</b><div class="deathgrid">${QN_CATS.map(c => `<span class="dwrap ${d.deaths[c] ? "on" : ""}"><button type="button" class="dbtn" data-qndeath="${esc(c)}" aria-label="${esc(c)}, einmal mehr">${esc(c)}<b class="dcount">${d.deaths[c] || ""}</b></button>${d.deaths[c] ? `<button type="button" class="ddec" data-qndeath-dec="${esc(c)}" aria-label="${esc(c)}, einmal weniger">−</button>` : ""}</span>`).join("")}</div>${ultPickHtml("q", ultDeathN(d.deaths), d.ultDeaths || {}, [])}</div>
@@ -6670,9 +6696,16 @@ function qnOpen() {
   bd.hidden = false;
   const f = bd.querySelector("[data-qnstep]"); if (f) f.focus();
 }
+// Punkt am Knopf «Notiz», solange eine Notiz angefangen ist (zum Beispiel Striche aus dem laufenden Match)
+function qnFabState() {
+  const b = document.getElementById("qnFab"), d = qnDraft; if (!b) return;
+  const has = !!d && (Object.values(d.tally || {}).some(t => t.ok || t.no) || Object.keys(d.fx || {}).length > 0 || deathTotal(d.deaths) > 0 || !!d.text || d.ults !== null);
+  b.classList.toggle("has", has); b.setAttribute("aria-label", has ? "Notiz zum Match (angefangen)" : "Notiz zum Match");
+}
 function qnClose() {
   const bd = document.getElementById("qnSheet");
   if (bd) bd.hidden = true;
+  qnFabState();
   if (qnOpener && qnOpener.focus) qnOpener.focus();
 }
 function qnRedraw(focusSel) {
@@ -6689,12 +6722,15 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { d.deaths[b.dataset.qndeath] = (d.deaths[b.dataset.qndeath] || 0) + 1; qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; if (d.deaths[c]) d.deaths[c]--; if (!d.deaths[c]) delete d.deaths[c]; ultTrim(d.ultDeaths || {}, ultDeathN(d.deaths)); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
+  else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
+  else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
   else if (b.dataset.qnfx) { const k = b.dataset.qnfx; d.fx = d.fx || {}; if (d.fx[k] === b.dataset.v) delete d.fx[k]; else d.fx[k] = b.dataset.v; qnRedraw(`[data-qnfx="${k.replace(/"/g, '\\"')}"][data-v="${b.dataset.v}"]`); }
   else if (b.hasAttribute("data-qnsave")) {
     const ts = Date.now();
     const fxIt = fxChosen(today());
+    fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
     state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, JSON.parse(JSON.stringify(d)), fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
-    qnDraft = null; qnAssignAll(); save(); qnClose(); render();
+    qnDraft = null; qnAssignAll(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
   }
 }
@@ -10741,9 +10777,21 @@ const rvWords = t => (String(t || "").match(/[\p{L}\d]{2,}/gu) || []).length;
 const rvNorm = t => String(t || "").toLowerCase().replace(/[^\p{L}\d]+/gu, " ").trim();
 const rvUi = { open: null, pbOpen: new Set() };
 // Was fehlt, bevor ein Match als ausgewertet gilt?
+// Schlechtes Match: Niederlage, schwache Werte, viele Tode, Ults ohne Wirkung oder ein verfehlter Fokus (alles ausser «Vorbild»).
+// Dort gehört das genauere Auseinandernehmen zur Pflicht: mindestens ein Problem mit «Warum» (mindestens drei Wörter).
+let rvBadMemo = null;
+function rvBad(m) {
+  const key = `${m.id}|${state.matches.length}|${m.result}|${m.d}|${JSON.stringify((m.qn || {}).tally || {})}|${JSON.stringify(m.rules || {})}|${JSON.stringify(m.tasks || {})}|${(m.focus || {}).rating}|${JSON.stringify(m.qn || {}).length}`;
+  if (rvBadMemo && rvBadMemo[m.id] && rvBadMemo[m.id].key === key) return rvBadMemo[m.id].v;
+  const r = rvReasons(m).filter(x => x.k !== "model"), v = r.length ? r : null;
+  rvBadMemo = Object.assign(rvBadMemo || {}, { [m.id]: { key, v } });
+  return v;
+}
+const rvWhyOk = m => (m.mistakes || []).some(l => rvWords(((m.probs || {})[l] || {}).why) >= 3);
 function rvMissing(m) {
   const miss = [], d = +m.d || 0, got = deathTotal(m.deathCauses);
   if (got < d) miss.push(`${plural(d - got, "Tod", "Tode")} ohne Ursache`);
+  if (rvBad(m) && !rvWhyOk(m)) miss.push("ein Problem mit «Warum» (schlechtes Match: genauer auseinandernehmen)");
   if (!(m.goods || []).length) miss.push("eine Stärke");
   if (rvWords(m.next) < 4) miss.push("ein Vorsatz mit mindestens vier Wörtern");
   else if (state.matches.some(x => x.id !== m.id && x.review && x.review.on === today() && rvNorm(x.next) === rvNorm(m.next))) miss.push("ein eigener Vorsatz (derselbe steht schon bei einem anderen Match)");
@@ -10787,6 +10835,8 @@ function rvReasons(m0, ctx) {
   const [kf, kl] = rvKeyStat(m), rk = ref(kf);
   if (rk && rk.v <= rk.b * 0.75) out.push({ k: "low", label: `Wenig ${kl}`, text: `${kl} ${fmtNum(rk.v)}${rk.per ? " pro 10 Min" : ""}, ${fmtB(rk, fmtNum)}`, sev: rk.b / Math.max(1, rk.v) });
   if (m.ults >= 2 && m.ultHit !== null && m.ultHit !== undefined && m.ultHit / m.ults <= 0.34) out.push({ k: "ult", label: "Ults ohne Wirkung", text: `Ult-Wirkung ${numDe(m.ultHit)} von ${m.ults}`, sev: 2 - m.ultHit / m.ults });
+  const missed = fxForMatch(m0).filter(it => { const v = fxGet(m0, it), t = ((m0.qn || {}).tally || {})[it.key]; return String(v) === "nein" || String(v) === "1" || (!v && t && t.no > t.ok); });
+  if (missed.length) out.push({ k: "focus", label: "Fokus verfehlt", text: `Laut Notiz nicht geschafft: ${missed.map(it => it.tag).join(", ")}`, sev: 1 + missed.length * 0.4 });
   if (lost) {
     const cs = [...new Set(m.enemies || [])].filter(e => counterSrc(e, m.hero));   // nur Counter, die im Heldenprofil mit Quelle stehen (die Spielstil-Regeln würden fast jede Niederlage treffen)
     if (cs.length) out.push({ k: "counter", label: "Gegen Counter verloren", text: `${cs.slice(0, 2).join(" und ")} ${cs.length === 1 ? "kontert" : "kontern"} ${m.hero} laut Quellen`, sev: 1 + cs.length / 4 });
@@ -10797,7 +10847,7 @@ function rvReasons(m0, ctx) {
 // Worauf das Review gerade achtet. Die Gewichte passen sich an deinen Stand an: Was bei dir schon im Rahmen der Besten liegt, kommt
 // seltener dran, was oft daneben liegt, öfter. Mit mehr ausgewerteten Matches kommen öfter gute Matches (Vorbild) dazu. Matches zu einer
 // offenen Mission (gleicher Held, gleiches Thema) zählen mehr. Das ist eine Faustregel der App, keine belegte Lernmethode.
-const RV_KINDS = { death: "Viele Tode", low: "Wenig Heilung, Schaden oder Geblockt", ult: "Ults ohne Wirkung", counter: "Gegen Counter verloren", model: "Vorbild-Siege" };
+const RV_KINDS = { death: "Viele Tode", low: "Wenig Heilung, Schaden oder Geblockt", ult: "Ults ohne Wirkung", counter: "Gegen Counter verloren", focus: "Fokus verfehlt", model: "Vorbild-Siege" };
 function rvFocus() {
   const recent = heroOnly(state.matches.slice(-20)), w = {}, why = {};
   const share = worse => { let n = 0, bad = 0; recent.forEach(m => { const r = worse(m); if (r === null) return; n++; if (r) bad++; }); return { n, bad }; };
@@ -10820,6 +10870,7 @@ function rvFocus() {
     else { w.ult = 1; why.ult = `${t}.`; }
   } else { w.ult = 1; why.ult = "Noch zu wenige Matches mit Angaben zur Ult-Wirkung."; }
   w.counter = 1; why.counter = "Niederlagen gegen Helden, die deinen Helden laut Quellen kontern.";
+  w.focus = 1.3; why.focus = "Matches, in denen du laut Notiz einen Fokus-Punkt nicht geschafft hast. Warum, siehst du am ehesten im Replay.";
   const tot = rvTotal();
   w.model = Math.round((0.5 + Math.min(0.7, tot / 30)) * 10) / 10;
   why.model = `Du hast ${plural(tot, "Match", "Matches")} ausgewertet. Je mehr es sind, desto öfter kommen auch gute Matches dran, damit du siehst, was schon funktioniert.`;
