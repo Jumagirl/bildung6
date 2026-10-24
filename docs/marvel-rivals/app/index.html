@@ -446,6 +446,19 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .calhint { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
 .autotag { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: .74rem; color: var(--muted); white-space: nowrap; vertical-align: middle; max-width: 100%; }
 @media (max-width: 600px) { .autotag { white-space: normal; overflow-wrap: anywhere; border-radius: 10px; } }
+.fxbox { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.fxrow .rl .badge { margin-bottom: 2px; }
+.fxdet { margin-top: 8px; }
+.fxdet > summary { cursor: pointer; }
+.fxpick { margin-top: 6px; }
+.fxpick .fxgl { margin: 8px 0 4px; }
+.fxchip { max-width: 100%; white-space: normal; text-align: left; }
+.fxchip .fxtag { font-size: .72em; opacity: .75; margin-right: 2px; }
+.fxownl { display: block; margin-top: 10px; }
+.fxownl input { width: 100%; }
+.weekhub .whsec { margin-top: 14px; }
+.weekhub .whsec > h3 { margin: 0 0 6px; font-size: 1rem; }
+.weekhub .where { color: var(--muted); }
 .funcard { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
 .funcard .funem { font-size: 1.8rem; line-height: 1; flex: none; }
 .funcard .funbody { flex: 1; min-width: 0; }
@@ -1805,6 +1818,11 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
   <div class="card">
     <div class="card-head"><h2 data-icon="goals">Reflexion</h2></div>
+    <div id="fxBox" class="fxbox" hidden>
+      <h3>Dein Fokus in diesem Match</h3>
+      <p class="muted small" style="margin:0 0 8px">Die Punkte, die du dir vorgenommen hast (Auswahl im Reiter «Woche» oder in der Notiz). Dieselben Knöpfe wie in Notiz und Review. Lass leer, was im Match nicht vorkam.</p>
+      <div id="fxRows"></div>
+    </div>
     <h3>Woran bist du gestorben?</h3>
     <p class="muted small" style="margin:0 0 8px">Tipp bei jedem Tod auf die Ursache, auch mehrmals. Die App wertet das aus und passt Übungen und Lektionen an.</p>
     <div id="deathBox"></div>
@@ -2050,8 +2068,9 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 <!-- GOALS -->
 <section id="tab-goals" hidden>
+  <div id="weekHub"></div>
   <div class="card hero-banner">
-    <h2>Planen · Durchführen · Reflektieren</h2>
+    <h2>Wochenziel: Planen · Durchführen · Reflektieren</h2>
     <p>Wie beim selbständigen Lernen: Setze dir ein konkretes Ziel, übe gezielt und schau danach, was funktioniert hat. Schreib dein Wochenziel in eigenen Worten, zum Beispiel „Weniger sterben“ oder „Besser heilen“. Die App erkennt das Thema, wählt passende Lektionen aus und stellt Aufgaben für die Woche zusammen. Auch Trainingsplan und Dashboard richten sich danach aus.</p>
   </div>
   <div class="card">
@@ -2906,7 +2925,7 @@ const DEFAULT_ROUTINE = [
   "10 Fragen im Counter-Training",
   "Nach jeder Niederlage einen Fehler notieren",
   "1 Replay / VOD (5 Min.) anschauen",
-  "Session-Reflexion im Tab Lernziele"
+  "Session-Reflexion im Reiter «Woche»"
 ];
 
 
@@ -2933,7 +2952,7 @@ const LESSONS = [
       "Eine Lektion pro Tag reicht. Lieber 10 Minuten täglich als einmal pro Woche drei Stunden."
     ],
     key: "Ein Fokus pro Session. Wer auf alles gleichzeitig achtet, achtet auf nichts.",
-    practice: ["Lege im Tab Lernziele ein kleines Ziel für diese Woche an.", "Logge dein nächstes Match vollständig – inklusive Gegnerteam und mindestens einem Fehler.", "Optional: Synchronisiere deine bisherigen Matches mit Rivals Data."],
+    practice: ["Lege im Reiter «Woche» ein kleines Ziel für diese Woche an.", "Logge dein nächstes Match vollständig – inklusive Gegnerteam und mindestens einem Fehler.", "Optional: Synchronisiere deine bisherigen Matches mit Rivals Data."],
     focus: "Logge jedes Match direkt danach und markiere mindestens eine Sache, die schiefging.",
     quiz: [
       { q: "Was bringt dich beim Üben am ehesten weiter?", opts: ["Möglichst viele Matches am Stück", "Gezieltes Üben mit einem klaren Fokus und Reflexion", "Jede Woche einen neuen Main", "Nur Competitive spielen"], a: 1, why: "Gezieltes Üben mit klarem Fokus und Reflexion bringt dich am schnellsten weiter. Du setzt dir ein Ziel, wiederholst es gezielt und prüfst ehrlich, ob es geklappt hat.\nMöglichst viele Matches am Stück sind nur Spielmenge: Du wiederholst auch deine Fehler, ohne sie zu bemerken.\nJede Woche einen neuen Main oder nur Competitive spielen gibt dir kein Ziel und kein Feedback, also wird nichts zur Gewohnheit." },
@@ -2967,7 +2986,7 @@ const LESSONS = [
       "In manchen Modi können Helden gebannt werden. Ein zweiter vertrauter Held verhindert, dass du dann ohne Plan dastehst."
     ],
     key: "Tiefe vor Breite: Lieber drei Helden richtig gut als zehn halb.",
-    practice: ["Wähle deinen Main und zwei Ausweichhelden. Schau im Helden-Guide, gegen wen sie stark sind.", "Schreib die drei Helden als Ziel in den Tab Lernziele.", "Spiele heute nur Helden aus deinem Pool."],
+    practice: ["Wähle deinen Main und zwei Ausweichhelden. Schau im Helden-Guide, gegen wen sie stark sind.", "Schreib die drei Helden als Ziel in den Reiter «Woche».", "Spiele heute nur Helden aus deinem Pool."],
     focus: "Spiele ausschliesslich Helden aus deinem Pool.",
     quiz: [
       { q: "Warum ist ein kleiner Hero-Pool sinnvoll?", opts: ["Weil andere Helden schlecht sind", "Weil sich Erfahrung und Spielverständnis schneller aufbauen", "Weil man so nie wechseln muss", "Weil es weniger Spass macht"], a: 1, why: "Ein kleiner Hero-Pool (= die wenigen Helden, die du wirklich spielst) lässt Erfahrung schneller wachsen. Wenn du dieselben Helden oft spielst, laufen Steuerung und Fähigkeiten automatisch. Dein Kopf wird frei für das Spielgeschehen.\nDass andere Helden schlecht sind, stimmt nicht: Es geht ums Üben, nicht um Stärke.\nGanz ohne Wechsel geht es auch nicht, du hast ja Ausweichhelden. Weniger Spass ist kein Ziel des Pools." },
@@ -3903,6 +3922,7 @@ const ICONS = {
   heroes: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/>',
   training: '<path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/>',
   goals: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  week: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
   ai: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
   data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/>',
@@ -3942,7 +3962,7 @@ const TITLES = {
   lexicon: ["Lexikon", "Ults, ihre Konter und alle Effekte erklärt"],
   heroes: ["Helden-Guide", "Alle Helden, ihre Counter und deine Matchups"],
   training: ["Training", "Routine, gezielte Übungen und Aufwärmen"],
-  goals: ["Lernziele", "Ziele setzen nach dem 3-Phasen-Modell"],
+  goals: ["Woche", "Wochenziel (Lernziele) und alle Aufgaben: was läuft und wo du es abhakst"],
   ai: ["KI-Coach", "Deine Daten als Prompt für einen Chatbot"],
   data: ["Daten & Sync", "Mit Rivals Data abgleichen und Backups verwalten"],
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
@@ -3960,13 +3980,14 @@ const TITLES = {
 // Die Seiten selbst (tab-…) bleiben unverändert.
 const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: was jetzt dran ist", tabs: ["today"] },
+  { id: "week", label: "Woche", icon: "week", info: "Wochenziel und alle Aufgaben der Woche: was läuft und wo du es abhakst", tabs: ["goals"] },
   { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen und Helden-Bootcamp; unter «Mehr»: Quiz, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "bootcamp", "quiz", "weak", "watch", "lexicon"], core: 3 },
   { id: "play", label: "Spielen", icon: "play", info: "Matches, Review, Dashboard und Squad; unter «Mehr»: Auswertung, Verlauf und Eternity-Weg", tabs: ["log", "review", "dashboard", "squad", "analysis", "progress", "top"], core: 4 },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide und Team & Counter; unter «Mehr»: Team-Ups und Meta", tabs: ["heroes", "team", "teamups", "meta"], core: 2 },
-  { id: "coach", label: "Coach", icon: "goals", info: "Lernziele und Daten & Sync; unter «Mehr»: Training und KI-Coach", tabs: ["goals", "data", "training", "ai"], core: 2 }
+  { id: "coach", label: "Coach", icon: "ai", info: "Daten & Sync und Training; unter «Mehr»: KI-Coach", tabs: ["data", "training", "ai"], core: 2 }
 ];
 const subMore = {};   // welcher Bereich seine «Mehr»-Zeile gerade offen hat
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Matches", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Lernziele", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Eternity-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Matches", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Woche", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -5077,9 +5098,7 @@ function renderToday() {
         : `<div class="nowlbl">Heute</div><h2>Alles erledigt für heute 🎉</h2><p>Stark. Morgen geht es mit dem nächsten Schritt weiter.</p>`; })()}</div>`;
   const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2><span class="badge">${doneN} von ${items.length}</span></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}${i === nowIdx ? " now" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}${x.done || i === nowIdx ? "" : `<div class="ts">${x.s}</div>`}</div><div class="ta">${i === nowIdx ? `<span class="badge">jetzt</span>` : x.a || ""}</div></div>`).join("")}</div>`;
   // Fokus fürs nächste Match
-  const fl = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
-  const focus = fl ? `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Dein Fokus fürs nächste Match</h2><button class="linkbtn small" type="button" data-lesson="${fl.id}">Lektion ${lessonNo(fl.id)}</button></div>
-    <p style="margin:0;font-weight:600">${esc(fl.focus)}</p><p class="muted small" style="margin:6px 0 0">Bewerte beim Loggen, ob du ihn umgesetzt hast.</p></div>` : "";
+  const focus = fxTodayHtml();
   // Hinweise
   const news = [];
   const missed = missedLessons();
@@ -5623,7 +5642,7 @@ function renderTodayCard() {
   card.className = "card hero-banner";
   card.hidden = !tm.length && !ms.some(isOpenRefl);
   if (!tm.length) {
-    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}${(() => { const o = openTasks(goal).filter(t => t.id !== "review")[0]; return o ? `<br><span class="small">Heute dazu: ${esc(o.text)}</span>` : ""; })()}` : "Tipp: Lege im Tab Lernziele fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
+    card.innerHTML = `<h2>Bereit für die nächste Session?</h2><p>${goal ? `Dein aktuelles Ziel: <b>${esc(goal.title)}</b>${goal.metric ? ` (${esc(goal.metric)})` : ""}${(() => { const o = openTasks(goal).filter(t => t.id !== "review")[0]; return o ? `<br><span class="small">Heute dazu: ${esc(o.text)}</span>` : ""; })()}` : "Tipp: Lege im Reiter «Woche» fest, worauf du heute achtest."}</p>${lessonBannerHtml(true)}`;
   } else {
     const ts = summary(tm), tmc = mistakeCounts(tm)[0], lastNext = tm.filter(m => m.next).slice(-1)[0];
     card.innerHTML = `<h2>Heutige Session</h2>
@@ -6273,7 +6292,7 @@ function setChips(el, values) {
 }
 function slotValues(id) { return [...document.querySelectorAll(`#${id} select`)].map(s => s.value); }
 // Von Rivals Data geholte Matches der letzten 14 Tage, zu denen du noch keine Reflexion eingetragen hast
-const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !(m.mistakes || []).length && !deathTotal(m.deathCauses) && !(m.goods || []).length && !m.notes
+const isOpenRefl = m => m.source === "rivalsdata" && !m.reflDone && !m.qn && !(m.mistakes || []).length && !deathTotal(m.deathCauses) && !(m.goods || []).length && !m.notes
   && (m.mood === null || m.mood === undefined) && (m.date || "") >= new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
 // Die Seite «Matches» hat drei Bereiche: Offen (Reflexion fehlt), Eintragen (Formular), Verlauf (alle Matches).
 // Ohne eigene Wahl startet sie bei «Offen», wenn dort etwas wartet, sonst bei «Eintragen».
@@ -6326,6 +6345,167 @@ $("#openRefl").addEventListener("click", e => {
     save(); render();
   }
 });
+// ---------- Dein Fokus im Match: eine Liste für Notiz, Match loggen, Review und den Reiter «Woche» ----------
+// Was du dir für die nächsten Matches vornimmst, wählst du einmal aus (höchstens drei, state.focusSel = {keys, own}). Ohne eigene Auswahl schlägt
+// die App vor: Mini-Ziel aus Block 3, Lektions-Fokus, Match-Fokus des Wochenziels und das Thema des Tages. Nach dem Match bewertest du dieselben
+// Punkte mit denselben Knöpfen, egal ob in der Notiz, beim Eintragen oder im Review. Jede Quelle behält ihr Feld und ihre Skala im Match:
+// Grundregel m.rules[id] (von selbst / bewusst / nein), Bootcamp-Aufgabe m.tasks[key], Lektions-Fokus m.focus = {id, rating},
+// Mini-Ziel m.qn.mini, Wochenziel m.qn.goal = {id, t, v}, eigenes Ziel m.qn.own = {t, v}. Welche Punkte zum Match gehörten: m.qn.fxKeys und m.qn.fxT.
+const FX_MAX = 3;
+const FX_FOCUS_V = [["3", "Ja"], ["2", "Teilweise"], ["1", "Nein"]];
+const fxScale = src => src === "rule" ? RULE_V : src === "focus" ? FX_FOCUS_V : TASK_V;
+const fxId = key => key.slice(key.indexOf(":") + 1);
+function fxMiniText(n) {
+  if (!n || n > PLAN_N) return "";
+  const m3 = dayGet(n).mini3 || {}, opts = mini3Options(n), sel = opts.find(o => o.k === m3.k) || opts[0];
+  if (sel.k === "own") return (m3.text || "").trim();
+  if (sel.k === "plan") { const t = PLAN.tracker.find(x => x.neu.includes(n)); return t && PRACTICE[t.id] ? PRACTICE[t.id].task : ""; }
+  return sel.txt || "";
+}
+// Alle Punkte, die gerade zur Wahl stehen. Mit Held (Match loggen, Review) nur dessen Bootcamp-Aufgaben, sonst die aller laufenden Kurse.
+function fxAll(date, hero) {
+  const n = planStarted() ? planDayOf(date || today()) : 0, out = [];
+  const mini = fxMiniText(n);
+  if (mini) out.push({ key: "mini", src: "mini", tag: "Mini-Ziel", t: mini });
+  const l = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
+  if (l && l.focus) out.push({ key: "focus:" + l.id, src: "focus", tag: `Lektion ${lessonNo(l.id)}`, t: l.focus });
+  const g = activeGoal(), gf = g && goalTasks(g).find(t => t.kind === "Match-Fokus");
+  if (gf && !(l && l.focus === gf.text)) out.push({ key: "goal:" + g.id, src: "goal", tag: "Wochenziel", t: gf.text });
+  if (planStarted()) rulesForDay(n).forEach(r => out.push({ key: "rule:" + r.t.id, src: "rule", tag: r.role === "day" ? "Thema des Tages" : r.role === "again" ? "Wiederholung" : "Grundregel", t: r.t.topic }));
+  const tk = hero ? taskRowsFor(hero) : Object.keys(state.boot || {}).filter(k => bootGet(k) && bootValid(k)).map(k => ({ k, t: taskCurrent(k) })).filter(x => x.t);
+  tk.forEach(x => out.push({ key: "task:" + taskKey(x.k, x.t), src: "task", tag: bootIsRole(x.k) ? "Rolle " + ROLE_SHORT[bootRole(x.k)] : x.k, t: x.t.text }));
+  const own = ((state.focusSel || {}).own || "").trim();
+  if (own) out.push({ key: "own", src: "own", tag: "Eigenes Ziel", t: own });
+  return out.map(x => Object.assign(x, { scale: fxScale(x.src) }));
+}
+const fxDefault = all => all.filter(x => ["mini", "focus", "goal"].includes(x.src) || (x.src === "rule" && x.tag === "Thema des Tages")).slice(0, FX_MAX).map(x => x.key);
+const fxSelKeys = all => state.focusSel && Array.isArray(state.focusSel.keys) ? state.focusSel.keys : fxDefault(all);
+function fxChosen(date, hero) { const all = fxAll(date, hero), keys = fxSelKeys(fxAll(today())); return all.filter(x => keys.includes(x.key)); }
+const fxShort = x => x.src === "rule" ? x.t : (x.t.length > 64 ? x.t.slice(0, 61) + "…" : x.t);
+function fxFromInfo(key, info) { if (!info) return null; const src = key.split(":")[0]; return { key, src, tag: info.tag, t: info.t, scale: fxScale(src) }; }
+const fxInfoOf = items => Object.fromEntries(items.map(x => [x.key, { tag: x.tag, t: x.t }]));
+function fxGet(m, it) {
+  const id = fxId(it.key), q = m.qn || {};
+  if (it.src === "rule") return (m.rules || {})[id];
+  if (it.src === "task") return (m.tasks || {})[id];
+  if (it.src === "focus") return m.focus && m.focus.id === id && m.focus.rating > 0 ? String(m.focus.rating) : undefined;
+  if (it.src === "mini") return q.mini || undefined;
+  if (it.src === "goal") return q.goal && q.goal.id === id ? q.goal.v : undefined;
+  if (it.src === "own") return q.own ? q.own.v : undefined;
+}
+function fxSet(m, it, v) {
+  const id = fxId(it.key), on = v !== null && v !== undefined && v !== "";
+  if (it.src === "rule" || it.src === "task") { const f = it.src === "rule" ? "rules" : "tasks"; m[f] = Object.assign({}, m[f]); if (on) m[f][id] = v; else delete m[f][id]; return; }
+  if (it.src === "focus") { if (on) m.focus = { id, rating: +v }; else if (m.focus && m.focus.id === id) delete m.focus; return; }
+  m.qn = Object.assign({}, m.qn);
+  if (it.src === "mini") m.qn.mini = on ? v : "";
+  else if (it.src === "goal") { if (on) m.qn.goal = { id, t: it.t, v }; else delete m.qn.goal; }
+  else if (it.src === "own") { if (on) m.qn.own = { t: it.t, v }; else delete m.qn.own; }
+}
+const fxVals = (m, items) => Object.fromEntries(items.map(it => [it.key, fxGet(m, it)]).filter(([, v]) => v !== undefined && v !== ""));
+// Merkt am Match, welche Punkte dazugehörten (damit Review und Bearbeiten später dieselben zeigen)
+function fxMark(m, items) {
+  if (!items.length) return;
+  m.qn = Object.assign({}, m.qn);
+  m.qn.fxKeys = [...new Set([...(m.qn.fxKeys || []), ...items.map(x => x.key)])];
+  m.qn.fxT = Object.assign({}, m.qn.fxT, fxInfoOf(items));
+}
+// Die Punkte eines bestimmten Matches: was dazu gemerkt ist, sonst (bei einem Match von heute) deine aktuelle Auswahl
+function fxForMatch(m) {
+  const q = m.qn || {}, all = fxAll(m.date || today(), m.hero), keys = q.fxKeys || (m.date === today() ? fxChosen(today(), m.hero).map(x => x.key) : []);
+  return keys.map(k => all.find(x => x.key === k) || fxFromInfo(k, (q.fxT || {})[k])).filter(Boolean)
+    .filter(it => it.src !== "task" || (() => { const x = taskByKey(fxId(it.key)); return !x || !m.hero || x.k === m.hero || x.k === "R:" + heroRole(m.hero); })());
+}
+// Bewertungszeilen, gleich aufgebaut wie die Fragen im Match-Log
+function fxRowsHtml(items, vals, attr) {
+  return items.map(it => { const cur = vals[it.key];
+    return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span></span>
+      <span class="chips">${it.scale.map(([v, label]) => `<button type="button" class="chip ${String(cur) === String(v) ? "on" : ""}" ${attr(it, v)} aria-pressed="${String(cur) === String(v)}">${label}</button>`).join("")}</span></div>`; }).join("");
+}
+// Auswahl: Chips zum An- und Abwählen, dazu ein eigenes Ziel
+function fxPickHtml(ctx) {
+  const all = fxAll(today()), chosen = fxSelKeys(all), groups = [["Für heute", ["mini", "focus", "goal", "own"]], ["Grundregeln und Thema des Tages", ["rule"]], ["Bootcamp-Aufgaben", ["task"]]];
+  return `<div class="fxpick" data-fxctx="${ctx}">${groups.map(([lab, srcs]) => { const l = all.filter(x => srcs.includes(x.src)); return l.length ? `<div class="small muted fxgl">${lab}</div><div class="chips">${l.map(x => { const on = chosen.includes(x.key);
+      return `<button type="button" class="chip fxchip ${on ? "on" : ""}" data-fxsel="${esc(x.key)}" aria-pressed="${on}" title="${esc(x.t)}"><span class="fxtag">${esc(x.tag)}</span> ${esc(fxShort(x))}</button>`; }).join("")}</div>` : ""; }).join("")}
+    <label class="small fxownl">Eigenes Ziel <input type="text" data-fxown value="${esc((state.focusSel || {}).own || "")}" placeholder="z. B. Nach jedem Fight zurück zur Deckung" maxlength="120"></label>
+    <p class="small muted" style="margin:6px 0 0">Höchstens ${FX_MAX} auf einmal, weniger ist im Match mehr. Die Auswahl gilt für Notiz, Match loggen und Review, bis du sie änderst.</p></div>`;
+}
+function fxRerender(el) {
+  if (el && el.closest("#qnSheet")) { qnRedraw(); return; }
+  render();
+}
+function fxToggle(key) {
+  const all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k));
+  let keys;
+  if (cur.includes(key)) keys = cur.filter(k => k !== key);
+  else if (cur.length >= FX_MAX) { toast(`Höchstens ${FX_MAX} auf einmal. Nimm zuerst einen Punkt weg.`); return false; }
+  else keys = [...cur, key];
+  state.focusSel = Object.assign({}, state.focusSel, { keys });
+  save(); return true;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fxsel]"); if (!b) return;
+  if (fxToggle(b.dataset.fxsel)) fxRerender(b);
+});
+document.addEventListener("change", e => {
+  const t = e.target.closest ? e.target.closest("[data-fxown]") : null; if (!t) return;
+  const v = t.value.trim(), all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k) && k !== "own");
+  if (v === ((state.focusSel || {}).own || "")) return;   // doppelte Meldung beim Verlassen des Felds
+  state.focusSel = Object.assign({}, state.focusSel, { own: v, keys: v ? (cur.length < FX_MAX ? [...cur, "own"] : cur) : cur });
+  if (v && cur.length >= FX_MAX) toast(`Eigenes Ziel gespeichert. Wähl einen anderen Punkt ab, damit es mitzählt (höchstens ${FX_MAX}).`);
+  save(); setTimeout(() => fxRerender(t), 0);   // erst nach dem Ereignis neu zeichnen (das Feld verliert dabei den Fokus)
+});
+// Verlauf eines Punkts über die Matches: letzte fünf Antworten als Punkte (grün ja, gelb teils oder bewusst, rot nein)
+const FX_DOT = { auto: "auto", ja: "auto", "3": "auto", bewusst: "bewusst", teils: "bewusst", "2": "bewusst", nein: "nein", "1": "nein" };
+function fxDots(it) {
+  const v = state.matches.map(m => fxGet(m, it)).filter(x => x !== undefined && x !== "").slice(-5);
+  return v.length ? `<span class="rdots" title="Letzte Antworten, neueste rechts">${v.map(x => `<i class="${FX_DOT[x] || ""}"></i>`).join("")}</span>` : "";
+}
+// Match loggen: Box «Dein Fokus in diesem Match». Punkte, die hier stehen, fehlen in den anderen Boxen (keine doppelte Frage).
+function fxFormItems() {
+  const f = $("#matchForm"); if (!f) return [];
+  const date = ($("#matchDate") && $("#matchDate").value) || today(), hero = f.hero ? f.hero.value : "";
+  const m = editingId ? state.matches.find(x => x.id === editingId) : null;
+  return m ? fxForMatch(Object.assign({}, m, { hero: hero || m.hero, date })) : fxChosen(date, hero);
+}
+const fxFormKeys = () => new Set(fxFormItems().map(x => x.key));
+function fxFormValues() {
+  const o = {};
+  document.querySelectorAll("#fxRows .chip.on").forEach(c => { o[c.dataset.fxk] = c.dataset.fxv; });
+  return o;
+}
+function renderFxBox(selected) {
+  const box = $("#fxBox"); if (!box) return;
+  const items = fxFormItems(), sel = selected || fxFormValues();
+  box.hidden = !items.length;
+  $("#fxRows").innerHTML = fxRowsHtml(items, sel, (it, v) => `data-fxk="${esc(it.key)}" data-fxv="${esc(v)}"`);
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest("#fxRows [data-fxk]"); if (!c) return;
+  const was = c.classList.contains("on");
+  c.parentNode.querySelectorAll(".chip").forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
+  if (!was) { c.classList.add("on"); c.setAttribute("aria-pressed", "true"); }
+});
+// Beim Speichern im Formular: Antworten in die Felder der Quellen schreiben
+function fxApplyForm(fields, base) {
+  const items = fxFormItems(), vals = fxFormValues();
+  if (!items.length) return;
+  fields.qn = Object.assign({}, base && base.qn, fields.qn);
+  items.forEach(it => fxSet(fields, it, vals[it.key]));
+  fxMark(fields, items);
+}
+// Heute: deine Auswahl in einer Karte
+function fxTodayHtml() {
+  const items = fxChosen(today());
+  if (!items.length) return "";
+  return `<div class="card today-card"><div class="card-head"><h2>${icon("target")}Dein Fokus fürs nächste Match</h2><button class="linkbtn small" type="button" data-fxgo="1">Auswahl ändern</button></div>
+    <ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>
+    <p class="muted small" style="margin:6px 0 0">Nach dem Match bewertest du diese Punkte mit denselben Knöpfen in der Notiz, beim Eintragen oder im Review.</p></div>`;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-fxgo]")) return;
+  showTab("goals"); setTimeout(() => { const el = document.getElementById("fxPickW"); if (el) { el.open = true; el.scrollIntoView({ block: "start", behavior: "smooth" }); } }, 60);
+});
 // ---------- Schnellnotiz nach dem Match ----------
 // Nach jedem Match tippst du in der Ladezeit eine kurze Notiz: Ults, Todesursachen (die fünf Gruppen des Plans), Mini-Ziel, Solo oder Stack, Voice,
 // den Zusatz des Tages und einen Satz. Held, Ergebnis und Tode holt der Abgleich selbst, so musst du am Tagesende nicht jedes Match nachtragen.
@@ -6334,7 +6514,17 @@ $("#openRefl").addEventListener("click", e => {
 const QN_CATS = Object.keys(DEATH_CAT);
 const QN_LINE = /^(Nach jedem Match|Standardzeile|Strichliste|Todesursachen-Tracker|Tippe in „Match loggen“ bei jedem Tod|Dazu in dieselbe Zeile|Zusatz|Match-Nummer|Darin stehen|Bei jedem Tod|Kontrolle)/;
 let qnDraft = null;
-const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, ultDeaths: {}, mini: "", stack: "", voice: "", extra: "", text: "" });
+const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, ultDeaths: {}, fx: {}, mini: "", stack: "", voice: "", extra: "", text: "" });
+const fxPickOpen = { q: false, w: false };   // Auswahl «Worauf achtest du?» aufgeklappt (q: Notiz, w: Reiter «Woche»), bleibt beim Neuzeichnen offen
+// Dein Fokus in der Notiz: dieselben Punkte und Knöpfe wie beim Eintragen und im Review
+function qnFxHtml(d) {
+  const items = fxChosen(today()), fx = d.fx || {};
+  return `<div class="qnrow"><b class="small">Dein Fokus: Hat es geklappt?</b>
+    ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`)}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
+    <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
+}
+document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".fxdet")) fxPickOpen[e.target.closest("#qnSheet") ? "q" : "w"] = e.target.open; }, true);
+const fxLabel = (key, v) => { const src = key.split(":")[0], x = fxScale(src).find(([k]) => String(k) === String(v)); return x ? x[1] : v; };
 const qnToday = () => state.qnotes.filter(q => q.date === today());
 // «Zusatz des Tages» aus dem Aufschreiben-Schritt des heutigen Plantags
 function qnExtraLabel() {
@@ -6353,6 +6543,11 @@ function qnApply(q, m) {
   if (deathTotal(q.ultDeaths)) { m.ultDeaths = Object.assign({}, m.ultDeaths); Object.entries(q.ultDeaths).forEach(([h, n]) => { m.ultDeaths[h] = (m.ultDeaths[h] || 0) + n; }); ultTrim(m.ultDeaths, ultDeathN(m.deathCauses)); }
   if (q.mini || q.stack || q.voice || q.extra) m.qn = Object.assign({}, m.qn, { mini: q.mini, stack: q.stack, voice: q.voice, extra: q.extra });
   if (q.text) m.notes = m.notes ? m.notes + "\n" + q.text : q.text;
+  if (q.fxKeys && q.fxKeys.length) {
+    const items = fxForMatch({ hero: m.hero, date: m.date, qn: { fxKeys: q.fxKeys, fxT: q.fxT } });
+    items.forEach(it => { const v = (q.fx || {})[it.key], has = fxGet(m, it); if (v && (has === undefined || has === "")) fxSet(m, it, v); });
+    fxMark(m, items);
+  }
   q.match = m.id;
 }
 // Ordnet sichere Notizen zu und nimmt sie aus der Warteliste. Gibt true zurück, wenn sich etwas geändert hat.
@@ -6363,16 +6558,16 @@ function qnAssignAll() {
   if (ch) state.qnotes = state.qnotes.filter(q => !q.match);
   return ch;
 }
-const qnSummary = q => [q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+const qnSummary = q => [q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
 function qnSheetHtml() {
   const d = qnDraft, n = qnToday().length + state.matches.filter(m => m.date === today() && !state.qnotes.some(q => q.match === m.id)).length, extra = qnExtraLabel();
   const seg = (k, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${d[k] === v ? "on" : ""}" data-qn="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${l}</button>`).join("")}</div>`;
   const step = (k, label) => `<span class="qnstep"><span class="small">${label}</span><button type="button" data-qnstep="${k}" data-d="-1" aria-label="${label}: weniger">−</button><b aria-live="polite">${d[k] ?? "–"}</b><button type="button" data-qnstep="${k}" data-d="1" aria-label="${label}: mehr">+</button></span>`;
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Held, Ergebnis und Tode holt der Abgleich. Die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
+    ${qnFxHtml(d)}
     <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
     <div class="qnrow"><b class="small">Tode: woran lag es?</b><div class="deathgrid">${QN_CATS.map(c => `<span class="dwrap ${d.deaths[c] ? "on" : ""}"><button type="button" class="dbtn" data-qndeath="${esc(c)}" aria-label="${esc(c)}, einmal mehr">${esc(c)}<b class="dcount">${d.deaths[c] || ""}</b></button>${d.deaths[c] ? `<button type="button" class="ddec" data-qndeath-dec="${esc(c)}" aria-label="${esc(c)}, einmal weniger">−</button>` : ""}</span>`).join("")}</div>${ultPickHtml("q", ultDeathN(d.deaths), d.ultDeaths || {}, [])}</div>
-    <div class="qnrow"><b class="small">Mini-Ziel geschafft?</b>${seg("mini", [["ja", "Ja"], ["teils", "Teilweise"], ["nein", "Nein"]])}</div>
     <div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>
     ${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}
     <label class="qnrow"><b class="small">Ein Satz: Was nimmst du mit?</b><input type="text" data-qntext="text" value="${esc(d.text)}" placeholder="z. B. zu früh vorgelaufen, nächstes Mal hinter dem Tank bleiben"></label>
@@ -6414,9 +6609,11 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { d.deaths[b.dataset.qndeath] = (d.deaths[b.dataset.qndeath] || 0) + 1; qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; if (d.deaths[c]) d.deaths[c]--; if (!d.deaths[c]) delete d.deaths[c]; ultTrim(d.ultDeaths || {}, ultDeathN(d.deaths)); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
+  else if (b.dataset.qnfx) { const k = b.dataset.qnfx; d.fx = d.fx || {}; if (d.fx[k] === b.dataset.v) delete d.fx[k]; else d.fx[k] = b.dataset.v; qnRedraw(`[data-qnfx="${k.replace(/"/g, '\\"')}"][data-v="${b.dataset.v}"]`); }
   else if (b.hasAttribute("data-qnsave")) {
     const ts = Date.now();
-    state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, JSON.parse(JSON.stringify(d))));
+    const fxIt = fxChosen(today());
+    state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, JSON.parse(JSON.stringify(d)), fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
     qnDraft = null; qnAssignAll(); save(); qnClose(); render();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
   }
@@ -6466,7 +6663,7 @@ function renderLog() {
   $("#enemySlots").querySelectorAll("select").forEach(s => s.addEventListener("change", () => { updateNemesis(); if (ultDeathN(deathState)) renderDeathBox(); }));
   updateNemesis();
   renderMapOptions($("#mapSelect").value);
-  renderMistakeChips(); renderRuleBox(); renderFqBox(); renderTaskBox(); renderDeathBox();
+  renderMistakeChips(); renderFxBox(); renderRuleBox(); renderFqBox(); renderTaskBox(); renderDeathBox();
   $("#teamBox").hidden = !mateNames().length;
 
   const rows = state.matches.slice().reverse();
@@ -6547,7 +6744,7 @@ function clearForm() {
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
   deathState = {}; ultState = {};
   renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []); renderTeamBox(null);
-  renderRuleBox({}); renderFqBox({}); renderTaskBox({});
+  renderFxBox({}); renderRuleBox({}); renderFqBox({}); renderTaskBox({}); renderFocusCard();
   renderDeathBox();
   updateNemesis();
   refreshPickers($("#matchForm"));
@@ -6578,7 +6775,7 @@ function startEdit(id) {
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {}); ultState = Object.assign({}, m.ultDeaths || {});
   renderMistakeChips(m.mistakes || [], m.hero); setChips($("#goodChips"), m.goods || []); renderTeamBox(m);
-  renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks));
+  renderFxBox(fxVals(m, fxForMatch(m))); renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks)); renderFocusCard();
   renderDeathBox();
   document.querySelectorAll('input[name="focusRating"]').forEach(r => { r.checked = !!(m.focus && m.focus.id === state.lessons.activeFocus && String(m.focus.rating) === r.value); });
   refreshPickers($("#matchForm"));
@@ -6770,9 +6967,9 @@ function renderMatchHints() {
     + `<p class="muted small hint-foot">Automatisch aus Aufstellung, Counter-Regeln und deinen bisherigen Matches abgeleitet – das sind Hinweise, keine Gewissheit.${missing ? " Mit vollständigen Teams werden sie genauer." : ""}</p>`;
 }
 ["change", "input"].forEach(ev => $("#matchForm").addEventListener(ev, e => {
-  if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); renderTaskBox({}); }
+  if (e.type === "change" && e.target && e.target.name === "hero") { renderMistakeChips(); renderDeathBox(); renderFxBox(); renderTaskBox({}); }
   else if (e.target && e.target.name === "d") renderDeathBox();
-  else if (e.type === "change" && e.target && e.target.name === "date") { renderRuleBox(); renderFqBox(); renderMistakeChips(); }
+  else if (e.type === "change" && e.target && e.target.name === "date") { renderFxBox(); renderRuleBox(); renderFqBox(); renderMistakeChips(); }
   renderMatchHints();
 }));
 ["#mistakeChips", "#goodChips"].forEach(sel => $(sel).addEventListener("click", () => setTimeout(renderMatchHints, 0)));
@@ -6828,6 +7025,7 @@ $("#matchForm").addEventListener("submit", e => {
     if (fields.ultHit > fields.ults) { toast("Mehr Ults mit Wirkung als eingesetzte Ults – bitte prüfen"); return; }
   }
   if (state.lessons.activeFocus && f.get("focusRating") !== null) fields.focus = { id: state.lessons.activeFocus, rating: Number(f.get("focusRating")) };
+  fxApplyForm(fields, editingId ? state.matches.find(m => m.id === editingId) : null);
   if (editingId) {
     const target = state.matches.find(m => m.id === editingId);
     Object.assign(target, fields);
@@ -7601,7 +7799,7 @@ function goalDayCardHtml(n) {
     ${ts.length ? `<ul class="wl">${first ? `<li><b>Heute zum Ziel:</b> ${linkify(esc(first.text), new Set())} <button type="button" class="btn small ghost" data-gdone="${g.id}" data-t="${esc(first.id)}">Erledigt</button></li>` : "<li>Alle Aufgaben zum Ziel sind erledigt.</li>"}
       ${focus ? `<li><b>Mögliches Mini-Ziel für Block 3:</b> ${esc(focus.text)} (Auswahl unter Block 3)</li>` : ""}
       ${l ? `<li><b>Passende Lektion:</b> ${esc(l.title)} <button type="button" class="btn small" data-lesson="${l.id}" data-from-day="${n}">Starten</button></li>` : ""}</ul>`
-      : `<p class="muted small">Zu diesem Ziel ist noch kein Thema gewählt. Wähle es im Tab Lernziele.</p>`}
+      : `<p class="muted small">Zu diesem Ziel ist noch kein Thema gewählt. Wähle es im Reiter «Woche».</p>`}
     <div class="row"><button type="button" class="btn ghost small" data-pact="tab" data-tab="goals">Alle Aufgaben und Fortschritt</button></div></div>`;
 }
 // Vorschläge aus den eigenen Matches: häufigste Fehler, Problem-Gegner, Rollen-Flex
@@ -7644,7 +7842,55 @@ function renderGoalDetect() {
 }
 
 // ---------- Lernziele ----------
+// ---------- Reiter «Woche»: alle Aufgaben an einem Ort ----------
+// Sammelt, was gerade läuft, und sagt zu jedem Punkt, wo du ihn abhakst oder ob er sich selbst abhakt. Neu ist hier nur die Übersicht:
+// Die Punkte stammen aus Trainingsplan, Review, Lektionen, Wiederholung, Fokus-Auswahl, Wochenziel, Missionen, Bootcamp und der Challenge der Woche.
+function weekRow(done, t, s, where, a) {
+  return `<div class="todo ${done ? "done" : ""}"><span class="tn">${done ? "✓" : "•"}</span><div class="tt">${t}<div class="ts">${s}${where ? `<br><span class="where">↳ ${where}</span>` : ""}</div></div><div class="ta">${a || ""}</div></div>`;
+}
+function weekHubHtml() {
+  const started = planStarted(), cur = planDay(), now = [], week = [];
+  let head = "";
+  if (started && cur <= PLAN_N) {
+    const d = PLAN.days[cur - 1], st = dayGet(cur), doneS = d.steps.filter(s => (st.steps || {})[s.key]).length, wk = Math.ceil(cur / 7), from = (wk - 1) * 7 + 1, to = Math.min(PLAN_N, wk * 7);
+    const dDone = PLAN.days.slice(from - 1, to).filter(x => dayGet(x.n).done).length;
+    head = `Planwoche ${wk} · Tag ${from} bis ${to} · ${dDone} von ${to - from + 1} Tagen erledigt`;
+    now.push(weekRow(!!st.done, `Trainingsplan: Tag ${cur} · ${esc(d.title)}`, `${doneS} von ${d.steps.length} Schritten`, "im Trainingstag abhaken, viele Häkchen setzen sich von selbst", `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Zum Tag</button>`));
+  } else if (!started) now.push(weekRow(false, "Trainingsplan starten", "112 Tage in 16 Wochen", "", `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>`));
+  const rs = rvStatus();
+  if (rs.need) now.push(weekRow(rs.ok, `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, "die wichtigsten Matches im Replay anschauen", "im Review abhaken (auch im Trainingstag)", rs.ok ? "" : `<button class="btn small ghost" type="button" data-go="review">Review</button>`));
+  const info = todayLessonInfo();
+  if (info && info.lesson) now.push(weekRow(false, `Lektion: ${esc(info.lesson.title)}`, `ca. ${info.lesson.minutes} Min.`, "hakt sich ab, sobald du die Lektion beendest", `<button class="btn small ghost" type="button" data-lesson="${info.lesson.id}">Öffnen</button>`));
+  const dueN = dueQs(false).length + dueHs().length;
+  if (dueN) now.push(weekRow(false, `${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig`, "kurz aus dem Kopf abrufen", "zählt im Quiz von selbst", `<button class="btn small ghost" type="button" data-pact="due-start">Wiederholen</button>`));
+  // Diese Woche: Wochenziel, Missionen, Bootcamp
+  const g = activeGoal();
+  if (!g) week.push(weekRow(false, "Wochenziel setzen", "ein Ziel pro Woche gibt dem Training Richtung", "unten auf dieser Seite", `<button class="btn small" type="button" data-wgoal="1">Ziel setzen</button>`));
+  else goalTasks(g).forEach(t => { const dn = taskDone(g, t.id);
+    week.push(weekRow(dn, `${esc(t.kind)}: ${esc(t.text)}`, `Wochenziel «${esc(g.title)}»`, t.kind === "Match-Fokus" ? "im Match bewerten (oben als Fokus wählbar), hier abhaken, wenn es sitzt" : "hier abhaken", dn ? "" : `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(t.id)}">Erledigt</button>`)); });
+  rvState().missions.filter(x => x.status === "open").forEach(mis => { const pr = wkProgress(mis);
+    week.push(weekRow(false, `Mission mit ${esc(mis.hero)}`, `${esc(wkMissionText(mis))} · ${Math.min(pr.have, mis.n)} von ${mis.n}`, "hakt sich selbst ab, aus deinen Matches", `<button class="btn small ghost" type="button" data-go="weak">Ansehen</button>`)); });
+  Object.keys(state.boot || {}).filter(k => bootGet(k) && bootValid(k) && taskCurrent(k)).slice(0, 4).forEach(k => { const t = taskCurrent(k);
+    week.push(weekRow(false, `Bootcamp ${esc(bootIsRole(k) ? "Rolle " + ROLE_SHORT[bootRole(k)] : k)}: ${esc(t.text)}`, "Aufgabe für die nächsten Matches", "nach dem Match bewerten: Notiz, Match loggen oder Review (zwei von drei Mal «Ja» heisst gemeistert)", `<button class="btn small ghost" type="button" data-bootopen="${esc(k)}">Kurs</button>`)); });
+  const fx = fxChosen(today());
+  return `<div class="card weekhub"><div class="card-head"><h2>${icon("week")}Diese Woche auf einen Blick</h2>${head ? `<span class="badge">${esc(head)}</span>` : ""}</div>
+      <p class="lead" style="margin:0 0 8px">Alles, was gerade läuft, und wo du es abhakst. Vieles hakt sich von selbst ab, sobald die Matches da sind.</p>
+      <div class="whsec"><h3>Heute</h3>${now.join("") || '<p class="small muted">Heute ist nichts offen.</p>'}</div>
+      <div class="whsec"><h3>Im Match: worauf du achtest</h3>
+        ${fx.length ? `<ul class="wl" style="margin:0">${fx.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>` : '<p class="small muted" style="margin:0">Noch nichts ausgewählt. Wähl unten bis zu drei Punkte.</p>'}
+        <p class="small" style="margin:6px 0 0"><b>Abhaken:</b> nach dem Match in der Notiz (Knopf «Notiz» unten rechts), beim Eintragen unter «Matches» oder im Review. Überall dieselben Punkte und dieselben Knöpfe.</p>
+        <div class="row" style="gap:6px;margin-top:6px"><button class="btn small" type="button" data-qnopen>${icon("edit")}Notiz öffnen</button></div>
+        <details class="fxdet" id="fxPickW" ${fxPickOpen.w || !fx.length ? "open" : ""}><summary class="small"><b>Worauf achtest du? Auswahl ändern</b> (${fx.length} von höchstens ${FX_MAX})</summary>${fxPickHtml("w")}</details></div>
+      <div class="whsec"><h3>Diese Woche</h3>${week.join("")}</div>
+      <div class="whsec"><h3>Zum Spass: Challenge der Woche</h3>${funCardHtml(true)}</div></div>`;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-wgoal]")) return;
+  const f = $("#goalForm"); if (f) { f.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => f.elements.title.focus(), 300); }
+});
 function renderGoals() {
+  funCheck();
+  $("#weekHub").innerHTML = weekHubHtml();
   const f = $("#goalForm");
   if (f && !f.elements.due.value) f.elements.due.value = addDays(today(), 6);
   renderGoalSuggest(); renderGoalDetect();
@@ -8646,7 +8892,7 @@ function lessonBannerHtml(onGradient) {
 function renderFocusCard() {
   const el = $("#focusCard");
   const l = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
-  if (!l) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!l || fxFormKeys().has("focus:" + l.id)) { el.hidden = true; el.innerHTML = ""; return; }
   const cur = document.querySelector('input[name="focusRating"]:checked');
   const val = cur ? cur.value : "";
   el.hidden = false;
@@ -9820,7 +10066,7 @@ function renderRuleBox(selected) {
   const date = ($("#matchDate") && $("#matchDate").value) || today(), n = planDayOf(date), manual = planDayManual(date);
   const sel = selected || ruleValues(), rs = rulesForDay(n), ids = new Set(rs.map(r => r.t.id));
   const extra = Object.keys(sel).map(ruleTopic).filter(t => t && !ids.has(t.id));
-  const list = [...rs, ...extra.map(t => ({ t, spot: false, role: "" }))];
+  const fk = fxFormKeys(), list = [...rs, ...extra.map(t => ({ t, spot: false, role: "" }))].filter(r => !fk.has("rule:" + r.t.id));
   box.hidden = !planStarted() && !list.length;
   const dl = $("#matchDay");
   if (dl) {
@@ -9837,7 +10083,7 @@ $("#matchDay").addEventListener("change", e => {
   const date = ($("#matchDate") && $("#matchDate").value) || today(), v = e.target.value;
   state.plan.dayByDate = state.plan.dayByDate || {};
   if (v === "") delete state.plan.dayByDate[date]; else state.plan.dayByDate[date] = +v;
-  save(); renderRuleBox(); renderFqBox(); renderMistakeChips(); renderOpenRefl();
+  save(); renderFxBox(); renderRuleBox(); renderFqBox(); renderMistakeChips(); renderOpenRefl();
   document.querySelectorAll("[data-dayfor]").forEach(x => { const d = planDayOf(x.dataset.dayfor); x.textContent = d ? "Tag " + d : "freies Spiel"; });
 });
 function ruleValues() {
@@ -10619,7 +10865,7 @@ function rvMatchHtml(x, open, L) {
     <span class="rvtags">${reasons.filter(r => r.k !== "lost").map(r => `<span class="rvtag ${r.k}">${esc(r.label)}</span>`).join("")}${rvLeftTag(L && L.left ? L.left[m.id] : 0, m)}</span></button>`;
   if (!open) return `<div class="rvm" data-m="${m.id}">${head}</div>`;
   const why = reasons.filter(r => r.text).map(r => `<li>${esc(r.text)}</li>`).join("");
-  const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4;
+  const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4, fxIt = fxForMatch(m);
   return `<div class="rvm open" data-m="${m.id}">${head}<div class="rvb">
     ${why ? `<ul class="wl small" style="margin:0">${why}</ul>` : ""}
     ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
@@ -10632,9 +10878,10 @@ function rvMatchHtml(x, open, L) {
     <div class="rvs"><h4><span class="rvn">2</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}</span></h4>
       <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
       <details class="small" style="margin-top:4px"><summary>Wann zählt eine Ult «mit Wirkung»?</summary><p style="margin:4px 0 0">${esc(PLAN.notes.ultIntro)}</p><ul class="wl" style="margin:4px 0 0">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Teilweise Wirkung zählt ½. Keine Ult eingesetzt? Dann trag 0 ein.</p></details></div>
-    <div class="rvs"><h4><span class="rvn">3</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
+    ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">3</span>Dein Fokus <span class="small muted">freiwillig, dieselben Punkte wie in der Notiz</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`)}</div>` : ""}
+    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 4 : 3}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
-    <div class="rvs"><h4><span class="rvn">4</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
+    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 5 : 4}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
       <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
       ${(() => { const ideas = fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …"); return ideas.length ? `<details class="small" style="margin-top:4px"><summary>Ideen aus deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
@@ -10700,6 +10947,9 @@ document.addEventListener("click", e => {
     if (f === "ults" && m.ultHit !== null && m.ultHit !== undefined && m.ultHit > v) m.ultHit = v;
     if (f === "ults" && (m.ultHit === null || m.ultHit === undefined)) m.ultHit = 0;
     save();
+  } else if (a === "fx" && m) {
+    const it = fxForMatch(m).find(x => x.key === b.dataset.k);
+    if (it) { fxSet(m, it, String(fxGet(m, it)) === b.dataset.v ? null : b.dataset.v); fxMark(m, [it]); save(); }
   } else if (a === "good" && m) {
     const g = b.dataset.g, list = m.goods || (m.goods = []); const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); save();
   } else if (a === "finish" && m) { if (!rvFinish(m)) return; }
@@ -12083,6 +12333,8 @@ function renderTaskBox(selected) {
   const sel = selected || taskValues(), hero = $("#heroSelect") ? $("#heroSelect").value : "";
   const rows = taskRowsFor(hero).map(r => ({ key: taskKey(r.k, r.t), k: r.k, t: r.t })), keys = new Set(rows.map(r => r.key));
   Object.keys(sel).forEach(key => { if (!keys.has(key)) { const x = taskByKey(key); if (x) rows.push({ key, k: x.k, t: x.t }); } });
+  const fk = fxFormKeys();
+  for (let i = rows.length - 1; i >= 0; i--) if (fk.has("task:" + rows[i].key)) rows.splice(i, 1);
   box.hidden = !rows.length;
   $("#taskRows").innerHTML = rows.map(r => `<div class="rrow"><span class="rl"><b class="small">${esc(bootIsRole(r.k) ? "Rolle " + ROLE_SHORT[bootRole(r.k)] : r.k)}</b> <span class="badge">${esc(r.t.kind)}</span><br><span class="small">${esc(r.t.text)}</span></span>
     <span class="chips">${TASK_V.map(([v, label]) => `<button type="button" class="chip ${sel[r.key] === v ? "on" : ""}" data-tk="${esc(r.key)}" data-tv="${v}" aria-pressed="${sel[r.key] === v}">${label}</button>`).join("")}</span></div>`).join("");
