@@ -449,6 +449,11 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .fxlive { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; flex-basis: 100%; margin-top: 2px; }
 .fxlive .btn { min-width: 52px; justify-content: center; }
 .qnfab.has::after { content: ""; position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--surface); }
+.daylist .dphase { margin: 10px 0 0; padding-top: 6px; border-top: 1px solid var(--border); }
+.daylist .dphase:first-of-type { border-top: 0; }
+.daylist .dph { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 2px; }
+.daylist .dphase.pdone .dph b { color: var(--muted); }
+.daylist .todo.xtra .tn { background: transparent; border: 1px dashed var(--border); }
 .pbd { margin: 6px 0 0; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--surface); }
 .pbd > summary { cursor: pointer; }
 .pbgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 12px; margin: 8px 0 4px; }
@@ -3933,6 +3938,7 @@ const ICONS = {
   heroes: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/>',
   training: '<path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/>',
   goals: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  replay: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4.5v4.5h4.5"/><path d="M10 9.2v5.6l4.6-2.8z"/>',
   week: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
   ai: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
   data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
@@ -3980,7 +3986,7 @@ const TITLES = {
   teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
   bootcamp: ["Helden-Bootcamp", "Pro Held vier Stufen von den Grundlagen zum Experten, pro Rolle ein Kurs, mit Aufgaben fürs Match"],
   watch: ["Zuschauen", "Von guten Streamern lernen: Aufgaben, worauf du beim Zuschauen achtest"],
-  review: ["Review", "Die wichtigsten Matches im Replay anschauen und nachtragen"],
+  review: ["Review", "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann alle anderen"],
   top: ["Eternity-Weg", "Was die Besten erreichen und wie weit du in jeder Rolle schon bist"],
   weak: ["Schwächen", "Was bei welchem Helden besser werden kann, und was du dafür tust"],
   progress: ["Verlauf", "Tage, Wochen und Phasen vergleichen und sehen, was besser geworden ist"]
@@ -3993,7 +3999,8 @@ const AREAS = [
   { id: "today", label: "Heute", icon: "home", info: "Dein Tag: was jetzt dran ist", tabs: ["today"] },
   { id: "week", label: "Woche", icon: "week", info: "Wochenziel und alle Aufgaben der Woche: was läuft und wo du es abhakst", tabs: ["goals"] },
   { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen und Helden-Bootcamp; unter «Mehr»: Quiz, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "bootcamp", "quiz", "weak", "watch", "lexicon"], core: 3 },
-  { id: "play", label: "Spielen", icon: "play", info: "Matches, Review, Dashboard und Squad; unter «Mehr»: Auswertung, Verlauf und Eternity-Weg", tabs: ["log", "review", "dashboard", "squad", "analysis", "progress", "top"], core: 4 },
+  { id: "play", label: "Spielen", icon: "play", info: "Matches, Dashboard und Squad; unter «Mehr»: Auswertung, Verlauf und Eternity-Weg", tabs: ["log", "dashboard", "squad", "analysis", "progress", "top"], core: 3 },
+  { id: "review", label: "Review", icon: "replay", info: "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann der Rest", tabs: ["review"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide und Team & Counter; unter «Mehr»: Team-Ups und Meta", tabs: ["heroes", "team", "teamups", "meta"], core: 2 },
   { id: "coach", label: "Coach", icon: "ai", info: "Daten & Sync und Training; unter «Mehr»: KI-Coach", tabs: ["data", "training", "ai"], core: 2 }
 ];
@@ -5069,45 +5076,59 @@ function renderToday() {
   const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
   const info = todayLessonInfo(), g = activeGoal(), openR = ms.filter(isOpenRefl).length, lessonsN = Object.keys(lessonsDone()).filter(id => lessonById(id)).length;
   const dateTxt = new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" });
-  const items = [];
-  // 1) Lektion
+  // Dein Tagesablauf: immer dieselbe Reihenfolge, passend zu den Abschnitten des Trainingstags. 1 Vorbereiten, 2 Spielen, 3 Auswerten,
+  // 4 Extra (freiwillig, zählt nicht mit). Jeder Schritt sagt, wo du ihn machst, und hakt sich wo möglich selbst ab.
+  const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy), inPlan = started && cur <= PLAN_N, B = blockMatches();
+  const prep = [], play = [], post = [], extra = [];
+  // 1) Vorbereiten
   if (info && info.lesson) {
     const l = info.lesson, st = state.lessons.progress[l.id];
-    items.push({ done: false, t: `Lektion: ${esc(l.title)}`, s: `${info.why === "plan" ? `Tageslektion zu Tag ${info.day} · ` : ""}ca. ${l.minutes} Min.`,
+    prep.push({ done: false, t: `Lektion: ${esc(l.title)}`, s: `${info.why === "plan" ? `Tageslektion zu Tag ${info.day} · ` : ""}ca. ${l.minutes} Min. · in «Lernen › Lektionen»`,
       a: `<button class="btn small" type="button" data-lesson="${l.id}"${info.why === "plan" ? ` data-from-day="${info.day}"` : ""}>${st ? "Fortsetzen" : "Starten"}</button>` });
-  } else items.push({ done: true, t: !info ? "Alle Lektionen geschafft" : info.why === "noLesson" ? "Heute keine neue Lektion" : "Lektion erledigt", s: info && info.why === "noLesson" ? "Testtag: zeig, was du schon kannst." : "Gut gemacht.", a: "" });
-  // 2) Training
-  const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy);
-  if (!started) items.push({ done: false, t: "Trainingsplan starten", s: "112 Tage in 16 Wochen vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
-  else if (cur > PLAN_N) items.push({ done: true, t: "Trainingsplan abgeschlossen", s: `Alle ${PLAN_N} Tage geschafft.`, a: "" });
-  else if (trainedToday) items.push({ done: true, t: "Training heute erledigt", s: `Nächster Trainingstag: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Tag ${cur} ansehen</button>` });
-  else items.push({ done: false, t: `Training: Tag ${cur} · ${esc(PLAN.days[cur - 1].title)}`, s: `${esc(modeText(PLAN.days[cur - 1]) || "Ausgangswerte")} · ${blockText()}${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Tag öffnen</button>` });
-  // 3) Wochenziel
-  if (!g) items.push({ done: false, t: "Wochenziel setzen", s: "Ein Ziel pro Woche gibt dem Training Richtung. Die App stellt Lektionen und Aufgaben dazu zusammen.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
-  else if (!goalTopics(g).length) items.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
-  else {
-    const o = openTasks(g)[0];
-    items.push(o ? { done: false, t: `Wochenziel: ${esc(g.title)}`, s: `${o.kind}: ${esc(o.text)}`, a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }
-      : { done: true, t: `Wochenziel: ${esc(g.title)}`, s: "Alle Aufgaben dieser Woche sind erledigt.", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ansehen</button>` });
-  }
-  // 4) Review der wichtigsten Matches
+  } else prep.push({ done: true, t: !info ? "Alle Lektionen geschafft" : info.why === "noLesson" ? "Heute keine neue Lektion" : "Lektion erledigt", s: info && info.why === "noLesson" ? "Testtag: zeig, was du schon kannst." : "Gut gemacht.", a: "" });
+  if (!started) prep.push({ done: false, t: "Trainingsplan starten", s: "112 Tage in 16 Wochen vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
+  else if (cur > PLAN_N) prep.push({ done: true, t: "Trainingsplan abgeschlossen", s: `Alle ${PLAN_N} Tage geschafft.`, a: "" });
+  else { const pd = trainedToday || dayStages(cur)[0].done;
+    prep.push({ done: pd, t: `Trainingstag ${cur}: ${esc(PLAN.days[cur - 1].title)}`, s: `Worauf es heute ankommt, Bilder zum Thema, Start · im Trainingstag unter «Vorbereitung»${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small ${pd ? "ghost" : ""}" type="button" data-pact="day" data-n="${cur}">${pd ? "Ansehen" : "Tag öffnen"}</button>` }); }
+  { const fx = fxChosen(tdy), ok = !!(state.focusSel && state.focusSel.d === tdy);
+    prep.push({ done: ok, t: "Fokus fürs Match festlegen", s: `${fx.length ? `Bis zu ${FX_MAX} Punkte: ${esc(fx.map(x => x.tag).join(", "))}` : "Noch nichts gewählt"} · gilt für Notiz, Match loggen und Review`,
+      a: `${fx.length && !ok ? `<button class="btn small" type="button" data-fxok="1">Passt so</button> ` : ""}<button class="btn small ${fx.length ? "ghost" : ""}" type="button" data-fxgo="1">${ok ? "Ansehen" : "Ändern"}</button>` }); }
+  if (!g) prep.push({ done: false, t: "Wochenziel setzen", s: "Einmal pro Woche: ein Ziel gibt dem Training Richtung · im Reiter «Woche»", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
+  // 2) Spielen
+  const withN = tm.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().length;
+  if (inPlan && !trainedToday) { const st = dayGet(cur).steps || {}, bd = ["b1", "b2", "b3"].every(k => st[k] || !PLAN.days[cur - 1].steps.some(x => x.key === k));
+    play.push({ done: bd, t: `Block 1 bis 3 spielen`, s: `${tm.length} von ${3 * B} Matches heute · die Aufgaben stehen im Trainingstag bei den Blöcken`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Zu den Blöcken</button>` }); }
+  else if (!tm.length) play.push({ done: false, t: "Spielen und festhalten", s: "Spiel deine Matches. Nach jedem Match: kurze Notiz.", a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
+  play.push({ done: tm.length > 0 && withN >= tm.length, t: "Nach jedem Match: Notiz", s: `${tm.length ? `${withN} von ${plural(tm.length, "Match", "Matches")} mit Notiz` : "Noch keine Matches vom Abgleich"}${waiting ? ` · ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""} · im Match mit ✓ und ✗ mitzählen, danach bewerten`,
+    a: `<button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button>` });
+  // 3) Auswerten
+  if (openR) post.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Matches ohne Notiz: kurz Fehler und Stärken eintragen · unter «Spielen › Matches»", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
   const rs = rvStatus();
-  if (rs.need) items.push({ done: rs.ok, t: `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, s: rs.ok ? "Heute geschafft." : "Die wichtigsten Matches im Replay anschauen und nachtragen.", a: `<button class="btn small ${rs.ok ? "ghost" : ""}" type="button" data-rv-go="${rs.L.open[0] ? rs.L.open[0].id : ""}">${rs.ok ? "Ansehen" : "Weiter"}</button>` });
-  // 5) Spielen und festhalten
-  const w = tm.filter(m => m.result === "W").length;
-  if (openR) items.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Trag Fehler und Stärken ein, solange du dich erinnerst.", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
-  else if (tm.length) items.push({ done: true, t: `${plural(tm.length, "Match", "Matches")} heute`, s: `${plural(w, "Sieg", "Siege")} · ${plural(tm.length - w, "Niederlage", "Niederlagen")} · Block: ${tm.length} von ${blockMatches()} Matches`, a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
-  else items.push({ done: false, t: "Spielen und festhalten", s: "Nach jedem Match 20 Sekunden fürs Log: Ergebnis, Held und ein Fehler.", a: `<button class="btn small" type="button" data-go="log">Match loggen</button>` });
+  if (rs.need) post.push({ done: rs.ok, t: `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, s: rs.ok ? "Heute geschafft." : "Zuerst die Matches mit Notiz, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ${rs.ok ? "ghost" : ""}" type="button" data-rv-go="${rs.L.open[0] ? rs.L.open[0].id : ""}">${rs.ok ? "Ansehen" : "Weiter"}</button>` });
+  if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : "Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»", a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
+  // 4) Extra, wenn du noch Lust hast (zählt nicht mit)
+  if (g && goalTopics(g).length) { const o = openTasks(g)[0]; if (o) extra.push({ done: false, t: `Wochenziel: ${esc(o.kind)}`, s: esc(o.text), a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }); }
+  else if (g) extra.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
+  { const nx = rvExtra().length; if (nx) extra.push({ done: false, t: `${plural(nx, "weiteres Match", "weitere Matches")} zum Auswerten`, s: "Mit Notiz zuerst, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ghost" type="button" data-go="review">Review</button>` }); }
+  { const { F, c } = funCur(), p = funProg(c, F); extra.push({ done: p.done, t: `Challenge der Woche: ${c.em} ${esc(c.t)}`, s: p.done ? "geschafft" : `${esc(p.txt)} · zum Spass`, a: `<button class="btn small ghost" type="button" data-funjump="1">Ansehen</button>` }); }
+  const phases = [["Vorbereiten", "vor dem ersten Match, ca. 10 Min.", prep], ["Spielen", inPlan && !trainedToday ? `Block 1 bis 3, ${B} Matches pro Block` : "deine Matches", play], ["Auswerten", "nach dem Spielen", post], ["Wenn du noch Lust hast", "freiwillig, zählt nicht mit", extra]];
+  const items = [...prep, ...play, ...post];
   const doneN = items.filter(x => x.done).length;
-  // «Jetzt dran»: der erste offene Schritt gross, darunter alle Schritte des Tages kurz
+  // «Jetzt dran»: der erste offene Schritt gross, darunter der ganze Ablauf
   const nowIdx = items.findIndex(x => !x.done), now = items[nowIdx];
   const big = a => String(a || "").replace(/class="btn small( ghost)?"/g, 'class="btn"');
+  const phaseOf = it => phases.findIndex(ph => ph[2].includes(it));
   const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= PLAN_N ? ` · Trainingsplan Tag ${cur} von ${PLAN_N}` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
-      <div class="lesson-stats"><div>${ring(doneN / items.length, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>
-    ${now ? `<div class="nowlbl">Jetzt dran · Schritt ${nowIdx + 1} von ${items.length}</div><h2>${now.t}</h2><p>${now.s}</p><div class="nowact">${big(now.a)}</div>`
+      <div class="lesson-stats"><div>${ring(items.length ? doneN / items.length : 1, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>
+    ${now ? `<div class="nowlbl">Jetzt dran · Schritt ${nowIdx + 1} von ${items.length} · ${esc(phases[phaseOf(now)][0])}</div><h2>${now.t}</h2><p>${now.s}</p><div class="nowact">${big(now.a)}</div>`
       : (() => { const x = todayExtra(); return x ? `<div class="nowlbl">Alles erledigt für heute 🎉 · Wenn du magst</div><h2>${x.t}</h2><p>${x.s}</p><div class="nowact">${big(x.a)}</div>`
         : `<div class="nowlbl">Heute</div><h2>Alles erledigt für heute 🎉</h2><p>Stark. Morgen geht es mit dem nächsten Schritt weiter.</p>`; })()}</div>`;
-  const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun</h2><span class="badge">${doneN} von ${items.length}</span></div>${items.map((x, i) => `<div class="todo ${x.done ? "done" : ""}${i === nowIdx ? " now" : ""}"><span class="tn">${x.done ? "✓" : i + 1}</span><div class="tt">${x.t}${x.done || i === nowIdx ? "" : `<div class="ts">${x.s}</div>`}</div><div class="ta">${i === nowIdx ? `<span class="badge">jetzt</span>` : x.a || ""}</div></div>`).join("")}</div>`;
+  let num = 0;
+  const row = x => { const counted = items.includes(x), i = counted ? ++num : 0, isNow = x === now;
+    return `<div class="todo ${x.done ? "done" : ""}${isNow ? " now" : ""}${counted ? "" : " xtra"}"><span class="tn">${x.done ? "✓" : counted ? i : "+"}</span><div class="tt">${x.t}${x.done || isNow ? "" : `<div class="ts">${x.s}</div>`}</div><div class="ta">${isNow ? `<span class="badge">jetzt</span>` : x.a || ""}</div></div>`; };
+  const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun: dein Tagesablauf</h2><span class="badge">${doneN} von ${items.length}</span></div>
+    <p class="small muted" style="margin:0 0 6px">Immer in dieser Reihenfolge: vorbereiten, spielen, auswerten. Jeder Schritt sagt dir, wo du ihn machst; vieles hakt sich von selbst ab.</p>
+    ${phases.map(([t, hint, l], pi) => l.length ? `<div class="dphase ${pi < 3 && l.every(x => x.done) ? "pdone" : ""} ${pi === 3 ? "pextra" : ""}"><div class="dph"><b>${pi < 3 ? `${pi + 1} · ` : ""}${t}</b> <span class="small muted">${hint}</span>${pi < 3 && l.every(x => x.done) ? ' <span class="badge ok">✓</span>' : ""}</div>${l.map(row).join("")}</div>` : "").join("")}</div>`;
   // Fokus fürs nächste Match
   const focus = fxTodayHtml();
   // Hinweise
@@ -6455,7 +6476,7 @@ function fxToggle(key) {
   if (cur.includes(key)) keys = cur.filter(k => k !== key);
   else if (cur.length >= FX_MAX) { toast(`Höchstens ${FX_MAX} auf einmal. Nimm zuerst einen Punkt weg.`); return false; }
   else keys = [...cur, key];
-  state.focusSel = Object.assign({}, state.focusSel, { keys });
+  state.focusSel = Object.assign({}, state.focusSel, { keys, d: today() });
   save(); return true;
 }
 document.addEventListener("click", e => {
@@ -6466,7 +6487,7 @@ document.addEventListener("change", e => {
   const t = e.target.closest ? e.target.closest("[data-fxown]") : null; if (!t) return;
   const v = t.value.trim(), all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k) && k !== "own");
   if (v === ((state.focusSel || {}).own || "")) return;   // doppelte Meldung beim Verlassen des Felds
-  state.focusSel = Object.assign({}, state.focusSel, { own: v, keys: v ? (cur.length < FX_MAX ? [...cur, "own"] : cur) : cur });
+  state.focusSel = Object.assign({}, state.focusSel, { own: v, keys: v ? (cur.length < FX_MAX ? [...cur, "own"] : cur) : cur, d: today() });
   if (v && cur.length >= FX_MAX) toast(`Eigenes Ziel gespeichert. Wähl einen anderen Punkt ab, damit es mitzählt (höchstens ${FX_MAX}).`);
   save(); setTimeout(() => fxRerender(t), 0);   // erst nach dem Ereignis neu zeichnen (das Feld verliert dabei den Fokus)
 });
@@ -6517,6 +6538,16 @@ function fxTodayHtml() {
     <ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>
     <p class="muted small" style="margin:6px 0 0">Nach dem Match bewertest du diese Punkte mit denselben Knöpfen in der Notiz, beim Eintragen oder im Review.</p></div>`;
 }
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-fxok]")) return;
+  state.focusSel = Object.assign({}, state.focusSel, { keys: fxChosen(today()).map(x => x.key), d: today() });
+  save(); render(); toast("Fokus für heute steht. Nach dem Match bewertest du ihn in der Notiz.");
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-funjump]")) return;
+  UIFOLD.fun = true; render();
+  setTimeout(() => { const el = document.querySelector('#todayBody details[data-f="fun"]'); if (el) { el.open = true; el.scrollIntoView({ block: "start", behavior: "smooth" }); } }, 60);
+});
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-fxgo]")) return;
   showTab("goals"); setTimeout(() => { const el = document.getElementById("fxPickW"); if (el) { el.open = true; el.scrollIntoView({ block: "start", behavior: "smooth" }); } }, 60);
@@ -7975,7 +8006,7 @@ function weekHubHtml() {
     now.push(weekRow(!!st.done, `Trainingsplan: Tag ${cur} · ${esc(d.title)}`, `${doneS} von ${d.steps.length} Schritten`, "im Trainingstag abhaken, viele Häkchen setzen sich von selbst", `<button class="btn small" type="button" data-pact="day" data-n="${cur}">Zum Tag</button>`));
   } else if (!started) now.push(weekRow(false, "Trainingsplan starten", "112 Tage in 16 Wochen", "", `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>`));
   const rs = rvStatus();
-  if (rs.need) now.push(weekRow(rs.ok, `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, "die wichtigsten Matches im Replay anschauen", "im Review abhaken (auch im Trainingstag)", rs.ok ? "" : `<button class="btn small ghost" type="button" data-go="review">Review</button>`));
+  if (rs.need) now.push(weekRow(rs.ok, `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, "zuerst die Matches mit Notiz, dann deine Schwächen", "im Reiter «Review» abhaken (auch im Trainingstag)", rs.ok ? "" : `<button class="btn small ghost" type="button" data-go="review">Review</button>`));
   const info = todayLessonInfo();
   if (info && info.lesson) now.push(weekRow(false, `Lektion: ${esc(info.lesson.title)}`, `ca. ${info.lesson.minutes} Min.`, "hakt sich ab, sobald du die Lektion beendest", `<button class="btn small ghost" type="button" data-lesson="${info.lesson.id}">Öffnen</button>`));
   const dueN = dueQs(false).length + dueHs().length;
@@ -10775,7 +10806,7 @@ const rvDone = m => !!(m && m.review && m.review.on);
 const rvTotal = () => state.matches.filter(rvDone).length;
 const rvWords = t => (String(t || "").match(/[\p{L}\d]{2,}/gu) || []).length;
 const rvNorm = t => String(t || "").toLowerCase().replace(/[^\p{L}\d]+/gu, " ").trim();
-const rvUi = { open: null, pbOpen: new Set() };
+const rvUi = { open: null, pbOpen: new Set(), more: {} };
 // Was fehlt, bevor ein Match als ausgewertet gilt?
 // Schlechtes Match: Niederlage, schwache Werte, viele Tode, Ults ohne Wirkung oder ein verfehlter Fokus (alles ausser «Vorbild»).
 // Dort gehört das genauere Auseinandernehmen zur Pflicht: mindestens ein Problem mit «Warum» (mindestens drei Wörter).
@@ -10925,7 +10956,7 @@ function rvList() {
   const free = Math.max(0, n - done.length - keep.length);
   const used = new Set([...keep.map(m => m.id), ...pin.skip, ...gone.map(m => m.id)]), from = addDays(d, -(RV_DAYS - 1));
   const cands = state.matches.filter(m => !rvDone(m) && (m.date || "") >= from && !used.has(m.id) && left[m.id] > RV_SPARE);
-  const open = keep.concat(free ? rvRank(cands, free).map(x => x.m) : []);
+  const open = keep.concat(free ? rvOrder(cands).slice(0, free).map(x => x.m) : []);
   const ids = open.map(m => m.id);
   if (ids.join() !== pin.ids.join()) { pin.ids = ids; saveCore(); }
   if (gone.length) pin.gone = [...new Set((pin.gone || []).concat(gone.map(m => m.id)))];
@@ -11025,9 +11056,50 @@ function rvMatchHtml(x, open, L) {
       ${(() => { const own = Object.entries(m.probs || {}).filter(([l]) => (m.mistakes || []).includes(l)).map(([, p]) => String(p.fix || "").trim()).filter(Boolean), ideas = [...new Set([...own, ...fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …")])]; return ideas.length ? `<details class="small" style="margin-top:4px" ${own.length ? "open" : ""}><summary>Ideen aus ${own.length ? "deinen Problem-Notizen und " : ""}deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
     <div class="rvfoot rvs" data-foot="${m.id}">${rvFootHtml(m, L)}</div></div></div>`;
 }
+// Reihenfolge fürs Review (Wunsch der Nutzerin): 1) Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten, die Notiz ist der
+// Ausgangspunkt), 2) Matches, die zu deinen Schwächen passen (Themen, die bei dir gerade oft danebenliegen, offene Missionen, verfehlter Fokus),
+// 3) alle anderen. Innerhalb der Gruppe zuerst das Replay, das am frühesten verschwindet; bei den Schwächen zuerst das deutlichste.
+// Die Tagespflicht nimmt die ersten Matches aus dieser Reihenfolge, alle weiteren kannst du freiwillig auswerten.
+const RV_GROUPS = [
+  ["note", "Mit Notiz, noch nicht ausgewertet", "Am schnellsten: Deine Notiz ist der Ausgangspunkt, du ergänzt nur, was du im Replay siehst."],
+  ["weak", "Passt zu deinen Schwächen", "Themen, die bei dir gerade oft danebenliegen, offene Missionen oder ein verfehlter Fokus."],
+  ["rest", "Alle anderen", "Wenn du noch Zeit und Lust hast."]
+];
+function rvWeakKinds() {
+  const F = rvFocus(), strong = Object.keys(F.w).filter(k => k !== "model" && F.w[k] >= 1.2);
+  return strong.length ? strong : ["death", "low", "ult"];   // solange nichts hervorsticht, zählen schwache Werte als Schwäche
+}
+function rvOrder(cands) {
+  const ctx = rvCtx(), F = rvFocus(), weakK = rvWeakKinds(), left = rvReplayLeft();
+  const mis = new Set(rvState().missions.filter(x => x.status === "open").map(x => `${x.hero}|${x.wid === "cause" ? "death" : x.wid === "enemy" ? "counter" : x.wid}`));
+  return cands.map(m => {
+    const reasons = rvReasons(m, ctx), weak = reasons.filter(r => r.k === "focus" || weakK.includes(r.k) || mis.has(`${m.hero}|${r.k}`));
+    const g = m.qn && m.qn.noted ? 0 : weak.length ? 1 : 2;
+    return { m, reasons, g, weak, sev: weak.reduce((a, r) => a + r.sev * (F.w[r.k] || 1), 0), left: left[m.id] || 0 };
+  }).sort((a, b) => a.g - b.g || (a.g === 1 ? b.sev - a.sev : 0) || a.left - b.left || matchTime(b.m) - matchTime(a.m));
+}
+// Alle Matches, die noch ausgewertet werden können (Replay noch da), ohne die Tagesauswahl
+function rvExtra() {
+  const L = rvList(), d = today(), from = addDays(d, -(RV_DAYS - 1)), pinned = new Set(L.open.map(m => m.id));
+  return rvOrder(state.matches.filter(m => !rvDone(m) && (m.date || "") >= from && !pinned.has(m.id) && (L.left[m.id] || 0) > 0));
+}
+function rvExtraHtml() {
+  const xs = rvExtra(), L = rvList();
+  if (!xs.length) return "";
+  const LL = Object.assign({}, L, { swapsLeft: 0 });
+  return `<div class="card rvextra"><div class="card-head"><h2>${icon("replay")}Wenn du Lust und Zeit hast</h2><span class="badge">${xs.length}</span></div>
+    <p class="lead" style="margin:0 0 8px">Weitere Matches, deren Replay noch da ist. Jedes ausgewertete Match zählt mit, auch über deine Tagesmenge hinaus.</p>
+    ${RV_GROUPS.map(([k, t, hint], gi) => { const l = xs.filter(x => x.g === gi); if (!l.length) return "";
+      const shown = rvUi.more[k] ? l : l.slice(0, 6);
+      return `<div class="rvgroup" data-rvg="${k}"><h3>${gi + 1} · ${esc(t)} <span class="badge">${l.length}</span></h3><p class="small muted" style="margin:0 0 6px">${esc(hint)}</p>
+        <div class="rvlist">${shown.map(x => rvMatchHtml({ m: x.m, reasons: x.reasons }, rvUi.open === x.m.id, LL)).join("")}</div>
+        ${l.length > shown.length ? `<button type="button" class="linkbtn small" data-rvmore="${k}">Alle ${l.length} zeigen</button>` : ""}</div>`; }).join("")}</div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-rvmore]"); if (!b) return; rvUi.more[b.dataset.rvmore] = true; rvRerender(); });
 function rvCardHtml() {
   const L = rvList(), st = rvStatus(), items = L.open.map(m => ({ m, reasons: rvReasons(m) }));
-  const cur = items.find(x => x.m.id === rvUi.open) || items[0];
+  const extraOpen = rvUi.open && !items.some(x => x.m.id === rvUi.open) && state.matches.some(m => m.id === rvUi.open && !rvDone(m));
+  const cur = items.find(x => x.m.id === rvUi.open) || (extraOpen ? null : items[0]);
   if (cur) rvUi.open = cur.m.id;   // das geöffnete Match gilt als angefangen und wird nicht ersetzt
   const total = st.need;
   const dots = Array.from({ length: total }, (_, i) => `<span class="rvdot ${i < st.done ? "on" : i === st.done ? "cur" : ""}"></span>`).join("");
@@ -11055,7 +11127,7 @@ function rvCardHtml() {
 }
 function rvPlanCardHtml(n) {
   const st = dayGet(n);
-  if (n === planDay()) return `<div class="rvwrap">${rvCardHtml()}</div>`;
+  if (n === planDay()) { const nx = rvExtra().length; return `<div class="rvwrap">${rvCardHtml()}${nx ? `<p class="small muted" style="margin:6px 0 0">${plural(nx, "weiteres Match wartet", "weitere Matches warten")}, wenn du Lust hast: <button type="button" class="linkbtn" data-go="review">im Reiter «Review»</button> (zuerst die mit Notiz).</p>` : ""}</div>`; }
   if (st.done && st.rv) return `<div class="note info rvnote" style="margin:8px 0"><span class="ni" aria-hidden="true">i</span><div>Review an diesem Tag: ${st.rv.done} von ${st.rv.need} Matches ausgewertet.</div></div>`;
   return "";
 }
@@ -11126,6 +11198,7 @@ function renderReview() {
     <p>Aus Fehlern lernst du am meisten, wenn du sie im Replay wirklich ansiehst. Die App sucht dir die wichtigsten Matches heraus. Insgesamt hast du ${plural(rvTotal(), "Match", "Matches")} ausgewertet${rvStreak() ? ` · 🔥 ${rvStreak()} ${rvStreak() === 1 ? "Tag" : "Tage"} in Folge` : ""}.</p></div>
     <div class="lesson-stats"><div>${ring(st.need ? st.done / st.need : 1, `${st.done}/${st.need}`)}<span>heute</span></div></div></div>
     <div class="card">${rvCardHtml()}</div>
+    ${rvExtraHtml()}
     ${rvCauseCardHtml()}
     ${rvProbCardHtml()}
     ${badgesHtml()}`;
@@ -12921,7 +12994,7 @@ const PAGE_HELP = {
   progress: ["Verlauf", ["Oben wählst du die Einteilung (Tag, Woche oder Phase), die Rolle und den Modus.", "«Auf einen Blick» vergleicht deine Baseline (Tag 1) mit deinen letzten Matches. Grüne Pfeile heissen besser, rote schlechter.", "Mit «A gegen B» legst du zwei Abschnitte nebeneinander, zum Beispiel Tag 1 gegen Tag 6 oder eine Woche gegen die nächste.", "Wenige Matches schwanken stark: Werte mit weniger als fünf Matches sind grau und haben keinen Pfeil."]],
   watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
-  review: ["Review", ["Die App sucht die wichtigsten Matches der letzten Tage heraus: viele Tode, wenig Heilung oder Schaden, Ults ohne Wirkung, Niederlagen gegen einen Counter und ein Vorbild-Sieg.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
+  review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
   weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten 12 Matches und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
@@ -13084,7 +13157,7 @@ function weeklyPackageText() {
 }
 function planAction(act, b) {
   switch (act) {
-    case "day": openPlanDay(+b.dataset.n); break;
+    case "day": openPlanDay(+b.dataset.n); if (b.dataset.stage) setTimeout(() => stageJump(b.dataset.stage), 60); break;
     case "home": openPlanHome(); break;
     case "fade-off": state.settings.fadeOff = true; save(); renderPlan(); break;
     case "fade-on": delete state.settings.fadeOff; save(); renderPlan(); break;

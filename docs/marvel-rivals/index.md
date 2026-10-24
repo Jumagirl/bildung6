@@ -14,14 +14,15 @@ genau dabei unterstützt – und zeigt, wie KI-Tools als persönlicher Coach ein
 
 ## So ist die App aufgebaut
 
-Die App hat **sechs Bereiche**, damit du den Überblick behältst. Am Handy stehen sie als Leiste unten, am Computer oben, darunter die Unterseiten des jeweiligen Bereichs. Pro Bereich stehen nur die zwei bis vier wichtigsten Unterseiten direkt da, die übrigen unter **«Mehr»** (zum Beispiel Quiz, Schwächen, Zuschauen und Lexikon im Bereich Lernen).
+Die App hat **sieben Bereiche**, damit du den Überblick behältst. Am Handy stehen sie als Leiste unten, am Computer oben, darunter die Unterseiten des jeweiligen Bereichs. Pro Bereich stehen nur die zwei bis vier wichtigsten Unterseiten direkt da, die übrigen unter **«Mehr»** (zum Beispiel Quiz, Schwächen, Zuschauen und Lexikon im Bereich Lernen).
 
 | Bereich | Unterseiten |
 |---|---|
-| **Heute** | Ganz oben **«Jetzt dran»**: genau ein Schritt mit einem Knopf (zum Beispiel die Lektion des Tages). Darunter «Heute zu tun» als kurze Liste (Lektion, Training, Wochenziel, Review, Spielen; der aktuelle Schritt ist markiert), dann Missionen, Grundregeln, Neues bei deinen Helden, «Erste Schritte» für Neue und deine Form. Eternity-Weg, App-Übungen und der Wegweiser stecken zugeklappt unter «Mehr für heute» |
+| **Heute** | Ganz oben **«Jetzt dran»**: genau ein Schritt mit einem Knopf und der Phase, in der du gerade bist. Darunter **«Heute zu tun: dein Tagesablauf»**, immer in derselben Reihenfolge und passend zu den Abschnitten des Trainingstags: **1 · Vorbereiten** (Lektion, Trainingstag mit Vorbereitung, Fokus fürs Match festlegen mit «Passt so» oder «Ändern», einmal pro Woche das Wochenziel), **2 · Spielen** (Block 1 bis 3, nach jedem Match die Notiz), **3 · Auswerten** (Matches ohne Notiz nachtragen, Review, Trainingstag abschliessen), **Wenn du noch Lust hast** (Aufgabe des Wochenziels, weitere Matches fürs Review, Challenge der Woche; zählt nicht mit). Jeder Schritt sagt, wo du ihn machst, vieles hakt sich von selbst ab. Darunter dein Fokus, Grundregeln, die Challenge und eingeklappt «Mehr für heute». |
 | **Woche** | Neben «Heute»: **«Diese Woche auf einen Blick»** sammelt alle laufenden Aufgaben und sagt zu jeder, **wo du sie abhakst** oder ob sie sich selbst abhakt: heute (Trainingstag, Review, Lektion, fällige Fragen), im Match (dein Fokus), diese Woche (Aufgaben des Wochenziels, Missionen, Bootcamp-Aufgaben) und die Challenge der Woche. Darunter wie bisher das Wochenziel (Planen, Durchführen, Reflektieren). |
 | **Lernen** | Trainingsplan, Lektionen, Quiz, Helden-Bootcamp, Schwächen, Zuschauen, Lexikon (mit den Spielregeln) |
-| **Spielen** | Matches (mit den Bereichen «Offen», «Eintragen», «Verlauf»), Review, Dashboard, Squad, Auswertung, Verlauf, Eternity-Weg |
+| **Spielen** | Matches (mit den Bereichen «Offen», «Eintragen», «Verlauf»), Dashboard, Squad, Auswertung, Verlauf, Eternity-Weg |
+| **Review** | Eigener Reiter für Replays, auch wenn du einfach Lust und Zeit hast. Reihenfolge: **1 · Matches mit Notiz**, die noch nicht ausgewertet sind (am schnellsten, die Notiz ist der Ausgangspunkt), **2 · Matches, die zu deinen Schwächen passen** (Themen, die gerade oft danebenliegen, offene Missionen, verfehlter Fokus), **3 · alle anderen**; innerhalb der Gruppe zuerst das Replay, das am frühesten verschwindet. Die ersten davon sind deine Tagesmenge (Pflicht im Trainingsplan), darunter stehen unter «Wenn du Lust und Zeit hast» alle weiteren, nach denselben Gruppen. Jedes ausgewertete Match zählt mit. |
 | **Helden** | Helden-Guide, Team & Counter, Team-Ups, Meta & Patch |
 | **Coach** | Daten & Sync, Training, KI-Coach |
 
