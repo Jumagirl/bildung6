@@ -5107,7 +5107,7 @@ function renderToday() {
   if (rs.need) post.push({ done: rs.ok, t: `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, s: rs.ok ? "Heute geschafft." : "Zuerst die Matches mit Notiz, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ${rs.ok ? "ghost" : ""}" type="button" data-rv-go="${rs.L.open[0] ? rs.L.open[0].id : ""}">${rs.ok ? "Ansehen" : "Weiter"}</button>` });
   if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : "Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»", a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
   // 4) Extra, wenn du noch Lust hast (zählt nicht mit)
-  if (g && goalTopics(g).length) { const o = openTasks(g)[0]; if (o) extra.push({ done: false, t: `Wochenziel: ${esc(o.kind)}`, s: esc(o.text), a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }); }
+  if (g && goalTopics(g).length) { const o = openTasks(g)[0]; if (o) extra.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: `${esc(o.kind)}: ${esc(o.text)}`, a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }); }
   else if (g) extra.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
   { const nx = rvExtra().length; if (nx) extra.push({ done: false, t: `${plural(nx, "weiteres Match", "weitere Matches")} zum Auswerten`, s: "Mit Notiz zuerst, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ghost" type="button" data-go="review">Review</button>` }); }
   { const { F, c } = funCur(), p = funProg(c, F); extra.push({ done: p.done, t: `Challenge der Woche: ${c.em} ${esc(c.t)}`, s: p.done ? "geschafft" : `${esc(p.txt)} · zum Spass`, a: `<button class="btn small ghost" type="button" data-funjump="1">Ansehen</button>` }); }
@@ -11066,7 +11066,7 @@ const RV_GROUPS = [
   ["rest", "Alle anderen", "Wenn du noch Zeit und Lust hast."]
 ];
 function rvWeakKinds() {
-  const F = rvFocus(), strong = Object.keys(F.w).filter(k => k !== "model" && F.w[k] >= 1.2);
+  const F = rvFocus(), strong = Object.keys(F.w).filter(k => k !== "model" && k !== "focus" && F.w[k] >= 1.2);
   return strong.length ? strong : ["death", "low", "ult"];   // solange nichts hervorsticht, zählen schwache Werte als Schwäche
 }
 function rvOrder(cands) {
@@ -11075,8 +11075,10 @@ function rvOrder(cands) {
   return cands.map(m => {
     const reasons = rvReasons(m, ctx), weak = reasons.filter(r => r.k === "focus" || weakK.includes(r.k) || mis.has(`${m.hero}|${r.k}`));
     const g = m.qn && m.qn.noted ? 0 : weak.length ? 1 : 2;
-    return { m, reasons, g, weak, sev: weak.reduce((a, r) => a + r.sev * (F.w[r.k] || 1), 0), left: left[m.id] || 0 };
-  }).sort((a, b) => a.g - b.g || (a.g === 1 ? b.sev - a.sev : 0) || a.left - b.left || matchTime(b.m) - matchTime(a.m));
+    // Schwächen: nach Deutlichkeit; alle anderen: auffällige Matches (Tode, Counter, Vorbild …) vor ganz normalen
+    const sev = g === 1 ? weak.reduce((a, r) => a + r.sev * (F.w[r.k] || 1), 0) : g === 2 ? reasons.reduce((a, r) => a + r.sev, 0) : 0;
+    return { m, reasons, g, weak, sev, left: left[m.id] || 0 };
+  }).sort((a, b) => a.g - b.g || b.sev - a.sev || a.left - b.left || matchTime(b.m) - matchTime(a.m));
 }
 // Alle Matches, die noch ausgewertet werden können (Replay noch da), ohne die Tagesauswahl
 function rvExtra() {
