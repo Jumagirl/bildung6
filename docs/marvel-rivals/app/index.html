@@ -11094,13 +11094,30 @@ function rvFocusHtml() {
 // Die Auswahl richtet sich nach dem Stand der Matches: Neue Matches können unberührte Vorschläge ersetzen, ein Match, an dem du schon
 // arbeitest (Ursache, Stärke oder Vorsatz eingetragen, oder gerade geöffnet), bleibt in jedem Fall stehen.
 let rvCache = null;   // gilt bis zum nächsten Speichern (saveCore leert ihn), damit eine Seite die Auswahl nicht mehrfach berechnet
+// Das Review gehört zum Trainingstag, nicht zum Kalendertag: Bleibt ein Plantag über Mitternacht offen (zum Beispiel weil «Tag abschliessen»
+// vergessen ging), zählen die Reviews seit dem Abschluss des vorigen Plantags weiter (höchstens 14 Tage zurück). Am Abschlusstag des vorigen
+// Tags zählen nur die Reviews danach: per Zeitstempel (doneAt), bei älteren Daten die, die der vorige Tag nicht schon verbraucht hat (rv.done).
+// Heutige Reviews zählen immer, wie bisher.
+function rvDoneForDay() {
+  const d = today(), all = state.matches.filter(rvDone), mine = all.filter(m => m.review.on === d);
+  const n = planStarted() ? planDay() : 0, prev = n > 1 && n <= PLAN_N ? dayGet(n - 1) : null;
+  if (!prev || !prev.done || prev.done >= d) return mine;
+  const old = all.filter(m => m.review.on < d && m.review.on >= prev.done && m.review.on >= addDays(d, -14));
+  let carry;
+  if (prev.doneAt) carry = old.filter(m => (m.review.at || 0) > prev.doneAt);
+  else {
+    const onPrev = old.filter(m => m.review.on === prev.done).sort((a, b) => (a.review.at || 0) - (b.review.at || 0));
+    carry = onPrev.slice(prev.rv ? prev.rv.done : onPrev.length).concat(old.filter(m => m.review.on > prev.done));
+  }
+  return carry.sort((a, b) => (a.review.at || 0) - (b.review.at || 0)).concat(mine);
+}
 function rvList() {
   if (rvCache && rvCache.day === today() && rvCache.open === rvUi.open && rvCache.ms === state.matches && rvCache.len === state.matches.length) return rvCache.val;
   const rv = rvState(), d = today(), n = rvN();
   Object.keys(rv.pins).forEach(k => { if (k < addDays(d, -14)) delete rv.pins[k]; });
   const pin = rv.pins[d] || (rv.pins[d] = { ids: [], skip: [], swaps: 0 });
   const byId = id => state.matches.find(m => m.id === id);
-  const done = state.matches.filter(m => rvDone(m) && m.review.on === d);
+  const done = rvDoneForDay();
   const touched = m => (m.goods || []).length || deathTotal(m.deathCauses) || rvWords(m.next) || rvUi.open === m.id;
   const left = rvReplayLeft();
   const was = pin.ids.map(byId).filter(m => m && !rvDone(m));
@@ -11258,7 +11275,7 @@ function rvCardHtml() {
   if (cur) rvUi.open = cur.m.id;   // das geöffnete Match gilt als angefangen und wird nicht ersetzt
   const total = st.need;
   const dots = Array.from({ length: total }, (_, i) => `<span class="rvdot ${i < st.done ? "on" : i === st.done ? "cur" : ""}"></span>`).join("");
-  const doneList = L.done.length ? `<details class="rvdone"><summary class="small">Schon ausgewertet (${L.done.length})</summary>${L.done.map(m => `<div class="orow"><span>${heroChip(m.hero)}</span><span>${resultPill(m.result)}</span><span class="sp small muted">${m.k}/${m.d}/${m.a} · ${esc((m.next || "").slice(0, 70))}</span></div>`).join("")}</details>` : "";
+  const doneList = L.done.length ? `<details class="rvdone"><summary class="small">Schon ausgewertet (${L.done.length})</summary>${L.done.map(m => `<div class="orow"><span>${heroChip(m.hero)}</span><span>${resultPill(m.result)}</span><span class="sp small muted">${m.review.on !== today() ? `ausgewertet am ${fmtDate(m.review.on)} · ` : ""}${m.k}/${m.d}/${m.a} · ${esc((m.next || "").slice(0, 70))}</span></div>`).join("")}${L.done.some(m => m.review.on !== today()) ? `<p class="small muted" style="margin:6px 0 0">Reviews von früheren Tagen zählen mit, solange Tag ${planDay()} noch nicht abgeschlossen ist.</p>` : ""}</details>` : "";
   return `<div class="rvcard"><div class="rvhead"><b>${icon("edit")}Review: die wichtigsten Matches</b><span class="badge ${st.ok ? "ok" : ""}">${total ? `${st.done} von ${total}` : "nichts offen"}</span></div>
     ${total ? `<div class="rvdots" role="img" aria-label="${st.done} von ${total} Matches ausgewertet">${dots}</div>` : ""}
     <p class="small muted" style="margin:0">So geht es: Öffne das Replay des Matches und such deine Tode (das Spiel springt nicht direkt dorthin, du siehst nur, wann Spieler gestorben sind). Schau dir jeweils die zehn Sekunden davor an und tippe die Ursache an. Die App prüft nicht, ob du das Replay wirklich angeschaut hast. Sie verlangt aber, dass jeder Tod eine Ursache bekommt und dass du eine Stärke und einen eigenen Vorsatz nennst. Erst dann zählt das Match.</p>
@@ -11351,7 +11368,7 @@ function renderReview() {
   const el = $("#reviewBody"), st = rvStatus();
   el.innerHTML = `<div class="card hero-banner lesson-hero"><div style="flex:1;min-width:240px"><h2 style="font-size:1.3rem;margin-top:0">Review</h2>
     <p>Aus Fehlern lernst du am meisten, wenn du sie im Replay wirklich ansiehst. Die App sucht dir die wichtigsten Matches heraus. Insgesamt hast du ${plural(rvTotal(), "Match", "Matches")} ausgewertet${rvStreak() ? ` · 🔥 ${rvStreak()} ${rvStreak() === 1 ? "Tag" : "Tage"} in Folge` : ""}.</p></div>
-    <div class="lesson-stats"><div>${ring(st.need ? st.done / st.need : 1, `${st.done}/${st.need}`)}<span>heute</span></div></div></div>
+    <div class="lesson-stats"><div>${ring(st.need ? st.done / st.need : 1, `${st.done}/${st.need}`)}<span>${st.L.done.some(m => m.review.on !== today()) ? `für Tag ${planDay()}` : "heute"}</span></div></div></div>
     <div class="card">${rvCardHtml()}</div>
     ${rvExtraHtml()}
     ${rvCauseCardHtml()}
@@ -13279,7 +13296,7 @@ function completeDay(n) {
   const st = dayEnsure(n);
   if (planStarted() && rvAnchor(PLAN.days[n - 1]) && n === planDay()) { const rs = rvStatus(); st.rv = { done: rs.done, need: rs.need }; }
   const t = $("#dayNote"); if (t) st.note = t.value.trim();
-  st.done = today();
+  st.done = today(); st.doneAt = Date.now();
   if (!state.plan.start) state.plan.start = today();
   const moved = scheduleCarry(n);
   save();
@@ -13350,7 +13367,7 @@ function planAction(act, b) {
     case "read": { const k = b.dataset.k; planUi.read.has(k) ? planUi.read.delete(k) : planUi.read.add(k); renderPlan(); break; }
     case "start": startPlan(); break;
     case "complete": completeDay(+b.dataset.n); break;
-    case "reopen": { const n = +b.dataset.n; dayEnsure(n).done = null; save(); stageResetOpen(n); renderPlan(); renderLevelChip(); break; }
+    case "reopen": { const n = +b.dataset.n; dayEnsure(n).done = null; delete dayEnsure(n).doneAt; save(); stageResetOpen(n); renderPlan(); renderLevelChip(); break; }
     case "stage": { const n = planUi.day, k = b.dataset.k; if (!n) break; planUi.stOpen[n + ":" + k] = true; const el = document.getElementById("stage-" + k); if (el) stageJump(k); break; }
     case "dayall": { dayAll = !dayAll; try { localStorage.setItem(DAYALL_KEY, dayAll ? "1" : "0"); } catch (e) {} if (planUi.day) stageResetOpen(planUi.day); renderPlan(); break; }
     case "prep-ok": { const n = +b.dataset.n, before = dayStageCur(n); dayEnsure(n).prepOk = true; save(); stageAfterChange(n, before); break; }
