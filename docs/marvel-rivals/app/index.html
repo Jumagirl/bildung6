@@ -11095,21 +11095,21 @@ function rvFocusHtml() {
 // arbeitest (Ursache, Stärke oder Vorsatz eingetragen, oder gerade geöffnet), bleibt in jedem Fall stehen.
 let rvCache = null;   // gilt bis zum nächsten Speichern (saveCore leert ihn), damit eine Seite die Auswahl nicht mehrfach berechnet
 // Das Review gehört zum Trainingstag, nicht zum Kalendertag: Bleibt ein Plantag über Mitternacht offen (zum Beispiel weil «Tag abschliessen»
-// vergessen ging), zählen die Reviews seit dem Abschluss des vorigen Plantags weiter (höchstens 14 Tage zurück). Am Abschlusstag des vorigen
-// Tags zählen nur die Reviews danach: per Zeitstempel (doneAt), bei älteren Daten die, die der vorige Tag nicht schon verbraucht hat (rv.done).
-// Heutige Reviews zählen immer, wie bisher.
+// vergessen ging), zählen die Reviews weiter. Gezählt wird ab dem Abschluss des vorletzten Plantags (höchstens 14 Tage zurück): Davon braucht
+// der vorige Tag so viele, wie er verlangt hat (rv.need, die frühesten zuerst), alles darüber zählt für den aktuellen Tag. Ohne Angabe gilt
+// alles bis zum Abschluss des vorigen Tags als verbraucht. Übernommen werden höchstens so viele, wie ein Tag braucht. Zeitstempel (doneAt)
+// machen die Grenze genau, ältere Daten haben nur ein Datum.
+// Am Abschlusstag des vorigen Tags zählen heutige Reviews wie bisher alle.
 function rvDoneForDay() {
   const d = today(), all = state.matches.filter(rvDone), mine = all.filter(m => m.review.on === d);
   const n = planStarted() ? planDay() : 0, prev = n > 1 && n <= PLAN_N ? dayGet(n - 1) : null;
   if (!prev || !prev.done || prev.done >= d) return mine;
-  const old = all.filter(m => m.review.on < d && m.review.on >= prev.done && m.review.on >= addDays(d, -14));
-  let carry;
-  if (prev.doneAt) carry = old.filter(m => (m.review.at || 0) > prev.doneAt);
-  else {
-    const onPrev = old.filter(m => m.review.on === prev.done).sort((a, b) => (a.review.at || 0) - (b.review.at || 0));
-    carry = onPrev.slice(prev.rv ? prev.rv.done : onPrev.length).concat(old.filter(m => m.review.on > prev.done));
-  }
-  return carry.sort((a, b) => (a.review.at || 0) - (b.review.at || 0)).concat(mine);
+  const pp = n > 2 ? dayGet(n - 2) : null, at = m => m.review.at || 0;
+  const after = (m, day) => !day || !day.done ? true : day.doneAt ? at(m) > day.doneAt : m.review.on > day.done;
+  const win = all.filter(m => m.review.on < d && m.review.on >= addDays(d, -14) && after(m, pp)).sort((a, b) => at(a) - at(b));
+  const before = win.filter(m => !after(m, prev)), later = win.filter(m => after(m, prev));
+  const used = prev.rv ? Math.min(prev.rv.need, prev.rv.done) : before.length;
+  return before.slice(used).concat(later).slice(-rvN()).concat(mine);   // übernommen werden höchstens so viele, wie ein Tag braucht (die neusten)
 }
 function rvList() {
   if (rvCache && rvCache.day === today() && rvCache.open === rvUi.open && rvCache.ms === state.matches && rvCache.len === state.matches.length) return rvCache.val;
