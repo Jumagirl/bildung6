@@ -33,9 +33,9 @@ from typing import Any, Iterable, Mapping
 
 FORMAT = "rivals-coach-sync"
 VERSION = 1
-# Stand der Match-Details: 2 = alle 12 Spieler mit Werten (team/foes), eigene Final Hits, Solo-Kills und Treffergenauigkeit.
+# Stand der Match-Details: 2 = alle 12 Spieler mit Werten (team/foes), eigene Final Hits, Solo-Kills und Treffergenauigkeit; 3 = dazu der eigene Rang (rl).
 # Ältere Matches werden beim nächsten Abgleich einmal neu geholt.
-DETAIL_VERSION = 2
+DETAIL_VERSION = 3
 
 # Namen, die in der App anders heissen als in rivals-api
 NAME_FIXES = {
@@ -313,6 +313,9 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
                 for key in ("fh", "solo", "acc"):
                     if key in mine:
                         match[key] = mine[key]
+                rank = to_int(player.get("rank_level"))   # eigener Rang laut Matchdaten: 1 = Bronze 3 … 22 = Eternity, 23 = One Above All
+                if rank and 1 <= rank <= 23:
+                    match["rl"] = rank
     if me_team is None:
         return
     team: list[dict] = []

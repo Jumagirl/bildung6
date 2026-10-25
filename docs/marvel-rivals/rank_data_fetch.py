@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Holt Daten nach Rangband für den Rivals Coach: Helden-Tierlisten (Winrate, Pickrate, Banrate) für Celestial, Celestial+ und Eternity+,
-Matchup-Winrates aller Helden gegeneinander und die Verteilung der Ränge. Alles öffentliche Daten von Rivals Data.
+"""Holt Daten nach Rangband für den Rivals Coach: Helden-Tierlisten (Winrate, Pickrate, Banrate) von Diamond+ bis Eternity+ (tiefer bietet
+die Quelle keine Tierlisten an), Matchup-Winrates aller Helden gegeneinander und die Verteilung aller 23 Rang-Stufen. Alles öffentliche
+Daten von Rivals Data.
 
 Benutzung:
     python rank_data_fetch.py rank_data.json
@@ -14,9 +15,11 @@ from datetime import datetime, timezone
 
 from rivals_sync import NAME_FIXES
 
-BANDS = ["celestial", "celestial_plus", "eternity_plus", "grandmaster_plus"]
-RANK_NAMES = {14: "Diamond 2", 15: "Diamond 1", 16: "Grandmaster 3", 17: "Grandmaster 2", 18: "Grandmaster 1",
-              19: "Celestial 3", 20: "Celestial 2", 21: "Celestial 1", 22: "Eternity", 23: "One Above All"}
+BANDS = ["celestial", "celestial_plus", "eternity_plus", "grandmaster_plus", "diamond_plus"]
+# Rang-Level 1 bis 23: je drei Stufen pro Rang (3 ist die tiefste), dann Eternity und One Above All
+RANK_NAMES = {lv: f"{name} {3 - i}" for r, name in enumerate(["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Grandmaster", "Celestial"])
+              for i, lv in enumerate(range(r * 3 + 1, r * 3 + 4))}
+RANK_NAMES.update({22: "Eternity", 23: "One Above All"})
 
 
 def main(out: str) -> int:
@@ -52,7 +55,7 @@ def main(out: str) -> int:
         print(f"Matchups: {len(result['matchups'])} Helden")
         rd = client.providers.rt.request("/rank-distribution/data")
         total = sum(r.get("total", 0) for r in rd)
-        result["ranks"] = [{"level": r["rank"], "name": RANK_NAMES.get(r["rank"]), "n": r["total"]} for r in sorted(rd, key=lambda r: -r["rank"]) if r["rank"] >= 14]
+        result["ranks"] = [{"level": r["rank"], "name": RANK_NAMES.get(r["rank"]), "n": r["total"]} for r in sorted(rd, key=lambda r: -r["rank"]) if r["rank"] in RANK_NAMES]
         result["rankTotal"] = total
         print(f"Rangverteilung: {total} erfasste Spieler")
     with open(out, "w", encoding="utf-8") as fh:
