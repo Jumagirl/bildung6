@@ -58,7 +58,11 @@ def main(out: str, roles_path: str, *sources: str, mode: str = "Competitive") ->
                 secs = p.get("t") or m["dur"]
                 if not secs or secs < MIN_SECONDS * 0.8 or p.get("d") is None:
                     continue
-                per = lambda v: (v or 0) / (secs / 60) * 10
+                # Fehlende Werte bleiben None und fallen bei dieser Kennzahl weg: Rivals Data liefert «Geblockt» und «Schaden eingesteckt»
+                # nicht in jedem Match (in Quick Match bei rund 40 % der Spieler nicht). Als 0 gezählt, würden sie die Mitte nach unten ziehen.
+                per = lambda v: None if v is None else v / (secs / 60) * 10
+                if all(not p.get(k) for k in ("dmg", "heal", "blk", "k", "d", "a")):
+                    continue   # ganz leere Zeile (zum Beispiel abwesend): kein Datenpunkt
                 rows.append({"hero": hero, "u": p["u"], "band": b, "dmg": per(p.get("dmg")), "heal": per(p.get("heal")),
                              "blk": per(p.get("blk")), "d": per(p.get("d")), "k": per(p.get("k")), "a": per(p.get("a")),
                              "tk": per(p.get("tk")), "acc": p.get("acc"), "mvp": 1 if p.get("mvp") else 0, "svp": 1 if p.get("svp") else 0})
@@ -78,7 +82,9 @@ def main(out: str, roles_path: str, *sources: str, mode: str = "Competitive") ->
             return None
         o: dict = {"n": len(rs), "p": len({r["u"] for r in rs})}
         for m in METRICS:
-            o[m] = [rnd(v, 1 if m in ("d", "k", "a") else 0) for v in q([r[m] for r in rs])]
+            vs = [r[m] for r in rs if r[m] is not None]
+            if len(vs) >= MIN_ROWS:
+                o[m] = [rnd(v, 1 if m in ("d", "k", "a") else 0) for v in q(vs)]
         accs = [r["acc"] for r in rs if r["acc"] not in (None, 0)]
         if len(accs) >= MIN_ROWS:
             o["acc"] = [rnd(v, 1) for v in q(accs)]
@@ -104,7 +110,8 @@ def main(out: str, roles_path: str, *sources: str, mode: str = "Competitive") ->
         if len(rs) >= ROLE_MIN:
             role_stats.setdefault(rl, {})[BANDS[b][0]] = {
                 "n": len(rs), "carry": rnd(sum(r["mvp"] + r["svp"] for r in rs) / len(rs), 3),
-                **{m: rnd(statistics.median([r[m] for r in rs]), 1 if m in ("d", "k", "a") else 0) for m in METRICS}}
+                **{m: rnd(statistics.median(vs), 1 if m in ("d", "k", "a") else 0) for m in METRICS
+                   for vs in [[r[m] for r in rs if r[m] is not None]] if len(vs) >= ROLE_MIN // 2}}
     band_rows = defaultdict(int)
     for r in rows:
         band_rows[r["band"]] += 1
