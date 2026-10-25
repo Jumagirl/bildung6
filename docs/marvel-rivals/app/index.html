@@ -816,6 +816,9 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .rkp { font-size: .72rem; padding: 2px 7px; border-radius: 999px; background: var(--surface-3); color: var(--muted); white-space: nowrap; }
 .rkp.ok { background: var(--good); color: #fff; }
 .rkp.na { background: transparent; border: 1px dashed var(--grid); }
+.dmore { margin-top: 6px; }
+.dmore > summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+.dmore .deathgrid { margin-top: 4px; }
 @media (max-width: 560px) { .rkl li { grid-template-columns: minmax(0, 1fr); } .rkl .rkc { justify-content: flex-start; } }
 .rkt td.me, .rkt th.me { font-weight: 800; }
 .rkt tr.goal td { background: color-mix(in srgb, var(--gold) 14%, transparent); }
@@ -2919,6 +2922,18 @@ const DEATH_BY_ROLE = {
     ["Von Diver oder Flanker erwischt", "Dive nicht abgewehrt"], ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Cooldowns falsch genutzt"], ["Keine Deckung genutzt", "Keine Deckung genutzt"],
     ["Auf ein falsches Ziel gestürmt", "Fokus auf falsches Ziel"]]
 };
+// Weitere Todesursachen, die in die Hauptliste nicht passen: für alle Rollen und pro Rolle. Sie stehen im Match-Log und im Review unter
+// «Weitere Ursachen». Ursachen ohne Fehler-Marke (null) zählen in der Statistik, führen aber zu keiner Übung.
+const DEATH_MORE = [["Von hinten oder ungesehen erwischt", "Nicht auf Minimap/Sound geachtet"], ["Von Kontrolle erwischt (Betäubung, Ziehen, Wegstossen)", null],
+  ["Von der Map gestossen oder abgestürzt", null], ["Einzeln vom Spawn zurückgelaufen", "Ohne Team reingegangen"], ["Verlorenen Fight nicht verlassen", null],
+  ["Falscher Held gegen dieses Team, zu spät gewechselt", "Zu spät gewechselt (Held)"], ["Bewusst geopfert (Punkt, Overtime, Team gerettet)", null], ["Lag oder Verbindungsproblem", null]];
+const DEATH_MORE_ROLE = {
+  Strategist: [["Im Duell verloren statt zum Team zu gehen", "Dive nicht abgewehrt"], ["Tank weg oder zu weit vorne, ohne Schutz", null]],
+  Vanguard: [["Ohne Heilung (Supports tot oder weit weg)", null]],
+  Duelist: [["Duell verloren (Zielen oder Timing)", "Schlechtes Zielen"], ["Ohne Heilung (Supports tot oder weit weg)", null]]
+};
+// Diese Ursachen sind kein Fehler, den man üben kann: keine Mission «häufigste Todesursache» dazu
+const DEATH_NEUTRAL = ["Bewusst geopfert (Punkt, Overtime, Team gerettet)", "Lag oder Verbindungsproblem", "Sonstiges"];
 const GOODS = [
   "Gutes Ult-Timing", "Gute Positionierung", "Viele Picks", "Team gut unterstützt",
   "Ruhig geblieben", "Gute Calls", "Objective gespielt", "Cooldowns gut genutzt", "Richtig gecountert"
@@ -6117,18 +6132,30 @@ function insights() {
 let deathState = {};   // Ursache -> Anzahl, für das Match im Formular
 const roleOfHero = h => { const r = h ? heroRole(h) : "?"; return r === "?" ? "" : r; };
 function deathOptions(hero) { return DEATH_BY_ROLE[roleOfHero(hero) || "Strategist"].concat([["Sonstiges", null]]); }
+const deathMore = hero => (DEATH_MORE_ROLE[roleOfHero(hero) || "Strategist"] || []).concat(DEATH_MORE);
 function deathMistake(label) {
-  for (const role in DEATH_BY_ROLE) for (const [l, m] of DEATH_BY_ROLE[role]) if (l === label) return m;
+  for (const role in DEATH_BY_ROLE) for (const [l, m] of DEATH_BY_ROLE[role].concat(DEATH_MORE_ROLE[role] || [])) if (l === label) return m;
+  for (const [l, m] of DEATH_MORE) if (l === label) return m;
   return null;
+}
+// Knöpfe für Todesursachen: Hauptliste der Rolle, darunter «Weitere Ursachen» (offen, sobald dort etwas gezählt ist oder du sie geöffnet hast)
+let dmoreOpen = false;
+document.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("dmore")) dmoreOpen = e.target.open; }, true);
+function deathGridHtml(hero, counts, btn) {
+  const c = counts || {}, main = deathOptions(hero).map(o => o[0]), more = deathMore(hero).map(o => o[0]), known = new Set(main.concat(more));
+  const extra = Object.keys(c).filter(l => !known.has(l)), used = more.filter(l => c[l]).length;
+  return `<div class="deathgrid">${main.concat(extra).map(btn).join("")}</div>
+    <details class="dmore" ${used || dmoreOpen ? "open" : ""}><summary class="small">Weitere Ursachen${used ? ` (${used} gewählt)` : ""}</summary><div class="deathgrid">${more.map(btn).join("")}</div></details>`;
 }
 const deathTotal = o => Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0);
 // Die fünf Hauptgruppen des Plans (Position, Fluchtweg/Cooldown, Gegnerische Ult, Zu gierig, Vom Team getrennt)
 const DEATH_CAT = {
-  "Position": ["Von Diver oder Flanker erwischt", "Ohne Deckung gestanden", "Aus der Distanz getroffen (Poke, Scharfschütze)", "Keine Deckung genutzt", "Von mehreren Gegnern fokussiert, nicht zurückgezogen"],
+  "Position": ["Von Diver oder Flanker erwischt", "Ohne Deckung gestanden", "Aus der Distanz getroffen (Poke, Scharfschütze)", "Keine Deckung genutzt", "Von mehreren Gegnern fokussiert, nicht zurückgezogen",
+    "Von hinten oder ungesehen erwischt", "Von Kontrolle erwischt (Betäubung, Ziehen, Wegstossen)", "Von der Map gestossen oder abgestürzt", "Im Duell verloren statt zum Team zu gehen"],
   "Fluchtweg/Cooldown": ["Fluchtfähigkeit nicht bereit oder nicht genutzt", "Schutz (Schild) zu früh weg oder falsch genutzt"],
   "Gegnerische Ult": ["Gegner-Ult getroffen"],
-  "Zu gierig": ["Zu weit vorne beim Heilen", "Zu weit vorgelaufen", "Zu weit vorne", "Mit wenig Leben weiter gekämpft", "Auf ein falsches Ziel gestürmt"],
-  "Vom Team getrennt": ["Allein gestanden, Team zu weit weg", "Allein geflankt", "Ohne Support oder Team vorne", "Ohne Team reingegangen"]
+  "Zu gierig": ["Zu weit vorne beim Heilen", "Zu weit vorgelaufen", "Zu weit vorne", "Mit wenig Leben weiter gekämpft", "Auf ein falsches Ziel gestürmt", "Verlorenen Fight nicht verlassen"],
+  "Vom Team getrennt": ["Allein gestanden, Team zu weit weg", "Allein geflankt", "Ohne Support oder Team vorne", "Ohne Team reingegangen", "Einzeln vom Spawn zurückgelaufen", "Tank weg oder zu weit vorne, ohne Schutz", "Ohne Heilung (Supports tot oder weit weg)"]
 };
 const deathCat = l => DEATH_CAT[l] ? l : Object.keys(DEATH_CAT).find(c => DEATH_CAT[c].includes(l)) || "Sonstiges";
 // Passende Fehler-Marken zu einer Ursache; bei einer Gruppe aus der Notiz (z. B. «Position») die aller Ursachen dieser Gruppe
@@ -6301,10 +6328,9 @@ function renderDeathBox() {
   const el = $("#deathBox");
   if (!el) return;
   const hero = $("#heroSelect") ? $("#heroSelect").value : "";
-  const labels = deathOptions(hero).map(o => o[0]), extra = Object.keys(deathState).filter(l => !labels.includes(l));
   const total = deathTotal(deathState), d = Number($("#matchForm").d.value) || 0;
-  el.innerHTML = `<div class="deathgrid">${labels.concat(extra).map(l => { const n = deathState[l] || 0;
-    return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-death="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-death-dec="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; }).join("")}</div>
+  el.innerHTML = `${deathGridHtml(hero, deathState, l => { const n = deathState[l] || 0;
+    return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-death="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-death-dec="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; })}
     <p class="muted small" style="margin:8px 0 0">${total ? `${plural(total, "Tod", "Tode")} erfasst${d ? ` von ${d} laut K/D/A` : ""}.` : "Noch keine Tode erfasst."}${total && total < d ? ` ${d - total} offen: Du kannst sie später beim Bearbeiten nachtragen.` : ""}</p>
     ${ultPickHtml("f", ultDeathN(deathState), ultState, slotValues("enemySlots").filter(Boolean))}`;
 }
@@ -10597,7 +10623,7 @@ function tbHeroHtml(h, opts) {
 }
 // Meta nach Rangband
 const TB_BANDS = [["eternity_plus", "Eternity+"], ["celestial_plus", "Celestial+"], ["celestial", "Celestial"], ["grandmaster_plus", "Grandmaster+"], ["diamond_plus", "Diamond+"]].filter(([k]) => { const t = TB(); return !t || !t.bands || t.bands[k]; });
-const tbUi = { role: "Strategist", band: "eternity_plus", mrole: "", sort: "wr" };
+const tbUi = { role: "Strategist", band: "eternity_plus", mrole: "", sort: "wr", mode: "" };
 function tbMetaHtml() {
   const t = TB();
   if (!t) return "";
@@ -10670,31 +10696,51 @@ const RK_BANDS = [["bronze", "Bronze", 1, 3], ["silver", "Silver", 4, 6], ["gold
 const RKL = () => { const t = TB(); return (t && t.ladder) || null; };
 const rkName = lv => lv >= 23 ? "One Above All" : lv === 22 ? "Eternity" : lv >= 1 ? `${RK_BANDS[Math.floor((lv - 1) / 3)][1]} ${3 - (lv - 1) % 3}` : "";
 const rkBandOf = lv => RK_BANDS.findIndex(b => lv >= b[2] && lv <= b[3]);
-// Werte eines Helden in einem Rangband (Index in RK_BANDS)
-function rkBench(h, bi) {
-  const k = RK_BANDS[bi][0], tb = tbHero(h), L = RKL();
+// Modus des Vergleichs: Quick Match mit Quick Match, Competitive mit Competitive. Quick-Match-Werte pro Rang (TOPB.qp) stammen aus
+// qp_bench_collect.py, der Rang jedes Spielers aus dessen Profil. Ohne diese Daten gibt es nur Competitive.
+const QPL = () => { const t = TB(); return (t && t.qp) || null; };
+const RK_MODES = { qp: ["Quick Match", "Quick Match"], ranked: ["Competitive", "Competitive"] };
+const modeKey = mode => mode === "Quick Match" ? "qp" : mode === "Competitive" ? "ranked" : null;
+// Standard auf «Rang-Weg»: der Modus, den du in den letzten 60 Matches öfter gespielt hast (gewählt: tbUi.mode)
+function rkMode() {
+  if (!QPL()) return "ranked";
+  if (tbUi.mode === "qp" || tbUi.mode === "ranked") return tbUi.mode;
+  const last = state.matches.slice(-60), qp = last.filter(m => m.mode === "Quick Match").length, rk = last.filter(m => m.mode === "Competitive").length;
+  return qp > rk ? "qp" : "ranked";
+}
+const rkModeOk = (m, mk) => m.mode === RK_MODES[mk][0];
+// Werte eines Helden in einem Rangband (Index in RK_BANDS) und Modus (Standard: Modus des Rang-Wegs)
+function rkBench(h, bi, mk) {
+  const k = RK_BANDS[bi][0];
+  if ((mk || rkMode()) === "qp") { const Q = QPL(); return (Q && Q.heroes && Q.heroes[h] && Q.heroes[h][k]) || null; }
+  const tb = tbHero(h), L = RKL();
   if (k === "eternity" && tb && tb.e) return tb.e;
   if (k === "celestial" && tb && tb.c) return tb.c;
   return (L && L.heroes && L.heroes[h] && L.heroes[h][k]) || null;
 }
 // Anteil MVP oder SVP einer Rolle in einem Rangband
-function rkCarry(role, bi) {
-  const k = RK_BANDS[bi][0], rb = tbRole(role), L = RKL(), cq = rb && rb.carry;
+function rkCarry(role, bi, mk) {
+  const k = RK_BANDS[bi][0];
+  if ((mk || rkMode()) === "qp") { const Q = QPL(), r = Q && Q.roles && Q.roles[role] && Q.roles[role][k]; return r ? r.carry : null; }
+  const rb = tbRole(role), L = RKL(), cq = rb && rb.carry;
   if (k === "eternity" && cq && cq.e != null) return cq.e;
   if (k === "celestial" && cq && cq.c != null) return cq.c;
   const r = L && L.roles && L.roles[role] && L.roles[role][k];
   return r ? r.carry : null;
 }
-// Dein Rang: selbst gewählt (state.app.rank) oder aus dem neusten importierten Match (m.rl, Rang laut Matchdaten)
+// Dein Rang: selbst gewählt (state.app.rank), sonst das Neuere aus dem letzten importierten Competitive-Match (m.rl) und dem Profil-Rang
+// aus dem Abgleich (state.sync.player.rank). Quick Match zählt nicht: Dort steht in den Matchdaten bei allen Spielern Rang-Level 1.
 function rkMine() {
   const set = state.app && +state.app.rank;
   if (set >= 1 && set <= 23) return { lv: set, src: "set" };
-  const m = state.matches.filter(x => x.rl >= 1 && x.rl <= 23).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
-  return m ? { lv: m.rl, src: "match", date: m.date } : null;
+  const m = state.matches.filter(x => x.mode === "Competitive" && x.rl >= 1 && x.rl <= 23).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+  const pr = state.sync && state.sync.player && state.sync.player.rank, prOk = pr && pr.level >= 1 && pr.level <= 23;
+  if (m && (!prOk || (m.date || "") >= (pr.at || ""))) return { lv: m.rl, src: "match", date: m.date };
+  return prOk ? { lv: pr.level, src: "profile", date: pr.at } : null;
 }
-// Deine Helden einer Rolle mit mindestens 3 Matches (letzte 60), je die letzten 12
+// Deine Helden einer Rolle mit mindestens 3 Matches im Modus des Rang-Wegs (letzte 60), je die letzten 12
 function rkHeroVals(role) {
-  const by = group(heroOnly(state.matches.slice(-60).filter(m => heroRole(m.hero) === role)), m => m.hero);
+  const mk = rkMode(), by = group(heroOnly(state.matches.slice(-60).filter(m => heroRole(m.hero) === role && rkModeOk(m, mk))), m => m.hero);
   return Object.keys(by).filter(h => by[h].length >= 3).sort((a, b) => by[b].length - by[a].length).map(h => ({ h, n: by[h].length, list: by[h].slice(-12) }));
 }
 // Reicht dein Wert an die Mitte der Stufe? null = kein Vergleich möglich
@@ -10703,7 +10749,7 @@ function rkReach(key, v, b) {
   if (!dir || !isFinite(v) || !b || !b[key]) return null;
   return dir > 0 ? v >= b[key][1] : v <= b[key][1];
 }
-const rkMyCarry = role => { const my = state.matches.slice(-60).filter(m => heroRole(m.hero) === role && m.source === "rivalsdata"); return my.length >= 10 ? my.filter(m => m.mvp || m.svp).length / my.length : NaN; };
+const rkMyCarry = role => { const mk = rkMode(), my = state.matches.slice(-60).filter(m => heroRole(m.hero) === role && m.source === "rivalsdata" && rkModeOk(m, mk)); return my.length >= 10 ? my.filter(m => m.mvp || m.svp).length / my.length : NaN; };
 // Drei Prüfungen pro Stufe und Rolle, nach denselben Regeln wie die Meilensteine (mindestens 2 Helden, davon zwei Drittel)
 function rkChecks(role, bi) {
   const hs = rkHeroVals(role), mk = TB_MAIN[role];
@@ -10733,7 +10779,7 @@ function rkAbove(lv) {
 function rkRankSelectHtml() {
   const me = rkMine(), set = state.app && +state.app.rank;
   const opts = [`<option value="0" ${set ? "" : "selected"}>Automatisch aus deinen Matches</option>`].concat(Array.from({ length: 23 }, (_, i) => 23 - i).map(lv => `<option value="${lv}" ${set === lv ? "selected" : ""}>${esc(rkName(lv))}</option>`));
-  const where = me ? (me.src === "set" ? "selbst gewählt" : `laut deinem Match vom ${fmtDate(me.date)}`) : "noch unbekannt";
+  const where = me ? (me.src === "set" ? "selbst gewählt" : me.src === "profile" ? `laut deinem Profil (Competitive, Stand ${fmtDate(me.date)})` : `laut deinem Competitive-Match vom ${fmtDate(me.date)}`) : "noch unbekannt";
   return `<label class="inline-label" style="flex-wrap:wrap;margin-top:8px"><b>Dein Rang</b> <select data-rkrank aria-label="Dein Rang">${opts.join("")}</select> <span class="muted small">${esc(where)}</span></label>`;
 }
 // Die Leiter einer Rolle: Eternity oben, Bronze unten; Häkchen für die drei Prüfungen pro Stufe
@@ -10759,27 +10805,30 @@ function rkGapHtml(role) {
   const goal = rkGoal(role), me = rkMine(), cur = me ? rkBandOf(me.lv) : -1;
   if (!RKL() || goal < 0) return "";
   const keys = ["d", TB_MAIN[role]], hs = rkHeroVals(role).slice(0, 6);
-  if (!hs.length) return `<p class="small muted">Für den Vergleich brauchst du mindestens 3 Matches mit einem ${ROLE_SHORT[role]}-Helden (mit Dauer, also am besten importiert).</p>`;
+  if (!hs.length) return `<p class="small muted">Für den Vergleich brauchst du mindestens 3 ${RK_MODES[rkMode()][1]}-Matches mit einem ${ROLE_SHORT[role]}-Helden (mit Dauer, also am besten importiert).</p>`;
   const cell = (k, v, b) => { const r = rkReach(k, v, b); return `<td class="num">${b && b[k] ? TB_METRICS[k].fmt(b[k][1]) : "–"}${r === true ? ' <span class="badge ok">✓</span>' : ""}</td>`; };
   const rows = hs.map(x => keys.map((k, i) => { const v = tbMine(x.list, k); return `<tr>${i ? "" : `<td rowspan="2">${heroChip(x.h)}<div class="small muted">${plural(x.n, "Match", "Matches")}</div></td>`}<td>${TB_METRICS[k].label}</td><td class="num me"><b>${isFinite(v) ? TB_METRICS[k].fmt(v) : "–"}</b></td>${cur >= 0 && cur !== goal ? `<td class="num">${(b => b && b[k] ? TB_METRICS[k].fmt(b[k][1]) : "–")(rkBench(x.h, cur))}</td>` : ""}${cell(k, v, rkBench(x.h, goal))}</tr>`; }).join("")).join("");
   return `<div class="table-wrap"><table class="rkt"><thead><tr><th>Held</th><th>pro 10 Min</th><th class="num me">Du</th>${cur >= 0 && cur !== goal ? `<th class="num">Mitte ${esc(RK_BANDS[cur][1])}</th>` : ""}<th class="num">Mitte ${esc(RK_BANDS[goal][1])}</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="small muted" style="margin:6px 0 0">Deine Werte: die letzten 12 Matches pro Held mit Dauer. ✓ heisst: mindestens so gut wie die Mitte von ${esc(RK_BANDS[goal][1])}. «–» heisst: Für diesen Helden gibt es auf dieser Stufe zu wenige Daten.</p>`;
+    <p class="small muted" style="margin:6px 0 0">Deine Werte: die letzten 12 ${RK_MODES[rkMode()][1]}-Matches pro Held mit Dauer. ✓ heisst: mindestens so gut wie die Mitte von ${esc(RK_BANDS[goal][1])}. «–» heisst: Für diesen Helden gibt es auf dieser Stufe zu wenige Daten.</p>`;
 }
 // Ein Held über alle Stufen: die Mitte jedes Rangs neben deinem Wert
 function rkHeroLadderHtml(h) {
-  const role = heroRole(h), keys = ["d", TB_MAIN[role] || "dmg"], mine = heroOnly(state.matches.filter(m => m.hero === h).slice(-12)), me = rkMine(), cur = me ? rkBandOf(me.lv) : -1, goal = rkGoal(role);
+  const mk = rkMode(), role = heroRole(h), keys = ["d", TB_MAIN[role] || "dmg"], mine = heroOnly(state.matches.filter(m => m.hero === h && rkModeOk(m, mk)).slice(-12)), me = rkMine(), cur = me ? rkBandOf(me.lv) : -1, goal = rkGoal(role);
   const rows = RK_BANDS.map((b, bi) => [b, bi, rkBench(h, bi)]).filter(x => x[2]).reverse();
   if (!rows.length) return `<p class="small muted">Für ${esc(h)} gibt es noch auf keiner Stufe genug Daten.</p>`;
   const carry = q => Math.round((q.mvp + q.svp) * 100) + " %";
   return `<div class="table-wrap"><table class="rkt"><thead><tr><th>Stufe</th>${keys.map(k => `<th class="num">${TB_METRICS[k].label}</th>`).join("")}<th class="num">MVP/SVP</th><th class="num">Daten</th></tr></thead><tbody>
     <tr><td class="me">Du (letzte ${mine.length})</td>${keys.map(k => { const v = tbMine(mine, k); return `<td class="num me">${isFinite(v) ? TB_METRICS[k].fmt(v) : "–"}</td>`; }).join("")}<td class="num me">–</td><td></td></tr>
     ${rows.map(([b, bi, q]) => `<tr class="${bi === goal ? "goal" : bi === cur ? "cur" : ""}"><td>${esc(b[1])}${bi === cur ? ' <span class="small muted">(du)</span>' : bi === goal ? ' <span class="small muted">(Ziel)</span>' : ""}</td>${keys.map(k => { const r = rkReach(k, tbMine(mine, k), q); return `<td class="num">${q[k] ? TB_METRICS[k].fmt(q[k][1]) : "–"}${r ? " ✓" : ""}</td>`; }).join("")}<td class="num">${carry(q)}</td><td class="num small muted">${q.n}</td></tr>`).join("")}</tbody></table></div>
-    <p class="small muted" style="margin:6px 0 0">Mitte (Median) pro 10 Minuten der Spieler jeder Stufe mit ${esc(h)}. ✓: Dein Wert ist mindestens so gut. Celestial und Eternity stammen aus Matches der besten Spieler, die tieferen Stufen aus der Rangleiter (Stand ${TB_STAND()}).</p>`;
+    <p class="small muted" style="margin:6px 0 0">Mitte (Median) pro 10 Minuten der Spieler jeder Stufe mit ${esc(h)} in ${RK_MODES[mk][1]}, daneben deine ${RK_MODES[mk][1]}-Matches. ✓: Dein Wert ist mindestens so gut. ${mk === "qp" ? "Den Rang der Spieler hat die App aus ihrem Profil (Competitive), weil Quick-Match-Daten keinen Rang enthalten." : "Celestial und Eternity stammen aus Matches der besten Spieler, die tieferen Stufen aus der Rangleiter."} Stand ${TB_STAND()}.</p>`;
 }
 function rkCardHtml(role) {
   if (!RKL()) return "";
   const hs = rkHeroVals(role).slice(0, 6);
+  const mk = rkMode(), chip = k => `<button type="button" class="chip ${mk === k ? "on" : ""}" data-tb="mode" data-v="${k}">${RK_MODES[k][1]}</button>`;
   return `<div class="card"><div class="card-head"><h2>${roleChip(role, ROLE_SHORT[role])} Stufe für Stufe</h2></div>
+    ${QPL() ? `<div class="row" style="gap:6px;margin:0 0 8px;align-items:center"><span class="small muted">Vergleich in</span>${chip("qp")}${chip("ranked")}</div>
+    <p class="small muted" style="margin:0 0 8px">Verglichen werden nur deine ${RK_MODES[mk][1]}-Matches mit Spielern in ${RK_MODES[mk][1]}. In Quick Match und Competitive kommen andere Zahlen zustande.</p>` : ""}
     ${rkLadderHtml(role)}
     ${rkGapHtml(role) ? foldHtml("rk-gap-" + role, rkGoal(role) >= 0 ? `Was dir für ${RK_BANDS[rkGoal(role)][1]} noch fehlt` : "Deine Werte", rkGapHtml(role), { icon: "target", open: true, sub: "Deine Werte neben der Mitte der Stufe" }) : ""}
     ${hs.map(x => foldHtml("rk-h-" + x.h, `${esc(x.h)}: alle Stufen`, rkHeroLadderHtml(x.h), { icon: "heroes", sub: "Was Spieler jedes Rangs mit diesem Helden erreichen" })).join("")}</div>`;
@@ -10822,6 +10871,7 @@ function tbRoleHtml(role) {
   const win = rb && rb.d ? `<div class="table-wrap"><table><thead><tr><th>pro 10 Min, Mitte</th><th class="num">Siege</th><th class="num">Niederlagen</th></tr></thead><tbody>${keys.filter(k => rb[k]).map(k => `<tr><td>${TB_METRICS[k].label}</td><td class="num">${TB_METRICS[k].fmt(rb[k][0])}</td><td class="num">${TB_METRICS[k].fmt(rb[k][1])}</td></tr>`).join("")}</tbody></table></div>
     <p class="small muted" style="margin:6px 0 0">Aus ${rb.n[0] + rb.n[1]} Datenpunkten von ${ROLE_SHORT[role]}-Spielern in Matches der Besten. Wer gewinnt, hat meist auch bessere Werte; das ist ein Zusammenhang, keine Ursache.</p>` : "";
   return `<div class="card"><div class="card-head"><h2>${roleChip(role, ROLE_SHORT[role])} Endziel Eternity: dein Stand gegenüber den Besten</h2></div>
+    <p class="small muted" style="margin:0 0 8px">Die Werte der Besten stammen aus Competitive-Matches (Eternity gibt es nur dort). Deine Werte zählen alle Modi; in Quick Match kommen meist andere Zahlen zustande. Für den Vergleich im selben Modus nimm «Stufe für Stufe» oben.</p>
     ${tot ? `<p class="lead" style="margin:0 0 8px">Bei deinen ${ROLE_SHORT[role]}-Helden liegen ${ok2} von ${tot} Werten auf Eternity-Niveau und ${ok1} weitere zwischen Celestial und Eternity.</p>` : `<p class="lead" style="margin:0 0 8px">Für einen Vergleich brauchst du mindestens 3 Matches mit Dauer und Schaden/Heilung bei einem ${ROLE_SHORT[role]}-Helden. Importierte Matches haben das schon.</p>`}
     <p class="small" style="margin:0 0 8px"><b>MVP oder SVP</b> (am Match-Ende als Bester deines Teams ausgezeichnet) in deinen ${ROLE_SHORT[role]}-Matches: <b>${isFinite(myCarry) ? Math.round(myCarry * 100) + " %" : "noch zu wenig Daten"}</b> · Eternity+ ${cq.e != null ? Math.round(cq.e * 100) + " %" : "–"} · Celestial ${cq.c != null ? Math.round(cq.c * 100) + " %" : "–"}. Das ist dein «Carry»-Wert: wie oft du in deinem Team vorne liegst.</p>
     ${foldHtml("tb-ms-" + role, "Meilensteine auf dem Weg", tbMilestonesHtml(role), { icon: "target", open: true, sub: `${tbMilestones(role).filter(m => m.ok).length} von 5 erreicht` })}
@@ -10984,18 +11034,28 @@ function rvMissing(m) {
 const rvPer10 = (m, f) => (m.dur > 0 && m[f] !== null && m[f] !== undefined ? m[f] / m.dur * 10 : null);
 function rvKeyStat(m) { const r = heroRole(m.hero); return r === "Strategist" ? ["heal", "Heilung"] : r === "Duelist" ? ["dmg", "Schaden"] : ["block", "Geblockt"]; }
 // Warum ist dieses Match wichtig? Jeder Held wird nur mit sich selbst verglichen: zuerst mit deinen eigenen Matches mit genau diesem
-// Helden (ab 3), sonst mit den Besten auf diesem Helden (Median der Celestial-Spieler aus «Wissen der Besten»). Nie mit anderen Helden,
+// Helden (ab 3), sonst mit Spielern eine Stufe über deinem Rang auf diesem Helden im selben Modus (rvTbRef). Nie mit anderen Helden,
 // auch nicht derselben Rolle: Cloak & Dagger stirbt anders als Mantis, Luna Snow heilt anders als Jeff.
 function rvCtx() {
   return { byHero: group(heroOnly(state.matches), x => x.hero) };
 }
 const rvTbKey = f => (f === "block" ? "blk" : f);
-// Median der Besten mit diesem Helden (Celestial, sonst Eternity), pro 10 Minuten
-function rvTbRef(hero, key) {
+// Vergleichswert pro 10 Minuten für einen Helden, immer im selben Modus wie das Match: Mitte der Spieler eine Stufe über deinem Rang
+// (Rang-Weg) mit diesem Helden, in Quick Match aus den Quick-Match-Daten, in Competitive aus den Competitive-Daten. Ohne bekannten Rang
+// gilt in Competitive wie bisher die Mitte der Besten (Celestial, sonst Eternity); Quick Match und andere Modi bekommen dann keinen
+// Vergleichswert (es zählen deine eigenen Matches), weil Competitive-Werte dort zu hoch gegriffen wären.
+const rvRefBand = () => { const me = typeof rkMine === "function" ? rkMine() : null; return me ? Math.min(RK_BANDS.length - 1, rkBandOf(me.lv) + 1) : -1; };
+function rvTbRef(hero, key, mode) {
+  const mk = modeKey(mode === undefined ? "Competitive" : mode), bi = mk ? rvRefBand() : -1;
+  if (bi >= 0 && (mk === "ranked" || QPL())) {
+    const b = rkBench(hero, bi, mk);
+    if (b && b[key]) return { v: b[key][1], name: `${RK_BANDS[bi][1]}-Spieler mit ${hero} (${RK_MODES[mk][1]}, eine Stufe über dir)`, band: bi, mk };
+  }
+  if (mk !== "ranked") return null;
   const b = typeof tbHero === "function" ? tbHero(hero) : null;
   if (!b) return null;
-  if (b.c && b.c[key]) return { v: b.c[key][1], name: `Celestial-Spieler mit ${hero}` };
-  if (b.e && b.e[key]) return { v: b.e[key][1], name: `Eternity-Spieler mit ${hero}` };
+  if (b.c && b.c[key]) return { v: b.c[key][1], name: `Celestial-Spieler mit ${hero}`, best: true };
+  if (b.e && b.e[key]) return { v: b.e[key][1], name: `Eternity-Spieler mit ${hero}`, best: true };
   return null;
 }
 function rvReasons(m0, ctx) {
@@ -11007,7 +11067,7 @@ function rvReasons(m0, ctx) {
     const v10 = rvPer10(m, f);
     if (s && v10 !== null && s.timedN >= 3 && isFinite(s[f + "10"]) && s[f + "10"] > 0) return { v: v10, b: s[f + "10"], per: true, name: ownName };
     if (s && v10 === null && m[f] !== null && m[f] !== undefined && isFinite(s[f]) && s[f] > 0) return { v: +m[f], b: s[f], per: false, name: ownName };
-    const t = v10 !== null ? rvTbRef(m.hero, rvTbKey(f)) : null;
+    const t = v10 !== null ? rvTbRef(m.hero, rvTbKey(f), m.mode || "") : null;
     return t ? { v: v10, b: t.v, per: true, name: t.name, tb: true } : null;
   };
   const fmtB = (r, fmt) => r.tb ? `${r.name} kommen im Median auf ${fmt(r.b)} pro 10 Min` : `sonst im Schnitt ${fmt(r.b)}${r.per ? " pro 10 Min" : ""} (${r.name})`;
@@ -11042,10 +11102,10 @@ function rvFocus() {
     else if (q <= 0.25) { w[k] = 0.6; why[k] = `${t}. Das sitzt schon recht gut, deshalb seltener.`; }
     else { w[k] = 1; why[k] = `${t}.`; }
   };
-  setBy("death", share(m => { const v = rvPer10(m, "d"), t = rvTbRef(m.hero, "d"); return v === null || !t ? null : v > t.v * 1.15; }),
-    "bist du deutlich häufiger gestorben als die Besten mit demselben Helden");
-  setBy("low", share(m => { const f = rvKeyStat(m)[0], v = rvPer10(m, f), t = rvTbRef(m.hero, rvTbKey(f)); return v === null || !t ? null : v < t.v * 0.85; }),
-    "lag deine Heilung, dein Schaden oder Geblockt deutlich unter den Besten mit demselben Helden");
+  setBy("death", share(m => { const v = rvPer10(m, "d"), t = rvTbRef(m.hero, "d", m.mode || ""); return v === null || !t ? null : v > t.v * 1.15; }),
+    "bist du deutlich häufiger gestorben als dein Vergleichswert (Spieler eine Stufe über dir mit demselben Helden im selben Modus)");
+  setBy("low", share(m => { const f = rvKeyStat(m)[0], v = rvPer10(m, f), t = rvTbRef(m.hero, rvTbKey(f), m.mode || ""); return v === null || !t ? null : v < t.v * 0.85; }),
+    "lag deine Heilung, dein Schaden oder Geblockt deutlich unter deinem Vergleichswert (Spieler eine Stufe über dir mit demselben Helden im selben Modus)");
   const su = summary(recent);
   if (su.ultN >= 5) {
     const t = `Deine letzten Ults hatten zu ${pct(su.ultPct)} Wirkung`;
@@ -11089,7 +11149,7 @@ function rvFocusHtml() {
   const F = rvFocus(), lv = v => (v >= 1.2 ? "öfter" : v < 0.8 ? "seltener" : "normal");
   return `<details class="rvdone"><summary class="small">Worauf das Review gerade achtet: zuerst ${esc(RV_KINDS[F.order[0]])}</summary>
     <ul class="wl small" style="margin:6px 0">${F.order.map(k => `<li><b>${esc(RV_KINDS[k])}</b> (${lv(F.w[k])}): ${esc(F.why[k])}</li>`).join("")}</ul>
-    <p class="small muted" style="margin:0">Jeder Held wird nur mit sich selbst verglichen: mit deinen eigenen Matches mit genau diesem Helden, sonst mit den Besten auf diesem Helden. Matches zu einer offenen Mission kommen öfter dran. Die Gewichte passen sich mit jedem Match an. Das ist eine Faustregel der App; ob diese Reihenfolge schneller besser macht, ist nicht untersucht.</p></details>`;
+    <p class="small muted" style="margin:0">Jeder Held wird nur mit sich selbst verglichen: mit deinen eigenen Matches mit genau diesem Helden, sonst mit Spielern eine Stufe über deinem Rang mit diesem Helden, und zwar im selben Modus (Quick Match mit Quick Match, Competitive mit Competitive). Matches zu einer offenen Mission kommen öfter dran. Die Gewichte passen sich mit jedem Match an. Das ist eine Faustregel der App; ob diese Reihenfolge schneller besser macht, ist nicht untersucht.</p></details>`;
 }
 // Die Auswahl richtet sich nach dem Stand der Matches: Neue Matches können unberührte Vorschläge ersetzen, ein Match, an dem du schon
 // arbeitest (Ursache, Stärke oder Vorsatz eingetragen, oder gerade geöffnet), bleibt in jedem Fall stehen.
@@ -11195,7 +11255,6 @@ function rvUltStep(m, f, label) {
 }
 function rvMatchHtml(x, open, L) {
   const m = x.m, got = deathTotal(m.deathCauses), d = +m.d || 0, reasons = x.reasons.length ? x.reasons : [{ k: "recent", label: "Neu", text: "Eines deiner neuesten Matches" }];
-  const labels = deathOptions(m.hero).map(o => o[0]), extra = Object.keys(m.deathCauses || {}).filter(l => !labels.includes(l));
   const head = `<button type="button" class="rvmh" data-rv="open" data-id="${m.id}" aria-expanded="${open}"><span>${heroChip(m.hero)}</span><span>${resultPill(m.result)}</span>
     <span class="small muted">${fmtDate(m.date)} · ${m.k}/${m.d}/${m.a}${m.dur > 0 ? ` · ${numDe(m.dur)} Min` : ""}${m.map ? ` · ${esc(m.map)}` : ""}</span>
     <span class="rvtags">${reasons.filter(r => r.k !== "lost").map(r => `<span class="rvtag ${r.k}">${esc(r.label)}</span>`).join("")}${rvLeftTag(L && L.left ? L.left[m.id] : 0, m)}</span></button>`;
@@ -11209,8 +11268,8 @@ function rvMatchHtml(x, open, L) {
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
     ${rvNoteHtml(m)}
     <div class="rvs"><h4><span class="rvn">1</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
-      ${d ? `<div class="deathgrid">${labels.concat(extra).map(l => { const n = (m.deathCauses || {})[l] || 0;
-        return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; }).join("")}</div>${ultPickHtml("r:" + m.id, ultDeathN(m.deathCauses), m.ultDeaths || {}, m.enemies)}` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit Schritt 2.</p>`}
+      ${d ? `${deathGridHtml(m.hero, m.deathCauses, l => { const n = (m.deathCauses || {})[l] || 0;
+        return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; })}${ultPickHtml("r:" + m.id, ultDeathN(m.deathCauses), m.ultDeaths || {}, m.enemies)}` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit Schritt 2.</p>`}
     </div>
     <div class="rvs"><h4><span class="rvn">2</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}</span></h4>
       <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
@@ -11393,7 +11452,7 @@ function rvStreak() {
 }
 
 // ---------- Schwächen pro Held und kleine Missionen ----------
-// Aus deinen Matches mit einem Helden (letzte 12) sucht die App Auffälligkeiten: mehr Tode als die Besten mit demselben Helden (oder als früher), eine häufige
+// Aus deinen Matches mit einem Helden (letzte 12) sucht die App Auffälligkeiten: mehr Tode als Spieler eine Stufe über dir mit demselben Helden im selben Modus (oder als früher), eine häufige
 // Todesursache, wenig Heilung/Schaden/Geblockt, Ults ohne Wirkung, ein Gegner, gegen den es selten klappt. Zu jeder Auffälligkeit gehören
 // die passenden Lektionen und Übungen aus den Wochenzielen (GOAL_TOPICS) und eine Mission über die nächsten drei Matches mit diesem Helden.
 // Die Missionen prüft die App allein aus deinen Zahlen. Kleine Stichproben: Es sind Hinweise, keine Urteile.
@@ -11409,31 +11468,34 @@ const tbEvid = (h, k) => { const b = typeof tbHero === "function" ? tbHero(h) : 
 function wkFind(hero) {
   const all = heroOnly(state.matches), mine = all.filter(m => m.hero === hero).slice(-WK_LAST);
   if (mine.length < WK_MIN) return [];
-  // Verglichen wird nur mit demselben Helden: zuerst mit den Besten auf diesem Helden (Median der Celestial-Spieler), sonst mit deinen
+  // Verglichen wird nur mit demselben Helden: zuerst mit Spielern eine Stufe über deinem Rang im selben Modus (rvTbRef), sonst mit deinen
   // früheren Matches mit diesem Helden. Andere Helden derselben Rolle spielen sich anders (Cloak & Dagger stirbt anders als Mantis).
   const older = all.filter(m => m.hero === hero).slice(0, -WK_LAST).slice(-30);
   const s = summary(mine), so = older.length >= 5 ? summary(older) : null, out = [];
+  // Für den Vergleich mit anderen Spielern zählen nur deine Matches im häufigsten Modus (Quick Match oder Competitive), damit die Werte passen
+  const modes = group(mine, m => m.mode || ""), mode = Object.keys(modes).sort((a, b) => modes[b].length - modes[a].length)[0] || "";
+  const sm = modes[mode] && modes[mode].length >= WK_MIN ? summary(modes[mode]) : null;
   const add = w => out.push(Object.assign({ hero }, w));
-  // Bezug für eine Kennzahl: {b, per, name, tb}
+  // Bezug für eine Kennzahl: {b, per, name, tb, who}
   const wkRef = (f, key) => {
-    const t = s.timedN >= 3 ? rvTbRef(hero, key) : null;
-    if (t) return { now: s[f + "10"], b: t.v, per: true, name: `${t.name} im Median`, tb: true };
+    const t = sm && sm.timedN >= 3 ? rvTbRef(hero, key, mode) : null;
+    if (t) return { now: sm[f + "10"], b: t.v, per: true, name: `${t.name} im Median`, tb: true, best: t.best, who: t.best ? "die Besten" : `${RK_BANDS[t.band][1]}-Spieler`, modeTxt: t.mk ? ` (in deinen ${RK_MODES[t.mk][1]}-Matches)` : "" };
     if (!so) return null;
     const per = s.timedN >= 3 && so.timedN >= 3;
     return { now: per ? s[f + "10"] : s[f], b: per ? so[f + "10"] : so[f], per, name: `in deinen früheren ${hero}-Matches` };
   };
-  // 1) Mehr Tode als die Besten mit diesem Helden (oder als früher)
+  // 1) Mehr Tode als dein Vergleichswert mit diesem Helden (oder als früher)
   const rd = wkRef("d", "d");
   if (rd && isFinite(rd.now) && isFinite(rd.b) && rd.b > 0 && rd.now >= rd.b * 1.2 && rd.now - rd.b >= (rd.per ? 0.8 : 1)) {
     const dNow = rd.now, unit = rd.per ? "pro 10 Min" : "pro Match", tgt = Math.round(dNow * 0.8 * 10) / 10;
-    add({ id: "death", topic: "survive", title: rd.tb ? "Du stirbst häufiger als die Besten mit diesem Helden" : "Du stirbst häufiger als früher", sev: dNow / rd.b,
-      evid: `Mit ${hero} stirbst du im Schnitt ${numDe(dNow.toFixed(1))}× ${unit}, ${rd.name} ${numDe(rd.b.toFixed(1))}× (deine letzten ${plural(mine.length, "Match", "Matches")}).${rd.tb ? tbEvid(hero, "d") : ""}`,
+    add({ id: "death", topic: "survive", title: rd.tb ? `Du stirbst häufiger als ${rd.who} mit diesem Helden` : "Du stirbst häufiger als früher", sev: dNow / rd.b,
+      evid: `Mit ${hero} stirbst du im Schnitt ${numDe(dNow.toFixed(1))}× ${unit}${rd.modeTxt || ""}, ${rd.name} ${numDe(rd.b.toFixed(1))}× (deine letzten ${plural(mine.length, "Match", "Matches")}).${rd.best ? tbEvid(hero, "d") : ""}`,
       mission: { metric: rd.per ? "d10" : "d", op: "<=", base: dNow, target: tgt } });
   }
   // 2) Häufigste Todesursache
-  const ds = deathStats(mine);
-  if (ds.total >= 4 && ds.causes.length) {
-    const [label, cnt] = ds.causes[0], share = cnt / ds.total, mk = deathMistake(label);
+  const ds = deathStats(mine), topCause = ds.causes.find(c => !DEATH_NEUTRAL.includes(c[0]));
+  if (ds.total >= 4 && topCause) {
+    const [label, cnt] = topCause, share = cnt / ds.total, mk = deathMistake(label);
     if (share >= 0.35 && cnt >= 3) {
       const base = cnt / ds.matches, limit = Math.max(0, Math.floor(base * 3 * 0.5)), tp = (mk && GOAL_TOPICS.find(t => t.mistakes.includes(mk))) || wkTopic("survive");
       add({ id: "cause", topic: tp.id, mistake: mk, title: `Häufigste Todesursache: ${label}`, sev: 1 + share,
@@ -11446,8 +11508,8 @@ function wkFind(hero) {
   if (rk && isFinite(rk.now) && isFinite(rk.b) && rk.b > 0 && rk.now <= rk.b * 0.85) {
     const kNow = rk.now, tp = kf === "heal" ? "heal" : kf === "dmg" ? "aim" : "tank";
     const tgt = Math.round(Math.min(rk.b, kNow * 1.2) / 100) * 100 || Math.round(Math.min(rk.b, kNow * 1.2));   // kleiner Schritt: höchstens ein Fünftel mehr
-    add({ id: "low", topic: tp, title: rk.tb ? `${kl} liegt unter den Besten mit diesem Helden` : `${kl} liegt unter deinem früheren Schnitt`, sev: rk.b / Math.max(1, kNow),
-      evid: `${kl} mit ${hero}: ${fmtNum(kNow)}${rk.per ? " pro 10 Min" : " pro Match"}, ${rk.name} ${fmtNum(rk.b)}.${rk.tb ? tbEvid(hero, rvTbKey(kf)) : ""}`,
+    add({ id: "low", topic: tp, title: rk.tb ? `${kl} liegt unter ${rk.who === "die Besten" ? "den Besten" : rk.who + "n"} mit diesem Helden` : `${kl} liegt unter deinem früheren Schnitt`, sev: rk.b / Math.max(1, kNow),
+      evid: `${kl} mit ${hero}: ${fmtNum(kNow)}${rk.per ? " pro 10 Min" : " pro Match"}${rk.modeTxt || ""}, ${rk.name} ${fmtNum(rk.b)}.${rk.best ? tbEvid(hero, rvTbKey(kf)) : ""}`,
       mission: { metric: rk.per ? kf + "10" : kf, op: ">=", base: kNow, target: tgt } });
   }
   // 4) Ults ohne Wirkung
@@ -11575,7 +11637,7 @@ function renderWeak() {
   const found = heroes.map(h => [h, wkFind(h)]), withF = found.filter(x => x[1].length), plain = found.filter(x => !x[1].length).map(x => x[0]);
   const open = rv.missions.filter(x => x.status === "open"), closed = rv.missions.filter(x => x.status !== "open").slice(-6).reverse();
   el.innerHTML = `<div class="card"><div class="card-head"><h2>${icon("target")}Schwächen-Training</h2></div>
-    <p class="lead">Die App schaut sich deine letzten ${WK_LAST} Matches pro Held an und sucht, was sich lohnt: mehr Tode als die Besten mit demselben Helden, eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen. Jeder Held wird nur mit sich selbst verglichen: mit den Besten auf genau diesem Helden (Median der Celestial-Spieler), sonst mit deinen früheren Matches mit ihm. Nie mit anderen Helden, denn Cloak & Dagger spielt sich anders als Mantis.</p>
+    <p class="lead">Die App schaut sich deine letzten ${WK_LAST} Matches pro Held an und sucht, was sich lohnt: mehr Tode als Spieler eine Stufe über deinem Rang mit demselben Helden (Quick Match mit Quick Match, Competitive mit Competitive), eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen. Jeder Held wird nur mit sich selbst verglichen: mit der Mitte der Spieler eine Stufe über deinem Rang auf genau diesem Helden (deinen Rang wählst du auf «Rang-Weg»), sonst mit deinen früheren Matches mit ihm. Ohne Rang gilt in Competitive die Mitte der Celestial-Spieler, in Quick Match zählen dann nur deine eigenen Matches. Nie mit anderen Helden, denn Cloak & Dagger spielt sich anders als Mantis.</p>
     <p class="small muted" style="margin:0">Das sind Hinweise aus kleinen Stichproben, keine Urteile. Ob Missionen dein Spiel verbessern, ist für Marvel Rivals nicht untersucht.</p></div>
     ${open.length ? `<div class="card"><div class="card-head"><h2>${icon("check")}Offene Missionen</h2><span class="badge">${open.length} von ${WK_OPEN_MAX}</span></div>${open.map(wkMissionHtml).join("")}</div>` : ""}
     ${heroes.length ? withF.slice(0, 8).map(([h, ws]) => wkHeroCardHtml(h, ws)).join("") : empty(`Noch kein Held mit mindestens ${WK_MIN} Matches. Sobald du ${WK_MIN} Matches mit einem Helden hast, zeigt die App hier, was sich lohnt.`, "heroes")}

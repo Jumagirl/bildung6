@@ -247,6 +247,22 @@ def duration_minutes(*sources: Any) -> float | None:
     return None
 
 
+RANK_MAX_AGE = 120 * 86400   # Rang aus dem Profil nur, wenn die Season-Angabe höchstens so alt ist
+
+
+def profile_rank(profile: Mapping[str, Any], now: float | None = None) -> dict | None:
+    """Aktueller Competitive-Rang aus dem Profil: Level der neusten Season in ``rank_game_season``, sonst None."""
+    seasons = [s for s in values(profile.get("rank_game_season")) if isinstance(s, Mapping) and s.get("update_time")]
+    if not seasons:
+        return None
+    last = max(seasons, key=lambda s: s["update_time"])
+    level = to_int(last.get("level"))
+    now = now if now is not None else datetime.now(timezone.utc).timestamp()
+    if not level or not 1 <= level <= 23 or now - last["update_time"] > RANK_MAX_AGE:
+        return None
+    return {"level": level, "at": datetime.fromtimestamp(last["update_time"], timezone.utc).strftime("%Y-%m-%d")}
+
+
 def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] | None) -> dict | None:
     """Wandelt einen History-Eintrag (+ optionale Details) ins Match-Format der App um."""
     match_id = row.get("match_uid")
@@ -313,8 +329,10 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
                 for key in ("fh", "solo", "acc"):
                     if key in mine:
                         match[key] = mine[key]
-                rank = to_int(player.get("rank_level"))   # eigener Rang laut Matchdaten: 1 = Bronze 3 … 22 = Eternity, 23 = One Above All
-                if rank and 1 <= rank <= 23:
+                # Eigener Rang laut Matchdaten (1 = Bronze 3 … 22 = Eternity, 23 = One Above All), nur in Competitive:
+                # In Quick Match steht dort bei allen Spielern 1, das ist kein Rang.
+                rank = to_int(player.get("rank_level"))
+                if match.get("mode") == "Competitive" and rank and 1 <= rank <= 23:
                     match["rl"] = rank
     if me_team is None:
         return
@@ -403,6 +421,12 @@ def sync(args: argparse.Namespace) -> dict:
         uid = player.uid
         result["player"] = {"name": getattr(player, "name", None) or str(args.player), "uid": uid,
                             "level": getattr(player, "level", None)}
+        try:
+            rank = profile_rank(as_dict(player))
+        except Exception:  # noqa: BLE001 - ohne Rang geht der Abgleich trotzdem
+            rank = None
+        if rank:
+            result["player"]["rank"] = rank   # aktueller Competitive-Rang laut Profil (Quick Match hat keinen Rang)
         print(f"Spieler gefunden: {result['player']['name']} (UID {uid})")
 
         try:
