@@ -916,6 +916,15 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .fig-head { padding: 12px 16px 2px; font-weight: 700; font-size: .92rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .fig svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .fig figcaption { padding: 2px 16px 14px; font-size: .84rem; color: var(--muted); line-height: 1.45; }
+.anim { margin: 6px 0 10px; max-width: 640px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.anim-stage svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
+.anim-cap { margin: 4px 16px 10px; font-size: .92rem; line-height: 1.5; max-width: 62ch; }
+.anim-ask, .anim-q { margin: 0 16px 10px; min-width: 0; }
+.anim-nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding: 2px 16px 14px; }
+.anim-dots { display: inline-flex; gap: 4px; vertical-align: middle; margin-left: 6px; }
+.anim-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-3); font-size: 0; }
+.anim-dots span.on { background: var(--good); }
+.anim-dots span.cur { background: var(--accent); }
 .fig-legend { list-style: none; margin: 0; padding: 6px 16px 14px; display: grid; gap: 9px; font-size: .86rem; line-height: 1.45; }
 .fig-legend li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; }
 .fig-legend .k { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .74rem; color: #fff; background: var(--muted); }
@@ -9786,15 +9795,17 @@ function dayFigHtml(n) {
   if (!fs.length) return "";
   const qs = dayFigQs(d), qBtn = qs.length ? `<div class="row"><button type="button" class="btn small ghost" data-pact="fig-quiz" data-n="${n}">${icon("quiz")}Bildfragen dazu (${qs.length})</button><span class="small muted">Erst antworten, dann siehst du die Lösung mit Begründung.</span></div>` : "";
   if (!d.deep) return foldHtml("d-fig", "Bilder zum Thema", `<p class="lead" style="margin:0 0 8px">Schau dir die Bilder vor dem ersten Match an. ${n < PLAN_N && PLAN.days[n].deep ? "Morgen am Vertiefen-Tag erklärst du sie aus dem Kopf." : ""}</p>
-    ${fs.map(f => `<div class="dfig">${FIGS[f.k]("teach")}<p class="small" style="margin:4px 0 0"><b>${f.id} – ${esc(f.w.title)}:</b> ${esc(f.w.einfach)}</p></div>`).join("")}${qBtn}`, { icon: "book", open: true, sub: plural(fs.length, "Lernbild", "Lernbilder") + " aus dem Lexikon" });
+    ${fs.map(f => `<div class="dfig">${FIGS[f.k]("teach")}<p class="small" style="margin:4px 0 0"><b>${f.id} – ${esc(f.w.title)}:</b> ${esc(f.w.einfach)}</p></div>`).join("")}${qBtn}`, { icon: "book", open: true, sub: plural(fs.length, "Lernbild", "Lernbilder") + " aus dem Lexikon" }) + dayAnimHtml(fs);
   const ask = figAskable(), open = fs.filter(f => planUi.figShown[n + ":" + f.k]).length;
   return foldHtml("d-figq", "Bild-Abruf", `<p class="lead" style="margin:0 0 8px">Die Bilder von gestern, diesmal ohne Lösung. Erklär dir jedes zuerst in einem Satz, dann deck auf und vergleiche.</p>
     ${fs.map(f => { const shown = planUi.figShown[n + ":" + f.k], canAsk = ask.has(f.k);
       return `<div class="dfig">${shown ? FIGS[f.k]("teach") : canAsk ? FIGS[f.k]("ask") : `<div class="figcover" role="img" aria-label="Bild verdeckt"><span>${f.id}</span><b>${esc(f.w.title)}</b><span class="small muted">Bild verdeckt</span></div>`}
         ${shown ? `<p class="small" style="margin:4px 0 0"><b>${f.id} – ${esc(f.w.title)}:</b> ${esc(f.w.einfach)}</p>`
           : `<p class="small muted" style="margin:4px 0 6px">${canAsk ? "Was fehlt im Bild, und warum?" : `Was zeigt das Bild zu «${esc(f.w.title)}»?`} Sag es dir in einem Satz.</p><button type="button" class="btn small" data-pact="fig-show" data-n="${n}" data-k="${f.k}">Aufdecken</button>`}</div>`; }).join("")}${qBtn}`,
-    { icon: "quiz", open: true, sub: `${open} von ${plural(fs.length, "Bild", "Bildern")} aufgedeckt` });
+    { icon: "quiz", open: true, sub: `${open} von ${plural(fs.length, "Bild", "Bildern")} aufgedeckt` }) + dayAnimHtml(fs);
 }
+// Lernanimationen zu den Bildern des Tages (Abschnitt «Lernanimationen»); fehlt eine, steht dort nichts
+const dayAnimHtml = fs => fs.filter(f => ANIM[f.id]).map(f => animFoldHtml(f.id, "d-anim-" + f.id)).join("");
 function startFigQuiz(n) {
   const qs = shuffle(dayFigQs(PLAN.days[n - 1]).slice()).slice(0, 5);
   if (!qs.length) { toast("Zu diesen Bildern gibt es keine Bildfragen"); return; }
@@ -13509,6 +13520,7 @@ function wissenEntryHtml(w, L) {
   const lock = (label, minLvl) => `<div class="wk lock">🔒 <b>${esc(label)}</b> – wird ab Stufe ${minLvl} (${lvInfo(minLvl).name}) freigeschaltet.</div>`;
   const out = [P("", "Einfach gesagt", w.einfach)];
   if (WISSEN_FIG[w.id]) out.push(FIGS[WISSEN_FIG[w.id]]("teach"));
+  if (ANIM[w.id]) out.push(animFoldHtml(w.id, "w-anim-" + w.id));
   (WISSEN_FIG_EXTRA[w.id] || []).forEach(k => out.push(FIGS.modemap(k)));
   if (w.szene) out.push(`<div class="wk szene"><b>So sieht das im Match aus:</b> ${linkify(esc(w.szene), seen)}</div>`);
   if (w.begriffe && w.begriffe.length) out.push(`<div class="wk begr"><b>Begriffe in diesem Eintrag</b><dl>${w.begriffe.map(b => `<div><dt>${esc(b.term)}</dt><dd>${esc(b.def)}</dd></div>`).join("")}</dl></div>`);
@@ -14762,6 +14774,322 @@ Object.assign(FIGS, {
   }
 });
 Object.assign(WISSEN_FIG, { L23: "map", L25: "aim", L27: "lead", L28: "comeback", L29: "meta", L30: "session" });
+
+// ---------- Lernanimationen: Lernbilder Schritt für Schritt ----------
+// Schematische Abläufe zu den Lexikon-Themen der Trainingstage, gezeichnet mit denselben Bausteinen wie die Lernbilder (DG). Pro Schritt ein
+// Bild und ein Satz, weiter nur per Knopf: jede Stufe in deinem Tempo (Segmentierung). Vor dem entscheidenden Schritt eine Vorhersage
+// («Was tust du jetzt?»): erst wählen, dann zeigt der nächste Schritt die Lösung (Abrufen vor dem Zeigen). Am Ende eine Abschlussfrage, die
+// als normale Frage ins Wiederholungs-System geht (WQ, knowRecord). Inhalte nur aus den Lexikon-Texten (WISSEN) und den Lernbildern, keine
+// neuen Spielfakten: Die Bilder sind Schemata, keine Spielszenen. Bewegung per SMIL; bei «weniger Bewegung» zeigt jeder Schritt gleich den
+// Endzustand. Fortschritt: state.anim[id] = {d: Datum, ok: Abschlussfrage richtig}.
+const AM = {
+  still: () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches),
+  // Gruppe von a nach b bewegen
+  move(a, b, inner, o) {
+    o = o || {};
+    if (AM.still()) return `<g transform="translate(${b[0]} ${b[1]})">${inner}</g>`;
+    return `<g transform="translate(${a[0]} ${a[1]})"><animateTransform attributeName="transform" type="translate" from="${a[0]} ${a[1]}" to="${b[0]} ${b[1]}" dur="${o.dur || 1.2}s" begin="${o.begin || 0.3}s" fill="freeze"/>${inner}</g>`;
+  },
+  // kurz hin und wieder zurück (zum Beispiel aus der Deckung heraus und wieder hinein)
+  peek(a, b, inner, o) {
+    o = o || {};
+    if (AM.still()) return `<g transform="translate(${a[0]} ${a[1]})">${inner}</g>`;
+    const A = a.join(" "), B = b.join(" ");
+    return `<g transform="translate(${A})"><animateTransform attributeName="transform" type="translate" values="${A};${B};${B};${A}" keyTimes="0;0.3;0.6;1" dur="${o.dur || 2.4}s" begin="${o.begin || 0.3}s" repeatCount="${o.rep || 2}" fill="freeze"/>${inner}</g>`;
+  },
+  fade(inner, begin) { return AM.still() ? inner : `<g opacity="0"><animate attributeName="opacity" from="0" to="1" dur=".5s" begin="${begin === undefined ? 0.4 : begin}s" fill="freeze"/>${inner}</g>`; },
+  pulse(x, y, r, style) { return `<circle class="d-ring-help" cx="${x}" cy="${y}" r="${r}"${style ? ` style="${style}"` : ""}>${AM.still() ? "" : `<animate attributeName="r" values="${r};${Math.round(r * 1.22)};${r}" dur="1.6s" repeatCount="indefinite"/>`}</circle>`; },
+  // Balken, der von einem Wert zum anderen wächst oder schrumpft (Prozent)
+  bar(x, y, w, h, from, to, cls, begin) {
+    const W = p => Math.max(h, w * p / 100).toFixed(1), c = cls || AM.hpCls(to);
+    return `<rect class="d-track" x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}"/><rect class="${c}" x="${x}" y="${y}" width="${W(AM.still() ? to : from)}" height="${h}" rx="${h / 2}">${AM.still() ? "" : `<animate attributeName="width" from="${W(from)}" to="${W(to)}" dur="1.2s" begin="${begin === undefined ? 0.3 : begin}s" fill="freeze"/>`}</rect>`;
+  },
+  hpCls: p => p < 40 ? "d-hp-low" : p <= 70 ? "d-hp-mid" : "d-hp-ok",
+  you: (kind, r, above) => DG.tk(0, 0, kind, { r: r || 18 }) + DG.t(0, above ? -((r || 18) + 8) : (r || 18) + 16, "Du", "d-txt", "middle"),
+  floor: () => DG.floor(6, 6, 468, 288),
+  shot: (d, soft) => `<path class="d-shot${soft ? " d-soft" : ""}" d="${d}" marker-end="url(#dArB)"/>`,
+  beam: d => `<path class="d-beam" d="${d}" marker-end="url(#dArG)"/>`,
+  cross: (x, y, r) => `<path class="d-dead" d="M${x - r} ${y - r}L${x + r} ${y + r}M${x + r} ${y - r}L${x - r} ${y + r}"/>`
+};
+
+// L2 Positionierung: Säule, Tank, Gegner wie im Lernbild «Wo stehst du als Support?»
+const anPos = {
+  base(o) {
+    o = o || {};
+    let s = AM.floor() + `<rect class="d-cover" x="170" y="198" width="30" height="58" rx="7"/>` + DG.t(185, 274, "Säule", "d-txt2", "middle");
+    if (o.kiste) s += `<rect class="d-cover" x="270" y="212" width="26" height="40" rx="6"/>` + DG.t(283, 268, "Kiste", "d-txt2", "middle");
+    s += DG.tk(430, 118, "foe", { r: 18 }) + DG.tk(430, 222, "foe", { r: 18 }) + DG.t(430, 252, "Gegner", "d-txt2", "middle");
+    return s;
+  },
+  tank: (p) => DG.tk(p[0], p[1], "tank", { r: 22 }) + DG.t(p[0], p[1] + 36, "Tank", "d-txt2", "middle"),
+  pins: st => { st = st || {}; return DG.pin(328, 202, "A", st.A) + DG.pin(160, 118, "B", st.B) + DG.pin(118, 186, "C", st.C) + DG.pin(50, 58, "D", st.D); }
+};
+// L20 Tank: wie im Lernbild «Tank-Grundlagen: Raum schaffen»
+const anTank = {
+  foes: (dx, moving, noMid) => [[372, 100], [388, 154], [372, 208]].filter(([, y]) => !(noMid && y === 154)).map(([x, y]) => moving ? AM.move([x, y], [x + dx, y], DG.tk(0, 0, "foe", { r: 16 }), { begin: 0.5 }) : DG.tk(x + dx, y, "foe", { r: 16 })).join(""),
+  sup: x => `<circle class="d-ring-help" cx="0" cy="0" r="92"/>` + DG.tk(0, 0, "sup", { r: 18 }) + DG.t(0, 34, "Support", "d-txt2", "middle"),
+  you: () => AM.you("tank", 24)
+};
+// L21 DPS: wie im Lernbild «DPS-Grundlagen: Ziel, Position, Fokus»
+const anDps = {
+  base(hpB, deadB) {
+    let s = AM.floor() + `<rect class="d-cover" x="196" y="84" width="64" height="16" rx="6"/><rect class="d-cover" x="274" y="236" width="20" height="46" rx="6"/>`;
+    s += DG.tk(80, 150, "tank", { r: 20 }) + DG.t(80, 184, "Tank", "d-txt2", "middle") + DG.tk(236, 258, "dps", { r: 16 });
+    s += DG.tk(310, 150, "foe", { r: 22 }) + `<path d="M284 124Q330 150 284 176" fill="none" stroke="var(--vanguard)" stroke-width="5" stroke-linecap="round" opacity=".9"/>`;
+    s += DG.tk(428, 74, "foe", { r: 17 }) + (deadB ? "" : DG.hp(406, 100, 44, hpB === undefined ? 30 : hpB, 8));
+    s += DG.tk(424, 214, "foe", { r: 16 }) + DG.hp(404, 236, 40, 100, 7);
+    return s;
+  },
+  pins: st => { st = st || {}; return DG.pin(342, 198, "A", st.A) + DG.pin(390, 50, "B", st.B) + DG.pin(424, 260, "C", st.C); }
+};
+// L5 Heal-Priorität: vier Mitspieler mit Lebensbalken wie im Lernbild «Wen heilst du zuerst?»
+const anHeal = {
+  rows: [{ l: "A", kind: "tank", name: "Tank · drei Gegner schiessen auf ihn" }, { l: "B", kind: "dps", name: "DPS · steht in Deckung" },
+    { l: "C", kind: "sup", name: "Support · direkt neben dir" }, { l: "D", kind: "dps", name: "Flanker · allein bei den Gegnern" }],
+  // v: {A: [von, bis], …}, st: Zustand der Markierungen, dead: Liste
+  draw(v, st, dead, extra) {
+    let s = DG.floor(6, 6, 468, 278);
+    anHeal.rows.forEach((r, i) => {
+      const cy = 52 + i * 62, [a, b] = v[r.l], isDead = (dead || []).includes(r.l);
+      s += DG.pin(30, cy, r.l, (st || {})[r.l] || "") + DG.tk(72, cy, r.kind, { r: 15, dim: isDead }) + (isDead ? AM.fade(AM.cross(72, cy, 9), 0.6) : "");
+      s += DG.t(98, cy - 8, esc(r.name), "d-txt") + AM.bar(98, cy + 2, 290, 14, a, b);
+      s += DG.t(462, cy + 14, `${b} %`, "d-txtb", "end");
+    });
+    return s + (extra || "");
+  }
+};
+// L6 Eigene Ult: Zeitleiste wie im Lernbild «Deine Ult: mit Plan statt aus Gewohnheit»
+const anUlt = {
+  X: t => 24 + t * 36.5,
+  lanes() {
+    const lane = (y0, title) => DG.t(24, y0, title, "d-txt") + `<rect class="d-lane" x="24" y="${y0 + 8}" width="438" height="34" rx="9"/>`;
+    return DG.floor(6, 6, 468, 250) + lane(30, "Gegner") + lane(96, "Defensive Ult: auf ihre Ult warten") + lane(162, "Offensive Ult: beim eigenen Angriff") + DG.lab(462, 236, "Zeit →", "end");
+  },
+  grow(t0, t1, y, label, begin, cls) {
+    const X = anUlt.X, w = X(t1) - X(t0);
+    return `<rect class="${cls || "d-cd"}" x="${X(t0)}" y="${y}" width="${AM.still() ? w : 0}" height="26" rx="8">${AM.still() ? "" : `<animate attributeName="width" from="0" to="${w}" dur="1.1s" begin="${begin || 0.3}s" fill="freeze"/>`}</rect>` + AM.fade(DG.t((X(t0) + X(t1)) / 2, y + 18, label, "d-txt2", "middle"), (begin || 0.3) + 0.9);
+  },
+  block(t0, t1, y, label, cls, begin) { const X = anUlt.X; return AM.fade(`<rect class="${cls}" x="${X(t0)}" y="${y}" width="${X(t1) - X(t0)}" height="34" rx="9"/>` + DG.t((X(t0) + X(t1)) / 2, y + 22, label, "d-white", "middle"), begin); },
+  head(t0, t1) {
+    const X = anUlt.X, a = X(t0), b = X(t1);
+    return `<line x1="${AM.still() ? b : a}" y1="16" x2="${AM.still() ? b : a}" y2="214" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 4">${AM.still() ? "" : `<animate attributeName="x1" from="${a}" to="${b}" dur="1.4s" begin=".3s" fill="freeze"/><animate attributeName="x2" from="${a}" to="${b}" dur="1.4s" begin=".3s" fill="freeze"/>`}</line>`;
+  }
+};
+// L7 Gegnerische Ults lesen: Balken «Zeit seit der letzten Ult» wie im Lernbild «Gegnerische Ults schätzen»
+const anRead = {
+  rows: [{ l: "A", t: "0:25", p: 12 }, { l: "B", t: "1:10", p: 40 }, { l: "C", t: "3:20", p: 95 }, { l: "D", t: "0:45", p: 24 }],
+  draw(grow, st, bolt) {
+    let s = DG.floor(6, 6, 468, 274);
+    anRead.rows.forEach((r, i) => {
+      const cy = 46 + i * 56;
+      s += DG.pin(30, cy + 6, r.l, (st || {})[r.l] || "") + DG.tk(72, cy + 6, "foe", { r: 15 });
+      s += DG.t(98, cy - 6, `Gegner ${i + 1}${grow ? ` · letzte Ult vor ${r.t}` : " · Ult gesehen?"}`, "d-txt") + AM.bar(98, cy + 2, 290, 14, grow === "anim" ? 2 : grow ? r.p : 2, grow ? r.p : 2, "d-fill");
+      if (bolt && r.l === "C") s += AM.fade(DG.bolt(412, cy + 9) + DG.lab(426, cy + 14, "bereit?"), 0.3);
+    });
+    return s + DG.lab(98, 268, "kurz her", "start") + DG.lab(388, 268, "lange her", "end") + DG.lab(243, 268, "Zeit seit der letzten Ult", "middle");
+  }
+};
+// L9 Schaden als Support: wie im Lernbild «Schaden machen, wenn niemand Heilung braucht»
+const anDmg = {
+  base(o) {
+    o = o || {};
+    let s = AM.floor();
+    s += DG.tk(176, 156, "tank", { r: 22 }) + AM.bar(156, 184, 40, 7, o.tank ? o.tank[0] : 85, o.tank ? o.tank[1] : 85);
+    s += DG.tk(150, 238, "dps", { r: 17 }) + AM.bar(130, 261, 40, 7, o.dps ? o.dps[0] : 85, o.dps ? o.dps[1] : 85);
+    const foe = (x, y, r, hp) => DG.tk(x, y, "foe", { r }) + DG.hp(x - 20, y + r + 6, 40, hp, 7);
+    s += foe(300, 172, 24, 100) + `<path d="M272 146Q318 172 272 198" fill="none" stroke="var(--vanguard)" stroke-width="5" stroke-linecap="round" opacity=".9"/>`;
+    if (!o.noB) s += foe(380, 84, 17, 28);
+    s += foe(390, 160, 18, 100) + foe(436, 258, 16, 100);
+    if (o.teamShots !== false) s += AM.shot("M198 146 358 94") + AM.shot("M166 226 362 104");
+    return s;
+  },
+  you: () => `<circle class="d-ring-help" cx="0" cy="0" r="38"/>` + DG.tk(0, 0, "sup", { r: 18 }) + DG.t(0, 56, "Du", "d-txt", "middle"),
+  pins: st => { st = st || {}; return DG.pin(300, 236, "A", st.A) + DG.pin(380, 40, "B", st.B) + DG.pin(390, 214, "C", st.C) + DG.pin(436, 218, "D", st.D); }
+};
+
+const ANIM = {
+  L2: { title: "Positionierung und Deckung", steps: [
+    { t: "Auf dem Weg zum Fight schaust du, wo Deckung ist: Wände, Säulen, Kisten. Merk dir diese Orte vorher, im Fight hast du keine Zeit mehr, sie zu suchen.",
+      svg: () => anPos.base() + anPos.tank([230, 118]) + AM.pulse(185, 227, 40) + AM.move([30, 150], [70, 160], AM.you("sup")) },
+    { t: "Jetzt du: Welche Position ist gedeckt und hat trotzdem Sicht auf deinen Tank?",
+      svg: () => anPos.base() + anPos.tank([230, 118]) + AM.shot("M404 118H258") + `<g transform="translate(70 160)">${AM.you("sup")}</g>` + AM.fade(anPos.pins(), 0.2),
+      ask: { q: "Wo stellst du dich hin?", opts: ["A: mitten auf der freien Fläche", "B: direkt hinter den Tank", "C: seitlich versetzt hinter die Säule", "D: weit hinten, weg vom Team"], a: 2,
+        why: "C: Die Säule hält die Schüsse ab, und du siehst deinen Tank zum Heilen. Auf freier Fläche (A) trifft dich jeder Gegner, direkt hinter dem Tank (B) treffen dich die Schüsse auf ihn, und weit hinten (D) hast du keine Sichtlinie zum Team." } },
+    { t: "Seitlich versetzt hinter der Säule: Die Schüsse treffen die Säule, und du siehst deinen Tank zum Heilen.",
+      svg: () => anPos.base() + anPos.tank([230, 118]) + AM.shot("M404 118H258") + AM.move([70, 160], [118, 224], AM.you("sup"))
+        + AM.fade(AM.shot("M408 222H208", true) + `<g class="d-blocked"><path d="M203 215 213 229M213 215 203 229"/></g>` + AM.beam("M132 212 212 134"), 1.4) + AM.fade(anPos.pins({ A: "bad", B: "bad", C: "good", D: "bad" }), 1.6) },
+    { t: "Heile aus der Deckung heraus: kurz rausgehen, heilen, wieder zurück. Treffen kann man dich nur im kurzen Moment draussen.",
+      svg: () => anPos.base() + anPos.tank([230, 118]) + AM.shot("M404 118H258") + AM.shot("M408 222H208", true) + `<g class="d-blocked"><path d="M203 215 213 229M213 215 203 229"/></g>`
+        + AM.beam("M140 200 212 134") + AM.peek([118, 224], [150, 196], AM.you("sup"), { rep: 3 }) },
+    { t: "Bewege dich mit dem Fight mit: Geht dein Tank vor, gehst du nach, bis zur nächsten Deckung. Geht er zurück, gehst du auch zurück.",
+      svg: () => anPos.base({ kiste: true }) + AM.move([230, 118], [300, 118], DG.tk(0, 0, "tank", { r: 22 }) + DG.t(0, 36, "Tank", "d-txt2", "middle"))
+        + AM.move([118, 224], [246, 232], AM.you("sup"), { begin: 0.8 }) + AM.fade(AM.beam("M256 216 290 140"), 2.2) }
+  ], quiz: { id: "L2-A", l: "L2", lvl: 1, q: "Dein Tank geht vor, du stehst gedeckt hinter einer Säule. Was tust du?",
+    opts: ["Hinter der Säule bleiben, die Deckung ist sicherer als jede neue Position", "Mitgehen bis zur nächsten Deckung, damit du ihn weiter siehst und heilen kannst", "Direkt hinter den Tank stellen, dann bist du am nächsten bei ihm", "Zurück nach hinten laufen und auf das Team warten"], a: 1,
+    why: "„Mitgehen bis zur nächsten Deckung“ stimmt: Bewege dich mit dem Fight mit. Geht dein Tank vor, gehst du nach, weil du ihn sonst nicht mehr siehst (L2).\nBleibst du stehen, verlierst du die Sichtlinie. Direkt hinter dem Tank treffen dich die Schüsse auf ihn. Und weit hinten bist du allein." } },
+
+  L20: { title: "Tank-Grundlagen", steps: [
+    { t: "Bevor du reingehst: Sind deine Fähigkeiten bereit? Ohne Cooldowns stehst du ohne Fähigkeiten im Fight.",
+      svg: () => AM.floor() + `<g transform="translate(110 154)">${anTank.sup()}</g>` + DG.tk(70, 96, "dps", { r: 16 }) + DG.tk(150, 244, "dps", { r: 15 }) + `<g transform="translate(200 154)">${anTank.you()}</g>`
+        + anTank.foes(0) + AM.pulse(200, 154, 34) + AM.fade(DG.chip(150, 14, 160, "Cooldowns bereit ✓", "good"), 0.8) },
+    { t: "Raum schaffen: Du drängst die Gegner zurück, dein Support geht mit. Je weiter die Gegner weichen, desto mehr Platz hat dein Team.",
+      svg: () => AM.floor() + AM.fade(`<rect class="d-zone-a" x="282" y="96" width="106" height="116" rx="14"/>` + DG.lab(335, 226, "Raum", "middle"), 1.4) + AM.move([110, 154], [160, 154], anTank.sup()) + AM.move([70, 96], [120, 96], DG.tk(0, 0, "dps", { r: 16 }))
+        + DG.tk(150, 244, "dps", { r: 15 }) + AM.move([200, 154], [250, 154], anTank.you()) + anTank.foes(36, true) + DG.chip(150, 14, 160, "Cooldowns bereit ✓", "good") },
+    { t: "Jetzt du: Ein Gegner zieht sich weit nach hinten zurück. Was tust du?",
+      svg: () => AM.floor() + `<rect class="d-zone-a" x="282" y="96" width="106" height="116" rx="14"/>` + `<g transform="translate(160 154)">${anTank.sup()}</g>` + DG.tk(120, 96, "dps", { r: 16 }) + DG.tk(150, 244, "dps", { r: 15 })
+        + `<g transform="translate(250 154)">${anTank.you()}</g>` + anTank.foes(36, false, true) + AM.move([424, 154], [456, 154], DG.tk(0, 0, "foe", { r: 16 }), { begin: 0.4 }) + AM.fade(DG.lab(452, 132, "weicht", "middle"), 0.9),
+      ask: { q: "Läufst du dem Gegner hinterher?", opts: ["Ja, so weit wie nötig, ein Tank muss immer ganz vorne sein", "Nein, nur so weit, wie dein Support mitkommt, sonst kämpfst du ohne Heilung", "Ja, und sofort die Ult drücken, auch wenn dein Team noch hinten ist", "Nein, zurück zum Spawn"], a: 1,
+        why: "Geh nur so weit vor, wie dein Support mitkommt. Bleib in seiner Heilreichweite, weil du sonst ohne Heilung kämpfst. Und die Ult drückst du nur, wenn dein Team mitzieht (L20)." } },
+    { t: "Du bleibst in der Heilreichweite deines Supports (gestrichelter Kreis). Weiter vorne stündest du allein und ohne Heilung vor dem Gegnerteam.",
+      svg: () => AM.floor() + `<g transform="translate(160 154)">${anTank.sup()}</g>` + DG.tk(120, 96, "dps", { r: 16 }) + DG.tk(150, 244, "dps", { r: 15 }) + `<g transform="translate(250 154)">${anTank.you()}</g>` + anTank.foes(36)
+        + AM.move([250, 154], [352, 154], `<g opacity=".38">${DG.tk(0, 0, "tank", { r: 24 })}</g>`, { begin: 0.4 }) + AM.fade(AM.cross(352, 154, 13) + DG.lab(352, 196, "ohne Heilung", "middle"), 1.7) + AM.pulse(160, 154, 92) },
+    { t: "Springt ein Diver auf einen Mitspieler, drehst du dich um und hilfst ihm. Zusammen holt ihr den Diver weg, danach drückt ihr wieder nach vorne.",
+      svg: () => AM.floor() + `<g transform="translate(160 154)">${anTank.sup()}</g>` + DG.tk(120, 96, "dps", { r: 16 }) + DG.tk(150, 244, "dps", { r: 15 }) + `<g transform="translate(250 154)">${anTank.you()}</g>` + anTank.foes(36)
+        + AM.move([330, 270], [196, 250], DG.tk(0, 0, "foe", { r: 14 }), { begin: 0.3, dur: 0.9 }) + AM.fade(AM.shot("M184 248 170 246"), 1.2) + AM.fade(DG.ar("M246 180 206 232", "d-move"), 1.6) }
+  ], quiz: { id: "L20-A", l: "L20", lvl: 1, q: "Du bist Tank. Deine Fähigkeiten laden noch, dein Team steht hinter dir. Wann startest du den Angriff?",
+    opts: ["Sofort, ein Tank muss immer Druck machen", "Erst wenn deine Fähigkeiten bereit sind, damit du nicht ohne sie im Fight stehst", "Erst wenn du allein vorne stehst, dann hast du mehr Platz", "Nur wenn dein Support weit hinten steht"], a: 1,
+    why: "„Erst wenn deine Fähigkeiten bereit sind“ stimmt: Engagiere mit Cooldowns. Sonst stehst du ohne Fähigkeiten im Fight (L20).\nAllein vorne und ohne Support kämpfst du ohne Heilung." } },
+
+  L21: { title: "DPS-Grundlagen", steps: [
+    { t: "Geh von der Seite in den Fight, nicht frontal. Such dir Deckung und einen Fluchtweg.",
+      svg: () => anDps.base() + AM.move([170, 150], [228, 56], AM.you("dps", 16, true)) + AM.fade(DG.ar("M212 48 150 30", "d-move") + DG.lab(140, 24, "Fluchtweg", "middle"), 1.6) },
+    { t: "Jetzt du: Auf wen schiesst du zuerst?",
+      svg: () => anDps.base() + `<g transform="translate(228 56)">${AM.you("dps", 16, true)}</g>` + AM.fade(anDps.pins(), 0.2),
+      ask: { q: "Welches Ziel nimmst du?", opts: ["A: den Tank vorne mit Schild", "B: den angeschlagenen Support", "C: den DPS mit vollem Leben", "Egal, Hauptsache möglichst viel Schaden"], a: 1,
+        why: "B: Zuerst Supports, angeschlagene Gegner und Flanker. Ein toter Support heilt nicht mehr, und ein angeschlagener Gegner fällt schnell. Den Tank mit seinem Schild nimmst du nicht zuerst (L21)." } },
+    { t: "Zuerst Supports, angeschlagene Gegner und Flanker. Den Tank mit Schild nimmst du nicht zuerst.",
+      svg: () => anDps.base() + `<g transform="translate(228 56)">${AM.you("dps", 16, true)}</g>` + AM.pulse(428, 74, 28, "fill:none;stroke:var(--bad)")
+        + AM.fade(AM.shot("M252 54 396 70"), 0.4) + AM.fade(AM.shot("M104 140 394 78"), 0.8) + AM.fade(AM.shot("M258 246 408 92"), 1.2) + anDps.pins({ A: "bad", B: "good", C: "bad" }) },
+    { t: "Fokusfeuer: Schiesst dein ganzes Team auf dasselbe Ziel, fällt es schnell. Verteilten Schaden heilen die Gegner leicht weg.",
+      svg: () => anDps.base(30, true) + `<g transform="translate(228 56)">${AM.you("dps", 16, true)}</g>` + AM.shot("M252 54 396 70") + AM.shot("M104 140 394 78") + AM.shot("M258 246 408 92")
+        + AM.bar(406, 100, 44, 8, 30, 0, "d-hp-low", 0.3) + AM.fade(AM.cross(428, 74, 11), 1.5) }
+  ], quiz: { id: "L21-A", l: "L21", lvl: 1, q: "Warum schiesst du als DPS auf dasselbe Ziel wie dein Team?",
+    opts: ["Weil ein Gegner, den alle treffen, schnell fällt, während verteilter Schaden leicht weggeheilt wird", "Weil du dann keine Deckung und keinen Fluchtweg mehr brauchst", "Weil der Tank mit Schild so am schnellsten fällt", "Weil du deine Fähigkeiten dann nicht mehr einsetzen musst"], a: 0,
+    why: "„Schnell fallen statt weggeheilt werden“ stimmt: Ein Gegner, den alle treffen, stirbt schnell. Verteilter Schaden lässt sich dagegen leicht wegheilen (L21).\nDeckung und Fluchtweg brauchst du trotzdem, und den Tank mit Schild nimmst du nicht zuerst." } },
+
+  L5: { title: "Heal-Priorität", h: 290, steps: [
+    { t: "Drei Gegner schiessen auf deinen Tank. Du kannst nicht alle gleichzeitig heilen, also gehst du eine feste Reihenfolge durch.",
+      svg: () => anHeal.draw({ A: [55, 30], B: [60, 60], C: [90, 90], D: [25, 15] }) },
+    { t: "Jetzt du: Wen heilst du zuerst?",
+      svg: () => anHeal.draw({ A: [30, 30], B: [60, 60], C: [90, 90], D: [15, 15] }),
+      ask: { q: "Wen heilst du zuerst?", opts: ["A: den Tank (30 %, unter Beschuss)", "B: den DPS (60 %, in Deckung)", "C: den Support neben dir (90 %)", "D: den Flanker (15 %, allein bei den Gegnern)"], a: 0,
+        why: "A: Den Tank heilst du zuerst, solange er vorne steht und den Fight trägt. Ohne ihn hat dein Team keine Front mehr (L5). Der Flanker allein bei den Gegnern fällt gleich und ist kaum noch zu retten." } },
+    { t: "Zuerst der Tank: Er trägt den Fight und ist noch zu retten.",
+      svg: () => anHeal.draw({ A: [30, 75], B: [60, 60], C: [90, 90], D: [15, 15] }, { A: "good" }) },
+    { t: "Danach heilst du, wer wenig Leben hat und noch zu retten ist. Der Flanker allein bei den Gegnern ist es nicht mehr.",
+      svg: () => anHeal.draw({ A: [75, 75], B: [60, 80], C: [90, 90], D: [15, 0] }, { A: "good", B: "good", D: "bad" }, ["D"]) },
+    { t: "Sind alle über etwa 70 %, machst du Schaden (L9), weil dein Team gerade keine Heilung braucht.",
+      svg: () => anHeal.draw({ A: [75, 75], B: [80, 80], C: [90, 90], D: [0, 0] }, { A: "good", B: "good", C: "good", D: "bad" }, ["D"], AM.fade(DG.chip(290, 8, 172, "Alle über 70 % → Schaden", "good", 22), 0.4)) }
+  ], quiz: { id: "L5-A", l: "L5", lvl: 1, q: "Alle Mitspieler haben über 70 % Leben, und dein Tank steht nicht unter Druck. Was machst du?",
+    opts: ["Weiter heilen, damit alle ständig volles Leben haben", "Schaden machen, weil dein Team gerade keine Heilung braucht", "Den Spieler heilen, der am nächsten bei dir steht", "Nichts tun und auf den nächsten Fight warten"], a: 1,
+    why: "„Schaden machen“ stimmt: Sind alle über etwa 70 %, machst du Schaden (L9), weil dein Team gerade keine Heilung braucht (L5).\nWer schon voll ist, braucht keine Heilung. Und du heilst nicht den, der am nächsten steht, sondern den, der den Fight entscheidet." } },
+
+  L6: { title: "Deine eigene Ult", h: 262, steps: [
+    { t: "Kenne deine Ult: Ist sie defensiv (rettet dein Team) oder offensiv (hilft beim Angriff)? Das steht auf deiner Hero-Karte.",
+      svg: () => anUlt.lanes() + AM.fade(DG.chip(286, 108, 172, "Defensiv: schützt", "info", 26), 0.3) + AM.fade(DG.chip(286, 174, 172, "Offensiv: greift an", "info", 26), 0.7) },
+    { t: "Die Gegner setzen ihre Fähigkeiten ein. Merk dir, was sie schon verbraucht haben.",
+      svg: () => anUlt.lanes() + anUlt.grow(0.3, 4.4, 42, "Cooldowns verbraucht", 0.3) + anUlt.head(0, 4.4) },
+    { t: "Jetzt du: Deine Ult ist defensiv. Wann setzt du sie ein?",
+      svg: () => anUlt.lanes() + anUlt.grow(0.3, 4.4, 42, "Cooldowns verbraucht", 0) + anUlt.head(4.4, 4.4),
+      ask: { q: "Wann setzt du deine defensive Ult ein?", opts: ["Sofort, sobald sie geladen ist", "Wenn die Gegner ihre Ult oder einen grossen Angriff starten", "Wenn alle in deinem Team volles Leben haben", "Gar nicht, defensive Ults lohnen sich nicht"], a: 1,
+        why: "Halte eine defensive Ult für den Moment bereit, in dem die Gegner ihre Ult oder einen grossen Angriff starten. Dann rettet sie dein Team am meisten (L6)." } },
+    { t: "Defensive Ult: bereithalten und einsetzen, wenn die Gegner ihre Ult starten.",
+      svg: () => anUlt.lanes() + anUlt.grow(0.3, 4.4, 42, "Cooldowns verbraucht", 0) + anUlt.block(5, 7.6, 38, "Ihre Ult", "d-ult-foe", 0.6)
+        + anUlt.grow(0.3, 4.7, 108, "bereithalten", 0.3) + anUlt.block(5.1, 7.4, 104, "Deine Ult ✓", "d-ult-ok", 1.5) + anUlt.head(4.4, 6.2) },
+    { t: "Offensive Ult: Setz sie ein, wenn dein Team angreift und die Gegner ihre Fähigkeiten gerade verbraucht haben.",
+      svg: () => anUlt.lanes() + anUlt.grow(0.3, 4.4, 42, "Cooldowns verbraucht", 0) + anUlt.block(5, 7.6, 38, "Ihre Ult", "d-ult-foe", 0) + anUlt.grow(0.3, 4.7, 108, "bereithalten", 0) + anUlt.block(5.1, 7.4, 104, "Deine Ult ✓", "d-ult-ok", 0)
+        + anUlt.grow(0.3, 4.4, 174, "noch warten", 0.3) + anUlt.block(4.6, 7, 170, "Angriff ✓", "d-ult-ok", 1.4) + anUlt.head(0, 4.6) },
+    { t: "Sag deine Ult an oder pinge sie, damit dein Team mitzieht.",
+      svg: () => anUlt.lanes() + anUlt.grow(0.3, 4.4, 174, "noch warten", 0) + anUlt.block(4.6, 7, 170, "Angriff ✓", "d-ult-ok", 0) + AM.fade(DG.chip(24, 214, 214, "„Ult bereit, wir gehen rein.“", "good", 26), 0.4) }
+  ], quiz: { id: "L6-A", l: "L6", lvl: 2, q: "Deine Ult ist zu 80 % geladen, und du überlegst, den Hero zu wechseln. Was passiert laut Lektion mit der Ladung?",
+    opts: ["Sie fällt auf 50 % zurück", "Sie bleibt bei 80 %", "Sie fällt auf 0 %", "Sie steigt auf 100 %"], a: 0,
+    why: "„Fällt auf 50 % zurück“ stimmt: War die Ult über 50 % geladen, fällt sie beim Wechsel auf 50 % zurück. Unter 50 % bleibt sie, wie sie ist (L6).\nDarum wechselst du nicht, wenn deine Ult fast bereit ist." } },
+
+  L7: { title: "Gegnerische Ults lesen", h: 288, steps: [
+    { t: "Die Ult-Ladung der Gegner siehst du nicht. Du merkst dir, wer seine Ult wann benutzt hat.",
+      svg: () => anRead.draw(false) },
+    { t: "Die Zeit läuft: Je länger der Balken, desto länger ist die letzte Ult dieses Gegners her.",
+      svg: () => anRead.draw("anim") },
+    { t: "Jetzt du: Wer hat seine Ult wahrscheinlich bereit?",
+      svg: () => anRead.draw(true),
+      ask: { q: "Wer hat seine Ult wahrscheinlich bereit?", opts: ["Gegner 1 (letzte Ult vor 0:25)", "Gegner 2 (letzte Ult vor 1:10)", "Gegner 3 (letzte Ult vor 3:20)", "Gegner 4 (letzte Ult vor 0:45)"], a: 2,
+        why: "Gegner 3: Wer lange keine Ult benutzt hat, hat sie wahrscheinlich bereit. Beispiel aus der Lektion: Ein Gegner hat seit 3:20 keine Ult benutzt, also rechnest du mit ihr (L7). Sicher wissen kannst du es nicht, du schätzt." } },
+    { t: "Gegner 3 hat seine Ult am längsten nicht benutzt. Mit seiner Ult rechnest du jetzt.",
+      svg: () => anRead.draw(true, { A: "bad", B: "bad", C: "good", D: "bad" }, true) },
+    { t: "Hörst oder siehst du eine gegnerische Ult: sofort in Deckung, Abstand gewinnen oder deinen Escape nutzen.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="150" y="96" width="26" height="110" rx="7"/>` + DG.t(163, 222, "Deckung", "d-txt2", "middle")
+        + `<circle class="d-ult-foe" cx="300" cy="150" r="${AM.still() ? 92 : 10}" opacity=".22">${AM.still() ? "" : `<animate attributeName="r" from="10" to="92" dur="1.2s" begin=".2s" fill="freeze"/>`}</circle>`
+        + DG.tk(300, 150, "foe", { r: 18 }) + AM.fade(DG.t(300, 262, "Gegnerische Ult", "d-txt2", "middle"), 0.3) + AM.move([250, 160], [126, 150], AM.you("sup"), { begin: 0.5, dur: 0.9 }) }
+  ], quiz: { id: "L7-A", l: "L7", lvl: 2, q: "Du rechnest damit, dass ein Gegner seine gefährliche Ult bereit hat. Was tust du mit deiner defensiven Ult?",
+    opts: ["Sofort einsetzen, bevor der Gegner zündet", "Zurückhalten, um seine Ult damit zu kontern", "Für den nächsten Fight sparen und diesen Fight aufgeben", "Den Hero wechseln, damit du eine andere Ult hast"], a: 1,
+    why: "„Zurückhalten“ stimmt: Rechnest du mit einer bereiten gegnerischen Ult, hältst du deine defensive Ult zurück, weil du sie dann zum Kontern brauchst (L7).\nSetzt du sie vorher ein, hast du nichts mehr, wenn die gegnerische Ult kommt." } },
+
+  L9: { title: "Schaden und Aggro als Support", steps: [
+    { t: "Prüf kurz: Sind alle über etwa 70 %, und steht der Tank nicht unter Druck? Nur dann machst du Schaden.",
+      svg: () => anDmg.base({ tank: [60, 85], dps: [55, 85] }) + `<g transform="translate(64 122)">${anDmg.you()}</g>` + AM.fade(DG.chip(16, 14, 136, "Team über 70 %", "good"), 1.4) },
+    { t: "Jetzt du: Welches Ziel nimmst du?",
+      svg: () => anDmg.base() + `<g transform="translate(64 122)">${anDmg.you()}</g>` + DG.chip(16, 14, 136, "Team über 70 %", "good") + AM.fade(anDmg.pins(), 0.2),
+      ask: { q: "Welches Ziel nimmst du?", opts: ["A: den Gegner-Tank mit Schild", "B: den angeschlagenen Gegner, auf den dein Team schon schiesst", "C: den Gegner-Support hinter dem Tank", "D: den Flanker weit hinten"], a: 1,
+        why: "B: Wähl gegnerische Supports, angeschlagene Gegner oder das Ziel, das dein Team gerade angreift. So fällt ein Gegner schneller, weil alle auf dasselbe schiessen (L9). Der Tank (A) hat viel Leben und einen Schild. Den Support (C) erreichst du hinter dem Tank nicht, dort holst du nichts raus. Und dem Flanker (D) weit weg müsstest du hinterherlaufen." } },
+    { t: "Du schiesst aus deiner sicheren Position mit und hilfst beim Kill.",
+      svg: () => anDmg.base() + `<g transform="translate(64 122)">${anDmg.you()}</g>` + DG.chip(16, 14, 136, "Team über 70 %", "good") + AM.fade(AM.beam("M88 116 354 90"), 0.4) + anDmg.pins({ A: "bad", B: "good", C: "bad", D: "bad" }) },
+    { t: "Der Gegner flieht mit wenig Leben. Lauf ihm nicht hinterher: Du würdest dich vom Team trennen. Du bleibst in deiner sicheren Position.",
+      svg: () => anDmg.base({ noB: true, teamShots: false }) + `<g transform="translate(64 122)">${anDmg.you()}</g>` + AM.move([380, 84], [452, 34], DG.tk(0, 0, "foe", { r: 17 }) + DG.hp(-20, 23, 40, 28, 7), { begin: 0.3 })
+        + AM.move([64, 122], [270, 70], `<g opacity=".38">${DG.tk(0, 0, "sup", { r: 18 })}</g>`, { begin: 0.9 }) + AM.fade(AM.cross(270, 70, 12) + DG.lab(270, 104, "allein", "middle"), 2.2) },
+    { t: "Braucht jemand Heilung, gehst du sofort zurück zum Heilen. Dein Team braucht dich dann wieder.",
+      svg: () => anDmg.base({ noB: true, tank: [85, 35], teamShots: false }) + `<g transform="translate(64 122)">${anDmg.you()}</g>` + AM.fade(AM.shot("M276 166 202 158") + AM.shot("M372 156 200 152"), 0.2) + AM.fade(AM.beam("M84 126 152 152"), 1.5) }
+  ], quiz: { id: "L9-A", l: "L9", lvl: 1, q: "Du machst als Support gerade Schaden, da fällt das Leben deines Tanks stark. Was tust du?",
+    opts: ["Weiter Schaden machen, damit ihr den Kill holt", "Sofort zurück zum Heilen", "Dem fliehenden Gegner hinterherlaufen", "Warten, bis der Tank selbst zurückkommt"], a: 1,
+    why: "„Sofort zurück zum Heilen“ stimmt: Braucht jemand Heilung, gehst du sofort zurück zum Heilen, weil dein Team dich dann wieder braucht (L9).\nEin typischer Fehler ist, Schaden zu machen, während dein Tank fällt." } }
+};
+WQ.push(...Object.values(ANIM).map(a => a.quiz));
+
+const animUi = {};   // id -> { s: Schritt, ans: {Schritt: gewählte Antwort}, q: Antwort auf die Abschlussfrage }
+const animSt = id => animUi[id] || (animUi[id] = { s: 0, ans: {}, q: null });
+const animDone = id => !!(state.anim && state.anim[id]);
+function animInner(id) {
+  const A = ANIM[id], st = animSt(id), n = A.steps.length, w = wissenById(id);
+  const dots = `<span class="anim-dots" aria-hidden="true">${A.steps.map((_, i) => `<span class="${i < st.s ? "on" : i === st.s ? "cur" : ""}"></span>`).join("")}<span class="${st.s >= n ? "cur" : ""}">?</span></span>`;
+  const head = `<div class="fig-head"><span>${icon("play")}${esc(A.title)}</span><span class="small muted">${st.s < n ? `Schritt ${st.s + 1} von ${n}` : "Abschlussfrage"} ${dots}</span></div>`;
+  if (st.s >= n) {
+    const q = A.quiz, a = st.q;
+    return `${head}<div class="anim-q"><p style="margin:0 0 8px"><b>${esc(q.q)}</b></p>
+      <div class="qopts">${q.opts.map((o, i) => `<button type="button" data-animq="${i}" data-id="${id}" ${a !== null ? "disabled" : ""} class="${a === null ? "" : i === q.a ? "right" : i === a ? "wrong" : ""}">${esc(o)}</button>`).join("")}</div>
+      ${a !== null ? `<div class="note ${a === q.a ? "good" : "info"}" style="margin:10px 0 0"><span class="ni" aria-hidden="true">${a === q.a ? "✓" : "i"}</span><div>${a === q.a ? "<b>Richtig.</b> " : "<b>Noch nicht.</b> "}${richLines(q.why, new Set())}</div></div>
+        <p class="small muted" style="margin:8px 0 0">Die Frage kommt später im Wissens-Check wieder, mit wachsendem Abstand.</p>` : `<p class="small muted" style="margin:8px 0 0">Erst antworten, dann siehst du die Lösung mit Begründung. Dein Text zum Nachlesen: ${esc(id)} – ${esc(w ? w.title : A.title)} im Lexikon.</p>`}</div>
+      <div class="anim-nav"><button type="button" class="btn ghost small" data-animgo="prev" data-id="${id}">Zurück</button><button type="button" class="btn ghost small" data-animgo="restart" data-id="${id}">Von vorne</button></div>`;
+  }
+  const step = A.steps[st.s], ask = step.ask, got = ask ? st.ans[st.s] : undefined, locked = ask && got === undefined;
+  return `${head}<div class="anim-stage" data-s="${st.s}"><svg viewBox="0 0 480 ${A.h || 300}" role="img" aria-label="${esc(step.t)}">${step.svg()}</svg></div>
+    <p class="anim-cap">${esc(step.t)}</p>
+    ${ask ? `<div class="anim-ask"><p style="margin:0 0 6px"><b>${esc(ask.q)}</b> <span class="small muted">Erst wählen, dann geht es weiter.</span></p>
+      <div class="qopts">${ask.opts.map((o, i) => `<button type="button" data-animask="${i}" data-id="${id}" ${got !== undefined ? "disabled" : ""} class="${got === undefined ? "" : i === ask.a ? "right" : i === got ? "wrong" : ""}">${esc(o)}</button>`).join("")}</div>
+      ${got !== undefined ? `<p class="small" style="margin:8px 0 0">${got === ask.a ? "<b>Richtig.</b> " : "<b>Nicht ganz.</b> "}${esc(ask.why)}</p>` : ""}</div>` : ""}
+    <div class="anim-nav">${st.s > 0 ? `<button type="button" class="btn ghost small" data-animgo="prev" data-id="${id}">Zurück</button>` : ""}
+      <button type="button" class="btn ghost small" data-animgo="replay" data-id="${id}" title="Diesen Schritt nochmal abspielen">Nochmal</button>
+      <button type="button" class="btn small" data-animgo="next" data-id="${id}" ${locked ? "disabled" : ""}>${st.s === n - 1 ? "Zur Abschlussfrage" : "Weiter"}</button></div>`;
+}
+const animHtml = id => ANIM[id] ? `<div class="anim" data-anim="${id}">${animInner(id)}</div>` : "";
+// Aufklappbar mit Fortschritt (für Trainingstag und Lexikon)
+const animFoldHtml = (id, key) => ANIM[id] ? foldHtml(key || "anim-" + id, `Lernanimation: ${esc(ANIM[id].title)}`, animHtml(id),
+  { icon: "play", sub: animDone(id) ? `angeschaut ${state.anim[id].ok ? "· Abschlussfrage richtig ✓" : "· Abschlussfrage noch einmal üben"}` : `${ANIM[id].steps.length} Schritte mit Vorhersage, dann eine Abschlussfrage` }) : "";
+function animRender(id) { document.querySelectorAll(`.anim[data-anim="${id}"]`).forEach(el => { el.innerHTML = animInner(id); }); }
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-animgo],[data-animask],[data-animq]");
+  if (!b || !ANIM[b.dataset.id]) return;
+  const id = b.dataset.id, st = animSt(id), n = ANIM[id].steps.length;
+  if (b.dataset.animgo === "next") st.s = Math.min(n, st.s + 1);
+  else if (b.dataset.animgo === "prev") st.s = Math.max(0, st.s - 1);
+  else if (b.dataset.animgo === "restart") { st.s = 0; st.ans = {}; st.q = null; }
+  else if (b.dataset.animask !== undefined) { if (st.ans[st.s] === undefined) st.ans[st.s] = +b.dataset.animask; }
+  else if (b.dataset.animq !== undefined && st.q === null) {
+    const q = ANIM[id].quiz; st.q = +b.dataset.animq;
+    knowRecord(q, st.q === q.a);
+    state.anim = Object.assign({}, state.anim, { [id]: { d: today(), ok: st.q === q.a } });
+    save();
+  }
+  animRender(id);
+});
 
 
 // ---------- Mini-Bilder für Begriffe (Glossar und Tooltips) und der Tagesablauf ----------
