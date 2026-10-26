@@ -916,6 +916,23 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .fig-head { padding: 12px 16px 2px; font-weight: 700; font-size: .92rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .fig svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .fig figcaption { padding: 2px 16px 14px; font-size: .84rem; color: var(--muted); line-height: 1.45; }
+.nmcard { border-left: 4px solid var(--accent); }
+.nmlbl { font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2px 0 2px; }
+.nmfocus { font-size: 1.12rem; font-weight: 700; line-height: 1.4; margin: 0 0 6px; text-wrap: pretty; }
+.nmpre { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
+.nmnext { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.nmbg { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.nmbg > summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+.nmbgsec { margin: 8px 0 0; }
+.nmbgsec .wl { margin: 2px 0 0; }
+.bfocus { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); }
+.bfl { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.bfl li { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: .92rem; line-height: 1.45; padding: 4px 6px; border-radius: 8px; }
+.bfl li.cur { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.bfr { font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .bfl li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.pfull > summary { cursor: pointer; color: var(--muted); margin: 4px 0; }
+.fxstep { margin: 4px 0 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); font-size: .9rem; }
 .anim { margin: 6px 0 10px; max-width: 640px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
 .anim-stage svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .anim-cap { margin: 4px 16px 10px; font-size: .92rem; line-height: 1.5; max-width: 62ch; }
@@ -5114,7 +5131,7 @@ document.addEventListener("keydown", e => {
 function renderToday() {
   const el = $("#todayBody");
   const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
-  const info = todayLessonInfo(), g = activeGoal(), openR = ms.filter(isOpenRefl).length, lessonsN = Object.keys(lessonsDone()).filter(id => lessonById(id)).length;
+  const info = todayLessonInfo(), g = activeGoal(), openR = ms.filter(m => isOpenRefl(m) && m.date >= addDays(tdy, -1)).length, lessonsN = Object.keys(lessonsDone()).filter(id => lessonById(id)).length;
   const dateTxt = new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" });
   // Dein Tagesablauf: immer dieselbe Reihenfolge, passend zu den Abschnitten des Trainingstags. 1 Vorbereiten, 2 Spielen, 3 Auswerten,
   // 4 Extra (freiwillig, zählt nicht mit). Jeder Schritt sagt, wo du ihn machst, und hakt sich wo möglich selbst ab.
@@ -5130,7 +5147,7 @@ function renderToday() {
   else if (cur > PLAN_N) prep.push({ done: true, t: "Trainingsplan abgeschlossen", s: `Alle ${PLAN_N} Tage geschafft.`, a: "" });
   else { const pd = trainedToday || dayStages(cur)[0].done;
     prep.push({ done: pd, t: `Trainingstag ${cur}: ${esc(PLAN.days[cur - 1].title)}`, s: `Worauf es heute ankommt, Bilder zum Thema, Start · im Trainingstag unter «Vorbereitung»${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small ${pd ? "ghost" : ""}" type="button" data-pact="day" data-n="${cur}">${pd ? "Ansehen" : "Tag öffnen"}</button>` }); }
-  { const fx = fxChosen(tdy), ok = !!(state.focusSel && state.focusSel.d === tdy);
+  if (!focusNow()) { const fx = fxChosen(tdy), ok = !!(state.focusSel && state.focusSel.d === tdy);
     prep.push({ done: ok, t: "Fokus fürs Match festlegen", s: `${fx.length ? `Bis zu ${FX_MAX} Punkte: ${esc(fx.map(x => x.tag).join(", "))}` : "Noch nichts gewählt"} · gilt für Notiz, Match loggen und Review`,
       a: `${fx.length && !ok ? `<button class="btn small" type="button" data-fxok="1">Passt so</button> ` : ""}<button class="btn small ${fx.length ? "ghost" : ""}" type="button" data-fxgo="1">${ok ? "Ansehen" : "Ändern"}</button>` }); }
   if (!g) prep.push({ done: false, t: "Wochenziel setzen", s: "Einmal pro Woche: ein Ziel gibt dem Training Richtung · im Reiter «Woche»", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
@@ -5142,7 +5159,7 @@ function renderToday() {
   play.push({ done: tm.length > 0 && withN >= tm.length, t: "Nach jedem Match: Notiz", s: `${tm.length ? `${withN} von ${plural(tm.length, "Match", "Matches")} mit Notiz` : "Noch keine Matches vom Abgleich"}${waiting ? ` · ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""} · im Match mit ✓ und ✗ mitzählen, danach bewerten`,
     a: `<button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button>` });
   // 3) Auswerten
-  if (openR) post.push({ done: false, t: `${plural(openR, "Match wartet", "Matches warten")} auf deine Reflexion`, s: "Matches ohne Notiz: kurz Fehler und Stärken eintragen · unter «Spielen › Matches»", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
+  if (openR) extra.push({ done: false, t: `${plural(openR, "Match", "Matches")} von heute und gestern ohne Notiz`, s: "Kurz Fehler und Stärken eintragen · ältere stehen unter «Spielen › Matches»", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
   const rs = rvStatus();
   if (rs.need) post.push({ done: rs.ok, t: `Review: ${rs.done} von ${rs.need} Matches ausgewertet`, s: rs.ok ? "Heute geschafft." : "Zuerst die Matches mit Notiz, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ${rs.ok ? "ghost" : ""}" type="button" data-rv-go="${rs.L.open[0] ? rs.L.open[0].id : ""}">${rs.ok ? "Ansehen" : "Weiter"}</button>` });
   if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : "Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»", a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
@@ -5169,8 +5186,8 @@ function renderToday() {
   const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun: dein Tagesablauf</h2><span class="badge">${doneN} von ${items.length}</span></div>
     <p class="small muted" style="margin:0 0 6px">Immer in dieser Reihenfolge: vorbereiten, spielen, auswerten. Jeder Schritt sagt dir, wo du ihn machst; vieles hakt sich von selbst ab.</p>
     ${phases.map(([t, hint, l], pi) => l.length ? `<div class="dphase ${pi < 3 && l.every(x => x.done) ? "pdone" : ""} ${pi === 3 ? "pextra" : ""}"><div class="dph"><b>${pi < 3 ? `${pi + 1} · ` : ""}${t}</b> <span class="small muted">${hint}</span>${pi < 3 && l.every(x => x.done) ? ' <span class="badge ok">✓</span>' : ""}</div>${l.map(row).join("")}</div>` : "").join("")}</div>`;
-  // Fokus fürs nächste Match
-  const focus = fxTodayHtml();
+  // Fokus fürs nächste Match: eine Sache; Grundregeln, Wochenziel und Missionen laufen eingeklappt nebenbei
+  const focus = nmCardHtml();
   // Hinweise
   const news = [];
   const missed = missedLessons();
@@ -5200,11 +5217,11 @@ function renderToday() {
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
   // Seltener Gebrauchtes steht eingeklappt unter «Mehr für heute» (die App merkt sich, ob es offen ist)
-  const tbH = tbTodayHtml(), tourH = tourCardHtml(), more = [tbH, tourH, guide].filter(Boolean).join("");
-  const moreSub = [tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
+  const tbH = tbTodayHtml(), tourH = tourCardHtml(), funH = funFoldHtml(), more = [funH, tbH, tourH, guide].filter(Boolean).join("");
+  const moreSub = [funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
   funCheck();
-  el.innerHTML = hero + list + missionsCardHtml() + focus + rulesCardHtml() + funFoldHtml() + newsCard + first + formHudHtml() + moreFold;
+  el.innerHTML = hero + focus + list + newsCard + first + formHudHtml() + moreFold;
 }
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
@@ -6432,14 +6449,16 @@ $("#openRefl").addEventListener("click", e => {
   }
 });
 // ---------- Dein Fokus im Match: eine Liste für Notiz, Match loggen, Review und den Reiter «Woche» ----------
-// Was du dir für die nächsten Matches vornimmst, wählst du einmal aus (höchstens drei, state.focusSel = {keys, own}). Ohne eigene Auswahl schlägt
-// die App vor: Mini-Ziel aus Block 3, Lektions-Fokus, Match-Fokus des Wochenziels und das Thema des Tages. Nach dem Match bewertest du dieselben
+// An einem Plantag steht immer die eine Sache des aktuellen Plan-Abschnitts oben (src "step", siehe «Ein Match, eine Sache», gespeichert in
+// m.qn.step = {k, t, v}). Dazu kannst du bis zu zwei Punkte wählen (höchstens drei insgesamt, state.focusSel = {keys, own, d, v: 2}); eine Auswahl
+// gilt für den Tag, an dem du sie triffst. Ohne Plan-Abschnitt schlägt die App einen Punkt vor (Mini-Ziel, Lektions-Fokus, Wochenziel oder Thema des Tages). Nach dem Match bewertest du dieselben
 // Punkte mit denselben Knöpfen, egal ob in der Notiz, beim Eintragen oder im Review. Jede Quelle behält ihr Feld und ihre Skala im Match:
 // Grundregel m.rules[id] (von selbst / bewusst / nein), Bootcamp-Aufgabe m.tasks[key], Lektions-Fokus m.focus = {id, rating},
 // Mini-Ziel m.qn.mini, Wochenziel m.qn.goal = {id, t, v}, eigenes Ziel m.qn.own = {t, v}. Welche Punkte zum Match gehörten: m.qn.fxKeys und m.qn.fxT.
 const FX_MAX = 3;
 const FX_FOCUS_V = [["3", "Ja"], ["2", "Teilweise"], ["1", "Nein"]];
 const fxScale = src => src === "rule" ? RULE_V : src === "focus" ? FX_FOCUS_V : TASK_V;
+const fxStep = all => all.find(x => x.src === "step");
 const fxId = key => key.slice(key.indexOf(":") + 1);
 function fxMiniText(n) {
   if (!n || n > PLAN_N) return "";
@@ -6451,7 +6470,9 @@ function fxMiniText(n) {
 // Alle Punkte, die gerade zur Wahl stehen. Mit Held (Match loggen, Review) nur dessen Bootcamp-Aufgaben, sonst die aller laufenden Kurse.
 function fxAll(date, hero) {
   const n = planStarted() ? planDayOf(date || today()) : 0, out = [];
-  const mini = fxMiniText(n);
+  const fn = (date || today()) === today() ? focusNow() : null;
+  if (fn && !fn.done) out.push({ key: "step:" + fn.seg.key, src: "step", tag: "Dein Fokus", t: fn.seg.t });
+  const mini = fn && !fn.done ? "" : fxMiniText(n);   // das Mini-Ziel ist in Block 3 schon die eine Sache
   if (mini) out.push({ key: "mini", src: "mini", tag: "Mini-Ziel", t: mini });
   const l = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
   if (l && l.focus) out.push({ key: "focus:" + l.id, src: "focus", tag: `Lektion ${lessonNo(l.id)}`, t: l.focus });
@@ -6464,8 +6485,12 @@ function fxAll(date, hero) {
   if (own) out.push({ key: "own", src: "own", tag: "Eigenes Ziel", t: own });
   return out.map(x => Object.assign(x, { scale: fxScale(x.src) }));
 }
-const fxDefault = all => all.filter(x => ["mini", "focus", "goal"].includes(x.src) || (x.src === "rule" && x.tag === "Thema des Tages")).slice(0, FX_MAX).map(x => x.key);
-const fxSelKeys = all => state.focusSel && Array.isArray(state.focusSel.keys) ? state.focusSel.keys : fxDefault(all);
+const fxDefault = all => fxStep(all) ? [fxStep(all).key] : all.filter(x => ["mini", "focus", "goal"].includes(x.src) || (x.src === "rule" && x.tag === "Thema des Tages")).slice(0, 1).map(x => x.key);
+function fxSelKeys(all) {
+  const sel = state.focusSel, own = sel && sel.v === 2 && sel.d === today() && Array.isArray(sel.keys), st = fxStep(all);
+  const keys = own ? sel.keys.filter(k => !k.startsWith("step:")) : st ? [] : fxDefault(all);
+  return (st ? [st.key, ...keys] : keys).slice(0, FX_MAX);
+}
 function fxChosen(date, hero) { const all = fxAll(date, hero), keys = fxSelKeys(fxAll(today())); return all.filter(x => keys.includes(x.key)); }
 const fxShort = x => x.src === "rule" ? x.t : (x.t.length > 64 ? x.t.slice(0, 61) + "…" : x.t);
 function fxFromInfo(key, info) { if (!info) return null; const src = key.split(":")[0]; return { key, src, tag: info.tag, t: info.t, scale: fxScale(src) }; }
@@ -6478,6 +6503,7 @@ function fxGet(m, it) {
   if (it.src === "mini") return q.mini || undefined;
   if (it.src === "goal") return q.goal && q.goal.id === id ? q.goal.v : undefined;
   if (it.src === "own") return q.own ? q.own.v : undefined;
+  if (it.src === "step") return q.step && q.step.k === id ? q.step.v : undefined;
 }
 function fxSet(m, it, v) {
   const id = fxId(it.key), on = v !== null && v !== undefined && v !== "";
@@ -6487,6 +6513,7 @@ function fxSet(m, it, v) {
   if (it.src === "mini") m.qn.mini = on ? v : "";
   else if (it.src === "goal") { if (on) m.qn.goal = { id, t: it.t, v }; else delete m.qn.goal; }
   else if (it.src === "own") { if (on) m.qn.own = { t: it.t, v }; else delete m.qn.own; }
+  else if (it.src === "step") { if (on) m.qn.step = { k: id, t: it.t, v }; else delete m.qn.step; }
 }
 const fxVals = (m, items) => Object.fromEntries(items.map(it => [it.key, fxGet(m, it)]).filter(([, v]) => v !== undefined && v !== ""));
 // Merkt am Match, welche Punkte dazugehörten (damit Review und Bearbeiten später dieselben zeigen)
@@ -6511,23 +6538,24 @@ function fxRowsHtml(items, vals, attr, extra) {
 const fxMissed = v => ["nein", "teils", "1", "2"].includes(String(v));
 // Auswahl: Chips zum An- und Abwählen, dazu ein eigenes Ziel
 function fxPickHtml(ctx) {
-  const all = fxAll(today()), chosen = fxSelKeys(all), groups = [["Für heute", ["mini", "focus", "goal", "own"]], ["Grundregeln und Thema des Tages", ["rule"]], ["Bootcamp-Aufgaben", ["task"]]];
-  return `<div class="fxpick" data-fxctx="${ctx}">${groups.map(([lab, srcs]) => { const l = all.filter(x => srcs.includes(x.src)); return l.length ? `<div class="small muted fxgl">${lab}</div><div class="chips">${l.map(x => { const on = chosen.includes(x.key);
+  const all = fxAll(today()), chosen = fxSelKeys(all), st = fxStep(all), groups = [["Zusätzlich für heute", ["mini", "focus", "goal", "own"]], ["Grundregeln und Thema des Tages", ["rule"]], ["Bootcamp-Aufgaben", ["task"]]];
+  return `<div class="fxpick" data-fxctx="${ctx}">${st ? `<div class="small muted fxgl">Die eine Sache aus dem Plan (immer dabei)</div><div class="fxstep"><span class="fxtag">${esc(st.tag)}</span> ${esc(st.t)}</div>` : ""}${groups.map(([lab, srcs]) => { const l = all.filter(x => srcs.includes(x.src)); return l.length ? `<div class="small muted fxgl">${lab}</div><div class="chips">${l.map(x => { const on = chosen.includes(x.key);
       return `<button type="button" class="chip fxchip ${on ? "on" : ""}" data-fxsel="${esc(x.key)}" aria-pressed="${on}" title="${esc(x.t)}"><span class="fxtag">${esc(x.tag)}</span> ${esc(fxShort(x))}</button>`; }).join("")}</div>` : ""; }).join("")}
     <label class="small fxownl">Eigenes Ziel <input type="text" data-fxown value="${esc((state.focusSel || {}).own || "")}" placeholder="z. B. Nach jedem Fight zurück zur Deckung" maxlength="120"></label>
-    <p class="small muted" style="margin:6px 0 0">Höchstens ${FX_MAX} auf einmal, weniger ist im Match mehr. Die Auswahl gilt für Notiz, Match loggen und Review, bis du sie änderst.</p></div>`;
+    <p class="small muted" style="margin:6px 0 0">${st ? `Am besten bleibt es bei der einen Sache. Wenn du willst, nimm bis zu ${FX_MAX - 1} Punkte dazu.` : `Am besten nur eine Sache, höchstens ${FX_MAX}.`} Die Auswahl gilt heute für Notiz, Match loggen und Review.</p></div>`;
 }
 function fxRerender(el) {
   if (el && el.closest("#qnSheet")) { qnRedraw(); return; }
   render();
 }
 function fxToggle(key) {
+  if (key.startsWith("step:")) { toast("Die eine Sache aus dem Plan ist immer dabei."); return false; }
   const all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k));
   let keys;
   if (cur.includes(key)) keys = cur.filter(k => k !== key);
   else if (cur.length >= FX_MAX) { toast(`Höchstens ${FX_MAX} auf einmal. Nimm zuerst einen Punkt weg.`); return false; }
   else keys = [...cur, key];
-  state.focusSel = Object.assign({}, state.focusSel, { keys, d: today() });
+  state.focusSel = Object.assign({}, state.focusSel, { keys: keys.filter(k => !k.startsWith("step:")), d: today(), v: 2 });
   save(); return true;
 }
 document.addEventListener("click", e => {
@@ -6536,10 +6564,10 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target.closest ? e.target.closest("[data-fxown]") : null; if (!t) return;
-  const v = t.value.trim(), all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k) && k !== "own");
+  const v = t.value.trim(), all = fxAll(today()), cur = fxSelKeys(all).filter(k => all.some(x => x.key === k) && k !== "own" && !k.startsWith("step:")), room = FX_MAX - (fxStep(all) ? 1 : 0);
   if (v === ((state.focusSel || {}).own || "")) return;   // doppelte Meldung beim Verlassen des Felds
-  state.focusSel = Object.assign({}, state.focusSel, { own: v, keys: v ? (cur.length < FX_MAX ? [...cur, "own"] : cur) : cur, d: today() });
-  if (v && cur.length >= FX_MAX) toast(`Eigenes Ziel gespeichert. Wähl einen anderen Punkt ab, damit es mitzählt (höchstens ${FX_MAX}).`);
+  state.focusSel = Object.assign({}, state.focusSel, { own: v, keys: v ? (cur.length < room ? [...cur, "own"] : cur) : cur, d: today(), v: 2 });
+  if (v && cur.length >= room) toast(`Eigenes Ziel gespeichert. Wähl einen anderen Punkt ab, damit es mitzählt (höchstens ${FX_MAX}).`);
   save(); setTimeout(() => fxRerender(t), 0);   // erst nach dem Ereignis neu zeichnen (das Feld verliert dabei den Fokus)
 });
 // Verlauf eines Punkts über die Matches: letzte fünf Antworten als Punkte (grün ja, gelb teils oder bewusst, rot nein)
@@ -6591,12 +6619,12 @@ function fxTodayHtml() {
 }
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-fxok]")) return;
-  state.focusSel = Object.assign({}, state.focusSel, { keys: fxChosen(today()).map(x => x.key), d: today() });
+  state.focusSel = Object.assign({}, state.focusSel, { keys: fxChosen(today()).map(x => x.key).filter(k => !k.startsWith("step:")), d: today(), v: 2 });
   save(); render(); toast("Fokus für heute steht. Nach dem Match bewertest du ihn in der Notiz.");
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-funjump]")) return;
-  UIFOLD.fun = true; render();
+  UIFOLD.fun = true; UIFOLD["today-more"] = true; render();
   setTimeout(() => { const el = document.querySelector('#todayBody details[data-f="fun"]'); if (el) { el.open = true; el.scrollIntoView({ block: "start", behavior: "smooth" }); } }, 60);
 });
 document.addEventListener("click", e => {
@@ -6714,7 +6742,7 @@ const fxLabel = (key, v) => { const src = key.split(":")[0], x = fxScale(src).fi
 const qnToday = () => state.qnotes.filter(q => q.date === today());
 // «Zusatz des Tages» aus dem Aufschreiben-Schritt des heutigen Plantags
 function qnExtraLabel() {
-  const n = planStarted() ? planDayOf(today()) : 0, s = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.find(x => x.key === "note") : null;
+  const n = focusDay().n, s = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.find(x => x.key === "note") : null;
   return s ? s.t.split("\n").map(x => x.trim()).filter(x => /^Zusatz/.test(x)).map(x => x.replace(/^Zusatz[^:]*:\s*/, "")).join(" · ") : "";
 }
 function qnMatchFor(q) {
@@ -9094,7 +9122,8 @@ function lessonBannerHtml(onGradient) {
 function renderFocusCard() {
   const el = $("#focusCard");
   const l = state.lessons.activeFocus && lessonById(state.lessons.activeFocus);
-  if (!l || fxFormKeys().has("focus:" + l.id)) { el.hidden = true; el.innerHTML = ""; return; }
+  const stepOn = !editingId && fxFormItems().some(x => x.src === "step");   // an einem Plantag gilt die eine Sache, der Lektions-Fokus ist dann wählbar, nicht Pflicht
+  if (!l || stepOn || fxFormKeys().has("focus:" + l.id)) { el.hidden = true; el.innerHTML = ""; return; }
   const cur = document.querySelector('input[name="focusRating"]:checked');
   const val = cur ? cur.value : "";
   el.hidden = false;
@@ -9906,7 +9935,7 @@ function planDayHtml(n) {
     + (start ? `<div class="psteps">${stepHtml(n, start, seenD)}</div>` : "")
     + foldHtml("d-len", "Ablauf und Matchlänge", `<details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>${matchLenHtml()}`, { icon: "training", sub: blockText() })
     + (!start && !prepS.done && nextLabel ? `<div class="row"><button class="btn" type="button" data-pact="prep-ok" data-n="${n}">Bereit, weiter zu ${esc(nextLabel)} →</button></div>` : "");
-  const blockBody = s => (n === cur ? qnPlanHtml() : "") + (s.key === weakAt ? wkDayCardHtml(n) : "")
+  const blockBody = s => (n === cur ? qnPlanHtml() : "") + blockFocusHtml(n, s.step) + (s.key === weakAt ? wkDayCardHtml(n) : "")
     + nugBefore(n, s.step, d) + `<div class="psteps">${stepHtml(n, s.step, seenD)}</div>` + nugAfter(n, s.step, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "")
     + (funDay(n) && blocks.length && s.key === blocks[blocks.length - 1].key ? funPlanHtml(n) : "");
   const note = stepOf("note");
@@ -10110,13 +10139,13 @@ const PRACTICE = {
     hero: h => heroRole(h) === "Strategist" ? prQuote(h, PROF[h] && PROF[h].spielstil, /Schaden/) : "" },
   6: { task: "Schau beim Laden auf das Gegnerteam: Dive, Poke oder Brawl? Wenn dein Pick schlecht passt, dann wechselst du in der ersten Pause (Wechsel-Berater unter Team & Counter)." },
   7: { task: "Nach zwei Niederlagen in Folge machst du zwei Minuten Pause, bevor du das nächste Match startest. Im Match: nur kurze, freundliche Calls." },
-  8: { task: "Spiel die Matches in Block 3 als Tank, zum Beispiel ungewertet: Bleib vorne, aber nie allein, und halte dein Team zusammen.", per: m => heroRole(m.hero) === "Vanguard", goal: "als Tank gespielt",
+  8: { task: "Spiel diese Matches als Tank, zum Beispiel ungewertet: Bleib vorne, aber nie allein, und halte dein Team zusammen.", per: m => heroRole(m.hero) === "Vanguard", goal: "als Tank gespielt",
     hero: h => heroRole(h) === "Vanguard" ? prQuote(h, PROF[h] && PROF[h].spielstil, /./) : "" },
-  9: { task: "Spiel die Matches in Block 3 als DPS, zum Beispiel ungewertet: Such dir ein Ziel aus, das dein Team gerade angreift (Fokusfeuer).", per: m => heroRole(m.hero) === "Duelist", goal: "als DPS gespielt",
+  9: { task: "Spiel diese Matches als DPS, zum Beispiel ungewertet: Such dir ein Ziel aus, das dein Team gerade angreift (Fokusfeuer).", per: m => heroRole(m.hero) === "Duelist", goal: "als DPS gespielt",
     hero: h => heroRole(h) === "Duelist" ? prQuote(h, PROF[h] && PROF[h].spielstil, /./) : "" },
   10: { task: "Wenn ein Diver auf dich springt, dann nutzt du sofort deine Abwehr-Fähigkeit und läufst zu deinem Team, statt allein zu kämpfen.", per: (m, base) => base.d ? m.d <= Math.max(2, Math.floor(base.d * 0.85)) : null, goal: "weniger Tode als dein Schnitt",
     hero: h => prTag(h, ["AntiDive"], "Hat Mittel gegen Diver wie Stuns, Fallen, Schlaf oder Wegstossen") },
-  11: { task: "Spiel Block 3 nur mit Helden aus deinem Pool und achte auf die aktuelle Bootcamp-Aufgabe.", per: m => poolHeroes().includes(m.hero), goal: "mit einem Pool-Helden gespielt", hero: h => poolHeroes().includes(h) ? "Steht in deinem Pool" : "" },
+  11: { task: "Spiel diese Matches nur mit Helden aus deinem Pool und achte auf die aktuelle Bootcamp-Aufgabe.", per: m => poolHeroes().includes(m.hero), goal: "mit einem Pool-Helden gespielt", hero: h => poolHeroes().includes(h) ? "Steht in deinem Pool" : "" },
   12: { task: "Sobald ein Partner für dein Team-Up im Team ist, setzt du das Team-Up mindestens einmal pro Fight bewusst ein.",
     hero: h => { const t = tuOf(h).own[0]; return t ? `Team-Up «${t.name}» mit ${t.helden.filter(z => z.rolle === "Partner").map(z => z.name).join(", ")}: ${tuFirst(t.wirkung)}` : ""; } },
   13: { task: "Vor jedem Match: Welche Karte, welcher Modus? Such dir eine sichere Position am ersten Punkt aus, bevor das Match startet." },
@@ -10135,7 +10164,7 @@ function prBase() {
   const ms = state.matches.filter(m => m.date < today()).slice(-20), t = ms.filter(m => m.dur > 0 && m.dmg !== null && m.dmg !== undefined), acc = ms.filter(m => m.acc > 0);
   return { d: ms.length >= 5 ? ms.reduce((a, m) => a + (+m.d || 0), 0) / ms.length : null, dmg10: t.length >= 5 ? t.reduce((a, m) => a + m.dmg, 0) / t.reduce((a, m) => a + m.dur, 0) * 10 : null, acc: acc.length >= 5 ? acc.reduce((a, m) => a + m.acc, 0) / acc.length : null };
 }
-const blockMatchesToday = bi => { const B = blockMatches(); return state.matches.filter(m => m.date === today()).slice().sort((a, b) => matchTime(a) - matchTime(b)).slice(bi * B, (bi + 1) * B); };
+const blockMatchesToday = bi => { const B = blockMatches(); return planMatchesToday(planDay()).slice().sort((a, b) => matchTime(a) - matchTime(b)).slice(bi * B, (bi + 1) * B); };
 const block3Matches = () => blockMatchesToday(2);
 // Thema für «gezielt üben» am Vertiefen-Tag ohne festes Thema (nach Tests): das gelernte Thema, das am wenigsten von allein läuft
 function practiceAuto(n) {
@@ -10174,11 +10203,306 @@ function stepHtml(n, s, seen, o = {}) {
   const lock = o.carry || done ? "" : rvLock(n, s);
   const auto = autoTagHtml(o.carry ? autoStepEval(o.carry.to, s, carryFor(o.carry.to).findIndex(x => x.id === o.carry.id)) : autoStepEval(n, s, -1), done);
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
+  const fullPlan = !o.carry && /^b[1-4]$/.test(s.key) && focusPlan(n).some(x => x.key === s.key);   // die eine Sache pro Match steht oben im Block
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""} ${lock ? "disabled" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice && !o.carry ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}${fullPlan ? `<details class="pfull"${WRITE_RE.test(s.t || "") ? " open" : ""}><summary class="small">Ganze Anleitung aus dem Plan${s.practice ? " und Übungs-Helden" : ""}</summary><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}</details>`
+      : `<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice && !o.carry ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}`}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
 const swapHintHtml = s => /Swap|Komposition|Gegnerteam aus/.test(s.t || "") ? `<div class="small" style="margin-top:6px"><button type="button" class="linkbtn" data-pact="swap-open">Dabei hilft dir der Support-Wechsel-Berater im Tab Team &amp; Counter</button></div>` : "";
+
+// ---------- Ein Match, eine Sache ----------
+// Für das nächste Match zeigt die App genau eine Sache: die Aufgabe des Plan-Abschnitts, in dem du gerade bist (Heute, Trainingstag, Notiz).
+// Welcher Abschnitt dran ist, folgt aus den Matches von heute (dazu die Notizen, die noch auf ihr Match warten) und den abgehakten Blöcken.
+// FOCUS_PLAN gilt für die Kennenlernen-Tage (ursprünglicher Tag 2 bis 56, Match-Nummern wie im Plan geschrieben, umgerechnet auf deine Blockgrösse).
+// Die Sätze stammen aus dem Plantext. Nennt ein Block mehrere Regeln für dieselben Matches, verteilt die Tabelle sie in der Reihenfolge des Plans
+// auf die Matches (so macht es der Plan selbst am ursprünglichen Tag 20: «In jedem Match gilt ein einziger Schwerpunkt»); verlangt der Plan ausdrücklich alle
+// in jedem Match (ursprünglich Tag 45 und 46), bleiben sie zusammen. Der ganze Plantext bleibt im Block sichtbar. Ein Abschnitt: [von, bis, Satz, «Geschafft, wenn …»].
+// Die Vertiefen-Tage leiten ihren Fokus aus gezielter Übung, Thema und Mini-Ziel ab (focusDeep).
+const FOCUS_PLAN = {
+  2: { b1: [[1, 1, "Nenn dir vor jedem Fight kurz Cover und Fluchtweg.", "du beides vor jedem Fight weisst"], [2, 2, "Stirb höchstens 1-mal pro Fight. Heb deinen Escape für Dives auf.", "du den Dive überlebst"], [3, 3, "Hast du keinen Fluchtweg mehr, zieh dich zurück, statt weiterzuheilen.", "du nicht in Fights stirbst, aus denen du nicht mehr rauskommst"]],
+    b2: [[4, 6, "Teamnähe: Beweg dich immer mit dem Team. Lauf nie allein los, nur um jemanden zu heilen."]],
+    b3: [[7, 9, "Abstand zum Tank: Bleib in Reichweite deines Tanks, aber nicht in seiner Schusslinie.", "du fast immer beim Tank bist und trotzdem nicht in seiner Schusslinie stehst"]],
+    b4: "Wo ist mein Fluchtweg?" },
+  3: { b1: [[1, 1, "Frag dich vor jedem Fight: Welche gefährliche gegnerische Ult könnte kommen? Wer seine Ult lange nicht benutzt hat, hat sie wahrscheinlich bereit."], [2, 2, "Heb deine defensive Ult für die gegnerische Ult auf. Setz sie nicht vorher ein."], [3, 3, "Spiel mit Gambit und setz die Ult nur mit Plan ein: Du weisst vorher, wann und wofür."]],
+    b2: [[4, 6, "Heal-Priorität: Heile in der Reihenfolge von deinem Zettel."]],
+    b3: [[7, 9, "Setz eine offensive Ult nur beim Engage ein, also wenn dein Team den Fight beginnt. Nicht mittendrin und nicht danach."]],
+    b4: "Wer von den Gegnern hat seine Ult wahrscheinlich wieder? Denk vor jedem Fight kurz daran." },
+  4: { b1: [[1, 1, "Such pro Fight 2 bis 3 Schaden-Fenster. Greif nur an, wenn alle über 70 % sind."], [2, 2, "Greif verwundbare Ziele an."], [3, 3, "Zieh beim Fokusfeuer mit: Schiess auf das Ziel, das dein Team angreift."]],
+    b2: [[4, 6, "Aggro nur mit Fluchtweg: Zieh das Feuer der Gegner nur auf dich, wenn du raus kannst. Besonders als Jubilee."]],
+    b3: [[7, 9, "Cover und Fluchtweg: Auch beim Schaden machen steht Cover in der Nähe, und du kennst den Weg raus."]],
+    b4: "Schaden-Fenster: Ist gerade eins offen (alle Mitspieler über 70 %)? Dann greif an. Wenn nicht, bleib beim Heilen.",
+    pre: { b2: "Statt der Matches geht auch ein Custom Game, in dem ihr Fokusfeuer übt." } },
+  5: { b1: [[1, 2, "Lies vor dem Match die Karte des Heroes, den du spielst."], [3, 3, "Wähl deinen Pick nach der Komposition."]],
+    b2: [[4, 5, "Swap-Check: Habt ihr 2 Fights verloren, prüf einen Swap."]],
+    b3: [[6, 8, "Erkenne die Gegner-Komposition (Dive, Poke oder Brawl) und wähl deinen Pick danach."]],
+    b4: "Die Hero-Wahl: Wie sieht das Gegnerteam aus, und passt mein Hero dazu?",
+    pre: { b1: "Schreib zuerst die Hero-Karten für Jubilee, Gambit und Cloak & Dagger, je 5 Minuten.", b2: "Schreib zuerst die Karten für Rocket, Invisible Woman, Luna Snow und White Fox." } },
+  6: { b1: [[1, 1, "Sag dein Ult-Timing an, damit dein Team darauf planen kann.", "du es bei jeder Ult sagst"], [2, 2, "Sag Flanker und Fokusziel an.", "du in jedem Fight mindestens eine der beiden Ansagen machst"], [3, 3, "Gib zu Beginn des Matches eine kurze Ansage, zum Beispiel einen deiner drei Standard-Sätze."]],
+    b2: [[4, 6, "Nur Pings: Gib deine Ansagen nur per Ping."]],
+    b3: [[7, 9, "Spiel ein Match mit Voice und eins ohne (dein Stumm-Match) und achte auf den Unterschied."]],
+    b4: "Ruhig bleiben. Merkst du Ärger, denk an den Tilt-Stopp.",
+    pre: { b1: "Du spielst im Stack und sprichst im Voice-Chat.", b2: "Du spielst solo. Dazu gelten die Mute-Regel und der Tilt-Stopp." } },
+  7: { b1: [[1, 4, "Testmatches: Wende alles an, was du in Woche 1 geübt hast. Kein einzelnes Ziel, du zeigst, was schon sitzt."]],
+    b2: [[5, 7, "Üb dein schwächstes Thema der Woche."]],
+    b3: [[8, 10, "Freies Spielen: keine feste Aufgabe."]],
+    pre: { b1: "Du spielst solo.", b2: "Du spielst im Stack." } },
+  8: { b1: [[1, 1, "Geh nur so weit vor, wie dein Support mitkommen kann. Ist er nicht mehr hinter dir, bist du zu weit vorn."], [2, 2, "Engagiere mit deinen Cooldowns."], [3, 3, "Nutze deine Ult nur, wenn dein Team mitzieht."]],
+    b2: [[4, 6, "Positionierung: Steh hinter Cover und kenne deinen Fluchtweg."]],
+    b3: [[7, 9, "Heal-Priorität: Heile in einer festen Reihenfolge (L5)."]],
+    pre: { b1: "Du spielst Tank.", b2: "Jetzt spielst du Support.", b3: "Du spielst Support." } },
+  9: { b1: [[1, 1, "Zielauswahl: Entscheide bewusst, welchen Gegner du zuerst angreifst."], [2, 2, "Position mit Cover in der Nähe."], [3, 3, "Cooldowns und Ult mit Plan: Du weisst vorher, wann und wofür du sie einsetzt."]],
+    b2: [[4, 6, "Heal-Priorität: Heile in einer festen Reihenfolge."]],
+    b3: [[7, 9, "Ult-Tracking: Merk dir, wer von den Gegnern seine Ult wann benutzt hat."]],
+    pre: { b1: "Du spielst DPS.", b2: "Du spielst Support.", b3: "Du spielst Support." } },
+  10: { b1: [[1, 1, "Ult nach Plan: Setz sie so ein, wie du es vor dem Match aufgeschrieben hast."], [2, 3, "Überleg vor jedem Fight, welche gegnerischen Ults wahrscheinlich bereit sind."]],
+    b2: [[4, 6, "Schaden-Fenster: Greif an, wenn alle Mitspieler über 70 % Leben haben."]],
+    b3: [[7, 9, "Nur ein Gedanke: Ult-Tracking. Denk vor jedem Fight kurz daran."]],
+    pre: { b1: "Vor jedem Match schreibst du deinen Ult-Plan in einem Satz auf, zum Beispiel „Ult beim Engage, wenn mein Tank vorne ist.“ Der Tilt-Stopp gilt." } },
+  11: { b1: [[1, 3, "Spiel deine schwächere Rolle mit dem gewählten Hero."]],
+    b2: [[4, 6, "Wähl deinen Pick nach der Komposition."]],
+    b3: [[7, 9, "Wähl für jedes Match ein Mini-Ziel, nur eins, zum Beispiel einen Fehler aus deinem Review."]],
+    pre: { b2: "Du spielst Support. Lies vor jeder Heldenwahl die Hero-Karte." } },
+  12: { b1: [[1, 1, "Gegen Dives: Steh so, dass du Cover hast, und nutze deinen Escape."], [2, 2, "Ruf den Dive kurz in den Voice-Chat, zum Beispiel „Dive von links“."]],
+    b2: [[3, 5, "Setz einen Ping für den Dive und für die Ult."]],
+    b3: [[6, 8, "Überleb den Dive nur mit Pings, Position und Escape."]],
+    pre: { b1: "Zuerst das Custom Game: Deine Freunde diven, du verteidigst mit Position, Escape und Ansagen.", b3: "Du spielst solo, ohne Voice (dein Stumm-Match)." } },
+  13: { b1: [[1, 3, "Mach vor jedem Fight einen Fluchtweg-Check: Wohin gehe ich, wenn es brenzlig wird?", "du ihn vor jedem Fight machst"]],
+    b2: [[4, 6, "Zähle in jedem Fight, wie oft du stirbst."]],
+    b3: [[7, 9, "Cover: Steh so, dass eine Wand oder Kiste zwischen dir und den Gegnern ist."]],
+    pre: { b3: "Du spielst eine andere Rolle als sonst, zum Beispiel Tank oder DPS." } },
+  14: { b1: [[1, 4, "Test: Wende alles an, was du bisher geübt hast. Kein einzelnes Ziel, du zeigst, was schon sitzt."]],
+    b2: [[5, 7, "Üb dein schwächstes Thema."]],
+    b3: [[8, 10, "Freies Spielen: keine feste Aufgabe."]],
+    pre: { b1: "Du spielst solo." } },
+  15: { b1: [[1, 2, "Vermeide deine Hauptkategorie von Tag 14: Achte auf die Lage, in der du sonst so stirbst, und mach es anders."], [3, 3, "Prüf vor jedem Fight deinen Fluchtweg."]],
+    b2: [[4, 6, "Teamnähe: Bleib nah bei deinem Team."]],
+    b3: [[7, 9, "Cover: Steh so, dass Cover in der Nähe ist."]] },
+  16: { b1: [[1, 1, "Achte auf deine Position."], [2, 2, "Als DPS: deine Zielauswahl. Als Tank: der Raum, den du für dein Team schaffst."], [3, 3, "Achte auf deine Cooldowns."]],
+    b2: [[4, 6, "Wähl pro Match ein Mini-Ziel: Positionierung oder Heal-Priorität."]],
+    b3: [[7, 9, "Spiel frei. Lies vor jeder Heldenwahl die Hero-Karte des Heroes, den du spielen willst."]],
+    pre: { b1: "Du spielst die Rolle, in der du schwächer bist.", b2: "Du spielst Support." } },
+  17: { b1: [[1, 1, "Heile nach deiner Heal-Priorität."], [2, 2, "Setz deine Ult nur mit Plan ein: Du weisst vorher, wann und wofür."], [3, 3, "Schätz die gegnerischen Ults vor jedem Fight."]],
+    b2: [[4, 6, "Heb deine defensive Ult für die gegnerische Ult auf."]],
+    b3: [[7, 9, "Schaden-Fenster: Greif an, wenn alle Mitspieler über 70 % Leben haben."]] },
+  18: { b1: [[1, 1, "Wähl deinen Pick nach der Komposition."], [2, 2, "Habt ihr 2 Fights verloren, prüf einen Swap."], [3, 3, "Wechsle wirklich, wenn dein Hero nicht funktioniert. Prüfen allein reicht nicht."]],
+    b2: [[4, 6, "Lies vor jeder Wahl die Hero-Karte."]],
+    b3: [[7, 9, "Triff deine Hero-Wahl bewusst: Warum nehme ich diesen Hero gegen dieses Gegnerteam?"]] },
+  19: { b1: [[1, 1, "Sag dein Ult-Timing an."], [2, 2, "Sag Flanker an."], [3, 3, "Sag das Fokusziel an."]],
+    b2: [[4, 6, "Nur Pings und eine Ansage zu Beginn."]],
+    b3: [[7, 9, "Keine Diskussionen: Streite nicht mit Mitspielern, auch nicht im Chat."]],
+    pre: { b1: "Du spielst im Stack und sprichst im Voice-Chat. Der Tilt-Stopp gilt ohne Ausnahme.", b2: "Du spielst solo." } },
+  20: { b1: [[1, 1, "Position: Steh hinter Deckung und so, dass du deinen Tank noch siehst.", "du nicht wegen deiner Position stirbst"], [2, 2, "Heal-Priorität: Heile zuerst den, der sonst stirbt.", "du bei jedem Fight sagen kannst, wen du zuerst geheilt hast und warum"], [3, 3, "Ult: Setze sie nur ein, wenn sie einen Fight dreht oder rettet.", "deine Ult Wirkung hatte"]],
+    b2: [[4, 6, "Spiel die Rolle, in der du dich schlechter fühlst, zum Beispiel Tank oder DPS.", "du danach sagen kannst, was dir in dieser Rolle am schwersten fiel"]],
+    b3: [[7, 9, "Wähle pro Match ein Mini-Ziel aus Woche 1, nur dieses eine. Nach dem Match: geschafft, ja oder nein?"]],
+    pre: { b1: "Du spielst Support." } },
+  21: { b1: [[1, 4, "Test: Wende alles aus Phase 1 an. Kein einzelnes Ziel, du zeigst, was schon sitzt.", "du weniger Tode pro Match hast als an Tag 1 und mehr Ults mit Wirkung"]],
+    b2: [[5, 7, "Spiel dein schwächstes Thema aus Phase 1, zum Beispiel deine Hauptkategorie.", "du bei diesem Thema weniger Fehler machst als vorher"]],
+    b3: [[8, 10, "Spiel frei: Hero und Mini-Ziel wählst du selbst. Zeig, wie du am besten spielst."]] },
+  22: { b1: [[1, 1, "Heile mit Dagger nur Mitspieler, die wirklich Heilung brauchen.", "du bei jedem Heal sagen kannst, warum dieser Mitspieler dran war"], [2, 2, "Setze Cloak gezielt ein: für Störung oder für Rettung.", "jeder Einsatz einen dieser Gründe hatte"], [3, 3, "Heb deinen Escape immer für Dives auf.", "dein Escape bereit ist, sobald ein Gegner auf dich zustürmt"]],
+    b2: [[4, 6, "Fluchtweg-Check: Wo ist meine Deckung, wohin fliehe ich, wenn Gegner auf mich losgehen?", "du vor jedem Fight eine Antwort hast"]],
+    b3: [[7, 9, "Beweg dich mit dem Team, vor allem mit deinem Tank, statt allein einen eigenen Weg zu nehmen.", "du in keinem Match allein und vom Team getrennt stirbst"]] },
+  23: { b1: [[1, 1, "Heile den Tank und rettbare Ziele, keine vollen Spieler.", "dein Tank nicht unbemerkt wegstirbt"], [2, 2, "Setze deine Ult nur ein, wenn sie einen Fight dreht oder rettet.", "jede Ult einen Fight gedreht oder jemanden gerettet hat"], [3, 3, "Nutze Cloak bewusst für Engages oder für den Rückzug.", "du vor jedem Einsatz weisst, ob es Angriff oder Rückzug ist"]],
+    b2: [[4, 6, "Heal-Priorität: Heile zuerst den, der sonst stirbt.", "du bei jedem Fight sagen kannst, wen du zuerst geheilt hast"]],
+    b3: [[7, 9, "Ult mit Plan: Leg vor dem Fight fest, wofür du sie einsetzt.", "deine Ult danach Wirkung hatte"]] },
+  24: { b1: [[1, 1, "Schreib nach jedem Tod den Gegner auf, der dich getötet hat.", "zu jedem Tod ein Gegner notiert ist"], [2, 2, "Achte darauf, welche Gegner dein Team am meisten stören.", "du am Ende mindestens einen Namen hast"], [3, 3, "Teste pro Problem-Gegner eine Gegenmassnahme: andere Position, anderer Einsatz deiner Cooldowns oder Swap.", "du eine Massnahme probiert hast"]],
+    b2: [[4, 6, "Nutze ein Team-Up, sobald ein Partner aus deiner Liste in deinem Team ist.", "du es mindestens einmal genutzt hast"]],
+    b3: [[7, 9, "Ult-Tracking: Wer von den Gegnern hat seine Ult wahrscheinlich?", "du vor jedem grossen Fight sagen kannst, wer seine Ult wahrscheinlich hat"]] },
+  25: { b1: [[1, 1, "Verbinde Heilung und Druck, aber nur mit Fluchtweg.", "du nie schiesst oder heilst, ohne zu wissen, wohin du fliehst"], [2, 2, "Prüfe vor jedem Fight, ob dein Escape bereit ist.", "du vor jedem Fight kurz geschaut hast"], [3, 3, "Geh nach jedem Kill kurz zurück in Deckung.", "du nach Kills nicht vorne stehen bleibst"]],
+    b2: [[4, 6, "Schaden-Fenster: Greif nur in diesen Momenten an, sonst heilst du.", "du nicht angreifst, während ein Mitspieler dringend Heilung braucht"]],
+    b3: [[7, 9, "Teamnähe: Steh so, dass dein Team dich schnell erreicht und du dein Team.", "du in keinem Match allein und vom Team getrennt stirbst"]] },
+  26: { b1: [[1, 1, "Schreib nach jedem Tod den Gegner auf, der dich getötet hat.", "zu jedem Tod ein Gegner notiert ist"], [2, 3, "Teste pro Problem-Gegner eine Gegenmassnahme: andere Position, andere Nutzung deiner Cooldowns oder Swap.", "du pro Gegner eine Massnahme probiert hast"]],
+    b2: [[4, 6, "Nutze ein Team-Up, sobald ein Partner aus deiner Liste in deinem Team ist.", "du es mindestens einmal genutzt hast"]],
+    b3: [[7, 9, "Ult-Tracking: Wer von den Gegnern hat seine Ult wahrscheinlich?", "du vor jedem grossen Fight sagen kannst, wer seine Ult wahrscheinlich hat"]] },
+  27: { b1: [[1, 1, "Finde dein stärkstes Muster aus Heilung und Schaden.", "du das Muster in einem Satz beschreiben kannst"], [2, 2, "Ult nur mit Plan: Leg vorher fest, wofür du sie brauchst.", "jede Ult einen geplanten Grund hatte"], [3, 3, "Teste die Ult als Antwort auf einen gegnerischen Engage.", "du siehst, ob die Ult den Engage entschärft hat"]],
+    b2: [[4, 6, "Achte auf die gegnerischen Ults.", "du vor jedem Fight sagen kannst, welche gegnerischen Ults wahrscheinlich bereit sind"]],
+    b3: [[7, 9, "Plane nach jeder Fähigkeit deinen Fluchtweg.", "du nach jedem Einsatz weisst, wohin du gehst"]] },
+  28: { b1: [[1, 1, "Schreib nach jedem Tod den Gegner auf, der dich getötet hat.", "zu jedem Tod ein Gegner notiert ist"], [2, 3, "Teste pro Problem-Gegner eine Gegenmassnahme: andere Position, andere Nutzung deiner Cooldowns oder Swap.", "du pro Gegner eine Massnahme probiert hast"]],
+    b2: [[4, 6, "Schreib nach jedem Match eine Zeile zu deinem grössten Fehler.", "der Fehler konkret ist, zum Beispiel „allein vorgelaufen“"]],
+    b3: [[7, 9, "Nutze ein Team-Up, sobald ein Partner aus deiner Liste in deinem Team ist.", "du es mindestens einmal genutzt hast"]] },
+  29: { b1: [[1, 2, "Mach Schaden, nicht nur Heilung: Such aktiv nach Zielen, die du treffen kannst.", "du nach jedem Match weisst, wie viele Final Hits du hattest"], [3, 3, "Mach klare Ansagen: Sag deinem Team kurz, was du als Nächstes vorhast."]],
+    b2: [[4, 6, "Nutze ein Team-Up, sobald ein Partner von Rocket in deinem Team ist.", "du es mindestens einmal genutzt hast"]] },
+  30: { b1: [[1, 1, "Halte sichere Heilwinkel."], [2, 3, "Heb deine Verschiebe-Fähigkeiten für Diver auf. Verbrauch sie nicht vorne an der Frontline.", "sie bereit sind, sobald ein Diver auf dich zukommt"]],
+    b2: [[4, 6, "Überlebe Dives.", "du einen Dive überlebst"]] },
+  31: { b1: [[1, 2, "Heile konstant von hinter der Frontline.", "du selten ohne Heilung dastehst und nicht vorne stirbst"], [3, 3, "Heb deine Kontroll-Fähigkeit für Duelisten auf, die deine Backline erreichen.", "die Fähigkeit bereit ist, sobald einer bei dir ankommt"]],
+    b2: [[4, 6, "Heal-Aim: Deine Heilung trifft ihr Ziel, auch wenn es sich bewegt."]] },
+  32: { b1: [[1, 2, "Frag dich nach jedem Fight: Was hat White Fox für mein Team getan?"], [3, 3, "Such zwei Situationen, in denen sich der Pick lohnt: eine Karte, eine Gegner-Komposition oder ein Moment im Fight.", "du zwei Situationen aufgeschrieben hast"]],
+    b2: [[4, 6, "Ult mit Plan: Leg vor dem Fight fest, wofür du sie einsetzt.", "deine Ult danach Wirkung hatte"]] },
+  33: { b1: [[1, 3, "Verlierst du 2 Fights, wechselst du gezielt: Schau, was die Gegner spielen, und nimm einen Hero, der dazu passt.", "du nach 2 verlorenen Fights wechselst und den Grund nennen kannst"]],
+    b2: [[4, 6, "Wähl deinen Hero nach der Gegner-Komposition.", "du deinen Pick in einem Satz begründen kannst"]],
+    b3: [[7, 9, "Lies deine Hero-Karten vor dem Match und noch einmal, sobald du siehst, was die Gegner spielen.", "du vor jedem Match kurz auf der Hero-Karte nachgeschaut hast"]],
+    pre: { b1: "Du startest mit Jubilee, Gambit oder Cloak & Dagger." } },
+  34: { b1: [[1, 3, "Vermeide deine Hauptkategorie.", "du weniger Striche in deiner Hauptkategorie hast als sonst"]],
+    b2: [[4, 6, "Teamnähe: Bleib nah bei deinem Team.", "du nicht mit der Todesursache „Vom Team getrennt“ stirbst"]],
+    b3: [[7, 9, "Spiel frei: Hero und Mini-Ziel wählst du selbst. Halte weiter bei jedem Tod die Ursache fest."]],
+    pre: { b1: "Du spielst nur Heroes aus deinem Hauptpool und hältst bei jedem Tod die Ursache fest." } },
+  35: { b1: [[1, 3, "Spiel in jedem Match einen anderen deiner drei Hauptheroes.", "jeder Hauptheroes ein Match bekommen hat"], [4, 4, "Frei: Du wählst Hero und Mini-Ziel selbst."]],
+    b2: [[5, 7, "Spiel das Thema, das bei dir laut deinen Kennzahlen am schwächsten ist."]] },
+  36: { b1: [[1, 1, "Frag dich im Match immer wieder: Was gewinnt hier die Runde?", "du die Antwort in einem Satz sagen kannst"], [2, 2, "Entscheide bei jedem Fight: Verteidige ich das Objective oder meine Position?", "du jede Entscheidung begründen kannst"], [3, 3, "Achte auf zwei Entscheidungen, die vom Modus abhingen, und schreib sie danach auf.", "du zwei Entscheidungen notiert hast"]],
+    b2: [[4, 6, "Achte auf die gegnerischen Ults."]] },
+  37: { b1: [[1, 1, "Nutze die Positionen, die du gefunden hast."], [2, 2, "Prüfe die Flank-Routen der Gegner.", "du vor jedem Fight weisst, von wo Gegner kommen können"], [3, 3, "Nutze High Ground."]],
+    b2: [[4, 6, "Fluchtweg-Check: Wo ist meine Fluchtroute?", "du in jedem Fight eine Route kennst"]] },
+  38: { b1: [[1, 1, "Entscheide vor jedem Fight: kämpfen oder zurückfallen. Nenn dir den Grund dazu.", "du jede Entscheidung begründen kannst"], [2, 2, "Nach einem Wipe startet ihr gemeinsam neu: Warte nach dem Respawn auf die anderen."], [3, 3, "Nutze nach einem gewonnenen Fight das Tempo: mit dem Team zum Objective, solange mehr Gegner tot sind als bei euch."]],
+    b2: [[4, 6, "Heal-Priorität: Heile zuerst den, der sonst stirbt, nicht den, der am meisten fehlt."]] },
+  39: { b1: [[1, 1, "Setzt der Gegner seine Ult ein, antwortest du mit einer passenden Ult.", "deine Ult die gegnerische entschärft hat"], [2, 2, "Versuche eine Ult-Kombi. Zeig per Ping, wann ihr startet.", "beide Ults im selben Fight kommen"], [3, 3, "Vor jeder Ult entscheidest du bewusst: sofort einsetzen oder aufheben?", "du dir diese Frage jedes Mal gestellt hast"]],
+    b2: [[4, 6, "Schaden-Fenster: Dort schiesst du."]] },
+  40: { b1: [[1, 1, "Wähl in der Hero-Auswahl einen Pick, der mit einem Mitspieler ein Team-Up hat.", "du einen Partner im Team hast"], [2, 2, "Nutze das Team-Up im Fight bewusst und sag es an.", "dein Partner weiss, dass du es jetzt einsetzt"], [3, 3, "Versuche eine Ult-Kombi und zeig sie per Ping.", "beide Ults im selben Fight kommen"]],
+    b2: [[4, 6, "Verlierst du 2 Fights, machst du einen Counterswap."]] },
+  41: { b1: [[1, 2, "Prüf vor jedem Fight, ob dein Escape bereit ist.", "du in jedem Fight vor dem ersten Schuss wusstest, ob dein Escape bereit ist"], [3, 3, "Steh so, dass Diver dich nicht zuerst erreichen, zum Beispiel hinter einer Wand, von der aus du deinen Tank noch siehst."]],
+    b2: [[4, 6, "Fluchtweg-Check: Du weisst, wohin du fliehst, und dass dein Escape bereit ist."]],
+    pre: { b1: "Zuerst 30 Min Custom Game: Deine Freunde diven, du wehrst die Dives ab. Danach spielst du solo." } },
+  42: { b1: [[1, 4, "Test: Wende alles an, besonders die Themen aus Phase 3. Kein einzelnes Ziel.", "du nach jedem Match sagen kannst, welche Themen du angewendet hast"]],
+    b2: [[5, 7, "Spiel dein schwächstes Thema aus Phase 3."]],
+    pre: { b1: "Vor jedem Match liest du deine Karten-Notizen." } },
+  43: { b1: [[1, 1, "Achte nur darauf, dass deine Heilung trifft.", "du nach dem Match sagen kannst, ob sie meistens getroffen hat"], [2, 2, "Bei bewegten Mitspielern hältst du vor.", "du auch laufende Mitspieler triffst"], [3, 3, "Schätze am Ende grob deine Trefferquote: hoch, mittel oder niedrig."]],
+    b2: [[4, 6, "Heal-Priorität: Heile zuerst den, der sonst stirbt, nicht den, der am meisten fehlt."]] },
+  44: { b1: [[1, 1, "Bleib ständig in Bewegung, auch beim Heilen.", "du beim Heilen nie still stehst"], [2, 2, "Wechsle zwischen zwei Fähigkeiten die Deckung oder die Höhe.", "du nach jeder Fähigkeit an einem anderen Ort stehst"], [3, 3, "Plane vor jedem Fight, welche Fähigkeit du aufhebst.", "dein Escape im Fight bereit war"]],
+    b2: [[4, 6, "Schaden-Fenster: Dort schiesst du."]] },
+  45: { b1: [[1, 3, "Drei Dinge, je mindestens einmal bewusst: Engage mit klarer Absicht, Peel für gedivte Mitspieler, Ult nur mit Team.", "du in jedem Match alle drei Dinge mindestens einmal bewusst gemacht hast"]],
+    b2: [[4, 6, "Behalte die Position deines Tanks im Blick."]],
+    pre: { b1: "Du spielst Tank.", b2: "Du spielst Support." } },
+  46: { b1: [[1, 3, "Drei Dinge, je mindestens einmal bewusst: Zielpriorität vor dem Fight, Winkel und Deckung, Ult mit Plan.", "du in jedem Match alle drei Dinge mindestens einmal bewusst gemacht hast"]],
+    b2: [[4, 6, "Schaden-Fenster: Dort schiesst du."]],
+    pre: { b1: "Du spielst DPS.", b2: "Du spielst Support." } },
+  47: { b1: [[1, 1, "Sag deinem Tank vor jedem Fight, was du von ihm brauchst, zum Beispiel „Bleib nah bei mir, dann kann ich dich heilen.“", "dein Tank vor dem Fight weiss, was du brauchst"], [2, 2, "Nutze ein Team-Up mit einem Mitspieler und sprecht es kurz ab.", "ihr es zusammen einsetzt"], [3, 3, "Sag deine Ult an und nenne das Fokusziel.", "beides vor dem Fight gesagt ist"]],
+    b2: [[4, 6, "Sag den Peel per Ping an: Setz den Ping dorthin, wo der Dive herkommt."]],
+    pre: { b2: "Du spielst solo." } },
+  48: { b1: [[1, 1, "Achte nur auf Heal-Aim.", "du nach dem Match deine Trefferquote einschätzen kannst"], [2, 2, "Achte nur auf Movement: Beweg dich auch beim Heilen und wechsle zwischen Deckung und Höhe."], [3, 3, "Achte auf beides: Du triffst und bewegst dich dabei."]],
+    b2: [[4, 6, "Übe die Mechanik, die in Match 1 bis 3 schwächer war: Heal-Aim oder Movement."]] },
+  49: { b1: [[1, 4, "Test: Wende alles an, besonders die Themen aus Phase 4. Kein einzelnes Ziel.", "du nach jedem Match sagen kannst, welche Themen du angewendet hast"]],
+    b2: [[5, 7, "Spiel dein schwächstes Thema."]] },
+  50: { b1: [[1, 1, "Beobachte in den ersten zwei Fights, wer vorne spielt und wer hinten.", "du nach Fight 2 beides sagen kannst"], [2, 2, "Pass Heilung und Position an das an, was du beobachtet hast: Steh nah bei dem, der am meisten Hilfe braucht."], [3, 3, "Zeig per Ping, wen du unterstützt.", "der Ping gesetzt ist"]],
+    b2: [[4, 6, "Entscheide vor jedem Fight: kämpfen oder zurückfallen?"]] },
+  51: { b1: [[1, 1, "Mach in jedem Fight genau eine Ansage, zum Beispiel „Dive links“.", "du in jedem Fight eine Ansage gemacht hast"], [2, 2, "Sag dein Ult-Timing an und warne vor Flankern."], [3, 3, "Bleib freundlich, auch wenn ein Mitspieler Fehler macht.", "du keinen Vorwurf gemacht hast"]],
+    b2: [[4, 6, "Gib deine Ansagen per Ping."]],
+    pre: { b2: "Du spielst ohne Voice, nur mit Pings." } },
+  52: { b1: [[1, 1, "Liegt ihr zurück, spielst du auf Überleben und Ult-Wert.", "du lebst und deine Ult etwas bewirkt hat"], [2, 2, "Nach jedem verlorenen Fight: einmal tief durchatmen und ein Gedanke: Was ändere ich?", "du das nach jedem verlorenen Fight gemacht hast"], [3, 3, "Heb deine Ult für ein Comeback auf.", "du sie nicht früher verbraucht hast"]],
+    b2: [[4, 6, "Nach jeder Niederlage machst du 30 Sekunden Pause, bevor es weitergeht."]] },
+  53: { b1: [[1, 1, "Wähl deinen Pick nach deiner Hero-Karte und nach der Meta."], [2, 2, "Spiel einen Hero aus deinem Pool, den du selten spielst."], [3, 3, "Spiel einen Hero aus deinem Pool. Frag dich danach: Welcher Pick hat am besten gepasst?"]],
+    b2: [[4, 6, "Wähl deinen Pick nach der Komposition und nach einem Team-Up-Partner."]] },
+  54: { b1: [[1, 3, "Spiel deine Flex-Rolle mit dem Hero, den du gewählt hast. Nutze, was du an Tag 45 (Tank) oder Tag 46 (DPS) gelernt hast.", "du alle Matches dieses Blocks in dieser Rolle durchgespielt hast"]],
+    b2: [[4, 6, "Nach jedem Block machst du strikt 5 bis 10 Minuten Pause: aufstehen und etwas trinken."]],
+    pre: { b2: "Du spielst wieder Support." } },
+  55: { b1: [[1, 3, "Wende alles an, was du bisher gelernt hast. Kein einzelnes Ziel."]],
+    b2: [[4, 6, "Wähle deine Fights bewusst und lies deine Mitspieler: Wer ist stark, wer braucht Hilfe?"]],
+    b3: [[7, 9, "Achte auf Heal-Aim und Movement."]],
+    b4: "Pro Match nur ein Gedanke. Nach jedem Block 5 bis 10 Minuten Pause: aufstehen und trinken.",
+    pre: { b1: "Es gilt der Tilt-Stopp: Nach 2 Niederlagen in Folge 5 Minuten Pause, nach 3 in Folge ist Ranked für heute beendet.", b3: "Lies vor jedem Match deine Karten-Notizen." } },
+  56: { b1: [[1, 4, "Abschlusstest: Wende alles an, was du gelernt hast. Setz ein, was im Match gerade passt.", "du nach jedem Match sagen kannst, welche Themen du angewendet hast"]],
+    b2: [[5, 7, "Spiel dein schwächstes Thema."]],
+    b3: [[8, 10, "Freies Spielen: Du wählst selbst, worauf du achtest."]] }
+};
+const focusFmt = t => scaleMatchRefs(planTx(planRenumber(t), planHeroMap()));
+// Vertiefen-Tag: Block 1 gezielte Übung, Block 2 das Thema (Satz der Grundregel), Block 3 dein Mini-Ziel, Block 4+ wieder das Thema
+function focusDeep(n, d) {
+  const b1 = d.steps.find(x => x.key === "b1"), pid = b1 && b1.practice ? (b1.practice === "auto" ? practiceAuto(n) : b1.practice) : null;
+  const P = pid && PRACTICE[pid], t = pid && PLAN.tracker.find(x => x.id === pid), rule = (t && ruleText(t)) || (t ? `Achte in jedem Fight auf «${t.topic}».` : "");
+  const B = blockMatches(), out = {};
+  if (P) out.b1 = { segs: [{ t: P.task, goal: P.per ? `In mindestens ${Math.ceil(B * 2 / 3)} der ${B} Matches ${P.goal}` : "", practice: pid }] };
+  const b2 = d.steps.find(x => x.key === "b2");
+  if (b2 && /Experte/.test(b2.label)) out.b2 = { pre: "Mach im Helden-Bootcamp zuerst eine Station der Stufe 3 oder 4.", segs: [{ t: "Spiel mit dem messbaren Ziel deiner Bootcamp-Station." }] };
+  else if (b2 && rule) out.b2 = { segs: [{ t: rule }] };
+  const mini = fxMiniText(n);
+  out.b3 = { segs: [{ t: mini || "Dein Mini-Ziel: Wähl im Block 3 des Trainingstags ein Thema, das noch nicht von allein läuft.", mini: !mini }] };
+  if (rule) out.b4 = rule;
+  return out;
+}
+// Alle Abschnitte eines Tages: [{key, bi, label, pre, segs: [{a, b, t, ok, key}]}], a und b sind Match-Nummern des Tages (b leer = offen)
+function focusPlan(n) {
+  const d = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1] : null;
+  if (!d) return [];
+  const B = blockMatches(), keys = d.steps.filter(x => /^b[1-3]$/.test(x.key)).map(x => x.key), out = [];
+  if (d.deep) {
+    const F = focusDeep(n, d);
+    keys.forEach((k, bi) => { const f = F[k]; if (f) out.push({ key: k, bi, pre: f.pre || "", segs: f.segs.map((s, i) => Object.assign({ a: bi * B + 1, b: (bi + 1) * B, key: `${n}:${k}:${i}` }, s, { t: focusFmt(s.t) })) }); });
+    if (F.b4 && d.steps.some(x => x.key === "b4")) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: keys.length * B + 1, b: null, t: focusFmt(F.b4), key: `${n}:b4:0` }] });
+    return out;
+  }
+  const T = FOCUS_PLAN[d.base];
+  if (!T) return [];
+  keys.forEach((k, bi) => {
+    const L = T[k]; if (!L || !L.length) return;
+    const f0 = L[0][0], S = L[L.length - 1][1] - f0 + 1;
+    out.push({ key: k, bi, pre: T.pre && T.pre[k] ? focusFmt(T.pre[k]) : "", segs: L.map(([from, to, t, ok], i) => ({ a: bi * B + Math.round((from - f0) * B / S) + 1, b: bi * B + Math.round((to - f0 + 1) * B / S), t: focusFmt(t), ok: ok ? focusFmt(ok) : "", key: `${n}:${k}:${i}` })) });
+  });
+  if (T.b4) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: keys.length * B + 1, b: null, t: focusFmt(T.b4), key: `${n}:b4:0` }] });
+  return out;
+}
+// Plantag fürs nächste Match. Ist der Plantag von heute schon abgeschlossen, geht es mit dem nächsten weiter; gezählt wird dann erst ab dem Abschluss.
+function focusDay() {
+  if (!planStarted()) return { n: 0, since: 0 };
+  const n = planDayOf(today()), st = n ? dayGet(n) : null;
+  if (n && n < PLAN_N && st.done === today() && !planDayManual(today())) return { n: n + 1, since: planSince(n + 1) };
+  return { n, since: 0 };
+}
+// Wie viele Matches schon gespielt sind: Matches von heute (Abgleich oder von Hand), dazu Notizen, die noch auf ihr Match warten
+const focusPlayed = since => state.matches.filter(m => m.date === today() && (!since || matchTime(m) > since)).length + qnToday().filter(q => !since || (q.ts || 0) > since).length;
+// Die eine Sache fürs nächste Match (nur heute, an einem Plantag)
+function focusNow() {
+  const { n, since } = focusDay();
+  if (!n || n > PLAN_N || (dayGet(n).done && dayGet(n).done < today())) return null;
+  const plan = focusPlan(n);
+  if (!plan.length) return null;
+  const B = blockMatches(), st = dayGet(n).steps || {}, played = focusPlayed(since), blocks = plan.filter(x => x.key !== "b4");
+  const biCount = Math.floor(played / B), biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
+  const bi = Math.max(biCount, biT), k = bi > biCount ? bi * B + 1 : played + 1;
+  const blk = plan.find(x => x.bi === bi) || (bi >= blocks.length ? plan.find(x => x.key === "b4") : null);
+  if (!blk) return { n, k, done: true, plan };
+  const i = Math.max(0, blk.segs.findIndex(s => k >= s.a && (s.b === null || k <= s.b))), seg = blk.segs[i] || blk.segs[blk.segs.length - 1];
+  const flat = plan.flatMap(x => x.segs.map(s => Object.assign({ blk: x }, s))), at = flat.findIndex(s => s.key === seg.key), next = at >= 0 ? flat[at + 1] || null : null;
+  return { n, k, B, blk, seg, next, first: k === seg.a, plan };
+}
+const focusBlockLabel = key => key === "b4" ? "Block 4+" : "Block " + key[1];
+const focusRange = s => s.b === null ? `ab Match ${s.a}` : s.a === s.b ? `Match ${s.a}` : `Match ${s.a} bis ${s.b}`;
+// Heute: «Dein nächstes Match». Eine Sache gross, darunter was danach kommt; alles andere läuft eingeklappt nebenbei.
+function nmCardHtml() {
+  const f = focusNow();
+  if (!f || f.done) {
+    const items = fxChosen(today()), bg = nmBackgroundHtml(f, true);
+    if (!items.length && !bg) return "";
+    return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><button class="linkbtn small" type="button" data-fxgo="1">Auswahl ändern</button></div>
+    ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>` : ""}
+    ${items.length ? `<div class="nmlbl">Achte nur auf ${items.length === 1 ? "eins" : "diese Punkte"}</div><ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>`
+      : `<p class="small muted" style="margin:0">Heute gibt es keine Plan-Aufgabe fürs Match. Wähl dir eine Sache aus.</p>`}
+    ${bg}</div>`;
+  }
+  const bg = nmBackgroundHtml(f);
+  const { seg, blk, next, k } = f, ev = seg.practice && f.n === planDay() ? practiceEval(seg.practice, blk.bi) : null;
+  return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${k} heute · ${focusBlockLabel(blk.key)}</span></div>
+    ${blk.pre && f.first ? `<p class="small nmpre"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
+    <div class="nmlbl">Achte nur auf eins</div>
+    <p class="nmfocus">${linkify(esc(seg.t), new Set())}</p>
+    ${seg.ok || seg.goal ? `<p class="small" style="margin:0 0 4px">${seg.goal ? `<b>Messbar:</b> ${esc(seg.goal)}.` : `<b>Geschafft, wenn</b> ${esc(seg.ok)}.`}${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""}</p>` : ""}
+    ${seg.mini ? `<div class="row" style="margin:4px 0"><button class="btn small" type="button" data-pact="day" data-n="${f.n}">Mini-Ziel wählen</button></div>` : ""}
+    <p class="small muted" style="margin:6px 0 0">Nach dem Match bewertest du in der Notiz nur das: Ja, Teilweise oder Nein.</p>
+    ${next ? `<div class="nmnext small"><span class="muted">Danach, ${esc(focusRange(next))}${next.blk !== blk ? ` (${focusBlockLabel(next.blk.key)})` : ""}:</span> ${esc(next.t)}</div>` : ""}
+    ${bg}</div>`;
+}
+// «Läuft nebenbei»: Grundregeln, Wochenziel und Missionen, eingeklappt. Sie laufen im Hintergrund mit, aktiv denkst du nur an die eine Sache.
+function nmBackgroundHtml(f, noExtra) {
+  const rs = planStarted() ? activeRules() : [], g = activeGoal(), gf = g && goalTasks(g).find(t => t.kind === "Match-Fokus"), mis = rvState().missions.filter(x => x.status === "open");
+  const extra = noExtra ? [] : fxChosen(today()).filter(x => x.src !== "step");
+  const parts = [];
+  if (extra.length) parts.push(`<div class="nmbgsec"><b class="small">Zusätzlich gewählt</b><ul class="wl">${extra.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)}</li>`).join("")}</ul></div>`);
+  if (rs.length) parts.push(`<div class="nmbgsec"><b class="small">Grundregeln</b><ul class="wl">${rs.map(r => `<li>${esc(r.t.topic)} ${ruleDots(r.t)}</li>`).join("")}</ul></div>`);
+  if (gf) parts.push(`<div class="nmbgsec"><b class="small">Wochenziel: ${esc(g.title)}</b><p class="small" style="margin:2px 0 0">${esc(gf.text)}</p></div>`);
+  if (mis.length) parts.push(`<div class="nmbgsec"><b class="small">${plural(mis.length, "Mission", "Missionen")}</b>${mis.map(wkMissionHtml).join("")}</div>`);
+  if (!parts.length) return "";
+  const n = extra.length + rs.length + (gf ? 1 : 0) + mis.length;
+  return `<details class="nmbg"${UIFOLD["nm-bg"] ? " open" : ""} data-f="nm-bg"><summary><span>Läuft nebenbei</span> <span class="small muted">${plural(n, "Punkt", "Punkte")}, nicht aktiv dran denken</span></summary>
+    <p class="small muted" style="margin:6px 0">Das musst du dir nicht vornehmen. Es läuft im Hintergrund mit, und die App fragt ab und zu nach.${f && !f.done ? " Im Match zählt nur die eine Sache oben." : ""}</p>${parts.join("")}
+    <div class="row" style="margin-top:6px"><button class="linkbtn small" type="button" data-fxgo="1">Etwas zusätzlich wählen</button></div></details>`;
+}
+document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.nmbg")) { UIFOLD["nm-bg"] = d.open; try { localStorage.setItem(STORE_KEY + "-folds", JSON.stringify(UIFOLD)); } catch (err) {} } }, true);
+// Trainingstag: oben im Block die Abschnitte mit je einer Sache, der aktuelle hervorgehoben
+function blockFocusHtml(n, s) {
+  const blk = focusPlan(n).find(x => x.key === s.key);
+  if (!blk) return "";
+  const f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "";
+  return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
+    ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${linkify(esc(x.t), new Set())}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}</span></li>`).join("")}</ol></div>`;
+}
 
 
 // ---------- Grundregeln: was im Hintergrund mitlaufen soll ----------
@@ -10456,19 +10780,22 @@ const blockStepKeys = d => d.steps.filter(x => BLOCK_KEYS.includes(x.key)).map(x
 function stepFieldKeys(n, s) {
   return scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean).map((t, i) => WRITE_RE.test(t) && !(s.key === "note" && QN_LINE.test(t)) ? s.key + ":" + i : null).filter(Boolean);
 }
+// Matches von heute, die zum Plantag n gehören: Wurde der Tag davor heute abgeschlossen, zählen erst die Matches danach (doneAt)
+function planSince(n) { const p = n > 1 ? dayGet(n - 1) : null; return p && p.done === today() && p.doneAt ? p.doneAt : 0; }
+const planMatchesToday = n => { const since = planSince(n); return state.matches.filter(m => m.date === today() && (!since || matchTime(m) > since)); };
 function autoStepEval(n, s, carryIdx) {
   if (!planStarted() || !(n >= 1 && n <= PLAN_N) || n !== planDay()) return null;
   const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
-    const B = blockMatches(), ms = state.matches.filter(m => m.date === today()).length;
+    const B = blockMatches(), ms = planMatchesToday(n).length;
     const r = autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches heute`), lock = carryIdx >= 0 ? "" : rvLock(n, s);
     if (lock && r.done) { r.done = false; r.wait = lock; }
     return r;
   }
   const keys = stepFieldKeys(n, s), f = st.fields || {};
   // Aufschreiben: dazu zählen die Notizen nach dem Match (für mindestens 80 % der Matches von heute)
-  const msToday = state.matches.filter(m => m.date === today());
+  const msToday = planMatchesToday(n);
   if (s.key === "note" && msToday.length && scaleMatchRefs(s.t).split("\n").some(x => QN_LINE.test(x.trim()))) {
     const ms = msToday, noted = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length + qnToday().length, ok = noted >= Math.ceil(ms.length * 0.8);
     const have = keys.filter(k => (f[k] || "").trim()).length + (ok ? 1 : 0), need = keys.length + 1;
@@ -11963,7 +12290,7 @@ function tipNugHtml(n) {
   if (!t) return "";
   const nug = nugOf(n, "tip");
   const body = `<p class="nug-tag">${esc(t.title)}</p><p class="nug-q">${esc(t.text)}</p>
-    <label class="small">Mach daraus einen Wenn-dann-Satz, den du im nächsten Match ausprobierst (optional).
+    <label class="small">Für später: Mach daraus einen Wenn-dann-Satz (optional). Im nächsten Match bleibt es bei deiner einen Sache.
       <span class="muted">Zum Beispiel: „Wenn ich unter die Hälfte meiner Leben falle, dann gehe ich zum nächsten Heilpaket.“</span>
       <textarea class="pfield" rows="2" data-nf="${n}|tip|ifthen" placeholder="Wenn …, dann …">${esc(nug.ifthen || "")}</textarea></label>
     <div class="row mt"><button type="button" class="btn small ${nug.ok ? "ghost" : ""}" data-pact="nug-ok" data-n="${n}" data-slot="tip">${nug.ok ? "✓ Gemerkt" : "Gemerkt"}</button>
