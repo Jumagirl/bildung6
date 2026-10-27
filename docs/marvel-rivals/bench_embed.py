@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Bettet die Vergleichswerte in die App ein (zwischen /*TOPB_START*/ und /*TOPB_END*/ in app/index.html): Rangbänder und Rangverteilung,
 die Werte der Besten und, falls angegeben, die Werte pro Rang über die ganze Rangleiter (``rank_bench_aggregate.py``): Competitive als
-``ladder``, Quick Match (Feld ``mode``: «Quick Match») als ``qp``.
+``ladder``, Quick Match (Feld ``mode``: «Quick Match») als ``qp``, und die Teamfaktoren (``team_factor_aggregate.py``, Feld ``factors``)
+als ``teamf``.
 
 Benutzung:
-    python bench_embed.py rank_data.json top_bench.json [rank_bench.json] [qp_bench.json] [app/index.html]
+    python bench_embed.py rank_data.json top_bench.json [rank_bench.json] [qp_bench.json] [team_factors.json] [app/index.html]
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ def main(rank_path: str, bench_path: str, *rest: str) -> int:
             "source": rank.get("source"), "bands": rank["bands"], "mu": rank["matchups"], "ranks": rank["ranks"], "rankTotal": rank.get("rankTotal"),
             "bench": bench}
     for x in extra:
-        data["qp" if x.get("mode") == "Quick Match" else "ladder"] = x
+        data["teamf" if "factors" in x else "qp" if x.get("mode") == "Quick Match" else "ladder"] = x
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     p = Path(html_path)
     s = p.read_text(encoding="utf-8")
