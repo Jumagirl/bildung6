@@ -5948,7 +5948,7 @@ function squadSetupHtml(all) {
 }
 function squadFiltersHtml(D) {
   const chip = (k, v, label) => `<button type="button" class="chip ${squadUi[k] === v ? "on" : ""}" data-sqfilt="${k}" data-v="${esc(v)}" aria-pressed="${squadUi[k] === v}">${esc(label)}</button>`;
-  const names = [...new Set(D.rows.flatMap(x => x.mates.map(t => t.name)).concat(squadUi.mate ? [squadUi.mate] : []))];
+  const names = [...new Set(mateNames().concat(D.rows.flatMap(x => x.mates.map(t => t.name)), squadUi.mate ? [squadUi.mate] : []))];
   return `<div class="card dfilters" role="group" aria-label="Filter für die Squad-Seite">
     <div class="dfg"><span class="dfl">Zeitraum</span><div class="chips">${DASH_PER.map(([v, l]) => chip("per", v, l)).join("")}</div></div>
     <div class="dfg"><label class="dfl" for="sqMate">Mit</label><select id="sqMate" data-sqsel="mate"><option value="">Allen Teammates</option>${names.map(n => `<option ${n === squadUi.mate ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
@@ -5982,13 +5982,16 @@ function renderSquad() {
   const D = squadData(), el = $("#squadBody");
   let html = squadSetupHtml(D.rows);
   if (!mateNames().length) { el.innerHTML = html; return; }
+  // Die Filterleiste bleibt immer sichtbar, sobald ein Filter gesetzt ist: Sonst kommt man aus einem leeren Ausschnitt (zum Beispiel «Heute»,
+  // bevor der Abgleich die Matches von heute geholt hat) nicht mehr heraus.
+  const filtered = squadUi.per !== "0" || !!squadUi.mode || !!squadUi.mate, reset = `<div class="row" style="justify-content:center;margin-top:8px"><button type="button" class="btn small" data-sqreset>Filter zurücksetzen</button></div>`;
   if (!D.rows.length) {
-    el.innerHTML = html + `<div class="card dempty">${empty(squadUi.per !== "0" || squadUi.mode ? "In diesem Ausschnitt gibt es keine Matches mit Team-Daten." : "Noch keine Matches mit Team-Daten. Sie kommen mit dem nächsten Abgleich von Rivals Data.", "team")}</div>`;
+    el.innerHTML = html + (filtered ? squadFiltersHtml(D) : "") + `<div class="card dempty">${empty(filtered ? "In diesem Ausschnitt gibt es keine Matches mit Team-Daten. Matches von heute kommen erst mit dem nächsten Abgleich." : "Noch keine Matches mit Team-Daten. Sie kommen mit dem nächsten Abgleich von Rivals Data.", "team")}${filtered ? reset : ""}</div>`;
     return;
   }
   html += squadFiltersHtml(D);
   if (!D.squad.length) {
-    el.innerHTML = html + `<div class="card dempty">${empty("Im Ausschnitt gibt es kein Match mit deinen Teammates. Prüf die Schreibweise der Namen oder wähl einen längeren Zeitraum.", "team")}</div>`;
+    el.innerHTML = html + `<div class="card dempty">${empty("Im Ausschnitt gibt es kein Match mit deinen Teammates. Prüf die Schreibweise der Namen oder wähl einen längeren Zeitraum.", "team")}${filtered ? reset : ""}</div>`;
     return;
   }
   const S = squadM(D.squad), avg = D.avg;
@@ -6080,6 +6083,7 @@ $("#squadBody").addEventListener("click", e => {
   if (f) { squadUi[f.dataset.sqfilt] = f.dataset.v; squadRedraw(`[data-sqfilt="${f.dataset.sqfilt}"][data-v="${CSS.escape(f.dataset.v)}"]`); return; }
   const t = e.target.closest("[data-stable]");
   if (t) { squadTables[t.dataset.stable] = !squadTables[t.dataset.stable]; squadRedraw(`[data-stable="${t.dataset.stable}"]`); return; }
+  if (e.target.closest("[data-sqreset]")) { Object.assign(squadUi, { per: "0", mode: "", mate: "" }); squadRedraw('[data-sqfilt="per"][data-v="0"]'); return; }
   const d = e.target.closest("[data-sqdel]");
   if (d) { state.settings.mates = mateNames().filter(n => n !== d.dataset.sqdel); if (squadUi.mate === d.dataset.sqdel) squadUi.mate = ""; save(); squadRedraw('[data-sqadd] input'); }
 });
