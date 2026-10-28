@@ -6754,6 +6754,7 @@ function qnLiveHtml(d, it, cur) {
 }
 function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
+  if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match für die Vorbereitung oder eine Lektion fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
   return `<div class="qnrow"><b class="small">Dein Fokus: Denkst du dran? Klappt es?</b><span class="small muted">Während des Matches mit ✓ und ✗ mitzählen, danach bewerten.</span>
     ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
     <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
