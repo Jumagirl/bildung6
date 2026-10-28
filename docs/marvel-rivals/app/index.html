@@ -920,6 +920,9 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .nmlbl { font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2px 0 2px; }
 .nmfocus { font-size: 1.12rem; font-weight: 700; line-height: 1.4; margin: 0 0 6px; text-wrap: pretty; }
 .nmpre { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
+.nmcont { margin: 0 0 6px; }
+.rvpick { margin: 4px 0 0; }
+.rvpick select { max-width: 100%; margin-top: 4px; }
 .nmex { margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .rvhint { margin: 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .nmnext { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
@@ -6539,10 +6542,11 @@ function fxForMatch(m) {
     .filter(it => it.src !== "task" || (() => { const x = taskByKey(fxId(it.key)); return !x || !m.hero || x.k === m.hero || x.k === "R:" + heroRole(m.hero); })());
   // Bei einem echten Match zählt die Aufgabe, die in diesem Match galt: aus der Notiz, sonst aus Plantag und Reihenfolge der Matches
   // (die aktuelle Aufgabe fürs nächste Match gehört nicht dazu). So steht sie auch im Review von Matches ohne Notiz.
-  if (m.id && state.matches.some(x => x.id === m.id) && !(q.fxKeys || []).some(k => k.startsWith("step:"))) {
+  // Im Review selbst gewählt (m.stepPick: Abschnitt oder «none» = kein Training) geht vor.
+  if (m.id && state.matches.some(x => x.id === m.id) && (m.stepPick || !(q.fxKeys || []).some(k => k.startsWith("step:")))) {
     items = items.filter(it => it.src !== "step");
-    const seg = q.step && q.step.k ? { key: q.step.k, t: q.step.t } : matchFocusSeg(m);
-    if (seg) items.unshift({ key: "step:" + seg.key, src: "step", tag: "Deine Aufgabe", t: seg.t, scale: fxScale("step") });
+    const seg = m.stepPick ? (m.stepPick === "none" ? null : focusSegByKey(m.stepPick)) : q.step && q.step.k ? { key: q.step.k, t: q.step.t } : matchFocusSeg(m);
+    if (seg) items.unshift({ key: "step:" + seg.key, src: "step", tag: "Deine Aufgabe", t: seg.t, scale: fxScale("step"), seg });
   }
   return items;
 }
@@ -10455,29 +10459,55 @@ function focusPlan(n, plain) {
   if (T.b4) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: keys.length * B + 1, b: null, t: focusFmt(T.b4), key: `${n}:b4:0` }] });
   return out;
 }
-// Plantag fürs nächste Match. Ist der Plantag von heute schon abgeschlossen, geht es mit dem nächsten weiter; gezählt wird dann erst ab dem Abschluss.
-function focusDay() {
-  if (!planStarted()) return { n: 0, since: 0 };
-  const n = planDayOf(today()), st = n ? dayGet(n) : null;
-  if (n && n < PLAN_N && st.done === today() && !planDayManual(today())) return { n: n + 1, since: planSince(n + 1) };
-  return { n, since: 0 };
+// ---------- Ein Trainingstag über mehrere Spieltage ----------
+// Ein Trainingstag läuft, bis du ihn abschliesst («Tag abschliessen» merkt den Zeitpunkt doneAt). Matches danach gehören zum nächsten Tag, auch über
+// Mitternacht hinweg: Wer Tag 15 heute zur Hälfte und morgen zu Ende spielt, macht morgen beim richtigen Match weiter. Mitgezählt werden höchstens
+// zwei Spieltage (das Datum selbst und der letzte Spieltag davor), damit freies Spielen nach einer Pause nicht als Training zählt; mit «Neu beginnen»
+// (dayGet(n).from) zählen frühere Matches nicht mehr. Abschlüsse zählen nur, wenn der Tag gerade dran war (live): Einen alten Tag nachträglich
+// abzuhaken verschiebt nichts. Ältere Abschlüsse ohne Zeitpunkt und Daten mit selbst festgelegtem Plantag zählen wie bisher pro Datum.
+function planLive() {
+  const out = [];
+  for (let k = 1; k <= PLAN_N; k++) { const d = dayGet(k); if (d.done && d.doneAt && d.live !== false) out.push({ n: k, at: d.doneAt }); }
+  return out.sort((a, b) => a.at - b.at);
 }
-// Wie viele Matches schon gespielt sind: Matches von heute (Abgleich oder von Hand), dazu Notizen, die noch auf ihr Match warten
-const focusPlayed = since => state.matches.filter(m => m.date === today() && (!since || matchTime(m) > since)).length + qnToday().filter(q => !since || (q.ts || 0) > since).length;
+// Erster offener Plantag ab einem Datum (an einem Datum abgeschlossene Tage übersprungen)
+const planOpenAfter = date => { let n = guessPlanDay(date); while (n && n < PLAN_N && dayGet(n).done) n++; return n; };
+// Matches eines Plantags im Fenster w = {since, until, dateOnly}, nach Zeit sortiert. Pro Datum (dateOnly) nur dieses Datum, sonst die letzten zwei
+// Spieltage des Fensters (beim laufenden Tag heute und der letzte Spieltag davor). Ein Datum mit selbst festgelegtem anderem Plantag oder freiem Spiel
+// zählt als Spieltag, seine Matches aber nicht mit: Freies Spiel dazwischen beendet das Weiterzählen.
+function planWinList(n, w, date) {
+  const from = Math.max(w.since || 0, dayGet(n).from || 0), until = w.until || Infinity;
+  let ms = state.matches.filter(x => (!w.dateOnly || x.date === date) && matchTime(x) > from && matchTime(x) <= until);
+  if (!w.dateOnly) {
+    const last = ms.reduce((a, x) => x.date > a ? x.date : a, ""), end = until === Infinity && today() > last ? today() : last;
+    const prev = ms.reduce((a, x) => x.date < end && x.date > a ? x.date : a, "");
+    ms = ms.filter(x => x.date === end || x.date === prev);
+  }
+  return ms.filter(x => !planDayManual(x.date) || state.plan.dayByDate[x.date] === n).sort((a, b) => matchTime(a) - matchTime(b));
+}
+// Plantag fürs nächste Match und seine bisherigen Matches (list); prevN = davon an einem früheren Spieltag (prev)
+function focusDay() {
+  if (!planStarted()) return { n: 0, since: 0, list: [], prevN: 0, prev: "" };
+  const d = today(), L = planLive(), man = planDayManual(d), n = man ? planDayOf(d) : planOpenAfter(d);
+  const w = man || !L.length ? { dateOnly: true } : { since: L[L.length - 1].at }, list = n ? planWinList(n, w, d) : [], old = list.filter(x => x.date < d);
+  return { n, since: Math.max(w.since || 0, (n && dayGet(n).from) || 0), list, prevN: old.length, prev: old.length ? old[0].date : "" };
+}
+// Wie viele Matches schon gespielt sind: Matches des Plantags (Abgleich oder von Hand), dazu Notizen von heute, die noch auf ihr Match warten
+const focusPlayed = f => f.list.length + qnToday().filter(q => !f.since || (q.ts || 0) > f.since).length;
 // Die eine Sache fürs nächste Match (nur heute, an einem Plantag)
 function focusNow() {
-  const { n, since } = focusDay();
+  const fd = focusDay(), { n } = fd;
   if (!n || n > PLAN_N || (dayGet(n).done && dayGet(n).done < today())) return null;
   const plan = focusPlan(n);
   if (!plan.length) return null;
-  const B = blockMatches(), st = dayGet(n).steps || {}, played = focusPlayed(since), blocks = plan.filter(x => x.key !== "b4");
+  const B = blockMatches(), st = dayGet(n).steps || {}, played = focusPlayed(fd), blocks = plan.filter(x => x.key !== "b4");
   const biCount = Math.floor(played / B), biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
   const bi = Math.max(biCount, biT), k = bi > biCount ? bi * B + 1 : played + 1;
   const blk = plan.find(x => x.bi === bi) || (bi >= blocks.length ? plan.find(x => x.key === "b4") : null);
-  if (!blk) return { n, k, done: true, plan };
+  if (!blk) return { n, k, done: true, plan, prevN: fd.prevN, prev: fd.prev };
   const i = Math.max(0, blk.segs.findIndex(s => k >= s.a && (s.b === null || k <= s.b))), seg = blk.segs[i] || blk.segs[blk.segs.length - 1];
   const flat = plan.flatMap(x => x.segs.map(s => Object.assign({ blk: x }, s))), at = flat.findIndex(s => s.key === seg.key), next = at >= 0 ? flat[at + 1] || null : null;
-  return { n, k, B, blk, seg, next, first: k === seg.a, plan };
+  return { n, k, B, blk, seg, next, first: k === seg.a, plan, prevN: fd.prevN, prev: fd.prev };
 }
 const focusBlockLabel = key => key === "b4" ? "Block 4+" : "Block " + key[1];
 const focusRange = s => s.b === null ? `ab Match ${s.a}` : s.a === s.b ? `Match ${s.a}` : `Match ${s.a} bis ${s.b}`;
@@ -10488,14 +10518,15 @@ function nmCardHtml() {
     const items = fxChosen(today()), bg = nmBackgroundHtml(f, true);
     if (!items.length && !bg) return "";
     return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><button class="linkbtn small" type="button" data-fxgo="1">Auswahl ändern</button></div>
-    ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>` : ""}
+    ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>${nmContHtml(f)}` : ""}
     ${items.length ? `<div class="nmlbl">Achte nur auf ${items.length === 1 ? "eins" : "diese Punkte"}</div><ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>`
       : `<p class="small muted" style="margin:0">Heute gibt es keine Plan-Aufgabe fürs Match. Wähl dir eine Sache aus.</p>`}
     ${bg}</div>`;
   }
   const bg = nmBackgroundHtml(f);
   const { seg, blk, next, k } = f, ev = seg.practice && f.n === planDay() ? practiceEval(seg.practice, blk.bi) : null;
-  return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${k} heute · ${focusBlockLabel(blk.key)}</span></div>
+  return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${k} ${f.prevN ? `von Tag ${f.n}` : "heute"} · ${focusBlockLabel(blk.key)}</span></div>
+    ${nmContHtml(f)}
     ${blk.pre && f.first ? `<p class="small nmpre"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
     <div class="nmlbl">${seg.rep ? "Wiederholung · achte nur auf eins" : "Achte nur auf eins"}</div>
     <p class="nmfocus">${linkify(esc(seg.t), new Set())}</p>
@@ -10507,6 +10538,21 @@ function nmCardHtml() {
     ${next ? `<div class="nmnext small"><span class="muted">Danach, ${esc(focusRange(next))}${next.blk !== blk ? ` (${focusBlockLabel(next.blk.key)})` : ""}:</span> ${esc(next.t)}</div>` : ""}
     ${bg}</div>`;
 }
+// Tag geht weiter: Matches vom letzten Spieltag zählen mit. «Neu beginnen» zählt erst ab jetzt und öffnet die Blöcke wieder (rückgängig machbar).
+function nmContHtml(f) {
+  const st = dayGet(f.n), u = st.fromUndo;
+  if (f.prevN) return `<p class="small nmcont">Tag ${f.n} geht weiter: ${plural(f.prevN, "Match", "Matches")} vom ${fmtDate(f.prev)} ${f.prevN === 1 ? "zählt" : "zählen"} mit, deshalb Match ${f.k}. War das kein Training? <button class="linkbtn small" type="button" data-dayrestart="${f.n}">Neu beginnen</button></p>`;
+  if (u && st.from && new Date(st.from).toISOString().slice(0, 10) === today()) return `<p class="small muted nmcont">Tag ${f.n} beginnt neu (frühere Matches zählen nicht mit). <button class="linkbtn small" type="button" data-dayrestart-undo="${f.n}">Rückgängig</button></p>`;
+  return "";
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-dayrestart],[data-dayrestart-undo]") : null; if (!b) return;
+  const undo = b.hasAttribute("data-dayrestart-undo"), n = +(undo ? b.dataset.dayrestartUndo : b.dataset.dayrestart), st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]);
+  if (undo) { const u = st.fromUndo || {}; if (u.from) st.from = u.from; else delete st.from; keys.forEach(k => { if (k in (u.steps || {})) st.steps[k] = u.steps[k]; }); delete st.fromUndo; }
+  else { st.fromUndo = { from: st.from || 0, steps: Object.fromEntries(keys.filter(k => k in st.steps).map(k => [k, st.steps[k]])) }; st.from = Date.now(); keys.forEach(k => { delete st.steps[k]; }); }
+  save(); render();
+  toast(undo ? `Tag ${n}: frühere Matches zählen wieder mit.` : `Tag ${n} beginnt neu: Frühere Matches zählen nicht mit, die Blöcke sind wieder offen.`);
+});
 // «Läuft nebenbei»: Grundregeln, Wochenziel und Missionen, eingeklappt. Sie laufen im Hintergrund mit, aktiv denkst du nur an die eine Sache.
 function nmBackgroundHtml(f, noExtra) {
   const rs = planStarted() ? activeRules() : [], g = activeGoal(), gf = g && goalTasks(g).find(t => t.kind === "Match-Fokus"), mis = rvState().missions.filter(x => x.status === "open");
@@ -10540,17 +10586,30 @@ function matchPlanWin(m) {
   if (i >= 0) return { n: here[i][0], since: i ? here[i - 1][1] : 0, until: here[i][1] };
   return { n: Math.min(PLAN_N, here[here.length - 1][0] + 1), since: here[here.length - 1][1], until: Infinity };
 }
-function matchFocusSeg(m) {
+// Zu welchem Plantag gehört ein gespieltes Match? Fenster wie bei focusDay: nach dem letzten Abschluss vor dem Match, bis zum Abschluss danach
+function matchDay(m) {
   if (!m || !m.date || !planStarted()) return null;
-  const { n, since, until } = matchPlanWin(m);
-  if (!n || n > PLAN_N) return null;
-  const list = state.matches.filter(x => x.date === m.date && (!since || matchTime(x) > since) && matchTime(x) <= until).sort((a, b) => matchTime(a) - matchTime(b));
-  const k = list.findIndex(x => x.id === m.id) + 1;
+  if (planDayManual(m.date)) return { n: state.plan.dayByDate[m.date], dateOnly: true };
+  const L = planLive(), t = matchTime(m), i = L.findIndex(x => x.at >= t);
+  if (i > 0) return { n: L[i].n, since: L[i - 1].at, until: L[i].at };
+  if (i < 0 && L.length) return { n: planOpenAfter(m.date), since: L[L.length - 1].at };
+  return Object.assign({ dateOnly: true }, matchPlanWin(m));   // vor dem ersten Abschluss mit Zeitpunkt: wie bisher pro Datum
+}
+function matchFocusSeg(m) {
+  const w = matchDay(m);
+  if (!w || !w.n || w.n > PLAN_N) return null;
+  const list = planWinList(w.n, w, m.date), k = list.findIndex(x => x.id === m.id) + 1;
   if (k < 1) return null;
-  const plan = focusPlan(n, true), B = blockMatches(), blocks = plan.filter(x => x.key !== "b4"), bi = Math.floor((k - 1) / B);
+  const plan = focusPlan(w.n, true), B = blockMatches(), blocks = plan.filter(x => x.key !== "b4"), bi = Math.floor((k - 1) / B);
   const blk = bi < blocks.length ? blocks[bi] : plan.find(x => x.key === "b4");
   if (!blk) return null;
-  return blk.segs.find(x => k >= x.a && (x.b === null || k <= x.b)) || blk.segs[blk.segs.length - 1];
+  const seg = blk.segs.find(x => k >= x.a && (x.b === null || k <= x.b)) || blk.segs[blk.segs.length - 1];
+  return Object.assign({}, seg, { n: w.n, k, blk: blk.key, cross: list[0].date < m.date });
+}
+// Ein Abschnitt aus seinem Schlüssel «Tag:Block:Nummer» (für die Wahl im Review)
+function focusSegByKey(key) {
+  const [n, bk, i] = String(key).split(":"), blk = +n >= 1 && +n <= PLAN_N ? focusPlan(+n, true).find(x => x.key === bk) : null, s = blk && blk.segs[+i];
+  return s ? Object.assign({}, s, { n: +n, blk: bk }) : null;
 }
 // Aufgaben, die laut Notiz oder Review nicht (ganz) geklappt haben, kommen in den nächsten Tagen wieder: in freien Abschnitten des Plans
 // («Freies Spielen», «Wähl ein Mini-Ziel», «dein schwächstes Thema»), als Mini-Ziel in Block 3 am Vertiefen-Tag und als Wahl beim Mini-Ziel.
@@ -10593,6 +10652,41 @@ function rvCounterHint(m) {
   const r = counterRules(role, 20).find(x => es.has(x.enemy) && x.hero !== m.hero);
   return r ? `<p class="small rvhint"><b>Konter-Tipp:</b> ${esc(r.enemy)} war im Gegnerteam, dagegen hilft ${esc(r.hero)}. ${esc(counterWhyTxt(r.why))}</p>` : "";
 }
+// Review: zu welchem Trainingstag und Match die Aufgabe gehört. Stimmt das nicht (du hast anders gespielt, als die App zählt), wählst du die Aufgabe
+// selbst (m.stepPick); eine schon gegebene Antwort wandert mit. «Kein Training» nimmt die Aufgabe weg, «Automatisch» rechnet wieder selbst.
+function rvPickHtml(m, fxIt) {
+  if (!planStarted()) return "";
+  const it = fxIt.find(x => x.src === "step"), seg = it && it.seg, key = it ? it.key.slice(5) : "", kn = +key.split(":")[0] || 0;
+  const info = m.stepPick === "none" ? "Von dir als freies Spiel markiert (keine Aufgabe)."
+    : m.stepPick && seg ? `Von dir gewählt: Tag ${seg.n} · ${focusBlockLabel(seg.blk)}.`
+    : seg && seg.k ? `Tag ${seg.n} · ${focusBlockLabel(seg.blk)} · Match ${seg.k} dieses Trainingstags${seg.cross ? " (der Tag lief über zwei Spieltage)" : ""}.`
+    : it ? `Aus deiner Notiz${kn ? ` (Tag ${kn})` : ""}.` : "Kein Trainingstag zugeordnet.";
+  const n0 = kn || (matchDay(m) || {}).n || planOpenAfter(m.date) || 1, days = [];
+  for (let n = Math.max(1, n0 - 1); n <= Math.min(PLAN_N, n0 + 1); n++) days.push(n);
+  const opt = (v, t) => `<option value="${esc(v)}"${(m.stepPick || "") === v ? " selected" : ""}>${esc(t)}</option>`;
+  const groups = days.map(n => `<optgroup label="${esc(planDayLabel(n))}">${focusPlan(n, true).map(b => b.segs.map(x => opt(x.key, `${focusBlockLabel(b.key)} · ${focusRange(x)}: ${x.t.length > 70 ? x.t.slice(0, 67) + " …" : x.t}`)).join("")).join("")}</optgroup>`).join("");
+  return `<div class="small muted rvpick"><span>${esc(info)}</span> <details style="display:inline"><summary class="linkbtn small" style="display:inline">${it || m.stepPick ? "Andere Aufgabe?" : "Doch trainiert? Aufgabe wählen"}</summary>
+    <select data-rvpick="${m.id}" aria-label="Aufgabe in diesem Match">${opt("", "Automatisch (wie die App zählt)")}${opt("none", "Kein Training (freies Spiel)")}${groups}</select></details></div>`;
+}
+document.addEventListener("change", e => {
+  const sel = e.target.closest ? e.target.closest("[data-rvpick]") : null; if (!sel) return;
+  const m = state.matches.find(x => x.id === sel.dataset.rvpick); if (!m) return;
+  const v = sel.value;
+  if (v) m.stepPick = v; else delete m.stepPick;
+  const q = m.qn;
+  if (q && q.step) {
+    const seg = v === "none" ? null : v ? focusSegByKey(v) : matchFocusSeg(m), ok = "step:" + q.step.k, nq = Object.assign({}, q);
+    if (seg) {
+      const nk = "step:" + seg.key, mv = o => { if (!o || !(ok in o)) return o; const c = Object.assign({}, o); c[nk] = c[ok]; delete c[ok]; return c; };
+      nq.step = { k: seg.key, t: seg.t, v: q.step.v };
+      nq.fxKeys = (q.fxKeys || []).map(k => k === ok ? nk : k);
+      nq.fxT = Object.assign(mv(q.fxT) || {}, { [nk]: { tag: "Deine Aufgabe", t: seg.t } });
+      nq.fxWhy = mv(q.fxWhy);
+    } else { delete nq.step; nq.fxKeys = (q.fxKeys || []).filter(k => !k.startsWith("step:")); }
+    m.qn = nq;
+  }
+  save(); rvRerender();
+});
 // Trainingstag: oben im Block die Abschnitte mit je einer Sache, der aktuelle hervorgehoben
 function blockFocusHtml(n, s) {
   const blk = focusPlan(n).find(x => x.key === s.key);
@@ -10879,16 +10973,15 @@ const blockStepKeys = d => d.steps.filter(x => BLOCK_KEYS.includes(x.key)).map(x
 function stepFieldKeys(n, s) {
   return scaleMatchRefs(s.t).split("\n").map(x => x.trim()).filter(Boolean).map((t, i) => WRITE_RE.test(t) && !(s.key === "note" && QN_LINE.test(t)) ? s.key + ":" + i : null).filter(Boolean);
 }
-// Matches von heute, die zum Plantag n gehören: Wurde der Tag davor heute abgeschlossen, zählen erst die Matches danach (doneAt)
-function planSince(n) { const p = n > 1 ? dayGet(n - 1) : null; return p && p.done === today() && p.doneAt ? p.doneAt : 0; }
-const planMatchesToday = n => { const since = planSince(n); return state.matches.filter(m => m.date === today() && (!since || matchTime(m) > since)); };
+// Matches, die zum laufenden Plantag n gehören (siehe «Ein Trainingstag über mehrere Spieltage»: ab dem letzten Abschluss, höchstens zwei Spieltage)
+const planMatchesToday = n => { const f = focusDay(); return f.n === n ? f.list : state.matches.filter(m => m.date === today()); };
 function autoStepEval(n, s, carryIdx) {
   if (!planStarted() || !(n >= 1 && n <= PLAN_N) || n !== planDay()) return null;
   const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
-    const B = blockMatches(), ms = planMatchesToday(n).length;
-    const r = autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches heute`), lock = carryIdx >= 0 ? "" : rvLock(n, s);
+    const B = blockMatches(), ms = planMatchesToday(n).length, since = focusDay().prev;
+    const r = autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches ${since ? `seit dem ${fmtDate(since)}` : "heute"}`), lock = carryIdx >= 0 ? "" : rvLock(n, s);
     if (lock && r.done) { r.done = false; r.wait = lock; }
     return r;
   }
@@ -11747,6 +11840,7 @@ function rvMatchHtml(x, open, L) {
     ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">3</span>${fxIt.some(it => it.src === "step") ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${fxIt.some(it => it.src === "step") ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
       (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<label class="small fxwhy">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>`
         : fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
+    ${rvPickHtml(m, fxIt)}
     ${rvProbStepHtml(m, fxIt.length ? 4 : 3)}
     <div class="rvs"><h4><span class="rvn">${fxIt.length ? 5 : 4}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
@@ -13831,6 +13925,7 @@ function completeDay(n) {
   const st = dayEnsure(n);
   if (planStarted() && rvAnchor(PLAN.days[n - 1]) && n === planDay()) { const rs = rvStatus(); st.rv = { done: rs.done, need: rs.need }; }
   const t = $("#dayNote"); if (t) st.note = t.value.trim();
+  st.live = !planStarted() || n === focusDay().n;   // nur der Tag, der gerade dran war, beendet das Fenster (siehe planLive)
   st.done = today(); st.doneAt = Date.now();
   if (!state.plan.start) state.plan.start = today();
   const moved = scheduleCarry(n);
@@ -13902,7 +13997,7 @@ function planAction(act, b) {
     case "read": { const k = b.dataset.k; planUi.read.has(k) ? planUi.read.delete(k) : planUi.read.add(k); renderPlan(); break; }
     case "start": startPlan(); break;
     case "complete": completeDay(+b.dataset.n); break;
-    case "reopen": { const n = +b.dataset.n; dayEnsure(n).done = null; delete dayEnsure(n).doneAt; save(); stageResetOpen(n); renderPlan(); renderLevelChip(); break; }
+    case "reopen": { const n = +b.dataset.n; dayEnsure(n).done = null; delete dayEnsure(n).doneAt; delete dayEnsure(n).live; save(); stageResetOpen(n); renderPlan(); renderLevelChip(); break; }
     case "stage": { const n = planUi.day, k = b.dataset.k; if (!n) break; planUi.stOpen[n + ":" + k] = true; const el = document.getElementById("stage-" + k); if (el) stageJump(k); break; }
     case "dayall": { dayAll = !dayAll; try { localStorage.setItem(DAYALL_KEY, dayAll ? "1" : "0"); } catch (e) {} if (planUi.day) stageResetOpen(planUi.day); renderPlan(); break; }
     case "prep-ok": { const n = +b.dataset.n, before = dayStageCur(n); dayEnsure(n).prepOk = true; save(); stageAfterChange(n, before); break; }
