@@ -4174,6 +4174,8 @@ let state = loadState();
 // Lokale Datei: localStorage dieses Browsers. Fehlt beides, warnt die App deutlich.
 const ONLINE_URL = ""; /* PRIVATE:ONLINE_URL */
 let storageOK = false;
+const PAGES_URL = "https://jumagirl.github.io/bildung6/";
+const Keep = { persisted: null, asked: false };   // Browser-Speicher schützen (siehe unten)
 try { const k = STORE_KEY + "-probe"; localStorage.setItem(k, "1"); storageOK = localStorage.getItem(k) === "1"; localStorage.removeItem(k); } catch (e) { storageOK = false; }
 const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
 const Cloud = { db: null, base: null, ready: false, status: "init", rev: null, lastJson: {}, chunkCount: 0, timer: null, queue: Promise.resolve(), unsub: null, error: "" };
@@ -4198,7 +4200,9 @@ function setSyncStatus(status, error) {
   if (banner) {
     const lost = status === "local" && !storageOK;
     const failed = status === "error";
-    banner.hidden = !(lost || failed);
+    const risk = status === "local" && storageOK ? storeRisk() : "";
+    banner.hidden = !(lost || failed || risk);
+    if (risk) banner.innerHTML = keepRiskHtml(risk);
     if (lost) banner.innerHTML = `<b>Achtung: In dieser Ansicht werden deine Einträge nicht gespeichert.</b> Beim nächsten Öffnen wären sie weg. ${ONLINE_URL
       ? `Nutze die <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version des Rivals Coach</a> – dort liegen deine Daten in deinem Konto.`
       : "Öffne die Datei in Chrome, Edge oder Firefox (nicht im privaten Modus und nicht in einer Vorschau-App)."} Sichere bis dahin über <b>Daten &amp; Sync → Als JSON exportieren</b>.`;
@@ -4220,6 +4224,7 @@ function saveCore() {
   if (typeof rvCache !== "undefined") rvCache = null;
   state.updatedAt = Date.now();
   saveLocal();
+  if (!IN_VIEWER && !Keep.asked) keepAsk();
   if (Cloud.ready) scheduleCloud();
 }
 function scheduleCloud() {
@@ -4343,8 +4348,65 @@ function renderStorageInfo() {
         : ["bad", "Nirgends – Daten gehen verloren", "Diese Ansicht erlaubt kein Speichern (z.B. Vorschau in einer App oder privater Modus). Exportiere ein Backup, bevor du die Seite schliesst."];
   el.className = `sync-status ${where[0] === "ok" ? "ok" : ""}`;
   el.innerHTML = `<span class="dot" style="${where[0] === "bad" ? "background:var(--bad)" : where[0] === "warn" ? "background:var(--warn)" : ""}"></span><div><b>Gespeichert: ${esc(where[1])}</b><br><span class="muted small">${esc(where[2])}</span>
-    ${!IN_VIEWER && ONLINE_URL ? `<br><span class="small">Tipp: In der <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version</a> werden deine Daten in deinem Konto gespeichert. Übertrage sie mit Backup exportieren → dort importieren.</span>` : ""}</div>`;
+    ${!IN_VIEWER && ONLINE_URL ? `<br><span class="small">Tipp: In der <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version</a> werden deine Daten in deinem Konto gespeichert. Übertrage sie mit Backup exportieren → dort importieren.</span>` : ""}${!IN_VIEWER && storageOK ? keepInfoHtml() : ""}</div>`;
 }
+// ---------- Browser-Speicher schützen (Datei oder Webseite ausserhalb von Claude) ----------
+// Anlass: Ein Freund musste im Browser immer wieder von vorne anfangen. Die Seite kann die Ursache nicht sicher erkennen: privater Modus,
+// In-App-Browser (Discord, WhatsApp, Instagram …), Vorschau einer Datei auf dem Handy, ein Browser, der beim Schliessen oder nach Tagen ohne
+// Besuch löscht (Safari). Deshalb vier Schutzmassnahmen: dauerhaften Speicher beim Browser anfragen (navigator.storage.persist), bekannte
+// Risiko-Ansichten erkennen und warnen, ein persönlicher Link mit dem Spielernamen (?spieler=…, die Matches kommen dann über den Gratis-Abgleich
+// von selbst zurück) und eine wöchentliche Erinnerung an die Sicherung, solange der Browser den Speicher nicht fest zusagt.
+function storeRisk() {
+  if (IN_VIEWER) return "";
+  const ua = navigator.userAgent || "", app = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|musical_ly|BytedanceWebview|TikTok|Discord|WhatsApp|Twitter|Line\//i.exec(ua);
+  if (app) return "inapp:" + app[0].replace(/^FB.*/, "Facebook").replace(/^(musical_ly|BytedanceWebview)$/, "TikTok").replace("Line/", "Line");
+  if (/; wv\)/.test(ua)) return "inapp:";
+  if (location.protocol === "file:" && /iPhone|iPad|iPod|Android/i.test(ua)) return "file";
+  return "";
+}
+const keepLink = () => { const n = (state.settings.playerName || "").trim(); return n ? `${PAGES_URL}?spieler=${encodeURIComponent(n)}` : PAGES_URL; };
+function keepRiskHtml(risk) {
+  const where = risk === "file" ? "als Datei in einer Vorschau auf dem Handy" : `in einer anderen App${risk.slice(6) ? ` (${esc(risk.slice(6))})` : ""}`;
+  return `<b>Achtung: Hier gehen deine Einträge wahrscheinlich beim Schliessen verloren.</b> Du hast die App ${where} geöffnet; solche Ansichten speichern oft nicht dauerhaft. ${risk === "file"
+    ? `Öffne lieber die Webseite in Safari oder Chrome: <b>${esc(keepLink())}</b>`
+    : `Öffne sie in Safari oder Chrome (Menü «…» oder «⋮», dann «Im Browser öffnen»), am besten über deinen Link: <b>${esc(keepLink())}</b>`}. Sichere bis dahin über <b>Daten &amp; Sync → Als JSON exportieren</b>.`;
+}
+// Dauerhaften Speicher anfragen: persisted() fragt nichts, persist() erst, wenn es eigene Daten gibt (manche Browser fragen dann einmal nach)
+async function keepAsk() {
+  if (IN_VIEWER || !storageOK || !(navigator.storage && navigator.storage.persisted)) return;
+  try {
+    if (Keep.persisted === null) Keep.persisted = await navigator.storage.persisted();
+    if (!Keep.persisted && !Keep.asked && hasUserData(state) && navigator.storage.persist) { Keep.asked = true; Keep.persisted = await navigator.storage.persist(); }
+  } catch (e) { /* ohne Zusage bleibt die Erinnerung an die Sicherung */ }
+  if (currentTabSafe() === "data") renderStorageInfo();
+}
+function keepInfoHtml() {
+  const p = Keep.persisted === true ? "Dein Browser hat zugesagt, die Daten dauerhaft zu behalten."
+    : "Dein Browser darf die Daten löschen, zum Beispiel im privaten Modus, beim Schliessen oder (Safari) nach einigen Tagen ohne Besuch. Mach deshalb regelmässig eine Sicherung.";
+  return `<br><span class="small">${esc(p)}</span>${webSyncOn() ? `<br><span class="small">Dein persönlicher Link (als Lesezeichen oder auf dem Home-Bildschirm speichern): <b>${esc(keepLink())}</b>
+    <button class="btn ghost small" type="button" data-keepcopy>Link kopieren</button><br><span class="muted">Öffnest du ihn in einem Browser ohne deine Daten, trägt er deinen Spielernamen ein und holt die Matches vom Gratis-Abgleich zurück. Notizen, Reviews und Plan-Fortschritt kommen nur aus einer Sicherung zurück.</span></span>` : ""}`;
+}
+// Erinnerung auf «Heute»: höchstens einmal pro Woche, solange der Browser nicht zusagt und es Daten von vor heute gibt
+function keepNews() {
+  if (IN_VIEWER || !storageOK || Keep.persisted === true || !hasUserData(state)) return null;
+  const a = state.app || {}, d = today();
+  if ((a.backupSnooze || "") > d || (a.backupAt && addDays(a.backupAt, 7) > d)) return null;
+  if (!a.backupAt && !state.matches.some(m => (m.date || d) < d) && !((state.plan.start || d) < d)) return null;
+  return ["info", `<b>Sichere deine Daten.</b> Dieser Browser darf sie löschen${a.backupAt ? ` (letzte Sicherung ${fmtDate(a.backupAt)})` : ""}. Mit einer Sicherung holst du Notizen, Reviews und Plan-Fortschritt jederzeit zurück. <button class="btn small" type="button" data-keep="backup">Sicherung speichern</button> <button class="linkbtn small" type="button" data-keep="later">In einer Woche erinnern</button>`];
+}
+// Leerer Start im Browser: Weg zurück zu den eigenen Daten
+function keepRestoreHtml() {
+  if (IN_VIEWER || hasUserData(state)) return "";
+  return `<div class="note info" style="margin:0 0 8px"><span class="ni" aria-hidden="true">i</span><div><b>Schon einmal angefangen und alles ist weg?</b> Trag unter «Daten &amp; Sync» deinen Spielernamen ein, dann holt die App deine Matches zurück. Notizen, Reviews und Plan-Fortschritt kommen aus einer Sicherung. <button class="btn small ghost" type="button" data-go="data">Spielername eintragen</button> <button class="btn small ghost" type="button" data-keep="import">Sicherung laden</button></div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-keep],[data-keepcopy]") : null; if (!b) return;
+  if (b.hasAttribute("data-keepcopy")) { copyText(keepLink(), "Link kopiert!"); return; }
+  const k = b.dataset.keep;
+  if (k === "backup") $("#exportBtn").click();
+  else if (k === "later") { state.app = state.app || {}; state.app.backupSnooze = addDays(today(), 7); save(); render(); }
+  else if (k === "import") $("#importFile").click();
+});
 
 // ---------- Eigener Bestätigungsdialog (confirm() ist in der Online-Ansicht gesperrt) ----------
 function askConfirm(message, okLabel, danger) {
@@ -5276,6 +5338,7 @@ function renderToday() {
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
   { const ti = txInsights()[0]; if (ti && ti.n >= 3) news.push(["info", `<b>Du schreibst oft über «${esc(ti.t.topic)}»</b> (${ti.n}× in 30 Tagen). Passende Lektion und Übung stehen im Review unter «Was du schreibst». <button class="btn small ghost" type="button" data-pact="tab" data-tab="review">Ansehen</button>`]); }
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
+  { const kn = keepNews(); if (kn) news.push(kn); }
   const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2></div>${notes(news)}</div>` : "";
   // Erste Schritte
   const steps = [
@@ -5287,7 +5350,7 @@ function renderToday() {
   const stepsDone = steps.filter(x => x[1]).length;
   const first = stepsDone < steps.length && !(state.settings && state.settings.hideStart) ? `<div class="card"><div class="card-head"><h2>${icon("list")}Erste Schritte <span class="badge">${stepsDone}/${steps.length}</span></h2><button class="linkbtn small" type="button" data-today="hidestart">Ausblenden</button></div>
     <p class="lead">So holst du das meiste aus dem Rivals Coach.</p>
-    ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
+    ${keepRestoreHtml()}${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
   // Seltener Gebrauchtes steht eingeklappt unter «Mehr für heute» (die App merkt sich, ob es offen ist)
@@ -9004,7 +9067,7 @@ $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
 });
-$("#exportBtn").addEventListener("click", () => { appSeen("backup", true); saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"); });
+$("#exportBtn").addEventListener("click", () => { appSeen("backup", true); state.app = state.app || {}; state.app.backupAt = today(); saveCore(); saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"); });
 $("#csvBtn").addEventListener("click", () => {
   const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "ults", "ultHit", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next", "source", "extId"];
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
@@ -14040,6 +14103,8 @@ function watchVideos(k) {
   return poolHeroes().filter(h => heroRole(h) === r && (HERO_VIDEOS[h] || []).length).slice(0, 4).map(h => Object.assign({ h }, HERO_VIDEOS[h][0]));
 }
 const watchVidUrl = v => "https://www.youtube.com/watch?v=" + encodeURIComponent(v.id);
+// TikTok: nur eine fertige Suche (TikTok sperrt automatische Suchen, deshalb keine ausgewählten Clips); «Deadpool (Vanguard)» → «Deadpool Vanguard»
+const watchTikTokUrl = h => "https://www.tiktok.com/search?q=" + encodeURIComponent(`Marvel Rivals ${String(h).replace(/\s*\((\w+)\)/, " $1")} guide`);
 const WATCH_MON = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 const watchVidAge = v => v.m ? `hochgeladen etwa ${WATCH_MON[+v.m.slice(5, 7) - 1]} ${v.m.slice(0, 4)}` : "über ein Jahr alt";
 function watchVidHtml(v, showHero) {
@@ -14052,9 +14117,11 @@ function watchVideosCardHtml(k) {
   const title = role ? `Guide-Videos für deine ${esc(ROLE_SHORT[bootRole(k)])}-Helden` : `Guide-Videos zu ${esc(k)}`;
   const body = vs.length ? vs.map(v => watchVidHtml(v, role)).join("")
     : `<p class="muted" style="margin:0">${role ? "In deinem Helden-Pool ist noch kein Held dieser Rolle. Wähle oben einen Helden, dann siehst du passende Videos." : "Für diesen Helden hat die Suche kein passendes Video gefunden."}</p>`;
-  const old = vs.some(v => !v.m);
+  const old = vs.some(v => !v.m), tts = role ? (vs.length ? vs.map(v => v.h) : [bootRole(k)]) : [k];
   return `<div class="card" id="watchVids"><div class="card-head"><h2>${icon("play")}${title}</h2><span class="muted small">Stand ${esc(fmtDate(WATCH_VID_STAND))}</span></div>
     ${body}
+    <div class="row" style="gap:6px;margin-top:8px">${tts.map(h => `<a class="btn ghost small" data-tt="${esc(h)}" href="${esc(watchTikTokUrl(h))}" target="_blank" rel="noopener">Auf TikTok suchen: ${esc(h)}</a>`).join("")}</div>
+    <p class="small muted" style="margin:4px 0 0">Die TikTok-Suche nach «Marvel Rivals … guide» ist nicht geprüft: Einzelne TikToks kann die App nicht auswählen. Kurze Clips zeigen oft nur einen Trick; achte auf das Datum.</p>
     <p class="small muted" style="margin:8px 0 0">Ausgewählt aus der YouTube-Suche nach festen Regeln: Guide im Titel, 4 bis 45 Minuten, möglichst neu, genug Aufrufe, pro Kanal ein Video. Titel und Kanal sind geprüft, den Inhalt hat die App nicht geprüft. Seit dem Upload können Patches den Helden verändert haben: Achte auf die Season im Titel.${old ? " Für diesen Helden gab es kein passendes Video aus dem letzten Jahr." : ""}</p></div>`;
 }
 function watchSubjectHtml(k) {
@@ -16518,11 +16585,14 @@ let startTab = "today";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "today"; } catch (e) {}
 if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });
 if (BUILD_STAMP) { const el = $("#buildStamp"); el.textContent = "Version vom " + BUILD_STAMP; el.hidden = false; }
+// Persönlicher Link ?spieler=NAME: trägt den Namen ein, wenn noch keiner gespeichert ist (überschreibt nie einen vorhandenen)
+if (!IN_VIEWER) { let n = ""; try { n = (new URLSearchParams(location.search).get("spieler") || "").trim().slice(0, 40); } catch (e) { n = ""; } if (n && !(state.settings.playerName || "").trim()) { state.settings.playerName = n; saveLocal(); } }
 setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "today");
 initCloud();
 initBridge();
 initWebSync();
+keepAsk();
 </script>
 </body>
 </html>
