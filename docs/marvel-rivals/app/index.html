@@ -819,6 +819,9 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .dmore { margin-top: 6px; }
 .dmore > summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
 .dmore .deathgrid { margin-top: 4px; }
+.qndet .qnrole { margin: 4px 0 6px; align-items: center; }
+.qncat { margin-top: 8px; }
+.qncat > b { display: block; color: var(--muted); }
 @media (max-width: 560px) { .rkl li { grid-template-columns: minmax(0, 1fr); } .rkl .rkc { justify-content: flex-start; } }
 .rkt td.me, .rkt th.me { font-weight: 800; }
 .rkt tr.goal td { background: color-mix(in srgb, var(--gold) 14%, transparent); }
@@ -6935,14 +6938,66 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => { if (e.target.closest && e.target.closest("[data-rvpb],[data-rvfxwhy]")) { clearTimeout(rvPbT); save(); } });
 // ---------- Schnellnotiz nach dem Match ----------
-// Nach jedem Match tippst du in der Ladezeit eine kurze Notiz: Ults, Todesursachen (die fünf Gruppen des Plans), Mini-Ziel, Solo oder Stack, Voice,
+// Nach jedem Match tippst du in der Ladezeit eine kurze Notiz: Ults, Todesursachen (grob nach Gruppe oder genauer), Mini-Ziel, Solo oder Stack, Voice,
 // den Zusatz des Tages und einen Satz. Held, Ergebnis und Tode holt der Abgleich selbst, so musst du am Tagesende nicht jedes Match nachtragen.
 // Zuordnung über die Uhrzeit: Die Notiz gehört zum letzten Match des Tages, das vor ihr begann (höchstens 45 Minuten davor). Sicher ist das erst,
 // wenn der Abgleich auch ein späteres Match kennt oder der Tag vorbei ist; bis dahin wartet die Notiz unter «Offen», wo du sie auch selbst zuordnen kannst.
-const QN_CATS = Object.keys(DEATH_CAT);
+// Todesursachen in der Notiz: ein Tipp auf eine Gruppe zählt einen Tod grob (die fünf Gruppen des Plans plus «Sonstiges»). Aufgeklappt stehen darunter
+// die einzelnen Ursachen jeder Gruppe für eine Rolle (Hauptliste und «Weitere Ursachen»); auch dort zählt jeder Tipp einen Tod. Die Zahl an der Gruppe
+// ist die Summe aus grob und genauer, «−» an der Gruppe nimmt den zuletzt dort gezählten Tod weg (d.dlog). Die Rolle rät die App aus dem letzten
+// Match von heute, sonst aus der Hauptrolle; umschaltbar, weil Held und Rolle erst mit dem Abgleich kommen.
+const QN_CATS = Object.keys(DEATH_CAT).concat(["Sonstiges"]);
+let qnDetOpen = false;
+function qnAutoRole() {
+  const last = state.matches.filter(m => m.date === today()).sort((a, b) => matchTime(a) - matchTime(b)).pop(), r = last ? roleOfHero(last.hero) : "";
+  return r || mainRole() || "Strategist";
+}
+const qnRole = d => ROLES.includes(d.role) ? d.role : qnAutoRole();
+const qnCatN = (d, c) => Object.entries(d.deaths || {}).reduce((a, [l, n]) => a + (deathCat(l) === c ? (+n || 0) : 0), 0);
+function qnCauses(d, c) {
+  const r = qnRole(d), all = DEATH_BY_ROLE[r].concat(DEATH_MORE_ROLE[r] || [], DEATH_MORE).map(o => o[0]);
+  return [...new Set(all.concat(Object.keys(d.deaths || {})))].filter(l => l !== c && deathCat(l) === c);
+}
+const qnDetN = d => Object.entries(d.deaths || {}).reduce((a, [l, n]) => a + (QN_CATS.includes(l) ? 0 : (+n || 0)), 0);
+function qnDeathAdd(d, l) { d.deaths[l] = (d.deaths[l] || 0) + 1; d.dlog = [...(d.dlog || []), l]; }
+// «−» an einer Gruppe: der zuletzt gezählte Tod dieser Gruppe, sonst zuerst der grobe; an einer einzelnen Ursache genau diese
+function qnDeathDec(d, l) {
+  let k = l;
+  if (QN_CATS.includes(l)) {
+    const log = d.dlog || [], i = log.map((x, j) => [x, j]).reverse().find(([x]) => deathCat(x) === l && d.deaths[x] > 0);
+    k = i ? i[0] : d.deaths[l] ? l : Object.keys(d.deaths).find(x => deathCat(x) === l && d.deaths[x] > 0);
+  }
+  if (!k || !d.deaths[k]) return;
+  d.deaths[k]--; if (!d.deaths[k]) delete d.deaths[k];
+  const j = (d.dlog || []).lastIndexOf(k); if (j >= 0) d.dlog.splice(j, 1);
+  ultTrim(d.ultDeaths || {}, ultDeathN(d.deaths));
+}
+const qnDbtn = (l, n, label) => `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-qndeath="${esc(l)}" aria-label="${esc(label || l)}, einmal mehr">${esc(label || l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-qndeath-dec="${esc(l)}" aria-label="${esc(label || l)}, einmal weniger">−</button>` : ""}</span>`;
+function qnDeathHtml(d) {
+  const r = qnRole(d), det = qnDetN(d);
+  return `<div class="qnrow"><b class="small">Tode: woran lag es?</b><span class="small muted">Ein Tipp ist ein Tod: grob über die Gruppe oder genauer darunter.</span>
+    <div class="deathgrid">${QN_CATS.map(c => qnDbtn(c, qnCatN(d, c))).join("")}</div>
+    <details class="dmore qndet" ${det || qnDetOpen ? "open" : ""}><summary class="small">Genauer: was genau?${det ? ` (${det} gewählt)` : ""}</summary>
+      <div class="chips qnrole"><span class="small muted">Rolle:</span>${ROLES.map(x => `<button type="button" class="chip ${x === r ? "on" : ""}" data-qnrole="${x}" aria-pressed="${x === r}">${x}</button>`).join("")}</div>
+      ${QN_CATS.map(c => { const list = qnCauses(d, c); return list.length ? `<div class="qncat"><b class="small">${esc(c)}</b><div class="deathgrid">${list.map(l => qnDbtn(l, (d.deaths || {})[l] || 0)).join("")}</div></div>` : ""; }).join("")}
+    </details>${ultPickHtml("q", ultDeathN(d.deaths), d.ultDeaths || {}, [])}</div>`;
+}
+document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".qndet")) qnDetOpen = e.target.open; }, true);
+// Wofür war das Match? Training zählt für die Blöcke; Vorbereitung oder Lektion, Mission oder Event im Spiel und freies Spiel nicht (d.prep bleibt
+// dafür gesetzt, d.purpose sagt, was es war). Ältere Notizen kennen nur d.prep, das heisst Vorbereitung oder Lektion.
+const QN_PURPOSE = [["0", "Training (Block)"], ["1", "Vorbereitung oder Lektion"], ["mission", "Mission oder Event im Spiel"], ["none", "Freies Spiel"]];
+const qnPurpose = d => d.prep ? (d.purpose || "prep") : "";
+const QN_PURPOSE_HINT = { prep: "Zählt nicht für die Blöcke, die nächsten Matches rücken nach.",
+  mission: "Zum Beispiel eine Tages-, Saison- oder Event-Mission im Spiel. Zählt nicht für die Blöcke, die nächsten Matches rücken nach. Missionen aus der App zählen von selbst mit, dafür bleibt es bei «Training».",
+  none: "Zählt nicht für die Blöcke, die nächsten Matches rücken nach." };
+const QN_PURPOSE_NAME = { prep: "Vorbereitung oder Lektion", mission: "Mission oder Event im Spiel", none: "Freies Spiel" };
+function qnPurposeHtml(d) {
+  const cur = qnPurpose(d), v = cur === "prep" ? "1" : cur || "0";
+  return `<div class="qnrow"><b class="small">Wofür war das Match?</b><div class="chips">${QN_PURPOSE.map(([k, l]) => `<button type="button" class="chip ${k === v ? "on" : ""}" data-qnprep="${k}" aria-pressed="${k === v}">${l}</button>`).join("")}</div>${cur ? `<span class="small muted">${QN_PURPOSE_HINT[cur]}</span>` : ""}</div>`;
+}
 const QN_LINE = /^(Nach jedem Match|Standardzeile|Strichliste|Todesursachen-Tracker|Tippe in „Match loggen“ bei jedem Tod|Dazu in dieselbe Zeile|Zusatz|Match-Nummer|Darin stehen|Bei jedem Tod|Kontrolle)/;
 let qnDraft = null;
-const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, ultDeaths: {}, fx: {}, mini: "", stack: "", voice: "", extra: "", text: "" });
+const qnBlank = () => ({ ults: null, ultHit: null, deaths: {}, dlog: [], ultDeaths: {}, fx: {}, mini: "", stack: "", voice: "", extra: "", text: "" });
 const fxPickOpen = { q: false, w: false };   // Auswahl «Worauf achtest du?» aufgeklappt (q: Notiz, w: Reiter «Woche»), bleibt beim Neuzeichnen offen
 // Dein Fokus in der Notiz: dieselben Punkte und Knöpfe wie beim Eintragen und im Review
 // Während des Matches: Striche pro Fokus-Punkt (✓ geklappt, ✗ nicht geklappt), zum Beispiel beim Respawn. Ohne eigene Bewertung schlägt
@@ -6964,7 +7019,7 @@ function qnLiveHtml(d, it, cur) {
 }
 function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
-  if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match für die Vorbereitung oder eine Lektion fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
+  if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match, das nicht fürs Training zählt (Vorbereitung, Lektion, Mission, freies Spiel), fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
   return `<div class="qnrow"><b class="small">Dein Fokus: Denkst du dran? Klappt es?</b><span class="small muted">Während des Matches mit ✓ und ✗ mitzählen, danach bewerten.</span>
     ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
     <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
@@ -6989,7 +7044,7 @@ function qnApply(q, m) {
   if (deathTotal(q.ultDeaths)) { m.ultDeaths = Object.assign({}, m.ultDeaths); Object.entries(q.ultDeaths).forEach(([h, n]) => { m.ultDeaths[h] = (m.ultDeaths[h] || 0) + n; }); ultTrim(m.ultDeaths, ultDeathN(m.deathCauses)); }
   if (q.mini || q.stack || q.voice || q.extra) m.qn = Object.assign({}, m.qn, { mini: q.mini, stack: q.stack, voice: q.voice, extra: q.extra });
   if (q.text) m.notes = m.notes ? m.notes + "\n" + q.text : q.text;
-  if (q.prep && !m.stepPick) m.stepPick = "prep";   // in der Notiz als Vorbereitung oder Lektion angegeben
+  if (q.prep && !m.stepPick) m.stepPick = qnPurpose(q);   // in der Notiz als Vorbereitung oder Lektion, Mission oder freies Spiel angegeben
   if (q.fxKeys && q.fxKeys.length) {
     const items = fxForMatch({ hero: m.hero, date: m.date, qn: { fxKeys: q.fxKeys, fxT: q.fxT } });
     items.forEach(it => { const v = (q.fx || {})[it.key], has = fxGet(m, it); if (v && (has === undefined || has === "")) fxSet(m, it, v); });
@@ -7007,7 +7062,7 @@ function qnAssignAll() {
   if (ch) state.qnotes = state.qnotes.filter(q => !q.match);
   return ch;
 }
-const qnSummary = q => [q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+const qnSummary = q => [QN_PURPOSE_NAME[qnPurpose(q)] || "", q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
 function qnSheetHtml() {
   const d = qnDraft, n = qnToday().length + state.matches.filter(m => m.date === today() && !state.qnotes.some(q => q.match === m.id)).length, extra = qnExtraLabel();
   const seg = (k, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${d[k] === v ? "on" : ""}" data-qn="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${l}</button>`).join("")}</div>`;
@@ -7015,11 +7070,11 @@ function qnSheetHtml() {
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
-    ${focusDay().n ? `<div class="qnrow"><b class="small">Wofür war das Match?</b><div class="chips"><button type="button" class="chip ${d.prep ? "" : "on"}" data-qnprep="0" aria-pressed="${!d.prep}">Training (Block)</button><button type="button" class="chip ${d.prep ? "on" : ""}" data-qnprep="1" aria-pressed="${!!d.prep}">Vorbereitung oder Lektion</button></div>${d.prep ? `<span class="small muted">Zählt nicht für die Blöcke, die nächsten Matches rücken nach.</span>` : ""}</div>` : ""}
+    ${focusDay().n ? qnPurposeHtml(d) : ""}
     ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
       return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
     <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
-    <div class="qnrow"><b class="small">Tode: woran lag es?</b><div class="deathgrid">${QN_CATS.map(c => `<span class="dwrap ${d.deaths[c] ? "on" : ""}"><button type="button" class="dbtn" data-qndeath="${esc(c)}" aria-label="${esc(c)}, einmal mehr">${esc(c)}<b class="dcount">${d.deaths[c] || ""}</b></button>${d.deaths[c] ? `<button type="button" class="ddec" data-qndeath-dec="${esc(c)}" aria-label="${esc(c)}, einmal weniger">−</button>` : ""}</span>`).join("")}</div>${ultPickHtml("q", ultDeathN(d.deaths), d.ultDeaths || {}, [])}</div>
+    ${qnDeathHtml(d)}
     ${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}
     <label class="qnrow"><b class="small">Ein Satz: Was nimmst du mit?</b><input type="text" data-qntext="text" value="${esc(d.text)}" placeholder="z. B. zu früh vorgelaufen, nächstes Mal hinter dem Tank bleiben"></label>
     <div class="row mt"><button class="btn" type="button" data-qnsave>${icon("check")}Notiz speichern</button><button class="btn ghost" type="button" data-qnclose>Abbrechen</button><span class="small muted">Heute ${plural(qnToday().length, "Notiz", "Notizen")} offen</span></div>`;
@@ -7064,19 +7119,21 @@ function qnClick(e) {
   if (e.target === bd || e.target.closest("[data-qnclose]")) { qnClose(); return; }
   const b = e.target.closest("button"); if (!b || !d) return;
   if (b.dataset.qnstep) { const k = b.dataset.qnstep, v = Math.max(0, (d[k] ?? 0) + +b.dataset.d); d[k] = v; if (k === "ultHit" && (d.ults ?? 0) < v) d.ults = v; if (k === "ults" && d.ultHit !== null && d.ultHit > v) d.ultHit = v; qnRedraw(`[data-qnstep="${k}"][data-d="${b.dataset.d}"]`); }
-  else if (b.dataset.qndeath) { d.deaths[b.dataset.qndeath] = (d.deaths[b.dataset.qndeath] || 0) + 1; qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
-  else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; if (d.deaths[c]) d.deaths[c]--; if (!d.deaths[c]) delete d.deaths[c]; ultTrim(d.ultDeaths || {}, ultDeathN(d.deaths)); qnRedraw(`[data-qndeath="${c}"]`); }
+  else if (b.dataset.qndeath) { qnDeathAdd(d, b.dataset.qndeath); qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
+  else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; qnDeathDec(d, c); qnRedraw(`[data-qndeath="${c}"]`); }
+  else if (b.dataset.qnrole) { d.role = b.dataset.qnrole; qnRedraw(`[data-qnrole="${d.role}"]`); }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
   else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
   else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
-  else if (b.dataset.qnprep) { d.prep = b.dataset.qnprep === "1"; qnRedraw(`[data-qnprep="${b.dataset.qnprep}"]`); }
+  else if (b.dataset.qnprep) { const v = b.dataset.qnprep; d.prep = v !== "0"; if (d.prep) d.purpose = v === "1" ? "prep" : v; else delete d.purpose; qnRedraw(`[data-qnprep="${v}"]`); }
   else if (b.dataset.qnfx) { const k = b.dataset.qnfx; d.fx = d.fx || {}; if (d.fx[k] === b.dataset.v) delete d.fx[k]; else d.fx[k] = b.dataset.v; qnRedraw(`[data-qnfx="${k.replace(/"/g, '\\"')}"][data-v="${b.dataset.v}"]`); }
   else if (b.hasAttribute("data-qnsave")) {
     const ts = Date.now();
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
     fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
-    state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, JSON.parse(JSON.stringify(d)), fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
+    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog;
+    state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
     qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
   }
@@ -10965,8 +11022,9 @@ function planLive() {
 }
 // Erster offener Plantag ab einem Datum (an einem Datum abgeschlossene Tage übersprungen)
 const planOpenAfter = date => { let n = guessPlanDay(date); while (n && dayGet(n).done && planNext(n)) n = planNext(n); return n; };
-// Matches, die nicht für die Blöcke zählen: selbst markiert als Vorbereitung oder Lektion («prep») oder als kein Training («none»)
-const planSkip = m => m.stepPick === "prep" || m.stepPick === "none";
+// Matches, die nicht für die Blöcke zählen: selbst markiert als Vorbereitung oder Lektion («prep»), Mission oder Event im Spiel («mission»)
+// oder als kein Training («none»)
+const planSkip = m => m.stepPick === "prep" || m.stepPick === "mission" || m.stepPick === "none";
 // Matches eines Plantags im Fenster w = {since, until, dateOnly}, nach Zeit sortiert. Pro Datum (dateOnly) nur dieses Datum, sonst die letzten zwei
 // Spieltage des Fensters (beim laufenden Tag heute und der letzte Spieltag davor). Ein Datum mit selbst festgelegtem anderem Plantag oder freiem Spiel
 // zählt als Spieltag, seine Matches aber nicht mit: Freies Spiel dazwischen beendet das Weiterzählen.
@@ -11193,13 +11251,14 @@ function rvCounterHint(m) {
   return r ? `<p class="small rvhint"><b>Konter-Tipp:</b> ${esc(r.enemy)} war im Gegnerteam, dagegen hilft ${esc(r.hero)}. ${esc(counterWhyTxt(r.why))}</p>` : "";
 }
 // Review: zu welchem Trainingstag und Match die Aufgabe gehört. Stimmt das nicht (du hast anders gespielt, als die App zählt), wählst du die Aufgabe
-// selbst (m.stepPick); eine schon gegebene Antwort wandert mit. «Vorbereitung oder Lektion» und «Kein Training» nehmen die Aufgabe weg und das Match
+// selbst (m.stepPick); eine schon gegebene Antwort wandert mit. «Vorbereitung oder Lektion», «Mission oder Event» und «Kein Training» nehmen die Aufgabe weg und das Match
 // aus der Zählung (die folgenden Matches rücken nach), «Automatisch» rechnet wieder selbst.
 function rvPickHtml(m, fxIt) {
   if (!planStarted()) return "";
   const it = fxIt.find(x => x.src === "step"), seg = it && it.seg, key = it ? it.key.slice(5) : "", kn = +key.split(":")[0] || 0;
   const info = m.stepPick === "none" ? "Von dir als freies Spiel markiert (keine Aufgabe, zählt nicht für die Blöcke)."
     : m.stepPick === "prep" ? "Vorbereitung oder Lektion (keine Aufgabe, zählt nicht für die Blöcke)."
+    : m.stepPick === "mission" ? "Mission oder Event im Spiel (keine Aufgabe, zählt nicht für die Blöcke)."
     : m.stepPick && seg ? `Von dir gewählt: Tag ${seg.n} · ${focusBlockLabel(seg.blk)}.`
     : seg && seg.k ? `Tag ${seg.n} · ${focusBlockLabel(seg.blk)} · Match ${seg.k} dieses Trainingstags${seg.cross ? " (der Tag lief über zwei Spieltage)" : ""}.`
     : it ? `Aus deiner Notiz${kn ? ` (Tag ${kn})` : ""}.` : "Kein Trainingstag zugeordnet.";
@@ -11208,7 +11267,7 @@ function rvPickHtml(m, fxIt) {
   const opt = (v, t) => `<option value="${esc(v)}"${(m.stepPick || "") === v ? " selected" : ""}>${esc(t)}</option>`;
   const groups = days.map(n => `<optgroup label="${esc(planDayLabel(n))}">${focusPlan(n, true).map(b => b.segs.map(x => opt(x.key, `${focusBlockLabel(b.key)} · ${focusRange(x)}: ${x.t.length > 70 ? x.t.slice(0, 67) + " …" : x.t}`)).join("")).join("")}</optgroup>`).join("");
   return `<div class="small muted rvpick"><span>${esc(info)}</span> <details style="display:inline"><summary class="linkbtn small" style="display:inline">${it || m.stepPick ? "Andere Aufgabe?" : "Doch trainiert? Aufgabe wählen"}</summary>
-    <select data-rvpick="${m.id}" aria-label="Aufgabe in diesem Match">${opt("", "Automatisch (wie die App zählt)")}${opt("prep", "Vorbereitung oder Lektion (zählt nicht für die Blöcke)")}${opt("none", "Kein Training (freies Spiel)")}${groups}</select></details></div>`;
+    <select data-rvpick="${m.id}" aria-label="Aufgabe in diesem Match">${opt("", "Automatisch (wie die App zählt)")}${opt("prep", "Vorbereitung oder Lektion (zählt nicht für die Blöcke)")}${opt("mission", "Mission oder Event im Spiel (zählt nicht für die Blöcke)")}${opt("none", "Kein Training (freies Spiel)")}${groups}</select></details></div>`;
 }
 document.addEventListener("change", e => {
   const sel = e.target.closest ? e.target.closest("[data-rvpick]") : null; if (!sel) return;
@@ -11217,7 +11276,7 @@ document.addEventListener("change", e => {
   if (v) m.stepPick = v; else delete m.stepPick;
   const q = m.qn;
   if (q && q.step) {
-    const seg = v === "none" || v === "prep" ? null : v ? focusSegByKey(v) : matchFocusSeg(m), ok = "step:" + q.step.k, nq = Object.assign({}, q);
+    const seg = planSkip({ stepPick: v }) ? null : v ? focusSegByKey(v) : matchFocusSeg(m), ok = "step:" + q.step.k, nq = Object.assign({}, q);
     if (seg) {
       const nk = "step:" + seg.key, mv = o => { if (!o || !(ok in o)) return o; const c = Object.assign({}, o); c[nk] = c[ok]; delete c[ok]; return c; };
       nq.step = { k: seg.key, t: seg.t, v: q.step.v };
