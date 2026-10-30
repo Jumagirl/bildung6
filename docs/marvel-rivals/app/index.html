@@ -5408,8 +5408,8 @@ function rankLineHtml() {
   return `<p class="small" style="margin:6px 0 0"><b>Rang: ${esc(rkName(r.lv))}</b> <span class="muted">${src}. Quick Match ändert den Rang nicht.</span></p>`;
 }
 function standCardHtml() {
-  const { P, v } = wsScore();
-  if (v === null && !rkMine()) return "";
+  const { P, v } = wsScore(), fit = rkFitLineHtml();
+  if (v === null && !rkMine() && !fit) return "";
   const low = P.filter(p => p.go).sort((a, b) => a.v - b.v)[0];
   return `<div class="card wscard"><div class="card-head"><h2>${icon("analysis")}Dein Stand</h2>${v !== null ? `<span class="badge">${pct(v)}</span>` : ""}</div>
     ${v !== null ? `<div class="wsmain"><span class="small"><b>Wissensstand</b></span>${wsBar(v, "big")}</div>
@@ -5417,7 +5417,7 @@ function standCardHtml() {
       <div class="wsparts">${wsParts().map(p => `<div class="wsrow"><span class="small"><b>${esc(p.t)}</b> <span class="muted">${esc(p.s)}</span></span>${p.v === null ? `<span class="small muted">noch keine Daten</span>` : `<span class="wsr">${wsBar(p.v)}<b class="small">${pct(p.v)}</b></span>`}</div>`).join("")}</div>
       <p class="small muted" style="margin:6px 0 0">Gewichtung: Umsetzung im Match 35 %, Wissen 30 %, läuft von allein 25 %, Trainingsplan 10 %. Teile ohne Daten zählen nicht. Eine Quizfrage zählt voll, sobald sie im Wiederholungs-System bei 8 Tagen Abstand angekommen ist. Das ist eine Schätzung aus deinen eigenen Angaben (Quiz, Bewertungen nach dem Match, Selbsteinschätzung), keine Messung deines Könnens.</p>
       ${low && low.v < 0.6 ? `<p class="small" style="margin:6px 0 0">Am meisten bringt gerade: <b>${esc(low.t)}</b> ${low.go}</p>` : ""}</details>` : ""}
-    ${rankLineHtml()}</div>`;
+    ${rankLineHtml()}${fit}</div>`;
 }
 document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.wsdet")) { UIFOLD["ws"] = d.open; try { localStorage.setItem(STORE_KEY + "-folds", JSON.stringify(UIFOLD)); } catch (err) {} } }, true);
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
@@ -5446,8 +5446,8 @@ const DASH_PER = [["1", "Heute"], ["7", "7 Tage"], ["30", "30 Tage"], ["90", "90
 const DASH_PREV = { "1": "gestern", "7": "den 7 Tagen davor", "30": "den 30 Tagen davor", "90": "den 90 Tagen davor" };
 const DASH_PREV_IN = { "1": "gestern", "7": "in den 7 Tagen davor", "30": "in den 30 Tagen davor", "90": "in den 90 Tagen davor" };
 const DASH_MODES = [["", "Alle Modi"], ["Competitive", "Ranked"], ["Quick Match", "Ungewertet"], ["Arcade / Event", "Arcade"], ["Custom / Training", "Custom"]];
-const DASH_METRICS = [["wr", "Winrate"], ["kda", "KDA"], ["d10", "Tode"], ["fh10", "Final Hits"], ["heal10", "Heilung"], ["dmg10", "Schaden"], ["block10", "Geblockt"], ["acc", "Genauigkeit"]];
-const DASH_METRIC_LONG = { wr: "Winrate", kda: "KDA", d10: "Tode pro 10 Min", fh10: "Final Hits pro 10 Min", heal10: "Heilung pro 10 Min", dmg10: "Schaden pro 10 Min", block10: "Geblockt pro 10 Min", acc: "Treffergenauigkeit" };
+const DASH_METRICS = [["wr", "Winrate"], ["kda", "KDA"], ["d10", "Tode"], ["fh10", "Final Hits"], ["heal10", "Heilung"], ["hq", "Heilquote"], ["dmg10", "Schaden"], ["block10", "Geblockt"], ["acc", "Genauigkeit"]];
+const DASH_METRIC_LONG = { wr: "Winrate", kda: "KDA", d10: "Tode pro 10 Min", fh10: "Final Hits pro 10 Min", heal10: "Heilung pro 10 Min", hq: "Heilung je Gegner-Schaden (Heilquote)", dmg10: "Schaden pro 10 Min", block10: "Geblockt pro 10 Min", acc: "Treffergenauigkeit" };
 const DASH_KEY = { Strategist: ["heal10", "Heilung"], Duelist: ["dmg10", "Schaden"], Vanguard: ["block10", "Geblockt"] };
 const DASH_CV = { Vanguard: "var(--cv-van)", Duelist: "var(--cv-due)", Strategist: "var(--cv-str)" };
 const dashUi = (() => {
@@ -5481,6 +5481,7 @@ function dashRole(list) {
 function dashVal(m, k) {
   if (k === "kda") return m.k !== null && m.k !== undefined && m.d !== null && m.d !== undefined ? kda(m) : null;
   if (k === "acc") return m.acc > 0 ? m.acc / 100 : null;   // Treffergenauigkeit aus Rivals Data, in Prozent
+  if (k === "hq") return heroRole(m.hero) === "Strategist" && m.heal > 0 ? healQuote(m, m.heal) : null;   // Heilung je Schaden des Gegnerteams
   const f = { d10: "d", heal10: "heal", dmg10: "dmg", block10: "block", k10: "k", a10: "a", fh10: "fh" }[k];
   return f && m.dur > 0 && m[f] !== null && m[f] !== undefined ? m[f] / m.dur * 10 : null;
 }
@@ -5490,13 +5491,13 @@ function dashPer10(list, f) {
 }
 function dashFmt(k, v) {
   if (!isFinite(v)) return "–";
-  if (k === "wr" || k === "ult" || k === "acc") return Math.round(v * 100) + " %";
+  if (k === "wr" || k === "ult" || k === "acc" || k === "hq") return Math.round(v * 100) + " %";
   if (k === "kda") return numDe(v.toFixed(2));
   if (k === "d10" || k === "k10" || k === "a10" || k === "fh10") return numDe(v.toFixed(1));
   return fmtNum(v);
 }
 function dashTick(k, v) {
-  if (k === "wr" || k === "ult" || k === "acc") return Math.round(v * 100) + " %";
+  if (k === "wr" || k === "ult" || k === "acc" || k === "hq") return Math.round(v * 100) + " %";
   if (Math.abs(v) >= 1000) return numDe((v / 1000).toFixed(Math.abs(v) >= 1e5 ? 0 : 1).replace(/\.0$/, "")) + "k";
   return numDe(String(Math.round(v * 10) / 10));
 }
@@ -5638,7 +5639,7 @@ function dashTrendPrep(D) {
 }
 function dashTrendCard(D) {
   const has = { wr: true, kda: D.hv.some(m => dashVal(m, "kda") !== null) };
-  ["d10", "fh10", "heal10", "dmg10", "block10", "acc"].forEach(k => { has[k] = D.hv.some(m => dashVal(m, k) !== null && (k === "d10" || dashVal(m, k) > 0)); });
+  ["d10", "fh10", "heal10", "hq", "dmg10", "block10", "acc"].forEach(k => { has[k] = D.hv.some(m => dashVal(m, k) !== null && (k === "d10" || dashVal(m, k) > 0)); });
   if (!has[dashUi.metric]) dashUi.metric = "wr";
   dashTrend = dashTrendPrep(D);
   const T = dashTrend, ml = DASH_METRIC_LONG[T.k];
@@ -6004,6 +6005,10 @@ function sheetFacts(m) {
   if (isFinite(kShare)) {
     const rt = rankIn(team, keyF[0]), ra = rankIn(all, keyF[0]);
     out.push(["info", `Du hattest <b>${Math.round(kShare * 100)} %</b> ${keyF[0] === "heal" ? "der Heilung" : keyF[0] === "blk" ? "des geblockten Schadens" : "des Schadens"} deines Teams (Platz ${rt} von ${team.length}${ra === 1 ? ", die meisten im ganzen Match" : ""}).`]);
+  }
+  if (keyF[0] === "heal" || keyF[0] === "blk") {
+    const f = keyF[0] === "heal" ? "heal" : "block", hn = healNeed(m, null, f), calm = hn && hn.b10 && hn.d10 <= hn.b10 * 0.75;
+    if (hn) out.push([calm ? "good" : "info", `Die Gegner machten <b>${fmtNum(hn.d10)}</b> Schaden pro 10 Min${hn.b10 ? ` (in deinen anderen ${esc(m.hero)}-Matches im Mittel ${fmtNum(hn.b10)})` : ""}.${hn.q !== null ? ` Davon hast du ${pct(hn.q)} ${f === "heal" ? "geheilt" : "geblockt"}${hn.qb ? ` (sonst ${pct(hn.qb)})` : ""}.` : ""}${calm ? ` Wenig Schaden der Gegner heisst wenig Bedarf: Weniger ${f === "heal" ? "Heilung" : "Geblockt"} war hier kein Fehler.` : ""}`]);
   }
   const fhs = share("fh");
   if (isFinite(fhs) && role !== "Strategist") out.push(["info", `Final Hits: ${me.fh} von ${sheetSum(team, "fh")} deines Teams (${Math.round(fhs * 100)} %).`]);
@@ -11978,6 +11983,64 @@ function tbRoleHtml(role) {
     ${tbCarryHtml(role) ? foldHtml("tb-carry-" + role, `So sieht ein Carry-Match aus (${ROLE_SHORT[role]})`, tbCarryHtml(role), { icon: "zap", sub: "Werte von MVP und SVP bei den Besten" }) : ""}
     ${win ? foldHtml("tb-win-" + role, `Was Siege bei den Besten ausmacht (${ROLE_SHORT[role]})`, win, { icon: "analysis" }) : ""}</div>`;
 }
+// ---------- Welcher Rang passt zu dir? (Schätzung) ----------
+// Wunsch der Nutzerin: sehen, welcher Rang ungefähr zu ihren Werten passt, damit sie sich eher an Ranked traut, und sich mit den Teammates vergleichen.
+// 1) Deine Werte: Pro Rolle werden deine Helden (mindestens 3 Matches im Modus des Rang-Wegs, je die letzten 12) mit der Mitte jeder Stufe verglichen,
+//    bei Toden und dem Hauptwert der Rolle (dieselben Prüfungen wie auf dem Rang-Weg). Eine Stufe passt, wenn du bei mindestens der Hälfte der
+//    Vergleiche die Mitte erreichst (sicher ab zwei Dritteln, vielleicht ab einem Drittel). Mindestens zwei Vergleiche.
+// 2) Deine Lobbys: Ränge deiner Teammates (Abgleich, Feld rl pro Teammate, nur die Zahl; in Quick Match aus dem Profil, nur bei Ranked in den letzten
+//    120 Tagen). Mitte und Spanne der letzten 40 Matches mit Rangangaben.
+// 3) Direktvergleich: dein Hauptwert gegen Teammates derselben Rolle im selben Match (gleiche Spielzeit), nur Matches ohne Heldenwechsel.
+// Eine Schätzung: Quick Match und Ranked haben getrennte Wertungen, wo du in Ranked startest, entscheidet das Spiel, und aufsteigen heisst gewinnen.
+function rkEstimate(role) {
+  const hs = rkHeroVals(role), mk = TB_MAIN[role];
+  if (!hs.length) return null;
+  const score = RK_BANDS.map((b, bi) => { const ev = hs.flatMap(x => ["d", mk].map(k => rkReach(k, tbMine(x.list, k), rkBench(x.h, bi)))).filter(v => v !== null); return { n: ev.length, ok: ev.filter(Boolean).length }; });
+  if (score.every(s => s.n < 2)) return null;
+  const top = f => { let r = -1; score.forEach((s, bi) => { if (s.n >= 2 && s.ok / s.n >= f) r = bi; }); return r; };
+  const fit = Math.max(0, top(0.5)), sure = Math.max(0, Math.min(fit, top(2 / 3))), maybe = Math.max(fit, top(1 / 3));
+  return { role, fit, lo: sure, hi: maybe, heroes: hs.map(x => x.h), n: Math.max(...score.map(s => s.n)), mode: rkMode() };
+}
+function lobbyRanks() {
+  const ok = t => t && t.rl >= 1 && t.rl <= 23, ms = state.matches.filter(m => (m.team || []).some(ok)).slice(-40);
+  const rl = ms.flatMap(m => m.team.filter(ok).map(t => t.rl)).sort((a, b) => a - b);
+  const q = p => rl[Math.min(rl.length - 1, Math.floor(p * rl.length))];
+  return rl.length >= 5 ? { n: rl.length, ms: ms.length, med: q(0.5), lo: q(0.25), hi: q(0.75) } : { n: rl.length, ms: ms.length };
+}
+function mateCompare(role) {
+  const f = { Strategist: "heal", Duelist: "dmg", Vanguard: "blk" }[role], mf = f === "blk" ? "block" : f, out = { f, n: 0, better: 0, byBand: {} };
+  state.matches.slice(-60).forEach(m => {
+    if (heroRole(m.hero) !== role || m.swapped || (Array.isArray(m.heroes) && m.heroes.length > 1) || m[mf] === null || m[mf] === undefined) return;
+    (m.team || []).filter(t => heroRole(t.h) === role && t[f] !== null && t[f] !== undefined && !t.bot).forEach(t => {
+      const b = +m[mf] > +t[f];
+      out.n++; if (b) out.better++;
+      if (t.rl >= 1 && t.rl <= 23) { const k = rkBandOf(t.rl), x = out.byBand[k] || (out.byBand[k] = { n: 0, better: 0 }); x.n++; if (b) x.better++; }
+    });
+  });
+  return out;
+}
+const RK_STAT_DE = { heal: "Heilung", dmg: "Schaden", blk: "Geblockt" };
+function rkFitCardHtml(role) {
+  const est = rkEstimate(role), lob = lobbyRanks(), mc = mateCompare(role), band = bi => RK_BANDS[bi][1], me = rkMine();
+  const bands = Object.entries(mc.byBand).sort((a, b) => a[0] - b[0]);
+  if (!est && !lob.med && !mc.n) return "";
+  return `<div class="card rkfit"><div class="card-head"><h2>${icon("target")}Welcher Rang passt zu dir?</h2><span class="badge">Schätzung</span></div>
+    ${est ? `<p class="lead" style="margin:0 0 4px">Deine Werte als ${esc(ROLE_SHORT[role])} passen etwa zu <b>${band(est.fit)}</b>${est.lo !== est.hi ? ` <span class="muted">(Spanne ${band(est.lo)} bis ${band(est.hi)})</span>` : ""}.</p>
+      <p class="small muted" style="margin:0 0 8px">${est.n < 4 ? "<b>Wenig Daten, nur grob.</b> " : ""}Aus ${est.heroes.map(esc).join(", ")} in ${esc(RK_MODES[est.mode][1])}, verglichen mit der Mitte jeder Stufe bei Toden und ${esc(TB_METRICS[TB_MAIN[role]].label)}. Mitte heisst: Die Hälfte der Spieler dieser Stufe hat schlechtere Werte als dort angegeben.</p>`
+      : `<p class="small muted" style="margin:0 0 8px">Für eine Schätzung aus deinen Werten fehlen noch Matches: mindestens ein Held mit 3 Matches in ${esc(RK_MODES[rkMode()][1])}, damit sich zwei Werte vergleichen lassen.</p>`}
+    ${lob.med ? `<p class="small" style="margin:0 0 6px"><b>Deine Teammates</b> in den letzten ${plural(lob.ms, "Match", "Matches")} mit Rangangaben: meist ${esc(rkName(lob.lo))} bis ${esc(rkName(lob.hi))}, in der Mitte ${esc(rkName(lob.med))} (${lob.n} Teammates mit Rang).</p>`
+      : `<p class="small muted" style="margin:0 0 6px">Ränge deiner Teammates: kommen mit den nächsten Abgleichen dazu (in Quick Match aus ihren Profilen, nur wenn sie in den letzten 120 Tagen Ranked gespielt haben)${lob.n ? `, bisher ${lob.n}` : ""}.</p>`}
+    ${mc.n >= 3 ? `<p class="small" style="margin:0 0 6px"><b>Gegen Teammates in deiner Rolle</b> im selben Match hattest du bei ${esc(RK_STAT_DE[mc.f])} ${mc.better} von ${mc.n} Mal mehr.${bands.length ? ` Nach ihrem Rang: ${bands.map(([k, x]) => `${band(+k)} ${x.better} von ${x.n}`).join(", ")}.` : ""}</p>` : ""}
+    ${est && me ? `<p class="small" style="margin:0 0 6px">Dein Rang ${me.src === "set" ? "(selbst gewählt)" : `laut ${me.src === "match" ? "letztem Competitive-Match" : "Profil"} vom ${fmtDate(me.date)}`}: <b>${esc(rkName(me.lv))}</b>.${rkBandOf(me.lv) < est.fit ? " Deine Werte liegen darüber. Ob sie in Ranked gleich bleiben, zeigt erst Ranked." : rkBandOf(me.lv) > est.fit ? " Deine Werte liegen darunter: Dein Rang hängt auch an Dingen, die diese zwei Zahlen nicht messen." : ""}</p>` : ""}
+    ${est ? `<div class="note good" style="margin:6px 0 0"><span class="ni" aria-hidden="true">✓</span><div>Ranked in der Gegend von <b>${band(est.lo)}</b>${est.lo !== est.fit ? ` bis <b>${band(est.fit)}</b>` : ""} dürfte zu dir passen. Dort musst du nicht besser sein als alle: In der Mitte einer Stufe hat die Hälfte der Spieler schlechtere Werte.</div></div>` : ""}
+    <p class="small muted" style="margin:6px 0 0">Eine Schätzung: Quick Match und Ranked haben getrennte Wertungen. Wo du in Ranked startest, entscheidet das Spiel, und aufsteigen heisst gewinnen. Werte erklären nur einen Teil davon.</p></div>`;
+}
+// Kurzfassung für «Dein Stand» auf «Heute»: Hauptrolle, sonst die Rolle mit Schätzung
+function rkFitLineHtml() {
+  if (typeof RKL !== "function" || !RKL()) return "";
+  const roles = [myRole(), ...POOL_ROLES].filter((r, i, a) => r && a.indexOf(r) === i), est = roles.map(rkEstimate).find(Boolean);
+  return est ? `<p class="small" style="margin:4px 0 0"><b>Geschätzt nach deinen Werten (${esc(ROLE_SHORT[est.role])}): etwa ${RK_BANDS[est.fit][1]}</b> <span class="muted">(${RK_BANDS[est.lo][1]} bis ${RK_BANDS[est.hi][1]}, aus ${esc(RK_MODES[est.mode][1])})</span> <button class="linkbtn small" type="button" data-go="top">Mehr auf dem Rang-Weg</button></p>` : "";
+}
 function renderTop() {
   const el = $("#topBody"), t = TB();
   if (!t) { el.innerHTML = `<div class="card"><p>Die Daten der Besten sind in dieser Version nicht enthalten.</p></div>`; return; }
@@ -11987,6 +12050,7 @@ function renderTop() {
     ${RKL() ? rkRankSelectHtml() : ""}</div></div>
     ${foldHtml("tb-ladder", "Wie verteilen sich die Ränge?", tbLadderHtml(), { icon: "analysis", sub: "Rangverteilung der erfassten Spieler, wie selten Eternity ist" })}
     <div class="card"><div class="card-head"><h2>${icon("target")}Deine Rollen</h2></div><div class="row" style="gap:6px">${POOL_ROLES.map(chip).join("")}</div></div>
+    ${rkFitCardHtml(tbUi.role)}
     ${rkCardHtml(tbUi.role)}
     ${tbRoleHtml(tbUi.role)}
     ${foldHtml("tb-pool", "Welche Helden lohnen sich pro Rolle?", tbPoolAdviceHtml(), { icon: "heroes", sub: "Beste Winrate bei Celestial+, mit Banrate und deinem Stand" })}
@@ -12173,6 +12237,23 @@ function rvTbRef(hero, key, mode) {
   if (b.e && b.e[key]) return { v: b.e[key][1], name: `Eternity-Spieler mit ${hero}`, best: true };
   return null;
 }
+// ---------- Heilbedarf: Schaden des Gegnerteams ----------
+// Wunsch der Nutzerin: Heilung pro 10 Minuten allein sagt wenig, wenn die Gegner kaum Schaden gemacht haben, dann war wenig Heilung nötig.
+// Rivals Data liefert den Schaden jedes Gegners (Feld dmg, so wie Rivals Data ihn zählt). Daraus: Gegner-Schaden pro 10 Minuten (der Heilbedarf)
+// und deine Heilquote (deine Heilung geteilt durch den Schaden der Gegner; bei Tanks entsprechend Geblockt). Eine grobe Schätzung: Ein Teil des
+// Schadens trifft Schilde oder wird von anderen geheilt, und über den Bedarf hinaus heilen geht nicht.
+const foeDmg = m => { const f = (m && m.foes) || []; return f.length >= 5 && f.some(x => +x.dmg > 0) ? f.reduce((a, x) => a + (+x.dmg || 0), 0) : null; };
+const foeDmg10 = m => { const d = foeDmg(m); return d !== null && m.dur > 0 ? d / m.dur * 10 : null; };
+const healQuote = (m, v) => { const d = foeDmg(m), h = v !== undefined ? v : m.heal; return d > 0 && h !== null && h !== undefined && isFinite(+h) ? +h / d : null; };
+const medianOf = a => { const x = a.filter(v => v !== null && isFinite(v)).sort((p, q) => p - q); return x.length ? (x.length % 2 ? x[(x.length - 1) / 2] : (x[x.length / 2 - 1] + x[x.length / 2]) / 2) : null; };
+// Heilbedarf eines Matches im Vergleich zu deinen anderen Matches mit diesem Helden (others: schon über heroView, sonst wird es hier gemacht)
+function healNeed(m0, others, f) {
+  const d10 = foeDmg10(m0);
+  if (d10 === null) return null;
+  const k = f || "heal", v = heroView(m0), os = (others || state.matches.filter(x => x.id !== m0.id && x.hero === m0.hero).map(heroView)).filter(x => x.id !== m0.id && foeDmg10(x) !== null).slice(-40);
+  const q = x => healQuote(x, x[k]);
+  return { d10, b10: os.length >= 3 ? medianOf(os.map(foeDmg10)) : null, q: q(v), qb: os.length >= 3 ? medianOf(os.map(q)) : null, n: os.length };
+}
 function rvReasons(m0, ctx) {
   const m = heroView(m0), RV_REF = 40, c = ctx || rvCtx(), out = [];   // Vergleich mit den jeweils letzten 40 Matches, damit es bei vielen Matches schnell bleibt
   const own = (c.byHero[m.hero] || []).filter(x => x.id !== m.id).slice(-RV_REF), s = own.length >= 3 ? summary(own) : null, lost = m.result === "L";
@@ -12193,7 +12274,11 @@ function rvReasons(m0, ctx) {
     if (!lost && m.d <= 5 && rd.v <= rd.b * 0.6) out.push({ k: "model", label: "Vorbild", text: `Sieg mit nur ${plural(m.d, "Tod", "Tode")}: Was hat hier funktioniert?`, sev: rd.b / Math.max(0.5, rd.v) });
   }
   const [kf, kl] = rvKeyStat(m), rk = ref(kf);
-  if (rk && rk.v <= rk.b * 0.75) out.push({ k: "low", label: `Wenig ${kl}`, text: `${kl} ${fmtNum(rk.v)}${rk.per ? " pro 10 Min" : ""}, ${fmtB(rk, fmtNum)}`, sev: rk.b / Math.max(1, rk.v) });
+  if (rk && rk.v <= rk.b * 0.75) {
+    // Heilung und Geblockt hängen vom Schaden der Gegner ab: Machten sie deutlich weniger Schaden als sonst und war deine Quote normal, ist das kein Problem
+    const hn = kf === "heal" || kf === "block" ? healNeed(m0, own, kf) : null, calm = hn && hn.b10 && hn.d10 <= hn.b10 * 0.75 && (hn.q === null || hn.qb === null || hn.q >= hn.qb * 0.8);
+    if (!calm) out.push({ k: "low", label: `Wenig ${kl}`, text: `${kl} ${fmtNum(rk.v)}${rk.per ? " pro 10 Min" : ""}, ${fmtB(rk, fmtNum)}${hn && hn.b10 ? `. Gegner-Schaden ${fmtNum(hn.d10)} pro 10 Min (sonst ${fmtNum(hn.b10)})${hn.q !== null && hn.qb ? `, ${kf === "heal" ? "geheilt" : "geblockt"} hast du ${pct(hn.q)} davon (sonst ${pct(hn.qb)})` : ""}` : ""}`, sev: rk.b / Math.max(1, rk.v) });
+  }
   if (m.ults >= 2 && m.ultHit !== null && m.ultHit !== undefined && m.ultHit / m.ults <= 0.34) out.push({ k: "ult", label: "Ults ohne Wirkung", text: `Ult-Wirkung ${numDe(m.ultHit)} von ${m.ults}`, sev: 2 - m.ultHit / m.ults });
   const missed = fxForMatch(m0).filter(it => { const v = fxGet(m0, it), t = ((m0.qn || {}).tally || {})[it.key]; return String(v) === "nein" || String(v) === "1" || (!v && t && t.no > t.ok); });
   if (missed.length) out.push({ k: "focus", label: "Fokus verfehlt", text: `Laut Notiz nicht geschafft: ${missed.map(it => it.tag).join(", ")}`, sev: 1 + missed.length * 0.4 });

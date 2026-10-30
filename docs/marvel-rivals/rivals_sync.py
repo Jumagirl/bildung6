@@ -27,6 +27,7 @@ import gzip
 import json
 import re
 import sys
+import time
 import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
@@ -248,6 +249,8 @@ def duration_minutes(*sources: Any) -> float | None:
 
 
 RANK_MAX_AGE = 120 * 86400   # Rang aus dem Profil nur, wenn die Season-Angabe höchstens so alt ist
+TEAM_RANK_MAX = 60           # höchstens so viele Profil-Abfragen für Teammate-Ränge pro Lauf (schont Rivals Data)
+TEAM_RANK_PAUSE = 0.25       # Sekunden zwischen zwei Profil-Abfragen
 
 
 def profile_rank(profile: Mapping[str, Any], now: float | None = None) -> dict | None:
@@ -263,7 +266,7 @@ def profile_rank(profile: Mapping[str, Any], now: float | None = None) -> dict |
     return {"level": level, "at": datetime.fromtimestamp(last["update_time"], timezone.utc).strftime("%Y-%m-%d")}
 
 
-def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] | None) -> dict | None:
+def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] | None, rank_of=None) -> dict | None:
     """Wandelt einen History-Eintrag (+ optionale Details) ins Match-Format der App um."""
     match_id = row.get("match_uid")
     if match_id is None:
@@ -293,14 +296,17 @@ def convert_match(row: Mapping[str, Any], uid: Any, details: Mapping[str, Any] |
         "enemies": [], "allies": [], "swapped": False,
     }
     if details:
-        apply_details(match, details, uid)
+        apply_details(match, details, uid, rank_of)
     if not match["hero"]:
         return None
     return match
 
 
-def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
-    """Ergänzt Teams, Schaden, Heilung und Heldenwechsel aus den Match-Details."""
+def apply_details(match: dict, details: Mapping[str, Any], uid: Any, rank_of=None) -> None:
+    """Ergänzt Teams, Schaden, Heilung und Heldenwechsel aus den Match-Details.
+
+    ``rank_of(player_uid)`` liefert den Rang eines Teammates aus seinem Profil (oder None). In Competitive steht der Rang in den Matchdaten;
+    in Quick Match steht dort bei allen 1, deshalb dann das Profil. Gespeichert wird nur die Zahl (Feld ``rl``), nie Name oder Kennung."""
     if not match["map"]:
         match["map"], match["type"] = map_label(details)
     me_team = None
@@ -347,6 +353,13 @@ def apply_details(match: dict, details: Mapping[str, Any], uid: Any) -> None:
         if str(camp) == str(me_team):
             match["allies"].append(row["h"])
             row["id"] = name_tag(player.get("name", player.get("nick_name")))   # nur das Kürzel, nie der Name
+            rank = to_int(player.get("rank_level"))
+            if match.get("mode") == "Competitive" and rank and 1 <= rank <= 23:
+                row["rl"] = rank
+            elif rank_of is not None:
+                lv = rank_of(player.get("uid", player.get("player_uid")))
+                if lv:
+                    row["rl"] = lv
             team.append(row)
         else:
             match["enemies"].append(row["h"])
@@ -437,6 +450,28 @@ def sync(args: argparse.Namespace) -> dict:
             result["warnings"].append(f"Match-History nicht abrufbar: {exc}")
             print(f"! Match-History nicht abrufbar: {exc}")
 
+        # Ränge der Teammates (Quick Match) aus ihren Profilen: pro Spieler einmal pro Lauf, höchstens TEAM_RANK_MAX Abfragen, mit kurzer Pause
+        rank_cache: dict[str, int | None] = {}
+        calls = {"n": 0}
+
+        def rank_of(player_uid: Any) -> int | None:
+            key = str(player_uid or "")
+            if not key or key == str(uid):
+                return None
+            if key not in rank_cache:
+                if calls["n"] >= TEAM_RANK_MAX:
+                    return None
+                calls["n"] += 1
+                try:
+                    prof = client.get_player_by_uid(player_uid)
+                    found = profile_rank(as_dict(prof))
+                    rank_cache[key] = found["level"] if found else None
+                except Exception:  # noqa: BLE001 - privates oder unbekanntes Profil: kein Rang
+                    rank_cache[key] = None
+                time.sleep(TEAM_RANK_PAUSE)
+            return rank_cache[key]
+
+        team_ranks = getattr(args, "team_ranks", True) and args.details
         skipped = reused = 0
         known = getattr(args, "known", None) or {}   # schon abgerufene Matches (extId -> Match), spart Abfragen bei häufigem Abgleich
         for i, row in enumerate(rows, 1):
@@ -454,7 +489,7 @@ def sync(args: argparse.Namespace) -> dict:
                 except Exception as exc:
                     result["warnings"].append(f"Details zu {row.match_uid} fehlen: {exc}")
             try:
-                match = convert_match(as_dict(row), uid, details)
+                match = convert_match(as_dict(row), uid, details, rank_of if team_ranks else None)
             except Exception as exc:
                 match = None
                 result["warnings"].append(f"Match übersprungen: {exc}")
