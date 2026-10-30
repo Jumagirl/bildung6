@@ -824,6 +824,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .rkt tr.goal td { background: color-mix(in srgb, var(--gold) 14%, transparent); }
 .rkt tr.cur td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .badge.ok { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+.badge.bad { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
 .herochips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .frole { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--grid); }
 .frole:first-child { border-top: 0; }
@@ -943,6 +944,17 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .rvpick select { max-width: 100%; margin-top: 4px; }
 .nmex { margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .rvhint { margin: 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
+.brbox { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-soft); display: grid; gap: 4px; }
+.brhead { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; align-items: baseline; }
+.brchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.brchip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .82rem; font-weight: 700; border: 1px solid var(--accent); background: var(--surface); color: var(--text); }
+.brchip.ok { border-color: var(--good); color: var(--good-text); }
+.brchip.no { border-color: var(--bad); color: var(--bad); }
+.brwarn { margin: 2px 0 0; color: var(--bad); font-weight: 600; }
+.brrow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; justify-content: space-between; }
+.brmut { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.brnow { margin: 4px 0 6px; }
+.brlvl summary { cursor: pointer; }
 .nmnext { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .nmbg { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
 .nmbg > summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
@@ -6999,9 +7011,10 @@ function qnSheetHtml() {
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
     ${focusDay().n ? `<div class="qnrow"><b class="small">Wofür war das Match?</b><div class="chips"><button type="button" class="chip ${d.prep ? "" : "on"}" data-qnprep="0" aria-pressed="${!d.prep}">Training (Block)</button><button type="button" class="chip ${d.prep ? "on" : ""}" data-qnprep="1" aria-pressed="${!!d.prep}">Vorbereitung oder Lektion</button></div>${d.prep ? `<span class="small muted">Zählt nicht für die Blöcke, die nächsten Matches rücken nach.</span>` : ""}</div>` : ""}
+    ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
+      return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
     <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
     <div class="qnrow"><b class="small">Tode: woran lag es?</b><div class="deathgrid">${QN_CATS.map(c => `<span class="dwrap ${d.deaths[c] ? "on" : ""}"><button type="button" class="dbtn" data-qndeath="${esc(c)}" aria-label="${esc(c)}, einmal mehr">${esc(c)}<b class="dcount">${d.deaths[c] || ""}</b></button>${d.deaths[c] ? `<button type="button" class="ddec" data-qndeath-dec="${esc(c)}" aria-label="${esc(c)}, einmal weniger">−</button>` : ""}</span>`).join("")}</div>${ultPickHtml("q", ultDeathN(d.deaths), d.ultDeaths || {}, [])}</div>
-    <div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>
     ${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}
     <label class="qnrow"><b class="small">Ein Satz: Was nimmst du mit?</b><input type="text" data-qntext="text" value="${esc(d.text)}" placeholder="z. B. zu früh vorgelaufen, nächstes Mal hinter dem Tank bleiben"></label>
     <div class="row mt"><button class="btn" type="button" data-qnsave>${icon("check")}Notiz speichern</button><button class="btn ghost" type="button" data-qnclose>Abbrechen</button><span class="small muted">Heute ${plural(qnToday().length, "Notiz", "Notizen")} offen</span></div>`;
@@ -10363,6 +10376,183 @@ function blockModeBadge(n, key) {
   const b = blockMode(PLAN.days[n - 1], key);
   return b ? ` <span class="mbadge ${b.k}" title="${esc(b.tip)}">${esc(b.t)}</span>` : "";
 }
+// ---------- Spielregeln pro Block: Modus, solo oder Stack, Voice ----------
+// Wunsch der Nutzerin: Die Regeln der Blöcke (Ranked, solo, Stumm-Match …) fielen im Text nicht auf und wurden deshalb oft nicht eingehalten.
+// Die App liest sie aus dem Plan: Modus über blockMode (Tagesmodus R/U, ab Block 4 eher ungewertet), solo oder Stack und Voice aus Blocktitel und -text,
+// dazu die Session-Regeln «Block 1 solo» (an K-Tagen steht Stack mit Voice im Titel) und «in Block 3 ein Stumm-Match». Sie stehen gross vor jedem
+// Block, auf «Heute» beim nächsten Match, in der Notiz und im Review. Geprüft wird, was sich prüfen lässt: der Modus aus dem Abgleich (Competitive oder
+// nicht), solo/Stack und Voice aus Notiz oder Review (Selbstauskunft).
+// Strenge (Wunsch: am Anfang locker, dann stetig strenger, damit nach dem Plan alles sitzt): Stufe 1 bis Tag 42 zeigen und markieren, Stufe 2 bis Tag 70
+// zusätzlich Erinnerung beim nächsten Match, Stufe 3 ab Tag 71: Ein Match mit verpasster Regel zählt nicht für den Block. Selbst einstellbar.
+// Mut-Leiter für Ranked solo (sie traute sich noch nicht): 1 Quick Match solo, 2 Ranked zu zweit, 3 ein Ranked-Match solo pro Block, 4 Ranked solo.
+// Jede Stufe zählt; nach zweimal «gut» schlägt die App die nächste vor. Ab Tag 71 mindestens Stufe 3, ab Tag 99 (Solo-Queue-Phase) Stufe 4.
+const BR_LEVELS = [["auto", "Automatisch"], ["1", "Locker"], ["2", "Mittel"], ["3", "Streng"]];
+const BR_LEVEL_NAME = { 1: "Locker", 2: "Mittel", 3: "Streng" };
+const BR_LEVEL_TXT = { 1: "Die Regeln stehen da, Verpasstes wird markiert, alle Matches zählen.", 2: "Wie locker, dazu erinnert die App beim nächsten Match an eine Regel, die du verpasst hast.", 3: "Ein Match, bei dem du eine Regel verpasst hast, zählt nicht für den Block." };
+const brLevel = n => { const v = String((state.settings || {}).ruleLevel || "auto"); return v !== "auto" && +v >= 1 && +v <= 3 ? +v : n > 70 ? 3 : n > 42 ? 2 : 1; };
+const MUT = [null,
+  { t: "Quick Match solo", s: "Alle anderen Regeln wie im Plan, nur ungewertet. So übst du solo ohne Rang-Druck." },
+  { t: "Ranked zu zweit", s: "Ranked mit einer vertrauten Person (oder im Stack). Du spielst gewertet, aber nicht allein." },
+  { t: "Ein Ranked-Match solo", s: "Pro Block ein einziges Ranked-Match solo, die anderen Quick Match solo." },
+  { t: "Ranked solo", s: "Der ganze Block wie im Plan: Ranked, allein in der Warteschlange." }];
+const mutState = () => state.ranked || (state.ranked = { stage: 0, feel: [] });
+const mutMin = n => n >= 99 ? 4 : brLevel(n) >= 3 ? 3 : 1;
+const mutStage = n => Math.max(mutMin(n), mutState().stage || 4);   // 0 = noch nicht gewählt: wie im Plan (Stufe 4)
+// Regeln laut Plan (ohne Mut-Leiter)
+function brRaw(n, key) {
+  const d = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1] : null, s = d && /^b[1-4]$/.test(key) ? d.steps.find(x => x.key === key) : null;
+  if (!s) return [];
+  const out = [], bm = blockMode(d, key), lab = s.label || "", t = s.t || "";
+  if (bm) out.push({ k: "mode", v: bm.k === "R" ? "ranked" : bm.k === "U" && key !== "b4" ? "qm" : "", label: bm.t, tip: bm.tip });
+  if (key !== "b4") {
+    if (/\bStack\b/.test(lab) || (!/\bsolo\b/i.test(lab) && /(Spiel|spielst du|Du spielst) im Stack/.test(t))) out.push({ k: "group", v: "stack", label: "Stack", tip: "Mit festen Freunden als Gruppe." });
+    else if (/\bsolo\b/i.test(lab) || /(Spiel|spielst du|Du spielst)[^.]{0,20}\bsolo\b/.test(t) || key === "b1") out.push({ k: "group", v: "solo", label: "Solo", tip: "Allein in der Warteschlange, mit zufälligen Mitspielern." });
+  }
+  if (/mit Voice/.test(lab) || /sprichst im Voice-Chat/.test(t)) out.push({ k: "voice", v: "ja", label: "Mit Voice", tip: "Du sprichst im Voice-Chat." });
+  else if (/Match mit Voice und eins ohne/.test(t)) out.push({ k: "voice", v: "both", label: "1 Match mit, 1 ohne Voice", tip: "Ein Match mit Voice-Chat und ein Stumm-Match (ohne Voice, nur Pings)." });
+  else if (/Stumm-Match/.test(t) || key === "b3") out.push({ k: "voice", v: "stumm1", label: "1 Stumm-Match", tip: "Ein Match im Block ohne Voice-Chat, nur mit Pings." });
+  else if (/ohne Voice/.test(t)) out.push({ k: "voice", v: "nein", label: "Ohne Voice", tip: "Alle Matches im Block ohne Voice-Chat, nur mit Pings." });
+  return out;
+}
+const brMutBlock = (n, key) => { const r = brRaw(n, key); return r.some(x => x.k === "mode" && x.v === "ranked") && r.some(x => x.k === "group" && x.v === "solo"); };
+// Regeln, die gelten (mit der Stufe der Mut-Leiter)
+function brRules(n, key) {
+  const r = brRaw(n, key);
+  if (!brMutBlock(n, key)) return r;
+  const st = mutStage(n);
+  if (st >= 4) return r;
+  return r.map(x => x.k === "mode" ? (st === 1 ? { k: "mode", v: "qm", label: "Quick Match statt Ranked", tip: "Mut-Leiter Stufe 1", mut: 1 } : st === 2 ? Object.assign({}, x, { mut: 2 }) : { k: "mode", v: "ranked1", label: "1 Ranked-Match solo, sonst Quick Match", tip: "Mut-Leiter Stufe 3", mut: 3 })
+    : x.k === "group" && st === 2 ? { k: "group", v: "stack", label: "Zu zweit oder im Stack", tip: "Mut-Leiter Stufe 2", mut: 2 } : x);
+}
+// Eine Regel für ein Match: true eingehalten, false verpasst, null unbekannt oder nur pro Block prüfbar
+function brCheck(rule, m) {
+  const q = (m && m.qn) || {};
+  if (rule.k === "mode") return !m.mode || !rule.v || rule.v === "ranked1" ? null : rule.v === "ranked" ? m.mode === "Competitive" : m.mode !== "Competitive";
+  if (rule.k === "group") return q.stack ? q.stack === rule.v : null;
+  if (rule.k === "voice" && (rule.v === "ja" || rule.v === "nein")) return q.voice ? q.voice === rule.v : null;
+  return null;
+}
+// Regeln, die nur über den ganzen Block gelten (ein Stumm-Match, ein Ranked-Match solo)
+function brBlockCheck(rule, ms, full) {
+  const v = m => (m.qn || {}).voice;
+  if (rule.k === "voice" && rule.v === "stumm1") return ms.some(m => v(m) === "nein") ? true : full ? false : null;
+  if (rule.k === "voice" && rule.v === "both") return ms.some(m => v(m) === "nein") && ms.some(m => v(m) === "ja") ? true : full ? false : null;
+  if (rule.k === "mode" && rule.v === "ranked1") return ms.some(m => m.mode === "Competitive" && (m.qn || {}).stack !== "stack") ? true : full ? false : null;
+  return undefined;
+}
+const brMiss = (n, key, m) => brRules(n, key).filter(r => brCheck(r, m) === false);
+// Stufe «Streng»: Matches mit verpasster Regel zählen nicht. Der Reihe nach, weil ein ausgelassenes Match die Blöcke der späteren verschiebt.
+function brStrictFilter(n, ms) {
+  if (!(n >= 1 && n <= PLAN_N) || brLevel(n) < 3) return ms;
+  const B = blockMatches(), keys = PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k));
+  let k = 0;
+  return ms.filter(m => { const key = keys[Math.floor(k / B)] || "b4"; if (brMiss(n, key, m).length) return false; k++; return true; });
+}
+// Matches eines Blocks (wie im Review und bei «Dein nächstes Match» gezählt). Pro Plantag einmal berechnet, bis sich etwas ändert.
+let brMemo = { sig: "", byN: {} };
+function brBlockMatches(n, key) {
+  const sig = `${today()}|${state.matches.length}|${state.updatedAt || 0}|${(state.settings || {}).ruleLevel || ""}|${mutState().stage}`;
+  if (brMemo.sig !== sig) brMemo = { sig, byN: {} };
+  if (!brMemo.byN[n]) {
+    const g = {};
+    state.matches.forEach(m => { const d = matchDay(m); if (!d || d.n !== n) return; const s = matchFocusSeg(m); if (s && s.n === n) (g[s.blk] = g[s.blk] || []).push(m); });
+    brMemo.byN[n] = g;
+  }
+  return brMemo.byN[n][key] || [];
+}
+// Stufe «Streng»: Matches des Tages, die wegen einer verpassten Regel nicht zählen, mit dem Block, in dem sie gezählt hätten
+function brDropped(n, key) {
+  if (brLevel(n) < 3) return [];
+  brBlockMatches(n, key);
+  const M = brMemo.byN[n];
+  if (!M._dropped) {
+    const B = blockMatches(), keys = PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k)), out = [];
+    let k = 0;
+    state.matches.filter(m => { const d = matchDay(m); return d && d.n === n && !planSkip(m); }).sort((a, b) => matchTime(a) - matchTime(b)).forEach(m => {
+      const bk = keys[Math.floor(k / B)] || "b4", miss = brMiss(n, bk, m);
+      if (miss.length) out.push({ m, key: bk, miss }); else k++;
+    });
+    M._dropped = out;
+  }
+  return M._dropped.filter(x => x.key === key);
+}
+function brStatus(n, key) {
+  const rules = brRules(n, key), ms = brBlockMatches(n, key), full = ms.length >= blockMatches();
+  return rules.map(r => {
+    const b = brBlockCheck(r, ms, full);
+    if (b !== undefined) return { r, block: true, ok: b };
+    const res = ms.map(m => brCheck(r, m));
+    return { r, ok: res.filter(x => x === true).length, no: res.filter(x => x === false).length, unk: res.filter(x => x === null).length, n: ms.length };
+  });
+}
+function brChip(x) {
+  const st = x.block ? (x.ok === true ? "ok" : x.ok === false ? "no" : "") : x.no ? "no" : x.n && !x.unk ? "ok" : "";
+  const mark = x.block ? (x.ok === true ? " ✓" : x.ok === false ? " ✗" : "") : x.n ? ` ${x.ok}/${x.n}${x.no ? " ✗" : x.unk ? "" : " ✓"}` : "";
+  return `<span class="brchip ${st}" title="${esc(x.r.tip || "")}">${esc(x.r.label)}${mark}</span>`;
+}
+const brRulesChips = rules => rules.map(r => `<span class="brchip" title="${esc(r.tip || "")}">${esc(r.label)}</span>`).join("");
+// Box oben in jedem Block des Trainingstags
+function brBoxHtml(n, key) {
+  const st = brStatus(n, key);
+  if (!st.length) return "";
+  const lvl = brLevel(n), auto = String((state.settings || {}).ruleLevel || "auto") === "auto", ms = brBlockMatches(n, key);
+  const drop = brDropped(n, key), miss = [...new Set(st.filter(x => !x.block && x.no).map(x => x.r.label).concat(drop.flatMap(x => x.miss.map(r => r.label))))], unk = st.some(x => !x.block && x.unk && (x.r.k === "group" || x.r.k === "voice"));
+  return `<div class="brbox"><div class="brhead"><b class="small">So spielst du diesen Block</b><span class="small muted">Regeln: ${BR_LEVEL_NAME[lvl]}${auto ? " (automatisch)" : ""}</span></div>
+    <div class="brchips">${st.map(brChip).join("")}</div>
+    ${miss.length ? `<p class="small brwarn">Verpasst: ${esc(miss.join(", "))}.${lvl >= 3 ? ` ${drop.length === 1 ? "Dieses Match zählt" : `Diese ${drop.length} Matches zählen`} nicht für den Block.` : lvl >= 2 ? " Beim nächsten Match erinnert dich die App daran." : " Das Match zählt trotzdem."}</p>` : ""}
+    ${unk && ms.length ? `<p class="small muted" style="margin:4px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
+    ${brMutBlock(n, key) ? mutHtml(n, key, ms.length) : ""}
+    <details class="small brlvl"><summary>Wie streng sind die Regeln?</summary><p style="margin:4px 0">Bis Tag 42 locker, bis Tag 70 mittel, ab Tag 71 streng, damit am Ende des Plans alles sitzt. ${esc(BR_LEVEL_NAME[lvl])}: ${esc(BR_LEVEL_TXT[lvl])}</p>
+      <div class="chips">${BR_LEVELS.map(([v, l]) => `<button type="button" class="chip ${String((state.settings || {}).ruleLevel || "auto") === v ? "on" : ""}" data-brlvl="${v}">${l}</button>`).join("")}</div></details></div>`;
+}
+// Mut-Leiter für Ranked solo
+function mutHtml(n, key, played) {
+  const S = mutState(), min = mutMin(n), st = mutStage(n), feel = S.feel.filter(f => f.stage === st), last2 = feel.slice(-2);
+  const todayFeel = S.feel.find(f => f.n === n && f.key === key && f.d === today());
+  const up = st < 4 && last2.length === 2 && last2.every(f => f.v === "gut"), down = !up && feel.length && feel[feel.length - 1].v === "zuviel" && st > min;
+  return `<div class="brmut"><b class="small">Mut-Leiter für Ranked solo</b> <span class="small muted">Jede Stufe zählt für den Block. Weiter geht es, wenn eine Stufe zweimal gut lief.</span>
+    <div class="chips" style="margin-top:4px">${[1, 2, 3, 4].map(i => `<button type="button" class="chip ${st === i ? "on" : ""}" data-mut="${i}" ${i < min ? "disabled" : ""} aria-pressed="${st === i}" title="${esc(MUT[i].s)}">${i} · ${esc(MUT[i].t)}</button>`).join("")}</div>
+    <p class="small" style="margin:4px 0 0"><b>Stufe ${st}:</b> ${esc(MUT[st].s)}${!S.stage && st === 4 ? " Traust du dich noch nicht? Wähl eine kleinere Stufe, sie zählt genauso." : ""}</p>
+    ${min > 1 ? `<p class="small muted" style="margin:2px 0 0">${n >= 99 ? "Ab Tag 99 gilt Stufe 4: Ranked solo, so wie du nach dem Plan spielen willst." : "Ab Tag 71 gilt mindestens Stufe 3, damit Ranked solo am Ende des Plans sitzt."}</p>` : ""}
+    ${played && !todayFeel ? `<div class="row small" style="gap:6px;margin-top:6px;align-items:center">Wie ging es dir mit Stufe ${st}? ${[["gut", "Gut"], ["okay", "Geht so"], ["zuviel", "Zu viel"]].map(([v, l]) => `<button type="button" class="chip" data-mutfeel="${v}" data-n="${n}" data-k="${key}">${l}</button>`).join("")}</div>` : todayFeel ? `<p class="small muted" style="margin:4px 0 0">Heute: ${esc({ gut: "gut", okay: "geht so", zuviel: "zu viel" }[todayFeel.v])} auf Stufe ${todayFeel.stage}.</p>` : ""}
+    ${up ? `<div class="note good" style="margin:6px 0 0"><span class="ni" aria-hidden="true">✓</span><div>Zweimal gut auf Stufe ${st}. Bereit für Stufe ${st + 1} («${esc(MUT[st + 1].t)}»)? <button type="button" class="btn small" data-mut="${st + 1}">Ja, nächste Stufe</button></div></div>` : ""}
+    ${down ? `<p class="small" style="margin:6px 0 0">Das ist okay. Bleib auf Stufe ${st}, oder geh eine zurück. <button type="button" class="btn ghost small" data-mut="${st - 1}">Eine Stufe zurück</button></p>` : ""}
+    <p class="small muted" style="margin:4px 0 0">Schritt für Schritt an etwas heranzugehen, das Angst macht, kennt man aus der Angstbehandlung. Ob es bei Ranked-Angst hilft, ist nicht untersucht.</p></div>`;
+}
+// «Heute»: Regeln fürs nächste Match und (ab Stufe Mittel) eine Erinnerung an das, was im letzten Match verpasst wurde
+function brNowHtml(f) {
+  if (!f || !f.blk) return "";
+  const rules = brRules(f.n, f.blk.key);
+  if (!rules.length) return "";
+  const last = (f.list || []).slice(-1)[0], ls = last ? matchFocusSeg(last) : null, lm = ls ? brMiss(ls.n, ls.blk, last) : [];
+  const again = brLevel(f.n) >= 2 ? lm.filter(r => rules.some(x => x.k === r.k && x.v === r.v)) : [];
+  return `<div class="brnow"><span class="nmlbl">So spielst du</span><div class="brchips">${brRulesChips(rules)}</div>
+    ${again.length ? `<p class="small brwarn">Im letzten Match verpasst: ${esc(again.map(r => r.label).join(", "))}. Diesmal bitte einhalten.</p>` : ""}</div>`;
+}
+// Review: Regeln des Blocks mit Antwort auf solo/Stack und Voice
+function rvRulesHtml(m) {
+  const s = matchFocusSeg(m);
+  if (!s) return "";
+  const rules = brRules(s.n, s.blk);
+  if (!rules.length) return "";
+  const q = m.qn || {}, lvl = brLevel(s.n);
+  const row = r => {
+    const c = brCheck(r, m), mk = c === true ? '<span class="badge ok">eingehalten</span>' : c === false ? '<span class="badge bad">verpasst</span>' : "";
+    if (r.k === "mode") return `<div class="brrow"><span class="small"><b>${esc(r.label)}</b>${m.mode ? ` <span class="muted">· gespielt: ${esc(m.mode)}</span>` : ""}</span>${mk}</div>`;
+    const f = r.k === "group" ? "stack" : "voice", opts = r.k === "group" ? [["solo", "Solo"], ["stack", "Stack"]] : [["ja", "Mit Voice"], ["nein", "Ohne Voice"]];
+    return `<div class="brrow"><span class="small"><b>${esc(r.label)}</b></span><span class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${q[f] === v ? "on" : ""}" data-rv="br" data-id="${m.id}" data-f="${f}" data-v="${v}" aria-pressed="${q[f] === v}">${l}</button>`).join("")}</span>${mk}</div>`;
+  };
+  return `<div class="brbox"><div class="brhead"><b class="small">Regeln in diesem Block</b><span class="small muted">${focusBlockLabel(s.blk)} von Tag ${s.n} · ${BR_LEVEL_NAME[lvl]}</span></div>${rules.map(row).join("")}
+    ${lvl >= 3 ? `<p class="small muted" style="margin:4px 0 0">Streng: Ein Match mit verpasster Regel zählt nicht für den Block.</p>` : ""}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-mut],[data-mutfeel],[data-brlvl]") : null; if (!b || b.disabled) return;
+  const S = mutState();
+  if (b.dataset.mut) { S.stage = Math.min(4, Math.max(1, +b.dataset.mut)); toast(`Mut-Leiter: Stufe ${S.stage} («${MUT[S.stage].t}»).`); }
+  else if (b.dataset.mutfeel) { const n = +b.dataset.n; S.feel.push({ d: today(), n, key: b.dataset.k, stage: mutStage(n), v: b.dataset.mutfeel }); S.feel = S.feel.slice(-40); }
+  else if (b.dataset.brlvl) { state.settings.ruleLevel = b.dataset.brlvl; planRecheckBlocks(); }
+  save(); render();
+});
 // Kurzfassung für den Tagesplan: welcher Modus in welchem Block
 function modeSummaryLine(n) {
   const d = PLAN.days[n - 1], blocks = ["b1", "b2", "b3"].filter(k => d.steps.some(s => s.key === k));
@@ -10526,7 +10716,7 @@ function stepHtml(n, s, seen, o = {}) {
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   const fullPlan = !o.carry && /^b[1-4]$/.test(s.key) && focusPlan(n).some(x => x.key === s.key);   // die eine Sache pro Match steht oben im Block
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""} ${lock ? "disabled" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}${fullPlan ? `<details class="pfull"${WRITE_RE.test(s.t || "") ? " open" : ""}><summary class="small">Ganze Anleitung aus dem Plan${s.practice ? " und Übungs-Helden" : ""}</summary><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}</details>`
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${/^b[1-4]$/.test(s.key) && !o.carry ? brBoxHtml(n, s.key) : ""}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}${fullPlan ? `<details class="pfull"${WRITE_RE.test(s.t || "") ? " open" : ""}><summary class="small">Ganze Anleitung aus dem Plan${s.practice ? " und Übungs-Helden" : ""}</summary><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}</details>`
       : `<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice && !o.carry ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}`}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
@@ -10783,7 +10973,7 @@ function planWinList(n, w, date) {
     const prev = ms.reduce((a, x) => x.date < end && x.date > a ? x.date : a, "");
     ms = ms.filter(x => x.date === end || x.date === prev);
   }
-  return ms.filter(x => !planDayManual(x.date) || state.plan.dayByDate[x.date] === n).sort((a, b) => matchTime(a) - matchTime(b));
+  return brStrictFilter(n, ms.filter(x => !planDayManual(x.date) || state.plan.dayByDate[x.date] === n).sort((a, b) => matchTime(a) - matchTime(b)));
 }
 // Plantag fürs nächste Match und seine bisherigen Matches (list); prevN = davon an einem früheren Spieltag (prev)
 function focusDay() {
@@ -10827,6 +11017,7 @@ function nmCardHtml() {
   const { seg, blk, next, k } = f, ev = seg.practice && f.n === planDay() ? practiceEval(seg.practice, blk.bi) : null;
   return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${k} ${f.prevN ? `von Tag ${f.n}` : "heute"} · ${focusBlockLabel(blk.key)}</span></div>
     ${nmContHtml(f)}
+    ${brNowHtml(f)}
     ${blk.pre && f.first ? `<p class="small nmpre"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
     <div class="nmlbl">${seg.rep ? "Wiederholung · achte nur auf eins" : "Achte nur auf eins"}</div>
     <p class="nmfocus">${linkify(esc(seg.t), new Set())}</p>
@@ -12194,7 +12385,7 @@ function rvMatchHtml(x, open, L) {
     ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
     ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
-    ${rvNoteHtml(m)}${rvCounterHint(m)}
+    ${rvNoteHtml(m)}${rvCounterHint(m)}${rvRulesHtml(m)}
     ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>${stepIt ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${stepIt ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
       (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<label class="small fxwhy">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>`
         : fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
@@ -12318,6 +12509,8 @@ document.addEventListener("click", e => {
     const c = m.deathCauses || {}, sw = swapHeroes(m);
     if (c[b.dataset.l]) { c[b.dataset.l]--; if (c[b.dataset.l] <= 0) delete c[b.dataset.l]; if (sw.length) m.byHero = bhCause(m.byHero, rvBhAct(m, sw), b.dataset.l, -1, sw); }
     if (m.ultDeaths) ultTrim(m.ultDeaths, ultDeathN(c)); save();
+  } else if (a === "br" && m) {   // Regeln des Blocks: solo/Stack und Voice angeben (nochmal tippen hebt auf)
+    const f = b.dataset.f; m.qn = Object.assign({}, m.qn, { [f]: (m.qn || {})[f] === b.dataset.v ? "" : b.dataset.v }); planRecheckBlocks(); save();
   } else if (a === "nem" && m) {
     m.nemesis = m.nemesis === b.dataset.h ? "" : b.dataset.h; save();
   } else if ((a === "u+" || a === "u-") && m) {
