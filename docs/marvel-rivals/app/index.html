@@ -922,6 +922,24 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .nmpre { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .nmcont { margin: 0 0 6px; }
 .rvpick { margin: 4px 0 0; }
+.txtheme { padding: 8px 0; border-top: 1px solid var(--line, var(--surface-2)); }
+.txtheme:first-of-type { border-top: 0; }
+.txai { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
+.pccard .chips { margin-top: 4px; }
+.pcq { display: grid; gap: 4px; margin: 0 0 10px; }
+.pctopics { display: grid; gap: 8px; margin-top: 6px; }
+.pctopic { display: grid; gap: 2px; }
+.day-tile.pskip { opacity: .55; }
+.wsbar { display: block; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; min-width: 60px; }
+.wsbar.big { height: 14px; }
+.wsbar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2, var(--accent))); }
+.wsmain { display: grid; gap: 6px; }
+.wsdet { margin-top: 8px; }
+.wsparts { display: grid; gap: 8px; margin-top: 6px; }
+.wsrow { display: grid; gap: 4px; }
+.wsr { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.bh { display: grid; gap: 4px; margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
+.bh .chip small { margin-left: 4px; }
 .rvpick select { max-width: 100%; margin-top: 4px; }
 .nmex { margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .rvhint { margin: 0; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
@@ -4047,7 +4065,7 @@ const TITLES = {
   meta: ["Meta & Patch", "Was sich geändert hat und was gerade stark ist"],
   teamups: ["Team-Ups", "Zwei Loadouts pro Held: Basiseffekt und Verstärkung durch den Partner"],
   bootcamp: ["Helden-Bootcamp", "Pro Held vier Stufen von den Grundlagen zum Experten, pro Rolle ein Kurs, mit Aufgaben fürs Match"],
-  watch: ["Zuschauen", "Von guten Streamern lernen: Aufgaben, worauf du beim Zuschauen achtest"],
+  watch: ["Zuschauen", "Von guten Spielern lernen: Aufgaben, Guide-Videos pro Held und Streamer"],
   review: ["Review", "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann alle anderen"],
   top: ["Rang-Weg", "Stufe für Stufe von Bronze bis Eternity: was Spieler jedes Rangs erreichen und wie weit du in jeder Rolle schon bist"],
   weak: ["Schwächen", "Was bei welchem Helden besser werden kann, und was du dafür tust"],
@@ -4156,6 +4174,8 @@ let state = loadState();
 // Lokale Datei: localStorage dieses Browsers. Fehlt beides, warnt die App deutlich.
 const ONLINE_URL = ""; /* PRIVATE:ONLINE_URL */
 let storageOK = false;
+const PAGES_URL = "https://jumagirl.github.io/bildung6/";
+const Keep = { persisted: null, asked: false };   // Browser-Speicher schützen (siehe unten)
 try { const k = STORE_KEY + "-probe"; localStorage.setItem(k, "1"); storageOK = localStorage.getItem(k) === "1"; localStorage.removeItem(k); } catch (e) { storageOK = false; }
 const IN_VIEWER = !!(window.claude && typeof window.claude.use === "function");
 const Cloud = { db: null, base: null, ready: false, status: "init", rev: null, lastJson: {}, chunkCount: 0, timer: null, queue: Promise.resolve(), unsub: null, error: "" };
@@ -4180,7 +4200,9 @@ function setSyncStatus(status, error) {
   if (banner) {
     const lost = status === "local" && !storageOK;
     const failed = status === "error";
-    banner.hidden = !(lost || failed);
+    const risk = status === "local" && storageOK ? storeRisk() : "";
+    banner.hidden = !(lost || failed || risk);
+    if (risk) banner.innerHTML = keepRiskHtml(risk);
     if (lost) banner.innerHTML = `<b>Achtung: In dieser Ansicht werden deine Einträge nicht gespeichert.</b> Beim nächsten Öffnen wären sie weg. ${ONLINE_URL
       ? `Nutze die <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version des Rivals Coach</a> – dort liegen deine Daten in deinem Konto.`
       : "Öffne die Datei in Chrome, Edge oder Firefox (nicht im privaten Modus und nicht in einer Vorschau-App)."} Sichere bis dahin über <b>Daten &amp; Sync → Als JSON exportieren</b>.`;
@@ -4202,6 +4224,7 @@ function saveCore() {
   if (typeof rvCache !== "undefined") rvCache = null;
   state.updatedAt = Date.now();
   saveLocal();
+  if (!IN_VIEWER && !Keep.asked) keepAsk();
   if (Cloud.ready) scheduleCloud();
 }
 function scheduleCloud() {
@@ -4325,8 +4348,65 @@ function renderStorageInfo() {
         : ["bad", "Nirgends – Daten gehen verloren", "Diese Ansicht erlaubt kein Speichern (z.B. Vorschau in einer App oder privater Modus). Exportiere ein Backup, bevor du die Seite schliesst."];
   el.className = `sync-status ${where[0] === "ok" ? "ok" : ""}`;
   el.innerHTML = `<span class="dot" style="${where[0] === "bad" ? "background:var(--bad)" : where[0] === "warn" ? "background:var(--warn)" : ""}"></span><div><b>Gespeichert: ${esc(where[1])}</b><br><span class="muted small">${esc(where[2])}</span>
-    ${!IN_VIEWER && ONLINE_URL ? `<br><span class="small">Tipp: In der <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version</a> werden deine Daten in deinem Konto gespeichert. Übertrage sie mit Backup exportieren → dort importieren.</span>` : ""}</div>`;
+    ${!IN_VIEWER && ONLINE_URL ? `<br><span class="small">Tipp: In der <a href="${ONLINE_URL}" target="_blank" rel="noopener">Online-Version</a> werden deine Daten in deinem Konto gespeichert. Übertrage sie mit Backup exportieren → dort importieren.</span>` : ""}${!IN_VIEWER && storageOK ? keepInfoHtml() : ""}</div>`;
 }
+// ---------- Browser-Speicher schützen (Datei oder Webseite ausserhalb von Claude) ----------
+// Anlass: Ein Freund musste im Browser immer wieder von vorne anfangen. Die Seite kann die Ursache nicht sicher erkennen: privater Modus,
+// In-App-Browser (Discord, WhatsApp, Instagram …), Vorschau einer Datei auf dem Handy, ein Browser, der beim Schliessen oder nach Tagen ohne
+// Besuch löscht (Safari). Deshalb vier Schutzmassnahmen: dauerhaften Speicher beim Browser anfragen (navigator.storage.persist), bekannte
+// Risiko-Ansichten erkennen und warnen, ein persönlicher Link mit dem Spielernamen (?spieler=…, die Matches kommen dann über den Gratis-Abgleich
+// von selbst zurück) und eine wöchentliche Erinnerung an die Sicherung, solange der Browser den Speicher nicht fest zusagt.
+function storeRisk() {
+  if (IN_VIEWER) return "";
+  const ua = navigator.userAgent || "", app = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|musical_ly|BytedanceWebview|TikTok|Discord|WhatsApp|Twitter|Line\//i.exec(ua);
+  if (app) return "inapp:" + app[0].replace(/^FB.*/, "Facebook").replace(/^(musical_ly|BytedanceWebview)$/, "TikTok").replace("Line/", "Line");
+  if (/; wv\)/.test(ua)) return "inapp:";
+  if (location.protocol === "file:" && /iPhone|iPad|iPod|Android/i.test(ua)) return "file";
+  return "";
+}
+const keepLink = () => { const n = (state.settings.playerName || "").trim(); return n ? `${PAGES_URL}?spieler=${encodeURIComponent(n)}` : PAGES_URL; };
+function keepRiskHtml(risk) {
+  const where = risk === "file" ? "als Datei in einer Vorschau auf dem Handy" : `in einer anderen App${risk.slice(6) ? ` (${esc(risk.slice(6))})` : ""}`;
+  return `<b>Achtung: Hier gehen deine Einträge wahrscheinlich beim Schliessen verloren.</b> Du hast die App ${where} geöffnet; solche Ansichten speichern oft nicht dauerhaft. ${risk === "file"
+    ? `Öffne lieber die Webseite in Safari oder Chrome: <b>${esc(keepLink())}</b>`
+    : `Öffne sie in Safari oder Chrome (Menü «…» oder «⋮», dann «Im Browser öffnen»), am besten über deinen Link: <b>${esc(keepLink())}</b>`}. Sichere bis dahin über <b>Daten &amp; Sync → Als JSON exportieren</b>.`;
+}
+// Dauerhaften Speicher anfragen: persisted() fragt nichts, persist() erst, wenn es eigene Daten gibt (manche Browser fragen dann einmal nach)
+async function keepAsk() {
+  if (IN_VIEWER || !storageOK || !(navigator.storage && navigator.storage.persisted)) return;
+  try {
+    if (Keep.persisted === null) Keep.persisted = await navigator.storage.persisted();
+    if (!Keep.persisted && !Keep.asked && hasUserData(state) && navigator.storage.persist) { Keep.asked = true; Keep.persisted = await navigator.storage.persist(); }
+  } catch (e) { /* ohne Zusage bleibt die Erinnerung an die Sicherung */ }
+  if (currentTabSafe() === "data") renderStorageInfo();
+}
+function keepInfoHtml() {
+  const p = Keep.persisted === true ? "Dein Browser hat zugesagt, die Daten dauerhaft zu behalten."
+    : "Dein Browser darf die Daten löschen, zum Beispiel im privaten Modus, beim Schliessen oder (Safari) nach einigen Tagen ohne Besuch. Mach deshalb regelmässig eine Sicherung.";
+  return `<br><span class="small">${esc(p)}</span>${webSyncOn() ? `<br><span class="small">Dein persönlicher Link (als Lesezeichen oder auf dem Home-Bildschirm speichern): <b>${esc(keepLink())}</b>
+    <button class="btn ghost small" type="button" data-keepcopy>Link kopieren</button><br><span class="muted">Öffnest du ihn in einem Browser ohne deine Daten, trägt er deinen Spielernamen ein und holt die Matches vom Gratis-Abgleich zurück. Notizen, Reviews und Plan-Fortschritt kommen nur aus einer Sicherung zurück.</span></span>` : ""}`;
+}
+// Erinnerung auf «Heute»: höchstens einmal pro Woche, solange der Browser nicht zusagt und es Daten von vor heute gibt
+function keepNews() {
+  if (IN_VIEWER || !storageOK || Keep.persisted === true || !hasUserData(state)) return null;
+  const a = state.app || {}, d = today();
+  if ((a.backupSnooze || "") > d || (a.backupAt && addDays(a.backupAt, 7) > d)) return null;
+  if (!a.backupAt && !state.matches.some(m => (m.date || d) < d) && !((state.plan.start || d) < d)) return null;
+  return ["info", `<b>Sichere deine Daten.</b> Dieser Browser darf sie löschen${a.backupAt ? ` (letzte Sicherung ${fmtDate(a.backupAt)})` : ""}. Mit einer Sicherung holst du Notizen, Reviews und Plan-Fortschritt jederzeit zurück. <button class="btn small" type="button" data-keep="backup">Sicherung speichern</button> <button class="linkbtn small" type="button" data-keep="later">In einer Woche erinnern</button>`];
+}
+// Leerer Start im Browser: Weg zurück zu den eigenen Daten
+function keepRestoreHtml() {
+  if (IN_VIEWER || hasUserData(state)) return "";
+  return `<div class="note info" style="margin:0 0 8px"><span class="ni" aria-hidden="true">i</span><div><b>Schon einmal angefangen und alles ist weg?</b> Trag unter «Daten &amp; Sync» deinen Spielernamen ein, dann holt die App deine Matches zurück. Notizen, Reviews und Plan-Fortschritt kommen aus einer Sicherung. <button class="btn small ghost" type="button" data-go="data">Spielername eintragen</button> <button class="btn small ghost" type="button" data-keep="import">Sicherung laden</button></div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-keep],[data-keepcopy]") : null; if (!b) return;
+  if (b.hasAttribute("data-keepcopy")) { copyText(keepLink(), "Link kopiert!"); return; }
+  const k = b.dataset.keep;
+  if (k === "backup") $("#exportBtn").click();
+  else if (k === "later") { state.app = state.app || {}; state.app.backupSnooze = addDays(today(), 7); save(); render(); }
+  else if (k === "import") $("#importFile").click();
+});
 
 // ---------- Eigener Bestätigungsdialog (confirm() ist in der Online-Ansicht gesperrt) ----------
 function askConfirm(message, okLabel, danger) {
@@ -4444,13 +4524,63 @@ function heroView(m) {
   const sp = m ? heroSplit(m) : null;
   if (!sp) return m;
   const v = Object.assign({}, m, { mixed: sp.share === null ? 1 : sp.share });
-  if (sp.main) Object.assign(v, { k: sp.main.k, d: sp.main.d, a: sp.main.a, dur: Math.round(sp.main.sec / 6) / 10 });
+  // Rivals Data liefert bei manchen Matches pro Held 0/0/0, obwohl es Kills und Tode gab: Dann sind die Werte pro Held unbekannt, nicht 0.
+  const kdaKnown = sp.list.some(h => h.k || h.d || h.a) || !(m.k || m.d || m.a);
+  if (sp.main) Object.assign(v, kdaKnown ? { k: sp.main.k, d: sp.main.d, a: sp.main.a } : { k: null, d: null, a: null }, { dur: Math.round(sp.main.sec / 6) / 10 });
   else Object.assign(v, { k: null, d: null, a: null, dur: null });
+  // Selbst zugeordnet (Review oder Match loggen): Tode, Todesursachen und Ults des Haupthelden, sobald alles zugeordnet ist
+  const bh = m.byHero, hs = sp.list.map(h => h.hero);
+  if (bh && sp.main) {
+    const sumD = hs.reduce((a, h) => a + deathTotal(bhGet(bh, h).c), 0), sumU = hs.reduce((a, h) => a + bhGet(bh, h).u, 0);
+    if (sumD > 0 && sumD === (+m.d || 0)) Object.assign(v, { d: deathTotal(bhGet(bh, m.hero).c), deathCauses: Object.assign({}, bhGet(bh, m.hero).c) });
+    if (sumU > 0 && sumU === (+m.ults || 0)) Object.assign(v, { ults: bhGet(bh, m.hero).u, ultHit: bhGet(bh, m.hero).uh });
+  }
   if (!(sp.share >= MIX_MAIN)) Object.assign(v, { dmg: null, heal: null, block: null });
   else ["dmg", "heal", "block"].forEach(f => { if (v[f] !== null && v[f] !== undefined) v[f] = Math.round(v[f] * sp.share); });   // Schätzung: gleiches Tempo wie im ganzen Match, damit es zur Dauer des Helden passt
   return v;
 }
 const heroOnly = list => list.map(heroView);
+// ---------- Heldenwechsel: Tode und Ults pro Held zuordnen ----------
+const rvBhAct = (m, sw) => sw.includes(bhActive[m.id]) ? bhActive[m.id] : (sw.includes(m.hero) ? m.hero : sw[0]);
+// Hast du im Match gewechselt, wählst du oben den Helden und tippst dann Todesursachen und Ults: Sie zählen für diesen Helden.
+// Gespeichert in m.byHero = { Held: { c: {Ursache: Anzahl}, u: Ults, uh: Ults mit Wirkung } }; die Summen bleiben in m.deathCauses, m.ults, m.ultHit.
+const swapHeroes = m => { const sp = m && heroSplit(m); return sp && sp.list.length >= 2 ? sp.list.map(h => h.hero) : []; };
+const bhGet = (bh, h) => Object.assign({ c: {}, u: 0, uh: 0 }, (bh || {})[h]);
+function bhCause(bh, h, cause, delta, heroes) {
+  const out = Object.assign({}, bh);
+  let who = h;
+  if (delta < 0 && !(bhGet(out, h).c[cause] > 0)) who = (heroes || Object.keys(out)).find(x => bhGet(out, x).c[cause] > 0);
+  if (!who) return out;
+  const x = bhGet(out, who), c = Object.assign({}, x.c);
+  c[cause] = Math.max(0, (c[cause] || 0) + delta); if (!c[cause]) delete c[cause];
+  out[who] = Object.assign({}, x, { c });
+  return out;
+}
+function bhUlt(bh, h, f, delta, heroes) {
+  const out = Object.assign({}, bh), k = f === "ultHit" ? "uh" : "u";
+  let who = h;
+  if (delta < 0 && !(bhGet(out, h)[k] > 0)) who = (heroes || Object.keys(out)).find(x => bhGet(out, x)[k] > 0);
+  if (!who) return out;
+  const x = bhGet(out, who);
+  out[who] = Object.assign({}, x, { [k]: Math.max(0, x[k] + delta) });
+  if (k === "u" && out[who].uh > out[who].u) out[who].uh = out[who].u;
+  if (k === "uh" && out[who].uh > out[who].u) out[who].u = Math.ceil(out[who].uh);
+  return out;
+}
+// Auswahl «Auf welchem Helden?» mit Stand pro Held; ctx unterscheidet Review («r:<id>») und Match loggen («f»)
+function bhHtml(ctx, heroes, bh, active, total) {
+  const rows = heroes.map(h => { const x = bhGet(bh, h); return { h, d: deathTotal(x.c), u: x.u, uh: x.uh }; }), sum = rows.reduce((a, r) => a + r.d, 0);
+  return `<div class="bh"><div class="small"><b>Auf welchem Helden?</b> <span class="muted">Du hast gewechselt. Wähl zuerst den Helden, dann zählen die Tode und Ults, die du tippst, für ihn.</span></div>
+    <div class="chips">${rows.map(r => `<button type="button" class="chip ${r.h === active ? "on" : ""}" data-bhpick="${esc(ctx)}" data-h="${esc(r.h)}" aria-pressed="${r.h === active}">${av(r.h, "sm")} ${esc(r.h)} <small class="muted">${plural(r.d, "Tod", "Tode")}${r.u ? ` · ${r.u} Ult${r.u === 1 ? "" : "s"}${r.uh ? ` (${numDe(r.uh)} mit Wirkung)` : ""}` : ""}</small></button>`).join("")}</div>
+    ${total > sum ? `<p class="small muted" style="margin:2px 0 0">${plural(total - sum, "Tod ist", "Tode sind")} noch keinem Helden zugeordnet (vor dieser Version eingetragen). Nimm sie mit − weg und tippe sie für den richtigen Helden neu.</p>` : ""}</div>`;
+}
+const bhActive = {};   // gewählter Held pro Match (Review) bzw. «f» (Formular)
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-bhpick]") : null; if (!b) return;
+  const ctx = b.dataset.bhpick;
+  if (ctx === "f") { bhActive.f = b.dataset.h; renderDeathBox(); }
+  else { bhActive[ctx.slice(2)] = b.dataset.h; rvRerender(); }
+});
 function mixTag(m) {
   const sp = heroSplit(m);
   if (!sp) return "";
@@ -5180,7 +5310,7 @@ function renderToday() {
   const nowIdx = items.findIndex(x => !x.done), now = items[nowIdx];
   const big = a => String(a || "").replace(/class="btn small( ghost)?"/g, 'class="btn"');
   const phaseOf = it => phases.findIndex(ph => ph[2].includes(it));
-  const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= PLAN_N ? ` · Trainingsplan Tag ${cur} von ${PLAN_N}` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
+  const hero = `<div class="card hero-banner nowcard"><div class="nowtop"><div class="small">${esc(dateTxt)}${started && cur <= PLAN_N ? ` · ${planWhere(cur)}` : ""} · <span class="flame${streakDays() ? " on" : ""}" aria-hidden="true">🔥</span> ${streakDays()} ${streakDays() === 1 ? "Tag" : "Tage"} in Folge</div>
       <div class="lesson-stats"><div>${ring(items.length ? doneN / items.length : 1, `${doneN}/${items.length}`)}<span>heute</span></div></div></div>
     ${now ? `<div class="nowlbl">Jetzt dran · Schritt ${nowIdx + 1} von ${items.length} · ${esc(phases[phaseOf(now)][0])}</div><h2>${now.t}</h2><p>${now.s}</p><div class="nowact">${big(now.a)}</div>`
       : (() => { const x = todayExtra(); return x ? `<div class="nowlbl">Alles erledigt für heute 🎉 · Wenn du magst</div><h2>${x.t}</h2><p>${x.s}</p><div class="nowact">${big(x.a)}</div>`
@@ -5206,7 +5336,9 @@ function renderToday() {
   { const pd = proDue().filter(n => kBox()[proId(n)]).length; if (pd) news.push(["info", `<b>${plural(pd, "Profi-Notiz", "Profi-Notizen")} zur Wiederholung fällig.</b> <button class="btn small" type="button" data-pro-go="${esc(proDue().filter(n => kBox()[proId(n)])[0].hero)}">Wiederholen</button>`]); }
   const dueN = dueQs(false).length + dueHs().length;
   if (dueN) news.push(["info", `<b>${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig.</b> Kurz abrufen, dann bleibt es hängen. <button class="btn small" type="button" data-pact="due-start">Jetzt bis zu 5 wiederholen</button>`]);
+  { const ti = txInsights()[0]; if (ti && ti.n >= 3) news.push(["info", `<b>Du schreibst oft über «${esc(ti.t.topic)}»</b> (${ti.n}× in 30 Tagen). Passende Lektion und Übung stehen im Review unter «Was du schreibst». <button class="btn small ghost" type="button" data-pact="tab" data-tab="review">Ansehen</button>`]); }
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
+  { const kn = keepNews(); if (kn) news.push(kn); }
   const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2></div>${notes(news)}</div>` : "";
   // Erste Schritte
   const steps = [
@@ -5218,7 +5350,7 @@ function renderToday() {
   const stepsDone = steps.filter(x => x[1]).length;
   const first = stepsDone < steps.length && !(state.settings && state.settings.hideStart) ? `<div class="card"><div class="card-head"><h2>${icon("list")}Erste Schritte <span class="badge">${stepsDone}/${steps.length}</span></h2><button class="linkbtn small" type="button" data-today="hidestart">Ausblenden</button></div>
     <p class="lead">So holst du das meiste aus dem Rivals Coach.</p>
-    ${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
+    ${keepRestoreHtml()}${steps.map((x, i) => `<div class="todo ${x[1] ? "done" : ""}"><span class="tn">${x[1] ? "✓" : i + 1}</span><div class="tt">${x[0]}</div><div class="ta">${x[1] ? "" : x[2]}</div></div>`).join("")}</div>` : "";
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
   // Seltener Gebrauchtes steht eingeklappt unter «Mehr für heute» (die App merkt sich, ob es offen ist)
@@ -5226,8 +5358,56 @@ function renderToday() {
   const moreSub = [funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
   funCheck();
-  el.innerHTML = hero + focus + list + newsCard + first + formHudHtml() + moreFold;
+  el.innerHTML = hero + focus + list + standCardHtml() + newsCard + first + formHudHtml() + moreFold;
 }
+// ---------- Dein Stand: Wissensstand und Rang ----------
+// Wunsch der Nutzerin: ein Balken, wie gut du gerade bist, nicht nur nach erledigten Trainingstagen. Vier Teile, jeder 0 bis 100 %:
+// Wissen (Quizfragen deiner Stufe: wie weit sie im Wiederholungs-System sind, ab Fach 4 voll, nie gefragt zählt 0), Umsetzung im Match (letzte 30 Antworten zu
+// Plan- und Bootcamp-Aufgaben: ja 1, teilweise ½, nein 0; ab 3 Antworten), Läuft von allein (Themen, die schon dran waren: «muss ich noch denken» 0,
+// «läuft von allein» 1, Antworten im Match zählen mehr als das Gefühl), Trainingsplan (erledigte Tage). Gewichte 30/35/25/10; Teile ohne Daten
+// fallen weg. Eine Schätzung aus deinen eigenen Angaben, keine Messung deines Könnens.
+const WS_V = { ja: 1, teils: 0.5, nein: 0 }, WS_SURE = 4;   // ab Fach 4 (8 Tage Abstand) zählt eine Frage als sicher
+function wsParts() {
+  const box = (state.quiz && state.quiz.k && state.quiz.k.box) || {};
+  const ids = new Set(WQ.filter(q => q.lvl <= currentLevel()).map(q => q.id).concat(Object.keys(box)));
+  const quiz = Object.keys(box).length && ids.size ? [...ids].reduce((a, id) => a + Math.min(WS_SURE, (box[id] || {}).f || 0) / WS_SURE, 0) / ids.size : null;
+  const rs = [];
+  state.matches.forEach(m => { const t = matchTime(m); if (m.qn && m.qn.step && m.qn.step.v in WS_V) rs.push([t, m.qn.step.v]); Object.values(m.tasks || {}).forEach(v => { if (v in WS_V) rs.push([t, v]); }); });
+  const last = rs.sort((a, b) => a[0] - b[0]).slice(-30), impl = last.length >= 3 ? last.reduce((a, [, v]) => a + WS_V[v], 0) / last.length : null;
+  const n = planStarted() ? planDay() : 0, av = PLAN.tracker.filter(t => t.neu.some(x => x < n)).map(topicAuto).filter(v => v >= 1);
+  const auto = av.length ? av.reduce((a, v) => a + (Math.min(3, v) - 1) / 2, 0) / av.length : null;
+  const plan = planStarted() ? Math.min(PLAN_N, Object.values(state.plan.days).filter(d => d && d.done).length) / PLAN_N : null;
+  return [
+    { k: "quiz", t: "Wissen", v: quiz, w: 0.30, s: `${Object.keys(box).length} von ${ids.size} Fragen deiner Stufe schon im Wiederholungs-System`, go: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="quiz">Quiz</button>` },
+    { k: "impl", t: "Umsetzung im Match", v: impl, w: 0.35, s: last.length ? `letzte ${last.length} Antworten zu deinen Aufgaben (Notiz, Review, Bootcamp)` : "noch keine Antworten zu Aufgaben", go: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="review">Review</button>` },
+    { k: "auto", t: "Läuft von allein", v: auto, w: 0.25, s: av.length ? `${plural(av.length, "Thema", "Themen")}, die schon dran waren` : "noch keine Einschätzung", go: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="plan">Trainingsplan</button>` },
+    { k: "plan", t: "Trainingsplan", v: plan, w: 0.10, s: `${Object.values(state.plan.days).filter(d => d && d.done).length} von ${PLAN_N} Tagen erledigt`, go: "" }
+  ];
+}
+function wsScore() {
+  const P = wsParts().filter(p => p.v !== null), W = P.reduce((a, p) => a + p.w, 0);
+  return { P, v: W ? P.reduce((a, p) => a + p.v * p.w, 0) / W : null };
+}
+const wsBar = (v, cls) => `<span class="wsbar ${cls || ""}" role="img" aria-label="${pct(v)}"><i style="width:${Math.round(Math.max(0, Math.min(1, v)) * 100)}%"></i></span>`;
+function rankLineHtml() {
+  const r = rkMine();
+  if (!r) return `<p class="small muted" style="margin:6px 0 0">Rang: noch unbekannt. Er kommt mit dem Abgleich aus deinem Profil bei Rivals Data oder aus einem Competitive-Match; du kannst ihn auch auf der Seite «Rang-Weg» selbst wählen.</p>`;
+  const src = r.src === "set" ? "von dir gewählt" : r.src === "match" ? `aus deinem letzten Competitive-Match vom ${fmtDate(r.date)}` : `laut deinem Profil bei Rivals Data, Stand ${fmtDate(r.date)} (letzte Competitive-Season-Angabe)`;
+  return `<p class="small" style="margin:6px 0 0"><b>Rang: ${esc(rkName(r.lv))}</b> <span class="muted">${src}. Quick Match ändert den Rang nicht.</span></p>`;
+}
+function standCardHtml() {
+  const { P, v } = wsScore();
+  if (v === null && !rkMine()) return "";
+  const low = P.filter(p => p.go).sort((a, b) => a.v - b.v)[0];
+  return `<div class="card wscard"><div class="card-head"><h2>${icon("analysis")}Dein Stand</h2>${v !== null ? `<span class="badge">${pct(v)}</span>` : ""}</div>
+    ${v !== null ? `<div class="wsmain"><span class="small"><b>Wissensstand</b></span>${wsBar(v, "big")}</div>
+    <details class="wsdet"${UIFOLD["ws"] ? " open" : ""} data-f="ws"><summary class="small">Woraus er besteht</summary>
+      <div class="wsparts">${wsParts().map(p => `<div class="wsrow"><span class="small"><b>${esc(p.t)}</b> <span class="muted">${esc(p.s)}</span></span>${p.v === null ? `<span class="small muted">noch keine Daten</span>` : `<span class="wsr">${wsBar(p.v)}<b class="small">${pct(p.v)}</b></span>`}</div>`).join("")}</div>
+      <p class="small muted" style="margin:6px 0 0">Gewichtung: Umsetzung im Match 35 %, Wissen 30 %, läuft von allein 25 %, Trainingsplan 10 %. Teile ohne Daten zählen nicht. Eine Quizfrage zählt voll, sobald sie im Wiederholungs-System bei 8 Tagen Abstand angekommen ist. Das ist eine Schätzung aus deinen eigenen Angaben (Quiz, Bewertungen nach dem Match, Selbsteinschätzung), keine Messung deines Könnens.</p>
+      ${low && low.v < 0.6 ? `<p class="small" style="margin:6px 0 0">Am meisten bringt gerade: <b>${esc(low.t)}</b> ${low.go}</p>` : ""}</details>` : ""}
+    ${rankLineHtml()}</div>`;
+}
+document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.wsdet")) { UIFOLD["ws"] = d.open; try { localStorage.setItem(STORE_KEY + "-folds", JSON.stringify(UIFOLD)); } catch (err) {} } }, true);
 // Knöpfe mit data-go öffnen die genannte Seite, überall in der App. data-open="refl": zur offenen Reflexion (bei genau einem Match direkt in dessen Eingabe)
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-go]");
@@ -6165,6 +6345,7 @@ function insights() {
 
 // ---------- Todesursachen und Fehler passend zu Rolle und Held ----------
 let deathState = {};   // Ursache -> Anzahl, für das Match im Formular
+let bhForm = {}, bhFormHeroes = [];   // Tode und Ults pro Held beim Bearbeiten eines Matches mit Heldenwechsel
 const roleOfHero = h => { const r = h ? heroRole(h) : "?"; return r === "?" ? "" : r; };
 function deathOptions(hero) { return DEATH_BY_ROLE[roleOfHero(hero) || "Strategist"].concat([["Sonstiges", null]]); }
 const deathMore = hero => (DEATH_MORE_ROLE[roleOfHero(hero) || "Strategist"] || []).concat(DEATH_MORE);
@@ -6363,18 +6544,26 @@ function renderDeathBox() {
   const el = $("#deathBox");
   if (!el) return;
   const hero = $("#heroSelect") ? $("#heroSelect").value : "";
-  const total = deathTotal(deathState), d = Number($("#matchForm").d.value) || 0;
-  el.innerHTML = `${deathGridHtml(hero, deathState, l => { const n = deathState[l] || 0;
+  const total = deathTotal(deathState), d = Number($("#matchForm").d.value) || 0, sw = bhFormHeroes, act = sw.includes(bhActive.f) ? bhActive.f : (sw.includes(hero) ? hero : sw[0]);
+  const ua = sw.length ? bhGet(bhForm, act) : null;
+  el.innerHTML = `${sw.length ? bhHtml("f", sw, bhForm, act, total) + `<div class="qnsteps small" style="margin:4px 0 8px">Ults als ${esc(act)}: <span class="qnstep"><span class="small">eingesetzt</span><button type="button" data-bhfu="ults" data-d="-1" aria-label="Ults weniger">−</button><b>${ua.u}</b><button type="button" data-bhfu="ults" data-d="1" aria-label="Ults mehr">+</button></span><span class="qnstep"><span class="small">mit Wirkung</span><button type="button" data-bhfu="ultHit" data-d="-0.5" aria-label="Ults mit Wirkung weniger">−</button><b>${numDe(ua.uh)}</b><button type="button" data-bhfu="ultHit" data-d="0.5" aria-label="Ults mit Wirkung mehr">+</button></span></div>` : ""}${deathGridHtml(hero, deathState, l => { const n = deathState[l] || 0;
     return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-death="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-death-dec="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; })}
     <p class="muted small" style="margin:8px 0 0">${total ? `${plural(total, "Tod", "Tode")} erfasst${d ? ` von ${d} laut K/D/A` : ""}.` : "Noch keine Tode erfasst."}${total && total < d ? ` ${d - total} offen: Du kannst sie später beim Bearbeiten nachtragen.` : ""}</p>
     ${ultPickHtml("f", ultDeathN(deathState), ultState, slotValues("enemySlots").filter(Boolean))}`;
 }
 $("#deathBox").addEventListener("click", e => {
+  const u = e.target.closest("[data-bhfu]");
+  if (u) {   // Ults pro Held im Formular: Held zählen und die Summe oben im Formular mitführen
+    const sw = bhFormHeroes, f = $("#matchForm"), act = sw.includes(bhActive.f) ? bhActive.f : (sw.includes(f.hero.value) ? f.hero.value : sw[0]), k = u.dataset.bhfu, dv = +u.dataset.d;
+    bhForm = bhUlt(bhForm, act, k, dv, [act]);
+    const su = sw.reduce((a, h) => a + bhGet(bhForm, h).u, 0), sh = sw.reduce((a, h) => a + bhGet(bhForm, h).uh, 0);
+    f.ults.value = su; f.ultHit.value = sh; renderDeathBox(); return;
+  }
   const b = e.target.closest("[data-death],[data-death-dec]");
   if (!b) return;
-  const inc = b.dataset.death, dec = b.dataset.deathDec;
-  if (inc) deathState[inc] = (deathState[inc] || 0) + 1;
-  else if (dec && deathState[dec]) { deathState[dec]--; if (deathState[dec] <= 0) delete deathState[dec]; ultTrim(ultState, ultDeathN(deathState)); }
+  const inc = b.dataset.death, dec = b.dataset.deathDec, sw = bhFormHeroes, act = sw.includes(bhActive.f) ? bhActive.f : (sw.includes($("#heroSelect").value) ? $("#heroSelect").value : sw[0]);
+  if (inc) { deathState[inc] = (deathState[inc] || 0) + 1; if (sw.length) bhForm = bhCause(bhForm, act, inc, 1, sw); }
+  else if (dec && deathState[dec]) { deathState[dec]--; if (deathState[dec] <= 0) delete deathState[dec]; if (sw.length) bhForm = bhCause(bhForm, act, dec, -1, sw); ultTrim(ultState, ultDeathN(deathState)); }
   const f = $("#matchForm"), total = deathTotal(deathState);
   if (inc && total > (Number(f.d.value) || 0)) f.d.value = total;   // mehr erfasste Tode als im K/D/A: Wert anheben
   renderDeathBox(); renderMatchHints();
@@ -6998,7 +7187,7 @@ function clearForm() {
   f.date.value = today();
   setMapValue("");
   document.querySelectorAll("#enemySlots select, #allySlots select").forEach(s => { s.value = ""; });
-  deathState = {}; ultState = {};
+  deathState = {}; ultState = {}; bhForm = {}; bhFormHeroes = [];
   renderMistakeChips([], f.hero.value); setChips($("#goodChips"), []); renderTeamBox(null);
   renderFxBox({}); renderRuleBox({}); renderFqBox({}); renderTaskBox({}); renderFocusCard();
   renderDeathBox();
@@ -7030,6 +7219,7 @@ function startEdit(id) {
   document.querySelectorAll("#allySlots select").forEach((s, i) => { s.value = m.allies[i] || ""; });
   updateNemesis(); f.nemesis.value = m.nemesis || "";
   deathState = Object.assign({}, m.deathCauses || {}); ultState = Object.assign({}, m.ultDeaths || {});
+  bhFormHeroes = swapHeroes(m); bhForm = JSON.parse(JSON.stringify(m.byHero || {})); delete bhActive.f;
   renderMistakeChips(m.mistakes || [], m.hero); renderProbBox(Object.assign({}, m.probs)); setChips($("#goodChips"), m.goods || []); renderTeamBox(m);
   renderFxBox(fxVals(m, fxForMatch(m))); renderRuleBox(Object.assign({}, m.rules)); renderFqBox(Object.assign({}, m.fq)); renderTaskBox(Object.assign({}, m.tasks)); renderFocusCard();
   renderDeathBox();
@@ -7268,6 +7458,7 @@ $("#matchForm").addEventListener("submit", e => {
     deathCauses: Object.assign({}, deathState),
     ultDeaths: ultTrim(Object.assign({}, ultState), ultDeathN(deathState))
   };
+  if (editingId && bhFormHeroes.length) fields.byHero = JSON.parse(JSON.stringify(bhForm));
   { const pv = probFormValues(); fields.probs = Object.fromEntries(Object.entries(pv).filter(([l]) => fields.mistakes.includes(l))); }
   if (!$("#teamBox").hidden) {
     fields.teamGood = [...document.querySelectorAll("#teamGoodChips .chip.on")].map(c => c.dataset.v);
@@ -8876,7 +9067,7 @@ $("#syncFile").addEventListener("change", async e => {
   try { const r = importSync(await readJsonFile(e.target)); quiz = null; render(); syncToast(r); }
   catch (err) { toast("Import fehlgeschlagen: " + err.message); }
 });
-$("#exportBtn").addEventListener("click", () => { appSeen("backup", true); saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"); });
+$("#exportBtn").addEventListener("click", () => { appSeen("backup", true); state.app = state.app || {}; state.app.backupAt = today(); saveCore(); saveFile(`rivals-coach-${today()}.json`, JSON.stringify(state, null, 2), "application/json"); });
 $("#csvBtn").addEventListener("click", () => {
   const cols = ["date", "hero", "mode", "type", "map", "result", "k", "d", "a", "dmg", "heal", "block", "dur", "ults", "ultHit", "mood", "enemies", "allies", "nemesis", "swapped", "mistakes", "goods", "notes", "next", "source", "extId"];
   const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
@@ -9490,7 +9681,18 @@ function levelBadge(n) { return `<span class="lvl lvl${n}">Stufe ${n} · ${lvInf
 function dayGet(n) { return state.plan.days[n] || { done: null, steps: {}, note: "" }; }
 function dayEnsure(n) { return state.plan.days[n] || (state.plan.days[n] = { done: null, steps: {}, note: "" }); }
 function planStarted() { return !!state.plan.start; }
-function planDay() { for (let n = 1; n <= PLAN_N; n++) if (!dayGet(n).done) return n; return PLAN_N + 1; }
+// ---------- Persönlicher Plan: eigene Reihenfolge der Trainingstage ----------
+// Wunsch der Nutzerin: Die App stellt aus den bestehenden, geprüften Trainingstagen einen eigenen Plan zusammen (Fragebogen: Ziel, Rollen, was du
+// lernen willst, was schon sitzt). Er ist nur eine andere Reihenfolge der Tage 1 bis 112: Was du lernen willst, kommt zuerst (das Schwächste vorne),
+// der Rest in der Standard-Reihenfolge, Themen, die schon sitzen, am Ende nur noch als Vertiefen-Tag. Erledigt wird pro Tag (dayGet(n).done), deshalb
+// zählt der Fortschritt für beide Pläne; umschalten geht jederzeit. state.plan.custom = { on, order: [Tag …], answers, at }.
+const planCustomOn = () => !!(state.plan.custom && state.plan.custom.on && Array.isArray(state.plan.custom.order) && state.plan.custom.order.length);
+let planStdOrder = null;
+const planOrder = () => planCustomOn() ? state.plan.custom.order : (planStdOrder || (planStdOrder = Array.from({ length: PLAN_N }, (_, i) => i + 1)));
+const planPos = n => { const i = planOrder().indexOf(n); return i < 0 ? Infinity : i; };
+const planNext = n => { const o = planOrder(), i = o.indexOf(n); return i >= 0 && i < o.length - 1 ? o[i + 1] : 0; };
+const planPrev = n => { const o = planOrder(), i = o.indexOf(n); return i > 0 ? o[i - 1] : 0; };
+function planDay() { for (const n of planOrder()) if (!dayGet(n).done) return n; return PLAN_N + 1; }
 function planDoneCount() { let c = 0; for (let n = 1; n <= PLAN_N; n++) if (dayGet(n).done) c++; return c; }
 function phaseOf(n) { return PLAN.phases.find(p => n >= p.from && n <= p.to) || PLAN.phases[PLAN.phases.length - 1]; }
 function autoLevel() {
@@ -9624,10 +9826,94 @@ function rulesHtml() {
       <p style="margin:0"><b>${esc(PLAN.notes.ultIntro)}</b></p><ul class="wl">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
       <p style="margin:0">${esc(PLAN.notes.ohne)}</p></div></details>`;
 }
+// Wo du im Plan stehst (Heute-Banner)
+const planWhere = n => planCustomOn() && planPos(n) < Infinity ? `Persönlicher Plan: Tag ${n}, Schritt ${planPos(n) + 1} von ${planOrder().length}` : `Trainingsplan Tag ${n} von ${PLAN_N}`;
+// Themen eines Tagespaars (Kennenlernen-Tag 2b−1 und Vertiefen-Tag 2b): neue Themen des Tages und Themen, die im Titel vorkommen
+const PC_KW = { 1: /Todesursach|Review|Baseline/, 2: /Positionierung|Teamnähe/, 3: /Ult/, 4: /Heal-Priorität|Heal und Ult/, 5: /Schaden|Aggro/, 6: /Komposition|Counterswap|Hero-Swap|Hero-Karten/,
+  7: /Kommunikation|Tilt/, 8: /Tank/, 9: /DPS/, 10: /Dive/, 11: /Pool|Kit\b|Matchups/, 12: /Team-Ups/, 13: /Modi|Problemkarten/, 14: /Fight-Auswahl|Tempo/, 15: /Heal-Aim/,
+  16: /Movement|Mechanik/, 17: /Mitspieler|Führung|Absprache/, 18: /mentale|Comeback|Ausdauer|Generalprobe/ };
+const PC_ROLE = { Strategist: ["4", "15"], Vanguard: ["8"], Duelist: ["9"] };   // Themen, die vor allem zu einer Rolle gehören (laut Plan)
+const PC_GOALS = [["rank", "Höherer Rang"], ["role", "Eine Rolle richtig lernen"], ["hero", "Meine Helden meistern"], ["general", "Allgemein besser werden"]];
+const PC_PREF = [["want", "Will ich lernen"], ["normal", "Normal"], ["know", "Kann ich schon"]];
+function pcPairTopics(b) {
+  const title = PLAN.days[2 * b - 2].title, ids = new Set(PLAN.tracker.filter(t => t.neu.includes(2 * b - 1)).map(t => String(t.id)));
+  Object.entries(PC_KW).forEach(([id, re]) => { if (re.test(title)) ids.add(id); });
+  return [...ids];
+}
+// Reihenfolge aus den Antworten: Tag 1 und 2 (Baseline) zuerst, dann alles, was du lernen willst (das Schwächste vorne: «muss ich noch denken»,
+// dann ohne Einschätzung, dann «klappt meistens»), dann der Rest samt Testtagen in der Standard-Reihenfolge, zuletzt Themen, die schon sitzen, nur mit
+// dem Vertiefen-Tag (Abruf und gezielte Übung). Nichts Neues: nur die Tage des Plans in anderer Reihenfolge.
+function pcBuild(ans) {
+  const want = new Set(Object.keys(ans.topics || {}).filter(id => ans.topics[id] === "want"));
+  if (ans.goal === "hero") want.add("11");
+  if (ans.goal === "role") (ans.roles || []).forEach(r => (PC_ROLE[r] || []).forEach(id => want.add(id)));
+  const know = new Set(Object.keys(ans.topics || {}).filter(id => ans.topics[id] === "know" && !want.has(id)));
+  const weak = ts => Math.min(...ts.map(id => { const t = PLAN.tracker.find(x => String(x.id) === id), v = t ? topicAuto(t) : 0; return v === 1 ? 0 : v === 0 ? 1 : v; }), 9);
+  const W = [], N = [], K = [];
+  for (let b = 1; b <= PLAN_N / 2; b++) {
+    const ts = pcPairTopics(b), test = /test/i.test(PLAN.days[2 * b - 2].title);
+    if (b === 1 || test) N.push(b);
+    else if (ts.some(id => want.has(id))) W.push({ b, w: weak(ts.filter(id => want.has(id))) });
+    else if (ts.length && ts.every(id => know.has(id))) K.push(b);
+    else N.push(b);
+  }
+  const first = N.includes(1) ? [1] : [], rest = N.filter(b => b !== 1);
+  const order = [...first, ...W.sort((x, y) => x.w - y.w || x.b - y.b).map(x => x.b), ...rest].flatMap(b => [2 * b - 1, 2 * b]).concat(K.map(b => 2 * b));
+  return { order, want: W.length, normal: rest.length + first.length, know: K.length };
+}
+const pcUi = { open: false, draft: null };
+function pcDraftNew() {
+  const c = state.plan.custom, a = c && c.answers;
+  if (a) return JSON.parse(JSON.stringify(a));
+  const topics = {};
+  PLAN.tracker.forEach(t => { const v = topicAuto(t); if (v === 3) topics[t.id] = "know"; else if (v === 1) topics[t.id] = "want"; });
+  return { goal: "general", roles: [myRole()], topics };
+}
+function pcCardHtml() {
+  if (pcUi.open) return pcFormHtml();
+  const c = state.plan.custom, on = planCustomOn();
+  if (!c) return `<div class="card pccard"><div class="card-head"><h2>${icon("target")}Plan an dich anpassen</h2></div>
+    <p class="small" style="margin:0 0 8px">Ein paar Fragen: Was ist dein Ziel, welche Rollen willst du lernen, was willst du lernen und was sitzt schon? Daraus stellt die App einen persönlichen Plan aus denselben Trainingstagen zusammen, in deiner Reihenfolge. Der Standardplan bleibt, du kannst jederzeit wechseln, und erledigte Tage zählen für beide.</p>
+    <button class="btn small" type="button" data-pc="open">Fragebogen starten</button></div>`;
+  const o = c.order || [], next = o.filter(n => !dayGet(n).done).slice(0, 5);
+  return `<div class="card pccard"><div class="card-head"><h2>${icon("target")}Dein Plan</h2><span class="badge">${on ? "persönlich" : "Standard"}</span></div>
+    <div class="chips"><button type="button" class="chip ${on ? "" : "on"}" data-pc="std" aria-pressed="${!on}">Standardplan (Tag 1 bis ${PLAN_N})</button><button type="button" class="chip ${on ? "on" : ""}" data-pc="mine" aria-pressed="${on}">Persönlicher Plan (${o.length} Tage)</button></div>
+    <p class="small muted" style="margin:6px 0">Erstellt am ${fmtDate(c.at)}: ${c.n ? `${plural(c.n.want, "Tagespaar", "Tagespaare")} (Kennenlernen und Vertiefen) mit dem, was du lernen willst, zuerst; ${plural(c.n.know, "Vertiefen-Tag", "Vertiefen-Tage")} zu Themen, die schon sitzen, am Ende zum Auffrischen.` : ""} Erledigte Tage zählen für beide Pläne.</p>
+    ${on && next.length ? `<div class="small"><b>Als Nächstes in deinem Plan:</b><ol class="wl" style="margin:4px 0 0">${next.map(n => `<li><button type="button" class="linkbtn" data-pact="day" data-n="${n}">Tag ${n}: ${esc(PLAN.days[n - 1].title)}</button></li>`).join("")}</ol></div>` : ""}
+    <div class="row" style="margin-top:8px"><button class="btn small ghost" type="button" data-pc="open">Fragebogen ändern</button></div></div>`;
+}
+function pcFormHtml() {
+  const d = pcUi.draft, r = pcBuild(d), first = r.order.filter(n => !dayGet(n).done).slice(0, 4);
+  const chip = (attr, v, on, label) => `<button type="button" class="chip ${on ? "on" : ""}" ${attr}="${esc(v)}" aria-pressed="${on}">${esc(label)}</button>`;
+  return `<div class="card pccard"><div class="card-head"><h2>${icon("target")}Dein persönlicher Plan</h2><button class="linkbtn small" type="button" data-pc="cancel">Abbrechen</button></div>
+    <div class="pcq"><b class="small">1 · Was ist dein Ziel?</b><div class="chips">${PC_GOALS.map(([v, l]) => chip("data-pcgoal", v, d.goal === v, l)).join("")}</div>
+      <span class="small muted">${d.goal === "role" ? "Die Themen deiner Rollen kommen nach vorne." : d.goal === "hero" ? "Die Tage zu deinen Pool-Helden (Hero-Mastery) kommen nach vorne." : "Ändert die Reihenfolge nicht, nur deine Antworten unten."}</span></div>
+    <div class="pcq"><b class="small">2 · Welche Rollen willst du lernen?</b><div class="chips">${ROLES.map(rl => chip("data-pcrole", rl, d.roles.includes(rl), ROLE_DE[rl])).join("")}</div></div>
+    <div class="pcq"><b class="small">3 · Was willst du lernen, und was sitzt schon?</b><span class="small muted">Vorschlag aus deinen Einschätzungen «Sitzt es?» und den Antworten im Match. «Kann ich schon» kommt am Ende nur noch als Vertiefen-Tag zum Prüfen.</span>
+      <div class="pctopics">${PLAN.tracker.map(t => `<div class="pctopic"><span class="small"><b>${esc(t.topic)}</b>${topicAuto(t) ? ` <span class="muted">(${esc(AUTO_LABEL[topicAuto(t)])})</span>` : ""}</span><div class="chips">${PC_PREF.map(([v, l]) => chip("data-pctopic", t.id + "|" + v, (d.topics[t.id] || "normal") === v, l)).join("")}</div></div>`).join("")}</div></div>
+    <div class="note info" style="margin:8px 0 0"><span class="ni" aria-hidden="true">i</span><div><b>Dein Plan: ${r.order.length} Tage.</b> ${plural(r.want, "Tagespaar", "Tagespaare")} (Kennenlernen und Vertiefen) zuerst, ${r.normal} in der Standard-Reihenfolge, ${plural(r.know, "Vertiefen-Tag", "Vertiefen-Tage")} am Ende zum Auffrischen.${first.length ? ` Als Nächstes: ${first.map(n => `Tag ${n} (${esc(PLAN.days[n - 1].title)})`).join(", ")}.` : ""}</div></div>
+    <div class="row" style="margin-top:8px"><button class="btn small" type="button" data-pc="save">${icon("check")}Plan erstellen und nutzen</button><button class="btn small ghost" type="button" data-pc="cancel">Abbrechen</button></div>
+    <p class="small muted" style="margin:6px 0 0">Der persönliche Plan nutzt nur die Tage des Standardplans in anderer Reihenfolge. Ob eine andere Reihenfolge schneller zum Ziel führt, ist nicht untersucht; sie richtet sich nach dem, was du lernen willst.</p></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-pc],[data-pcgoal],[data-pcrole],[data-pctopic]") : null; if (!b) return;
+  const d = pcUi.draft;
+  if (b.dataset.pc === "open") { pcUi.draft = pcDraftNew(); pcUi.open = true; }
+  else if (b.dataset.pc === "cancel") { pcUi.open = false; }
+  else if (b.dataset.pc === "save" && d) { const r = pcBuild(d); state.plan.custom = { on: true, order: r.order, answers: d, at: today(), n: { want: r.want, know: r.know } }; pcUi.open = false; save(); toast("Dein persönlicher Plan ist aktiv."); }
+  else if (b.dataset.pc === "std" && state.plan.custom) { state.plan.custom.on = false; save(); toast("Standardplan aktiv. Erledigte Tage bleiben erledigt."); }
+  else if (b.dataset.pc === "mine" && state.plan.custom) { state.plan.custom.on = true; save(); toast("Persönlicher Plan aktiv."); }
+  else if (b.dataset.pcgoal && d) d.goal = b.dataset.pcgoal;
+  else if (b.dataset.pcrole && d) { const r = b.dataset.pcrole; d.roles = d.roles.includes(r) ? d.roles.filter(x => x !== r) : d.roles.concat(r); }
+  else if (b.dataset.pctopic && d) { const [id, v] = b.dataset.pctopic.split("|"); d.topics[id] = v; }
+  else return;
+  render();
+});
 function dayTile(d, cur) {
   const st = dayGet(d.n);
-  return `<button type="button" class="day-tile lv${levelOfDay(d.n)} ${st.done ? "done" : ""} ${d.n === cur ? "today" : ""}" data-pact="day" data-n="${d.n}">
-    <span class="dn">${st.done ? "✓" : ""}Tag ${d.n}${d.kennzahlen ? " ★" : ""}</span><span class="dt">${esc(d.title)}</span><span class="dm">${esc(modeText(d) || "Ausgangswerte")}</span></button>`;
+  const skip = planCustomOn() && planPos(d.n) === Infinity && !st.done;
+  return `<button type="button" class="day-tile lv${levelOfDay(d.n)} ${st.done ? "done" : ""} ${d.n === cur ? "today" : ""}${skip ? " pskip" : ""}" data-pact="day" data-n="${d.n}"${skip ? ' title="Nicht in deinem persönlichen Plan (Thema sitzt schon)"' : ""}>
+    <span class="dn">${st.done ? "✓" : ""}Tag ${d.n}${d.kennzahlen ? " ★" : ""}${skip ? " · nicht im Plan" : ""}</span><span class="dt">${esc(d.title)}</span><span class="dm">${esc(modeText(d) || "Ausgangswerte")}</span></button>`;
 }
 function planHomeHtml() {
   const started = planStarted(), cur = planDay(), dn = planDoneCount(), L = currentLevel();
@@ -9650,7 +9936,7 @@ function planHomeHtml() {
       <p>${esc(modeText(d) || "Ausgangswerte")}${cal && gap !== 0 ? ` · Laut Startdatum wäre heute Tag ${cal} (${gap > 0 ? `${gap} Tag${gap === 1 ? "" : "e"} im Rückstand` : `${-gap} Tag${gap === -1 ? "" : "e"} voraus`})` : ""}</p>
       ${(() => { const id = dayLessons(cur)[0]; if (!id) return ""; const l = lessonById(id), dn = lessonsDone()[id]; return `<p class="small" style="position:relative">📘 Lektion dazu: <b>${esc(l.title)}</b> (ca. ${l.minutes} Min.) · ${dn ? "erledigt ✓" : "noch offen"}</p>`; })()}
       <div class="row mt" style="position:relative"><button class="btn" type="button" data-pact="day" data-n="${cur}" style="background:#fff;color:#2b1f8f">Tag ${cur} öffnen →</button></div></div>
-      <div class="lesson-stats"><div>${ring(dn / PLAN_N, `${dn}/${PLAN_N}`)}<span>Tage</span></div></div></div>`;
+      <div class="lesson-stats"><div>${(() => { const o = planOrder(), od = o.filter(x => dayGet(x).done).length; return planCustomOn() ? `${ring(od / o.length, `${od}/${o.length}`)}<span>dein Plan</span>` : `${ring(dn / PLAN_N, `${dn}/${PLAN_N}`)}<span>Tage</span>`; })()}</div></div></div>`;
   }
   const lvAuto = autoLevel();
   const path = foldHtml("path", "Dein Lernpfad", `<p class="lead">Am Anfang lernst du die Grundlagen, am Ende Expertenwissen – und wirst danach abgefragt. Deine Stufe wächst mit den Trainingstagen und den Lektionen (die höhere der beiden zählt).</p>
@@ -9669,7 +9955,7 @@ function planHomeHtml() {
   }).join("");
   const legend = `<details class="small muted rmore" style="margin:0 2px 12px"><summary>Was bedeuten R, U, K und ★?</summary>${esc(PLAN.legend.replace(/^📖[^.]*\.\s*/, ""))} ★ = Kennzahlen-Tag mit Vergleich deiner Werte.</details>`;
   const sec = (t, sub) => `<div class="psec"><h3>${t}</h3>${sub ? `<span class="small muted">${sub}</span>` : ""}</div>`;
-  return banner + carryOverflowHtml()
+  return banner + (started ? pcCardHtml() : "") + carryOverflowHtml()
     + sec("Alle Trainingstage", "Tippe auf einen Tag, um ihn zu öffnen") + legend + phases
     + sec("Einstellungen", "Dein Pool und deine Lernstufe") + poolCardHtml() + path
     + sec("Nachschlagen", "Hintergrund und Regeln, wenn du sie brauchst") + tbPlanNoteHtml()
@@ -9760,7 +10046,7 @@ function topicAuto(t) {
   return 0;
 }
 function autoRateHtml(n) {
-  const ts = PLAN.tracker.filter(t => t.neu.includes(n) || t.refresh.includes(n));
+  const ts = PLAN.tracker.filter(t => t.neu.includes(n) || topicAgain(t, n));
   if (!ts.length) return "";
   const cur = dayGet(n).auto || {};
   return `<div class="field mt">Wie sitzt es? <span class="muted small">Dein Ziel: Es läuft nebenbei, ohne dass du nachdenken musst.</span>
@@ -9807,17 +10093,18 @@ function topicLessonIds(t) {
   t.neu.forEach(dn => ((PLAN.days[dn - 1] || {}).l || []).forEach(l => { if (!ids.includes("L" + l)) ids.push("L" + l); }));
   return ids;
 }
+const topicAgain = (t, n) => t.refresh.includes(n) && !t.neu.includes(n) && (!planCustomOn() || t.neu.some(x => dayGet(x).done));
 function refreshIds(n) {
   const ids = [];
-  PLAN.tracker.filter(t => t.refresh.includes(n) && !t.neu.includes(n)).forEach(t => topicLessonIds(t).forEach(id => { if (!ids.includes(id)) ids.push(id); }));
+  PLAN.tracker.filter(t => topicAgain(t, n)).forEach(t => topicLessonIds(t).forEach(id => { if (!ids.includes(id)) ids.push(id); }));
   return ids;
 }
 // „Heute zählt nur das“: neues Thema, kurze Auffrischung, und wann alles Frühere von selbst wiederkommt
 function focusCardHtml(n) {
   const neu = PLAN.tracker.filter(t => t.neu.includes(n));
-  const again = PLAN.tracker.filter(t => t.refresh.includes(n) && !t.neu.includes(n));
-  const later = PLAN.tracker.filter(t => t.neu[0] < n && !t.refresh.includes(n) && !t.neu.includes(n))
-    .map(t => [t, Math.min(...t.refresh.filter(x => x > n))]).filter(([, x]) => isFinite(x)).sort((a, b) => a[1] - b[1]).slice(0, 4);
+  const again = PLAN.tracker.filter(t => topicAgain(t, n)), pn = planPos(n);
+  const later = PLAN.tracker.filter(t => planPos(t.neu[0]) < pn && !topicAgain(t, n) && !t.neu.includes(n))
+    .map(t => [t, t.refresh.filter(x => planPos(x) > pn && planPos(x) < Infinity).sort((a, b) => planPos(a) - planPos(b))[0]]).filter(([, x]) => x).sort((a, b) => planPos(a[1]) - planPos(b[1])).slice(0, 4);
   let prev = null, vor = null;
   for (let p = n - 1; p >= Math.max(1, n - 3); p--) if (dayGet(p).note) { prev = [p, dayGet(p).note]; break; }
   for (let p = n - 1; p >= Math.max(1, n - 3); p--) if (((dayGet(p).refl || {}).next || "").trim()) { vor = [p, dayGet(p).refl.next.trim()]; break; }
@@ -9947,9 +10234,10 @@ function planDayHtml(n) {
   const stages = dayStages(n), stepOf = k => d.steps.find(x => x.key === k);
   const blocks = stages.filter(x => x.step), weakAt = (blocks.find(x => x.key === "b3") || blocks[blocks.length - 1] || {}).key || "prep";
   const head = `<div class="daynav"><button class="btn ghost small" type="button" data-pact="home">← Alle Tage</button>
-      <div class="row"><button class="btn ghost small" type="button" data-pact="day" data-n="${n - 1}" ${n <= 1 ? "disabled" : ""}>‹ Tag ${n - 1}</button>
-      <button class="btn ghost small" type="button" data-pact="day" data-n="${n + 1}" ${n >= PLAN_N ? "disabled" : ""}>Tag ${n + 1} ›</button></div></div>
-    <div class="card dayhead"><div class="card-head"><div><div class="muted small">Tag ${n} von ${PLAN_N} · Woche ${Math.ceil(n / 7)} · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
+      <div class="row">${(() => { const inMine = planCustomOn() && planPos(n) < Infinity, pv = inMine ? planPrev(n) : n - 1, nx = inMine ? planNext(n) : n + 1;   // Tag ausserhalb des persönlichen Plans: Nachbartage
+        return `<button class="btn ghost small" type="button" data-pact="day" data-n="${pv}" ${pv < 1 ? "disabled" : ""}>‹ ${pv >= 1 ? `Tag ${pv}` : "Anfang"}</button>
+      <button class="btn ghost small" type="button" data-pact="day" data-n="${nx}" ${!nx || nx > PLAN_N ? "disabled" : ""}>${nx && nx <= PLAN_N ? `Tag ${nx}` : "Ende"} ›</button>`; })()}</div></div>
+    <div class="card dayhead"><div class="card-head"><div><div class="muted small">Tag ${n} von ${PLAN_N}${planCustomOn() && planPos(n) < Infinity ? ` · Schritt ${planPos(n) + 1} von ${planOrder().length} in deinem Plan` : ` · Woche ${Math.ceil(n / 7)}`} · Phase ${ph.id}: ${esc(ph.name)}</div><h2 style="font-size:1.3rem">${esc(d.title)}</h2></div>
       <div class="row">${levelBadge(lv)}${d.mode ? `<span class="tag">${esc(modeText(d))}</span>` : ""}${d.kennzahlen ? '<span class="badge">★ Kennzahlen-Tag</span>' : ""}${st.role && st.role !== "none" ? `<span class="tag">+ ${ROLE_SHORT[st.role]}</span>` : ""}${st.done ? `<span class="badge" style="background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good-text)">✓ erledigt ${fmtDate(st.done)}</span>` : n === cur ? '<span class="badge">nächster Tag</span>' : ""}</div></div>
       ${d.heute ? `<div class="heute"><b>Worum geht es heute?</b> ${linkify(esc(d.heute), seenD)}</div>` : ""}
       ${dayStepperHtml(n, stages)}
@@ -9979,7 +10267,7 @@ function planDayHtml(n) {
     + `<div class="dend">${autoRateHtml(n)}
       ${reflectionHtml(n)}
       <label class="mt">Zwei Sätze: Was lief gut? Was kommt morgen wieder?<textarea id="dayNote" data-n="${n}" placeholder="Deine Notiz …">${esc(st.note)}</textarea></label>
-      <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${n < PLAN_N ? `<button class="btn" type="button" data-pact="day" data-n="${n + 1}">Weiter zu Tag ${n + 1} →</button>` : ""}`
+      <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${(() => { const nx = planCustomOn() && planPos(n) < Infinity ? planNext(n) : n + 1; return nx && nx <= PLAN_N ? `<button class="btn" type="button" data-pact="day" data-n="${nx}">Weiter zu Tag ${nx} →</button>` : ""; })()}`
         : `<button class="btn" type="button" data-pact="complete" data-n="${n}">${icon("check")}Tag ${n} abschliessen</button>`}</div></div>`;
   const body = stages.map((s, i) => {
     if (s.key === "prep") return stageHtml(n, s, i, prep, "Worauf es heute ankommt, Lektion, Start");
@@ -9987,7 +10275,8 @@ function planDayHtml(n) {
     if (s.key === "carry") { const items = carryFor(n); return stageHtml(n, s, i, `<p class="lead" style="margin:0">Diese Blöcke sind von früheren Tagen offen geblieben und automatisch hier eingeplant.</p><div class="psteps">${items.map(carryStepHtml).join("")}</div>`, `${plural(items.length, "Block", "Blöcke")} aus früheren Tagen`); }
     return stageHtml(n, s, i, end, "Aufschreiben, Wissens-Check, Rückblick, Tag abschliessen");
   }).join("");
-  return head + body;
+  const pcNote = planCustomOn() && d.deep && planPos(n - 1) === Infinity && !dayGet(n - 1).done ? `<div class="note info"><span class="ni" aria-hidden="true">i</span><div>Dieses Thema sitzt laut deinem Fragebogen schon, deshalb gibt es in deinem persönlichen Plan nur den Vertiefen-Tag. Er prüft, ob es wirklich sitzt. Wo «gestern» steht, ist das Thema dieses Tages gemeint (Tag ${n - 1}: ${esc(PLAN.days[n - 2].title)}).</div></div>` : "";
+  return head + pcNote + body;
 }
 
 // ---------- Eigener Pool: Heldennamen im Plan ----------
@@ -10480,7 +10769,7 @@ function planLive() {
   return out.sort((a, b) => a.at - b.at);
 }
 // Erster offener Plantag ab einem Datum (an einem Datum abgeschlossene Tage übersprungen)
-const planOpenAfter = date => { let n = guessPlanDay(date); while (n && n < PLAN_N && dayGet(n).done) n++; return n; };
+const planOpenAfter = date => { let n = guessPlanDay(date); while (n && dayGet(n).done && planNext(n)) n = planNext(n); return n; };
 // Matches, die nicht für die Blöcke zählen: selbst markiert als Vorbereitung oder Lektion («prep») oder als kein Training («none»)
 const planSkip = m => m.stepPick === "prep" || m.stepPick === "none";
 // Matches eines Plantags im Fenster w = {since, until, dateOnly}, nach Zeit sortiert. Pro Datum (dateOnly) nur dieses Datum, sonst die letzten zwei
@@ -10630,7 +10919,7 @@ function matchPlanWin(m) {
   here.sort((a, b) => a[1] - b[1]);
   const t = matchTime(m), i = here.findIndex(([, at]) => at >= t);
   if (i >= 0) return { n: here[i][0], since: i ? here[i - 1][1] : 0, until: here[i][1] };
-  return { n: Math.min(PLAN_N, here[here.length - 1][0] + 1), since: here[here.length - 1][1], until: Infinity };
+  return { n: planNext(here[here.length - 1][0]) || here[here.length - 1][0], since: here[here.length - 1][1], until: Infinity };
 }
 // Zu welchem Plantag gehört ein gespieltes Match? Fenster wie bei focusDay: nach dem letzten Abschluss vor dem Match, bis zum Abschluss danach
 function matchDay(m) {
@@ -10691,6 +10980,15 @@ const counterRuleText = r => `Ist ${r.enemy} im Gegnerteam, wechsle auf ${r.hero
 const FOCUS_COMP = /Komposition|Swap|Counterswap|Pick|Hero-Wahl|Heldenwahl|Gegnerteam|wechselst/;
 const FOCUS_ROLE = { Tank: "Vanguard", DPS: "Duelist", Support: "Strategist" };
 const focusRole = pre => { const m = /Du spielst (Tank|DPS|Support)/.exec(pre || ""); return m ? FOCUS_ROLE[m[1]] : myRole(); };
+// Review: zum schwierigsten Gegner ein Konter deiner Rolle aus den Heldenprofilen (nur mit Begründung aus der Quelle)
+function rvNemHint(m) {
+  const e = m.nemesis, role = heroRole(m.hero);
+  if (!e || role === "?") return "";
+  const cs = ((PROF[e] || {}).counter || []).filter(c => heroByName(c.held) && heroRole(c.held) === role && c.held !== m.hero && c.warum && !COUNTER_NOWHY.test(c.warum));
+  const pool = poolHeroes(), c = cs.find(x => pool.includes(x.held)) || cs[0];
+  return c ? `<p class="small rvhint" style="margin-top:6px"><b>Gegen ${esc(e)}</b> hilft in deiner Rolle ${esc(c.held)}. ${esc(counterWhyTxt(c.warum))}</p>`
+    : `<p class="small muted" style="margin:6px 0 0">Für ${esc(e)} nennen die Heldenprofile keinen Konter deiner Rolle mit Begründung.</p>`;
+}
 // Review: Konter-Tipp, wenn in diesem Match ein Gegner war, den laut Quelle ein Held deiner Rolle kontert (und du ihn nicht gespielt hast)
 function rvCounterHint(m) {
   const role = heroRole(m.hero), es = new Set(m.enemies || []);
@@ -10774,16 +11072,16 @@ function ruleText(t) {
 const blocksTicked = n => { const bs = (PLAN.days[n - 1].steps || []).filter(x => /^b\d/.test(x.key)), st = dayGet(n).steps || {}; return bs.length > 0 && bs.every(x => st[x.key]); };
 function guessPlanDay(date) {
   if (!planStarted() || !date || date < state.plan.start) return 0;
-  const laterDone = n => { for (let k = n + 1; k <= PLAN_N; k++) if (dayGet(k).done) return true; return false; };
-  for (let n = 1; n <= PLAN_N; n++) {
-    const d = dayGet(n).done;
+  const o = planOrder(), laterDone = i => o.slice(i + 1).some(k => dayGet(k).done);   // Reihenfolge des aktiven Plans (Standard oder persönlich)
+  for (let i = 0; i < o.length; i++) {
+    const n = o[i], d = dayGet(n).done;
     if (d) {
       if (d < date) continue;
-      let m = n;
-      if (d === date) while (m < PLAN_N && dayGet(m + 1).done === d) m++;   // an einem Tag mehrere Tage erledigt: der letzte zählt
-      return m;
+      let j = i;
+      if (d === date) while (j < o.length - 1 && dayGet(o[j + 1]).done === d) j++;   // an einem Tag mehrere Tage erledigt: der letzte zählt
+      return o[j];
     }
-    if (blocksTicked(n) && laterDone(n)) continue;
+    if (blocksTicked(n) && laterDone(i)) continue;
     return n;
   }
   return 0;
@@ -10796,7 +11094,7 @@ function rulesForDay(n) {
   if (!n) return activeRules();
   const prio = t => { const v = topicAuto(t); return v === 1 ? 0 : v === 0 ? 1 : 2; };
   const main = PLAN.tracker.filter(t => t.neu.includes(n)).map(t => ({ t, spot: false, role: "day" }));
-  const again = PLAN.tracker.filter(t => t.refresh.includes(n) && !t.neu.includes(n)).map(t => ({ t, spot: false, role: "again" }));
+  const again = PLAN.tracker.filter(t => topicAgain(t, n)).map(t => ({ t, spot: false, role: "again" }));
   const used = new Set([...main, ...again].map(r => r.t.id));
   const rest = PLAN.tracker.filter(t => t.neu.some(x => x < n) && !used.has(t.id) && topicAuto(t) < 3)
     .sort((a, b) => prio(a) - prio(b) || Math.min(...b.neu) - Math.min(...a.neu)).map(t => ({ t, spot: false, role: "" }));
@@ -11600,7 +11898,23 @@ document.addEventListener("click", e => {
 // nur Angaben, die man ohne Replay kaum machen kann. Daraus folgen Schwächen pro Held, kleine Missionen und Abzeichen.
 const RV_N = 5, RV_MAX = 8, RV_DAYS = 7, RV_SWAPS = 2;
 const rvState = () => state.rv || (state.rv = { pins: {}, missions: [], badges: {} });
-const rvN = () => { const v = Math.round(+state.settings.reviewN); return v >= 1 && v <= RV_MAX ? v : RV_N; };
+const rvManualN = () => { const v = Math.round(+state.settings.reviewN); return v >= 1 && v <= RV_MAX ? v : RV_N; };
+// Anzahl nach Bedarf (Standard): so viele Matches, wie gerade zu deinen Schwächen passen (offene Notizen, verfehlter Fokus, Missionen, Themen, die
+// oft danebenliegen), dazu die heute schon ausgewerteten; mindestens 2, höchstens 8 und nicht mehr als die Hälfte der Matches mit Replay.
+// Mit − und + stellst du eine feste Zahl ein, «Automatisch» schaltet zurück. Eine Faustregel der App, nicht untersucht.
+const rvAuto = () => state.settings.reviewAuto !== false;
+let rvAutoMemo = null;
+function rvAutoInfo() {
+  const d = today(), k = `${d}|${state.matches.length}|${rvReplayN()}|${rvReplayDays()}|${state.matches.filter(rvDone).length}`;
+  if (rvAutoMemo && rvAutoMemo.k === k && rvAutoMemo.ms === state.matches) return rvAutoMemo.v;
+  const from = addDays(d, -(RV_DAYS - 1)), left = rvReplayLeft(), done = state.matches.filter(m => rvDone(m) && m.review.on === d).length;   // nicht rvDoneForDay (braucht selbst rvN)
+  const avail = state.matches.filter(m => !rvDone(m) && (m.date || "") >= from && (left[m.id] || 0) > RV_SPARE);
+  const weak = avail.length ? rvOrder(avail).filter(x => x.g <= 1).length : 0, cap = Math.max(1, Math.ceil((avail.length + done) / 2));
+  const v = { n: Math.max(1, Math.min(RV_MAX, cap, Math.max(2, weak + done))), weak, done, avail: avail.length };
+  rvAutoMemo = { k, ms: state.matches, v };
+  return v;
+}
+const rvN = () => rvAuto() ? rvAutoInfo().n : rvManualN();
 // Das Spiel behält Replays nur kurz (beobachtet: Matches von heute und gestern; laut Nutzerin höchstens die letzten 40). Beides ist einstellbar,
 // weil die App das Spiel nicht sehen kann. Gezählt werden die Matches in der App, neueste zuerst. Neue Vorschläge brauchen bei der
 // Anzahl etwas Reserve (RV_SPARE), weil der Abgleich hinterherhinkt. Ein angefangenes Match, dessen Replay weg ist, fällt ohne Wechsel weg.
@@ -11871,37 +12185,43 @@ function rvMatchHtml(x, open, L) {
     <span class="rvtags">${reasons.filter(r => r.k !== "lost").map(r => `<span class="rvtag ${r.k}">${esc(r.label)}</span>`).join("")}${rvLeftTag(L && L.left ? L.left[m.id] : 0, m)}</span></button>`;
   if (!open) return `<div class="rvm" data-m="${m.id}">${head}</div>`;
   const why = reasons.filter(r => r.text).map(r => `<li>${esc(r.text)}</li>`).join("");
-  const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4, fxIt = fxForMatch(m);
+  const preset = d > 0 && got >= d && (m.goods || []).length && rvWords(m.next) >= 4, fxIt = fxForMatch(m), stepIt = fxIt.some(it => it.src === "step");
+  const swap = swapHeroes(m), bhAct = swap.includes(bhActive[m.id]) ? bhActive[m.id] : (swap.includes(m.hero) ? m.hero : swap[0]);
+  // Reihenfolge (Wunsch der Nutzerin): zuerst die Aufgabe des Tages und der schwierigste Gegner, dann Tode, Ults, Probleme, Stärken, Vorsatz
+  let sn = 0; const num = () => ++sn;
   return `<div class="rvm open" data-m="${m.id}">${head}<div class="rvb">
     ${why ? `<ul class="wl small" style="margin:0">${why}</ul>` : ""}
     ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
     ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
     ${rvNoteHtml(m)}${rvCounterHint(m)}
-    <div class="rvs"><h4><span class="rvn">1</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
-      ${d ? `${deathGridHtml(m.hero, m.deathCauses, l => { const n = (m.deathCauses || {})[l] || 0;
-        return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; })}${ultPickHtml("r:" + m.id, ultDeathN(m.deathCauses), m.ultDeaths || {}, m.enemies)}` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit Schritt 2.</p>`}
-    </div>
-    <div class="rvs"><h4><span class="rvn">2</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}</span></h4>
-      <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
-      <details class="small" style="margin-top:4px"><summary>Wann zählt eine Ult «mit Wirkung»?</summary><p style="margin:4px 0 0">${esc(PLAN.notes.ultIntro)}</p><ul class="wl" style="margin:4px 0 0">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Teilweise Wirkung zählt ½. Keine Ult eingesetzt? Dann trag 0 ein.</p></details></div>
-    ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">3</span>${fxIt.some(it => it.src === "step") ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${fxIt.some(it => it.src === "step") ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
+    ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>${stepIt ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${stepIt ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
       (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<label class="small fxwhy">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>`
         : fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
     ${rvPickHtml(m, fxIt)}
-    ${rvProbStepHtml(m, fxIt.length ? 4 : 3)}
-    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 5 : 4}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
+    ${(m.enemies || []).length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>Wer hat dir am meisten Probleme gemacht? <span class="small muted">freiwillig, für Konter-Tipps und den Überblick über deine schwierigsten Gegner</span></h4>
+      <div class="chips">${m.enemies.map(h => `<button type="button" class="chip ${m.nemesis === h ? "on" : ""}" data-rv="nem" data-id="${m.id}" data-h="${esc(h)}" aria-pressed="${m.nemesis === h}">${av(h, "sm")} ${esc(h)}</button>`).join("")}</div>${rvNemHint(m)}</div>` : ""}
+    <div class="rvs"><h4><span class="rvn">${num()}</span>Tode zuordnen <span class="small muted">${d ? `${Math.min(got, d)} von ${d}` : "keine Tode"}</span></h4>
+      ${swap.length && (d || (m.ults ?? 0)) ? bhHtml("r:" + m.id, swap, m.byHero, bhAct, got) : ""}
+      ${d ? `${deathGridHtml(m.hero, m.deathCauses, l => { const n = (m.deathCauses || {})[l] || 0;
+        return `<span class="dwrap ${n ? "on" : ""}"><button type="button" class="dbtn" data-rv="death" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal mehr">${esc(l)}<b class="dcount">${n || ""}</b></button>${n ? `<button type="button" class="ddec" data-rv="dec" data-id="${m.id}" data-l="${esc(l)}" aria-label="${esc(l)}, einmal weniger">−</button>` : ""}</span>`; })}${ultPickHtml("r:" + m.id, ultDeathN(m.deathCauses), m.ultDeaths || {}, m.enemies)}` : `<p class="small muted" style="margin:0">In diesem Match bist du nie gestorben. Weiter mit dem nächsten Schritt.</p>`}
+    </div>
+    <div class="rvs"><h4><span class="rvn">${num()}</span>Ults <span class="small muted">${m.ults === null || m.ults === undefined ? "freiwillig, für deine Ult-Wirkung" : `${numDe(m.ultHit ?? 0)} von ${m.ults} mit Wirkung`}${swap.length ? ` · zählt für ${esc(bhAct)}` : ""}</span></h4>
+      <div class="qnsteps">${rvUltStep(m, "ults", "eingesetzt")}${rvUltStep(m, "ultHit", "mit Wirkung")}</div>
+      <details class="small" style="margin-top:4px"><summary>Wann zählt eine Ult «mit Wirkung»?</summary><p style="margin:4px 0 0">${esc(PLAN.notes.ultIntro)}</p><ul class="wl" style="margin:4px 0 0">${PLAN.notes.ult.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Teilweise Wirkung zählt ½. Keine Ult eingesetzt? Dann trag 0 ein.</p></details></div>
+    ${rvProbStepHtml(m, num())}
+    <div class="rvs"><h4><span class="rvn">${num()}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
-    <div class="rvs"><h4><span class="rvn">${fxIt.length ? 6 : 5}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
+    <div class="rvs"><h4><span class="rvn">${num()}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
       <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
       ${(() => { const own = Object.entries(m.probs || {}).filter(([l]) => (m.mistakes || []).includes(l)).map(([, p]) => String(p.fix || "").trim()).filter(Boolean), ideas = [...new Set([...own, ...fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …")])]; return ideas.length ? `<details class="small" style="margin-top:4px" ${own.length ? "open" : ""}><summary>Ideen aus ${own.length ? "deinen Problem-Notizen und " : ""}deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
     <div class="rvfoot rvs" data-foot="${m.id}">${rvFootHtml(m, L)}</div></div></div>`;
 }
-// Reihenfolge fürs Review (Wunsch der Nutzerin): 1) Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten, die Notiz ist der
-// Ausgangspunkt), 2) Matches, die zu deinen Schwächen passen (Themen, die bei dir gerade oft danebenliegen, offene Missionen, verfehlter Fokus),
-// 3) alle anderen. Innerhalb der Gruppe zuerst das Replay, das am frühesten verschwindet; bei den Schwächen zuerst das deutlichste.
-// Die Tagespflicht nimmt die ersten Matches aus dieser Reihenfolge, alle weiteren kannst du freiwillig auswerten.
+// Reihenfolge fürs Review (Wunsch der Nutzerin): zuerst ältere Matches (früheres Datum, deren Replay bald verschwindet), auch wenn ein neues
+// schwächere Werte hat; am selben Tag zuerst Helden aus deinem Pool, dann 1) Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten,
+// die Notiz ist der Ausgangspunkt), 2) Matches, die zu deinen Schwächen passen (Themen, die gerade oft danebenliegen, offene Missionen, verfehlter
+// Fokus), 3) alle anderen; bei den Schwächen zuerst das deutlichste. Die Tagespflicht nimmt die ersten Matches aus dieser Reihenfolge.
 const RV_GROUPS = [
   ["note", "Mit Notiz, noch nicht ausgewertet", "Am schnellsten: Deine Notiz ist der Ausgangspunkt, du ergänzt nur, was du im Replay siehst."],
   ["weak", "Passt zu deinen Schwächen", "Themen, die bei dir gerade oft danebenliegen, offene Missionen oder ein verfehlter Fokus."],
@@ -11912,15 +12232,15 @@ function rvWeakKinds() {
   return strong.length ? strong : ["death", "low", "ult"];   // solange nichts hervorsticht, zählen schwache Werte als Schwäche
 }
 function rvOrder(cands) {
-  const ctx = rvCtx(), F = rvFocus(), weakK = rvWeakKinds(), left = rvReplayLeft();
+  const ctx = rvCtx(), F = rvFocus(), weakK = rvWeakKinds(), left = rvReplayLeft(), pool = new Set(poolHeroes());
   const mis = new Set(rvState().missions.filter(x => x.status === "open").map(x => `${x.hero}|${x.wid === "cause" ? "death" : x.wid === "enemy" ? "counter" : x.wid}`));
   return cands.map(m => {
     const reasons = rvReasons(m, ctx), weak = reasons.filter(r => r.k === "focus" || weakK.includes(r.k) || mis.has(`${m.hero}|${r.k}`));
     const g = m.qn && m.qn.noted ? 0 : weak.length ? 1 : 2;
     // Schwächen: nach Deutlichkeit; alle anderen: auffällige Matches (Tode, Counter, Vorbild …) vor ganz normalen
     const sev = g === 1 ? weak.reduce((a, r) => a + r.sev * (F.w[r.k] || 1), 0) : g === 2 ? reasons.reduce((a, r) => a + r.sev, 0) : 0;
-    return { m, reasons, g, weak, sev, left: left[m.id] || 0 };
-  }).sort((a, b) => a.g - b.g || b.sev - a.sev || a.left - b.left || matchTime(b.m) - matchTime(a.m));
+    return { m, reasons, g, weak, sev, left: left[m.id] || 0, pool: pool.has(m.hero) ? 0 : 1 };
+  }).sort((a, b) => (a.m.date || "").localeCompare(b.m.date || "") || a.pool - b.pool || a.g - b.g || b.sev - a.sev || a.left - b.left || matchTime(a.m) - matchTime(b.m));
 }
 // Alle Matches, die noch ausgewertet werden können (Replay noch da), ohne die Tagesauswahl
 function rvExtra() {
@@ -11958,9 +12278,11 @@ function rvCardHtml() {
     <div class="rvlist">${items.map(x => rvMatchHtml(x, cur && x.m.id === cur.m.id, L)).join("")}</div>
     ${doneList}
     ${rvFocusHtml()}
-    <div class="row small muted" style="gap:8px;align-items:center">Matches pro Tag:
+    <div class="row small muted" style="gap:8px;align-items:center">Matches pro Tag: ${rvAuto() ? "automatisch" : "fest"}
       <button type="button" class="btn ghost small" data-rv="n-" aria-label="Eins weniger" ${L.n <= 1 ? "disabled" : ""}>−</button><b>${L.n}</b>
-      <button type="button" class="btn ghost small" data-rv="n+" aria-label="Eins mehr" ${L.n >= RV_MAX ? "disabled" : ""}>+</button></div>
+      <button type="button" class="btn ghost small" data-rv="n+" aria-label="Eins mehr" ${L.n >= RV_MAX ? "disabled" : ""}>+</button>
+      ${rvAuto() ? "" : `<button type="button" class="linkbtn small" data-rv="nauto">Automatisch</button>`}</div>
+    ${rvAuto() ? (() => { const a = rvAutoInfo(); return `<p class="small muted" style="margin:0">Nach Bedarf: ${a.weak ? `${plural(a.weak, "Match passt", "Matches passen")} gerade zu deinen Schwächen` : "gerade passt kein Match deutlich zu deinen Schwächen"}${a.done ? `, ${a.done} heute schon ausgewertet` : ""}. Mindestens 2, höchstens ${RV_MAX}, nie mehr als die Hälfte der Matches mit Replay. Mit − und + stellst du eine feste Zahl ein.</p>`; })() : ""}
     <div class="row small muted" style="gap:8px;align-items:center">Replays im Spiel: ${rvReplayDaysLabel(rvReplayDays())}
       <button type="button" class="btn ghost small" data-rv="d-" aria-label="Einen Tag weniger" ${rvReplayDays() <= 1 ? "disabled" : ""}>−</button>
       <button type="button" class="btn ghost small" data-rv="d+" aria-label="Einen Tag mehr" ${rvReplayDays() >= RV_RDAYS_MAX ? "disabled" : ""}>+</button></div>
@@ -11988,14 +12310,21 @@ document.addEventListener("click", e => {
   if (a === "open" && m) { rvUi.open = rvUi.open === m.id ? null : m.id; }
   else if (a === "death" && m) {
     m.deathCauses = m.deathCauses || {};
-    if (deathTotal(m.deathCauses) < (+m.d || 0)) m.deathCauses[b.dataset.l] = (m.deathCauses[b.dataset.l] || 0) + 1;
+    const sw = swapHeroes(m), h = rvBhAct(m, sw);
+    if (deathTotal(m.deathCauses) < (+m.d || 0)) { m.deathCauses[b.dataset.l] = (m.deathCauses[b.dataset.l] || 0) + 1; if (sw.length) m.byHero = bhCause(m.byHero, h, b.dataset.l, 1, sw); }
     else toast("Alle Tode sind schon zugeordnet. Nimm zuerst einen weg (−), wenn du etwas ändern willst.");
     save();
   } else if (a === "dec" && m) {
-    const c = m.deathCauses || {}; if (c[b.dataset.l]) { c[b.dataset.l]--; if (c[b.dataset.l] <= 0) delete c[b.dataset.l]; } if (m.ultDeaths) ultTrim(m.ultDeaths, ultDeathN(c)); save();
+    const c = m.deathCauses || {}, sw = swapHeroes(m);
+    if (c[b.dataset.l]) { c[b.dataset.l]--; if (c[b.dataset.l] <= 0) delete c[b.dataset.l]; if (sw.length) m.byHero = bhCause(m.byHero, rvBhAct(m, sw), b.dataset.l, -1, sw); }
+    if (m.ultDeaths) ultTrim(m.ultDeaths, ultDeathN(c)); save();
+  } else if (a === "nem" && m) {
+    m.nemesis = m.nemesis === b.dataset.h ? "" : b.dataset.h; save();
   } else if ((a === "u+" || a === "u-") && m) {
     const f = b.dataset.f, step = f === "ultHit" ? 0.5 : 1, has = m[f] !== null && m[f] !== undefined;
     const v = a === "u+" ? (has ? m[f] + step : step) : Math.max(0, (has ? m[f] : 0) - step);
+    const sw = swapHeroes(m);
+    if (sw.length && v !== (has ? m[f] : 0)) m.byHero = bhUlt(m.byHero, rvBhAct(m, sw), f, a === "u+" ? step : -step, sw);
     m[f] = v;
     if (f === "ultHit" && (m.ults ?? 0) < v) m.ults = Math.ceil(v);
     if (f === "ults" && m.ultHit !== null && m.ultHit !== undefined && m.ultHit > v) m.ultHit = v;
@@ -12016,7 +12345,8 @@ document.addEventListener("click", e => {
     const g = b.dataset.g, list = m.goods || (m.goods = []); const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); save();
   } else if (a === "finish" && m) { if (!rvFinish(m)) return; }
   else if (a === "swap" && m) { rvSwap(m); save(); }
-  else if (a === "n-" || a === "n+") { state.settings.reviewN = Math.min(RV_MAX, Math.max(1, rvN() + (a === "n+" ? 1 : -1))); save(); }
+  else if (a === "n-" || a === "n+") { state.settings.reviewN = Math.min(RV_MAX, Math.max(1, rvN() + (a === "n+" ? 1 : -1))); state.settings.reviewAuto = false; save(); }
+  else if (a === "nauto") { state.settings.reviewAuto = true; save(); }
   else if (a === "d-" || a === "d+") { state.settings.replayDays = Math.min(RV_RDAYS_MAX, Math.max(1, rvReplayDays() + (a === "d+" ? 1 : -1))); save(); }
   else if (a === "r-" || a === "r+") { state.settings.replayN = Math.min(RV_REPLAYS_MAX, Math.max(RV_REPLAYS_MIN, rvReplayN() + (a === "r+" ? 5 : -5))); save(); }
   else return;
@@ -12045,8 +12375,150 @@ function renderReview() {
     ${rvExtraHtml()}
     ${rvCauseCardHtml()}
     ${rvProbCardHtml()}
+    ${txCardHtml()}
     ${badgesHtml()}`;
 }
+// ---------- Was du schreibst: Muster in deinen Texten ----------
+// Wunsch der Nutzerin: Die App liest, was du schreibst (Notiz nach dem Match, Vorsatz, «Warum» und «Wie umgesetzt» im Review, Problem-Notizen,
+// Tagesnotiz und Rückblick), erkennt wiederkehrende Themen und schlägt dazu Lektionen, Lexikon-Einträge und Übungen aus dem Plan vor. Zwei Wege:
+// Wortlisten (immer, ohne KI) und, in deiner privaten Version, eine Auswertung durch Claude (Fähigkeit «sample»), die nur aus dem Katalog der
+// vorhandenen Themen, Lektionen und Übungen wählt und Aufgaben aus deinen eigenen Worten formuliert. Keine neuen Spielfakten; Zitate werden geprüft.
+const TX_KW = [
+  [2, /zu weit vor|vorgelaufen|vorne gestanden|positio|deckung|cover|allein|ohne (mein )?team|getrennt/i],
+  [3, /\bults?\b|ulti/i],
+  [4, /heil|heal|priorit/i],
+  [5, /aggro|schaden|damage|\bdmg\b/i],
+  [6, /counter|swap|gewechselt|wechseln|komposition|\bcomp\b/i],
+  [7, /tilt|frust|wütend|genervt|nervös|kommunik|\bcalls?\b|voice|\bping/i],
+  [10, /\bdive|gedived|flank|von hinten|hinter mich/i],
+  [14, /\bfights?\b|tempo|\breset|regroup/i],
+  [15, /\baim|getroffen|treffen|verfehlt|daneben/i],
+  [16, /cooldown|fähigkeit|\bskill|movement|\bdash/i],
+  [18, /müde|konzentr|pause|lange session|im kopf/i]
+];
+function txTexts(days) {
+  const from = addDays(today(), -(days || 30)), out = [], add = (date, src, t) => { t = String(t || "").trim(); if (t.length >= 4 && (date || "") >= from) out.push({ date, src, t }); };
+  state.matches.forEach(m => {
+    add(m.date, "Notiz", m.notes); add(m.date, "Vorsatz", m.next);
+    Object.entries(m.probs || {}).forEach(([l, p]) => ["what", "why", "fix"].forEach(k => add(m.date, `Problem «${l}»`, (p || {})[k])));
+    Object.values((m.qn || {}).fxWhy || {}).forEach(t => add(m.date, "Aufgabe im Review", t));
+  });
+  Object.keys(state.plan.days || {}).forEach(n => { const d = state.plan.days[n] || {}; add(d.done, `Tagesnotiz Tag ${n}`, d.note); if (d.refl) Object.values(d.refl).forEach(t => typeof t === "string" && add(d.done, `Rückblick Tag ${n}`, t)); });
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+// Wortlisten: Themen, die in mindestens zwei Texten vorkommen, mit deinen Zitaten und passenden Inhalten aus dem Plan
+function txInsights() {
+  const texts = txTexts(30), hits = {};
+  texts.forEach(x => TX_KW.forEach(([id, re]) => { if (re.test(x.t)) (hits[id] = hits[id] || []).push(x); }));
+  return Object.entries(hits).filter(([, l]) => l.length >= 2).sort((a, b) => b[1].length - a[1].length).slice(0, 3).map(([id, l]) => {
+    const t = PLAN.tracker.find(x => String(x.id) === String(id));
+    return t ? { t, n: l.length, quotes: l.slice(-2).reverse(), ...txContent(t) } : null;
+  }).filter(Boolean);
+}
+// Inhalte zu einem Thema: Lektion (aus den Tagen, an denen das Thema neu ist), Lexikon-Einträge und die gezielte Übung
+function txContent(t) {
+  // Führt ein Tag mehrere Themen ein, gehören seine Lektionen nicht alle zu diesem Thema: dann nur die, deren Titel zum Thema passt
+  const re = (TX_KW.find(([id]) => String(id) === String(t.id)) || [])[1], fit = (ids, title) => { const f = re ? ids.filter(id => re.test(title(id) || "")) : []; return f.length ? f : ids; };
+  const lessons = fit([...new Set(t.neu.flatMap(n => dayLessons(n)))], id => (lessonById(id) || {}).title).slice(0, 2), lex = fit(topicLessonIds(t), id => (wissenById(id) || {}).title).slice(0, 2), pr = PRACTICE[t.id];
+  return { lessons, lex, practice: pr ? pr.task : "" };
+}
+const txQuote = x => `«${esc(x.t.length > 120 ? x.t.slice(0, 117) + " …" : x.t)}» <span class="muted">(${esc(x.src)}, ${fmtDate(x.date)})</span>`;
+function txActions(lessons, lex, task) {
+  return `<div class="row" style="gap:6px;margin-top:4px">${lessons.map(id => `<button class="btn small ghost" type="button" data-lesson="${esc(id)}">Lektion: ${esc((lessonById(id) || {}).title || id)}</button>`).join("")}
+    ${lex.map(id => `<button class="btn small ghost" type="button" data-pact="wissen" data-l="${esc(id)}">Lexikon: ${esc((wissenById(id) || {}).title || id)}</button>`).join("")}
+    ${task ? `<button class="btn small" type="button" data-txfocus="${esc(task)}">Als Fokus fürs nächste Match</button>` : ""}</div>`;
+}
+const txAi = { busy: false, err: "", ctl: null, ok: null, avail: false };
+// Claude-Auswertung nur, wo die Seite die Fähigkeit «sample» hat (deine private Version in der Claude-App); sonst kein Knopf
+if (IN_VIEWER) window.claude.use("sample").then(x => { txAi.avail = !!x; if (x && currentTabSafe() === "review") rvRerender(); }).catch(() => { txAi.avail = false; });
+function txCardHtml() {
+  const ins = txInsights(), ai = state.textAi, n = txTexts(30).length;
+  if (!n && !ai) return "";
+  return `<div class="card txcard"><div class="card-head"><h2>${icon("edit")}Was du schreibst</h2><span class="badge">${plural(n, "Text", "Texte")} in 30 Tagen</span></div>
+    <p class="small muted" style="margin:0 0 8px">Die App liest deine Notizen, Vorsätze, Begründungen im Review und Tagesnotizen und sucht Themen, die immer wieder vorkommen. Dazu schlägt sie Lektionen, Lexikon-Einträge und Übungen aus dem Plan vor.</p>
+    ${ins.length ? ins.map(x => `<div class="txtheme"><b>${esc(x.t.topic)}</b> <span class="small muted">${x.n}× in deinen Texten</span>
+      <ul class="wl small" style="margin:4px 0 0">${x.quotes.map(q => `<li>${txQuote(q)}</li>`).join("")}</ul>
+      ${x.practice ? `<p class="small" style="margin:4px 0 0"><b>Übung aus dem Plan:</b> ${esc(x.practice)}</p>` : ""}${txActions(x.lessons, x.lex, x.practice)}</div>`).join("")
+      : `<p class="small muted" style="margin:0">Noch kein Thema kommt mindestens zweimal vor. Je mehr du in Notiz und Review schreibst, desto genauer wird es.</p>`}
+    ${txAiHtml()}</div>`;
+}
+function txAiHtml() {
+  const ai = state.textAi;
+  if ((!txAi.avail || txAi.ok === false) && !(ai && ai.themes && ai.themes.length)) return "";
+  const res = ai && ai.themes && ai.themes.length ? `<div class="txai"><div class="small"><b>Auswertung von Claude</b> <span class="muted">vom ${fmtDT(ai.at)}${ai.n ? `, ${plural(ai.n, "Text", "Texte")}` : ""}</span></div>
+    ${ai.summary ? `<p class="small" style="margin:4px 0">${esc(ai.summary)}</p>` : ""}
+    ${ai.themes.map(th => `<div class="txtheme"><b>${esc(th.title)}</b>${th.topic ? ` <span class="small muted">Thema im Plan: ${esc(th.topic)}</span>` : ""}
+      ${th.quotes.length ? `<ul class="wl small" style="margin:4px 0 0">${th.quotes.map(q => `<li>«${esc(q)}»</li>`).join("")}</ul>` : ""}
+      ${th.task ? `<p class="small" style="margin:4px 0 0"><b>Aufgabe aus deinen Worten:</b> ${esc(th.task)}</p>` : ""}
+      ${th.practice.map(id => PRACTICE[id] ? `<p class="small" style="margin:4px 0 0"><b>Übung aus dem Plan:</b> ${esc(PRACTICE[id].task)}</p>` : "").join("")}
+      ${txActions(th.lessons, th.lex, th.task)}</div>`).join("")}</div>` : "";
+  if (!txAi.avail) return res;
+  if (txAi.ok === false) return res + (txAi.err ? `<p class="small muted" style="margin:8px 0 0">${esc(txAi.err)}</p>` : "");   // nicht freigegeben: kein Knopf mehr
+  return `${res}<div class="row small" style="gap:8px;margin-top:8px;align-items:center">
+    <button class="btn small ${ai ? "ghost" : ""}" type="button" data-txai="run" ${txAi.busy ? "disabled" : ""}>${txAi.busy ? "Claude liest …" : ai ? "Neu auswerten lassen" : "Mit Claude auswerten"}</button>
+    ${txAi.busy ? `<button class="linkbtn small" type="button" data-txai="stop">Abbrechen</button>` : ""}
+    <span class="muted">${txAi.err ? esc(txAi.err) : "Claude liest deine Texte der letzten 45 Tage und wählt nur aus den Lektionen und Übungen der App. Läuft über dein Claude-Konto, beim ersten Mal fragt die App um Erlaubnis."}</span></div>`;
+}
+async function txAiRun() {
+  const sample = IN_VIEWER ? await window.claude.use("sample") : null;
+  if (!sample) { txAi.ok = false; txAi.err = "Die Auswertung mit Claude geht nur in deiner Version in der Claude-App."; rvRerender(); return; }
+  const texts = txTexts(45);
+  if (texts.length < 3) { txAi.err = "Dafür braucht es mindestens drei Texte."; rvRerender(); return; }
+  let body = "", used = 0;
+  for (const x of texts.slice().reverse()) { const line = `[${x.date} · ${x.src}] ${x.t.replace(/\s+/g, " ").slice(0, 400)}\n`; if (body.length + line.length > 14000) break; body = line + body; used++; }
+  const cat = { topics: PLAN.tracker.map(t => ({ id: String(t.id), topic: t.topic })), lessons: LESSONS.map(l => ({ id: l.id, title: l.title })),
+    lexikon: [...new Set(PLAN.tracker.flatMap(t => topicLessonIds(t)))].map(id => ({ id, title: (wissenById(id) || {}).title || id })), practice: Object.entries(PRACTICE).map(([id, p]) => ({ id: String(id), task: p.task })) };
+  const prompt = `Du hilfst einer Spielerin von Marvel Rivals, Muster in ihren eigenen Notizen zu finden. Unten stehen ihre Texte der letzten Wochen (Notizen nach Matches, Vorsätze, Begründungen aus dem Review, Tagesnotizen) und ein Katalog mit Themen, Lektionen, Lexikon-Einträgen und Übungen der App.
+
+Aufgabe: Finde höchstens 4 Themen, die in ihren Texten wiederholt vorkommen (mindestens zweimal). Für jedes Thema:
+- title: kurzer Name auf Deutsch (Schweizer Schreibung, nie «ß»)
+- quotes: 1 bis 2 Zitate aus ihren Texten, Wort für Wort kopiert (ohne Datum und Quelle in eckigen Klammern)
+- topicId: die passendste id aus «topics» oder null
+- lessonIds: bis zu 2 ids aus «lessons», die wirklich dazu passen
+- lexIds: bis zu 2 ids aus «lexikon»
+- practiceIds: höchstens 1 id aus «practice»
+- task: eine Aufgabe fürs nächste Match als Wenn-dann-Satz, formuliert aus ihren eigenen Worten
+Dazu summary: ein Satz, was in ihren Texten am meisten auffällt.
+
+Regeln: Erfinde keine Spielfakten (keine Zahlen, Fähigkeiten, Abklingzeiten oder Konter), die nicht in ihren Texten oder im Katalog stehen. Verwende nur ids aus dem Katalog. Du-Form.
+
+Antworte nur mit JSON in dieser Form:
+{"summary": "…", "themes": [{"title": "…", "quotes": ["…"], "topicId": "2", "lessonIds": ["l3"], "lexIds": ["L2"], "practiceIds": ["2"], "task": "Wenn …, dann …"}]}
+
+KATALOG:
+${JSON.stringify(cat)}
+
+IHRE TEXTE:
+${body}`;
+  txAi.busy = true; txAi.err = ""; txAi.ctl = new AbortController(); rvRerender();
+  try {
+    const r = await sample.json(prompt, { signal: txAi.ctl.signal });
+    const all = texts.map(x => x.t).join("\n"), norm = q => String(q || "").replace(/\s+/g, " ").trim(), allN = norm(all);
+    const ids = (l, ok) => (Array.isArray(l) ? l : []).map(String).filter(ok);
+    const themes = (r && Array.isArray(r.themes) ? r.themes : []).slice(0, 4).map(th => {
+      const t = PLAN.tracker.find(x => String(x.id) === String(th.topicId));
+      return { title: String(th.title || "").slice(0, 80), topic: t ? t.topic : "", quotes: (Array.isArray(th.quotes) ? th.quotes : []).map(norm).filter(q => q.length >= 4 && allN.includes(q)).slice(0, 2),
+        lessons: ids(th.lessonIds, id => !!lessonById(id)).slice(0, 2), lex: ids(th.lexIds, id => cat.lexikon.some(x => x.id === id)).slice(0, 2),
+        practice: ids(th.practiceIds, id => !!PRACTICE[id]).slice(0, 1), task: String(th.task || "").replace(/ß/g, "ss").slice(0, 220) };
+    }).filter(th => th.title);
+    state.textAi = { at: new Date().toISOString(), n: used, summary: String((r && r.summary) || "").replace(/ß/g, "ss").slice(0, 300), themes };
+    save(); txAi.ok = true;
+  } catch (e) {
+    const c = e && e.code;
+    txAi.err = c === "cancelled" ? "" : c === "not_granted" || c === "sampling_disabled" || c === "not_declared" ? "Claude ist für diese Seite nicht freigegeben." : c === "rate_limited" ? "Gerade zu viele Anfragen. Versuch es später noch einmal." : c === "invalid_json" ? "Die Antwort liess sich nicht lesen. Versuch es noch einmal." : "Das hat nicht geklappt. Versuch es später noch einmal.";
+    if (c === "not_granted" || c === "sampling_disabled" || c === "not_declared") txAi.ok = false;
+  } finally { txAi.busy = false; txAi.ctl = null; rvRerender(); }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-txai],[data-txfocus]") : null; if (!b) return;
+  if (b.dataset.txai === "run" && !txAi.busy) txAiRun();
+  else if (b.dataset.txai === "stop" && txAi.ctl) txAi.ctl.abort();
+  else if (b.dataset.txfocus) {   // als eigenes Ziel fürs nächste Match (zählt zu den höchstens drei Punkten)
+    const all = fxAll(today()), keep = fxSelKeys(all).filter(k => k !== "own" && !k.startsWith("step:")).slice(0, FX_MAX - 2);
+    state.focusSel = Object.assign({}, state.focusSel, { own: b.dataset.txfocus, keys: [...keep, "own"], d: today(), v: 2 });
+    save(); toast("Steht jetzt als «Eigenes Ziel» in deinem Fokus fürs nächste Match."); rvRerender();
+  }
+});
 // Woran du in den ausgewerteten Matches stirbst
 function rvCauseCardHtml() {
   const ms = state.matches.filter(rvDone).slice(-30), ds = deathStats(ms);
@@ -13445,6 +13917,71 @@ const WATCH_STREAMERS = [
   { n: "Kragie", rs: ["Duelist"], h: ["Hela", "The Punisher", "Star-Lord"], tw: "kragiee", yt: "", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" },
   { n: "Rigsychu", rs: ["Duelist"], h: ["Elsa Bloodstone", "Psylocke", "Phoenix"], tw: "rigsychu", yt: "@rigsychu", note: "Laut Liquipedia aktiv als Content Creator.", src: "Liquipedia" }
 ];
+// Konkrete Guide-Videos pro Held (Wunsch der Nutzerin). Ausgewählt am WATCH_VID_STAND aus der YouTube-Suche «Marvel Rivals <Held> guide»
+// (und «… guide deutsch») nach festen Regeln: Heldenname, «Rivals» und ein Guide-Wort im Titel, 4 bis 45 Minuten, keine Tierlisten, News oder
+// Einstellungs-Videos, genug Aufrufe, möglichst neu (zuerst höchstens 6, dann 12 Monate; nur wenn nichts Neueres da ist, ein älteres Video),
+// pro Kanal höchstens ein Video. Titel und Kanal stammen aus dem oEmbed-Dienst von YouTube (Originaltitel; die Suche übersetzt Titel
+// automatisch, deshalb zählt «Deutsch» nur, wenn der Originaltitel deutsch ist). m = ungefährer Upload-Monat aus «vor x Monaten»,
+// leer = über ein Jahr alt. Den Inhalt der Videos hat die App nicht geprüft.
+const WATCH_VID_STAND = "2026-10-30";
+const HERO_VIDEOS = {
+  "Captain America": [{id: "xxB6aXk__WE", t: "How to Play Captain America for Beginners in Marvel Rivals Season 9", c: "Tcanz Gaming", m: "2026-08", len: "4:07", lang: "en"}],
+  "Doctor Strange": [{id: "XgjtWnjx6_c", t: "The ULTIMATE Dr Strange Guide You NEED | Marvel Rivals", c: "Parzivel", m: "2026-08", len: "9:21", lang: "en"}, {id: "eSsYoBZwP6Q", t: "ADVANCE Doctor Strange Guide in Marvel Rivals", c: "Infinitea", m: "2026-02", len: "9:44", lang: "en"}],
+  "Groot": [{id: "gOIEAXkflQ8", t: "How To CARRY As Groot in Marvel Rivals (w/Notes)", c: "pavle", m: "2026-01", len: "13:03", lang: "en"}, {id: "vrpRXQSbkIo", t: "BEST SEASON 5 GROOT GUIDE | MARVEL RIVALS", c: "Malchronicles", m: "2025-12", len: "23:10", lang: "en"}],
+  "Hulk": [{id: "SDr3KYsqPjw", t: "Season 9 Hulk Guide for CARRYING in Ranked | Marvel Rivals", c: "CaptainCoach", m: "2026-07", len: "35:03", lang: "en"}, {id: "6m6bLC4jKec", t: "Stop Playing Hulk WRONG in Marvel Rivals (Season 10 Masterclass)", c: "Parzivel", m: "2026-09", len: "8:22", lang: "en"}],
+  "Magneto": [{id: "u-eBV9LH4VE", t: "Season 9 Magneto Advanced Guide! - Best Combos & Tips | Marvel Rivals", c: "Pixelz", m: "2026-07", len: "38:22", lang: "en"}, {id: "4NAHM0WZrnc", t: "How To MASTER Magneto: A Season 10 Guide | Marvel Rivals", c: "Parzivel", m: "2026-09", len: "8:04", lang: "en"}],
+  "Peni Parker": [{id: "fHwTq8w2FVU", t: "Peni Parker Guide | The BEST Comprehensive Guide to PENI PARKER in Marvel Rivals", c: "Paz", m: "2025-12", len: "28:54", lang: "en"}],
+  "Thor": [{id: "IXOE_4zJlaY", t: "The Ultimate Thor Guide | Marvel Rivals Season 8.5", c: "Chro", m: "2026-05", len: "20:08", lang: "en"}, {id: "Ze3q1zrlXVM", t: "Advanced Thor Guide 2026 - Best Combos & Tips | Marvel Rivals", c: "Pixelz", m: "2026-05", len: "24:39", lang: "en"}],
+  "Venom": [{id: "BKD7VdasVrA", t: "How Venom's Movement CARRIES In Top 500 *GUIDE* Marvel Rivals Season 10.5", c: "snakeCase2", m: "2026-10", len: "23:52", lang: "en"}, {id: "yrruR1MFWMU", t: "The ULTIMATE Venom Guide For Marvel Rivals Season 10.5...", c: "KirkCast", m: "2026-10", len: "30:28", lang: "en"}],
+  "The Thing": [{id: "dEAGPXUKuho", t: "How to play Thing in Season 9 of Marvel Rivals ", c: "JoJoThaMoFo Uncut", m: "2026-07", len: "19:48", lang: "en"}, {id: "_rneuN-khXU", t: "The ULTIMATE Thing Guide | Marvel Rivals Season 9", c: "Uptighthalo", m: "2026-08", len: "15:05", lang: "en"}],
+  "Emma Frost": [{id: "LvqhWSSyeVM", t: "How To ACTUALLY TANK As EMMA FROST In Marvel Rivals Season 10....", c: "FT4", m: "2026-09", len: "12:09", lang: "en"}],
+  "Angela": [{id: "24snnF2xQ3c", t: "Your NEW ADVANCED GUIDE for Angela in Marvel Rivals", c: "True Vanguard", m: "2026-09", len: "31:44", lang: "en"}, {id: "KWQ2tKpTERM", t: "HOW TO MOVE Like a T500 ANGELA | Marvel Rivals", c: "FullMetalLamps", m: "2026-03", len: "33:49", lang: "en"}],
+  "Devil Dinosaur": [{id: "Mu48nMPiYdI", t: "ULTIMATE DEVIL DINOSAUR GUIDE (Beginner/Advanced) | MARVEL RIVALS", c: "Tephrite", m: "2026-05", len: "8:22", lang: "en"}, {id: "M5bX0bMOEAk", t: "My ULTIMATE Devil Dinosaur Guide (Marvel rivals)", c: "LampZadd", m: "2026-07", len: "25:01", lang: "en"}, {id: "WFHLV-FVlOE", t: "Zermalme deine Gegner mit diesem DEVIL DINOSAUR Guide für Marvel Rivals!", c: "Da_Ro_Jo", m: "2026-05", len: "8:38", lang: "de"}],
+  "Rogue": [{id: "T4JySTnoz3g", t: "How To Control Fights As Rogue In Marvel Rivals!", c: "SillySphark", m: "2026-10", len: "29:00", lang: "en"}, {id: "o5iHiX19u1c", t: "MARVEL RIVALS ROGUE TUTORIAL! | ITSBELAC'S 1ST UPLOAD!", c: "Belac", m: "2026-10", len: "25:49", lang: "en"}],
+  "The Hood": [{id: "he_fyXEp5xA", t: "The Hood Masterclass - Advanced Guide in Marvel Rivals", c: "True Vanguard", m: "2026-08", len: "30:18", lang: "en"}, {id: "QCuItyqk75U", t: "ULTIMATE THE HOOD GUIDE (Beginner/Advanced) | MARVEL RIVALS", c: "Tephrite", m: "2026-08", len: "8:28", lang: "en"}],
+  "Black Panther": [{id: "HcTX_pzqvzU", t: "Rank 1 Black Panther Advanced Combo Guide For Season Season 7! | Marvel Rivals", c: "Somjuu", m: "2026-04", len: "18:49", lang: "en"}, {id: "0AkMzA-n-EA", t: "Black Panther Guide | The BEST Comprehensive Guide to BLACK PANTHER in Marvel Rivals", c: "Paz", m: "2026-01", len: "27:11", lang: "en"}],
+  "Black Widow": [{id: "EWDG8N7m_Tg", t: "8 Tips to DOMINATE as Black Widow This Season in Marvel Rivals", c: "True Vanguard", m: "2026-07", len: "15:18", lang: "en"}, {id: "QBRAhTn74_8", t: "Complete Guide to Redesigned Black Widow in Marvel Rivals", c: "Zesty Guides", m: "2026-07", len: "8:39", lang: "en"}],
+  "Hawkeye": [{id: "6EF4ibgi0Mg", t: "How To Master Hawkeye In Marvel Rivals", c: "Fleemoneymo", m: "2026-01", len: "5:23", lang: "en"}],
+  "Hela": [{id: "KD6ORSun0ZE", t: "Hela Guide | The BEST Comprehensive Guide to HELA in Marvel Rivals", c: "Paz", m: "", len: "22:37", lang: "en"}],
+  "Iron Fist": [{id: "4TLLLOZR544", t: "The ONLY IRON FIST COMBO GUIDE You Ever NEED | Marvel Rivals", c: "nootle", m: "2026-09", len: "19:38", lang: "en"}, {id: "UHAZzD-AjWQ", t: "How to MASTER Iron Fist in Marvel Rivals (Season 10 Guide)", c: "Nightsss", m: "2026-09", len: "25:08", lang: "en"}],
+  "Iron Man": [{id: "POfzQ4Gzees", t: "You’re Playing Iron Man WRONG… Here’s How to Fix It! | Marvel Rivals", c: "Glaze Em", m: "2026-09", len: "18:30", lang: "en"}],
+  "Magik": [{id: "5imu2SVkmZU", t: "The ULTIMATE Magik Guide 🗡️ | ŁIMBØ's Magik 101 - Marvel Rivals", c: "ŁłMBØ", m: "2026-08", len: "15:15", lang: "en"}],
+  "Mister Fantastic": [{id: "0iVHtxQS0Bs", t: "The ULTIMATE Mister Fantastic Guide In Marvel Rivals Season 10.5 (NEW BROKEN TECH!)", c: "quacklylol", m: "2026-10", len: "30:38", lang: "en"}, {id: "V4DFywKwdFk", t: "Mister Fantastic Guide | The BEST Comprehensive Guide to MISTER FANTASTIC in Marvel Rivals", c: "Paz", m: "2025-12", len: "30:44", lang: "en"}],
+  "Moon Knight": [{id: "yHH6KBvciPg", t: "Moon Knight Guide | The BEST Comprehensive Guide to MOON KNIGHT in Marvel Rivals", c: "Paz", m: "2025-11", len: "25:19", lang: "en"}],
+  "Namor": [{id: "bRWd0PP91ZY", t: "How to Play NAMOR Like the Top 500 Players | Marvel Rivals Namor Guide ...", c: "Prez", m: "", len: "5:47", lang: "en"}],
+  "Psylocke": [{id: "euTQmzAi-6g", t: "Advanced Psylocke Guide | Marvel Rivals", c: "lolterm", m: "2026-07", len: "29:13", lang: "en"}, {id: "8iVd80kz7bM", t: "The ONLY Psylocke Guide You Need (Marvel Rivals)", c: "Vohcals", m: "2026-07", len: "4:26", lang: "en"}],
+  "Scarlet Witch": [{id: "A7dqA_qxI9s", t: "Complete Guide to S10 Redesigned Scarlet Witch in Marvel Rivals", c: "Zesty Guides", m: "2026-09", len: "12:34", lang: "en"}, {id: "cPujUz0S7nQ", t: "Scarlet Witch Guide | The BEST Comprehensive Guide to SCARLET WITCH in Marvel Rivals", c: "Paz", m: "2026-01", len: "25:31", lang: "en"}],
+  "Spider-Man": [{id: "d6tJO7RLwK8", t: "Spider-Man Complete Guide | Beginner to Advanced | Marvel Rivals", c: "Blurry Shady", m: "2026-08", len: "39:48", lang: "en"}, {id: "W6Vqcqa1eqc", t: "ULTIMATE Marvel Rivals Spider-Man Guide: Combos, Tech, Matchups and more! (Season 5 And Beyond!)", c: "Dash SK", m: "2025-12", len: "13:15", lang: "en"}],
+  "Squirrel Girl": [{id: "hfHY0afkEUg", t: "Squirrel Girl Guide | The BEST Comprehensive Guide to SQUIRREL GIRL in Marvel Rivals", c: "Paz", m: "", len: "22:57", lang: "en"}],
+  "Star-Lord": [{id: "jcjK6THfnHo", t: "(The Legendary Outlaw) The Marvel Rivals Star-Lord Guide/Experience", c: "Infernasu Archive", m: "2026-08", len: "30:06", lang: "en"}, {id: "-TXAPbukBYs", t: "Advanced Starlord Guide That Will Make YOU DOMINATE | Marvel Rivals Season 6", c: "Shanks", m: "2026-02", len: "24:44", lang: "en"}],
+  "Storm": [{id: "jMw7nBMZcLA", t: "How to play Storm PERFECTLY in Marvel Rivals Season 10", c: "TduckTV", m: "2026-09", len: "11:34", lang: "en"}, {id: "UVeTDfyEP1Q", t: "Updated STORM GUIDE for Beginners to Advanced in Marvel Rivals", c: "Holy Materia", m: "2026-09", len: "19:41", lang: "en"}],
+  "The Punisher": [{id: "2CN7K8Lm89M", t: "Stop Throwing on Punisher – 5 Tips That Win More Games (Marvel Rivals Season 8)", c: "PsychoSingh", m: "2026-06", len: "23:28", lang: "en"}, {id: "I6kKKD_sokE", t: "15 Punisher Tips and tricks!  | Punisher guide for marvel rivals", c: "Dratch", m: "2026-05", len: "7:18", lang: "en"}],
+  "Winter Soldier": [{id: "Az2wqtnAFjE", t: "(Server Admin) The Marvel Rivals Winter Soldier Guide/Experience", c: "Infernasu Archive", m: "2026-08", len: "26:30", lang: "en"}, {id: "HK4-ROTGeqg", t: "BEST Winter Soldier Guide | Marvel Rivals", c: "Tornado Zaid", m: "2026-01", len: "20:52", lang: "en"}],
+  "Wolverine": [{id: "m5_6d22GlrY", t: "The ONLY Wolverine Guide You’ll Ever Need (2026 Updated) (Marvel Rivals)", c: "JUSTBULLA", m: "2026-10", len: "22:33", lang: "en"}, {id: "2ngWzkqjqMA", t: "How to play Wolverine in Season 10! | Day 1 Guide | Marvel Rivals", c: "TTVYeet", m: "2026-09", len: "28:19", lang: "en"}],
+  "Human Torch": [{id: "_xPJQr_d6lI", t: "Human Torch Is Secretly INSANE | Master Him Fast | Quick Guide & Advanced Combos | Marvel Rivals", c: "Cozy Rivals", m: "2026-07", len: "10:51", lang: "en"}, {id: "aEyf80SO9L0", t: "Advanced Human Torch guide as of Marvel Rivals Season 9.5", c: "Neko and Tora", m: "2026-08", len: "26:41", lang: "en"}],
+  "Black Cat": [{id: "G37UzMRriQU", t: "Your NEW ADVANCED GUIDE for BLACK CAT in Marvel Rivals", c: "True Vanguard", m: "2026-08", len: "25:23", lang: "en"}, {id: "cfVs6e4mHRw", t: "Black Cat Marvel Rivals Guide - Master Her in 25 Minutes", c: "Kyoldi", m: "2026-09", len: "25:02", lang: "en"}, {id: "muYm4lLCX7M", t: "Stehle dir das Glück mit diesem Black Cat Guide für Marvel Rivals! (deutsch/german)", c: "Da_Ro_Jo", m: "2026-04", len: "9:23", lang: "de"}],
+  "Blade": [{id: "ZYBZN17IIuU", t: "(The One and Only) The Marvel Rivals Blade Guide/Experience", c: "Infernasu Archive", m: "2026-08", len: "33:34", lang: "en"}, {id: "9fFJaSalJ1M", t: "How To Start CARRYING on Blade | Marvel Rivals Guide", c: "Sekaar", m: "2026-08", len: "12:55", lang: "en"}],
+  "Cyclops": [{id: "oN9sOyaQYwA", t: "ULTIMATE CYCLOPS GUIDE (Beginner/Advanced) | MARVEL RIVALS", c: "Tephrite", m: "2026-06", len: "8:01", lang: "en"}, {id: "KhnbkcccBJ8", t: "Cyclops ADVANCED GUIDE and Hidden Tech in Marvel Rivals", c: "True Vanguard", m: "2026-06", len: "29:54", lang: "en"}, {id: "BjT18nZ0gck", t: "Verfalle in die rubinrote Raserei mit diesem CYCLOPS Guide für Marvel Rivals!", c: "Da_Ro_Jo", m: "2026-09", len: "8:05", lang: "de"}],
+  "Daredevil": [{id: "roYOcG3hkmE", t: "How to MASTER Daredevil in his New Era | Marvel Rivals Rank 1 Guide", c: "NugnugTV", m: "2026-09", len: "44:54", lang: "en"}, {id: "1GVXlM4susQ", t: "Daredevil Marvel Rivals Guide – Master Him in 7 Minutes", c: "Kyoldi", m: "2026-08", len: "7:00", lang: "en"}],
+  "Elsa Bloodstone": [{id: "tw1trcZD-Ho", t: "Advanced Elsa Bloodstone Guide | Marvel Rivals", c: "lolterm", m: "2026-09", len: "31:17", lang: "en"}, {id: "XTUTGUIFfUY", t: "Elsa Bloodstone Guide | The BEST Comprehensive Guide to ELSA BLOODSTONE in Marvel Rivals", c: "Paz", m: "2026-02", len: "31:20", lang: "en"}, {id: "CvmyHHqoKPc", t: "Meistere jede Jagd mit diesem Elsa Bloodstone Guide für Marvel Rivals!", c: "Da_Ro_Jo", m: "2026-02", len: "8:02", lang: "de"}],
+  "Gorr": [{id: "5IoJdk0_0JM", t: "The Ultimate Gorr Advanced Guide in Marvel Rivals", c: "True Vanguard", m: "2026-09", len: "26:15", lang: "en"}, {id: "e0QLPLmrqhY", t: "The ULTIMATE Gorr Guide | Marvel Rivals", c: "Marvel Rivals Guides", m: "2026-09", len: "9:23", lang: "en"}, {id: "wPiVzDVxYNU", t: "VERNICHTE alle Götter mit diesem GORR Guide für Einsteiger / Marvel Rivals", c: "Da_Ro_Jo", m: "2026-09", len: "10:34", lang: "de"}],
+  "Phoenix": [{id: "o3DTpfD8DUQ", t: "Phoenix Discipline : The Complete High Elo Guide | Marvel Rivals ", c: "FXFTH", m: "2026-04", len: "9:37", lang: "en"}, {id: "YkX8gu5gqUs", t: "How To Play PHOENIX in Marvel Rivals | Season 5 Hero Guide.", c: "Nixi3", m: "2025-12", len: "7:13", lang: "en"}],
+  "Adam Warlock": [{id: "OBJJz6KtoZI", t: "Adam Warlock Guide for Marvel Rivals: Abilities, Gameplay, and Winning Tips!", c: "BABOONBANANA99", m: "", len: "8:36", lang: "en"}],
+  "Cloak & Dagger": [{id: "iosbhBXCz1M", t: "5 Cloak & Dagger Tips That Instantly Win More Games (S6.5) | Marvel Rivals", c: "PsychoSingh", m: "2026-03", len: "17:43", lang: "en"}],
+  "Invisible Woman": [{id: "HEzXCOcVzy8", t: "THE ONLY INVISIBLE WOMAN GUIDE YOU NEED!!! | Marvel Rivals", c: "Vicisity", m: "2026-08", len: "11:22", lang: "en"}, {id: "UucrCGAL6R8", t: "5 Tips EVERY PLAYER NEEDS to Master Invisible Woman in Marvel Rivals", c: "MattZephy", m: "2026-07", len: "4:24", lang: "en"}],
+  "Jeff the Land Shark": [{id: "Xb2d3KtrnFA", t: "The UNFAIR Jeff Guide For WINNERS (Marvel Rivals)", c: "savinglee", m: "2025-12", len: "23:36", lang: "en"}, {id: "Fcxy4_IQvkE", t: "Riven's Guide to NEVER MISSING Another Jeff Ult!  || Marvel Rivals", c: "RivenSpeedruns", m: "2026-02", len: "13:23", lang: "en"}],
+  "Loki": [{id: "JJ8MXSaeQJ4", t: "How To PLAY Loki PERFECTLY in Marvel Rivals", c: "BabiifaceNels", m: "2026-09", len: "15:27", lang: "en"}, {id: "PeNLGfMyVHk", t: "How to Play Loki Like a Pro  | Marvel Rivals Beginner Guide", c: "CameronPlayz", m: "2026-07", len: "29:56", lang: "en"}],
+  "Luna Snow": [{id: "BsNdIx6o-Bc", t: "How To Actually  Improve Your Aim On Luna Snow Guide (Marvel Rivals)", c: "23KCO", m: "2026-09", len: "12:23", lang: "en"}, {id: "HPn62_zMGmY", t: "Master Luna Snow FAST! 5 Advanced Tips & Tricks | Marvel Rivals", c: "MattZephy", m: "2026-07", len: "5:10", lang: "en"}],
+  "Mantis": [{id: "p3LAp0x4yAs", t: "Mantis Discipline: The Complete High Elo Guide | Marvel Rivals", c: "FXFTH", m: "2026-08", len: "18:31", lang: "en"}],
+  "Rocket Raccoon": [{id: "jxCksQy7_JE", t: "Marvel Rivals | Ultimate Rocket Guide (Tips, Tricks and More)", c: "-Nardo-Blue", m: "2026-03", len: "21:08", lang: "en"}],
+  "Ultron": [{id: "YSsIrN-KZtM", t: "How to ACTUALLY Play Ultron in MARVEL RIVALS Season 10.5", c: "Micaphom3", m: "2026-09", len: "8:18", lang: "en"}, {id: "We-a89EBWNs", t: "How To Play Ultron: The Right Way. Ft: Rivals Revealed", c: "GhostSap_", m: "2026-08", len: "22:53", lang: "en"}],
+  "Gambit": [{id: "ypSrpYtA9Mo", t: "How to Play Gambit Like a Pro | Marvel Rivals Beginner Guide", c: "CameronPlayz", m: "2026-08", len: "32:30", lang: "en"}, {id: "mYUUUKAQplM", t: "ULTIMATE GAMBIT GUIDE (Beginner/Advanced) | MARVEL RIVALS", c: "Tephrite", m: "2025-11", len: "8:04", lang: "en"}],
+  "Jubilee": [{id: "XuEoj9TR284", t: "ULTIMATE JUBILEE GUIDE (Beginner/Advanced) | MARVEL RIVALS", c: "Tephrite", m: "2026-07", len: "8:17", lang: "en"}, {id: "OdzlNXV6-dM", t: "TIPS AND TRICKS FROM THE RANK 1 JUBILEE - Marvel Rivals Guide", c: "aramori", m: "2026-07", len: "14:06", lang: "en"}, {id: "gcfTxvLWZNc", t: "ENTZÜNDE das Healing Feuerwerk mit diesem JUBILEE GUIDE für Marvel Rivals!", c: "Da_Ro_Jo", m: "2026-09", len: "8:46", lang: "de"}],
+  "White Fox": [{id: "oaOgkr4OKYY", t: "I’m THE TOP 30 White Fox — Here’s How to Play Her | Marvel Rivals White Fox Guide", c: "bekgriger", m: "2026-08", len: "22:08", lang: "en"}, {id: "c5FxoXJEqu4", t: "White Fox Masterclass - Advanced Guide in Marvel Rivals", c: "True Vanguard", m: "2026-05", len: "24:52", lang: "en"}, {id: "5Z0NkzCmBks", t: "Beherrsche die Kumiho-Macht mit diesem White Fox Guide für Marvel Rivals!", c: "Da_Ro_Jo", m: "2026-03", len: "8:20", lang: "de"}],
+  "Deadpool (Vanguard)": [{id: "4YhdIakg3nY", t: "You’re Throwing Games on Tankpool (Deadpool Vanguard) – 5 Tips That Win - Marvel Rivals S7", c: "PsychoSingh", m: "2026-04", len: "20:38", lang: "en"}, {id: "zgPcb8dYxc4", t: "Complete Guide to Deadpool as a Vanguard \"Tankpool\" in Marvel Rivals", c: "Zesty Guides", m: "2026-01", len: "17:38", lang: "en"}],
+  "Deadpool (Duelist)": [{id: "jSoLEult7-U", t: "Best DPS Deadpool Guide in Under 10 Minutes! | Marvel Rivals", c: "AndyDKYou", m: "2026-02", len: "9:16", lang: "en"}, {id: "4g5lNgscegc", t: "Complete Guide to Deadpool as a Duelist \"Damagepool\" in Marvel Rivals", c: "Zesty Guides", m: "2026-01", len: "19:56", lang: "en"}],
+  "Deadpool (Strategist)": [{id: "ioqdM4pi490", t: "Complete Guide to Deadpool as a Strategist \"Healpool\" in Marvel Rivals", c: "Zesty Guides", m: "2026-01", len: "16:11", lang: "en"}, {id: "orQg7yzJsu0", t: "Deadpool [Strategist] COMPLETE GUIDE in Marvel Rivals! (BEST ROLE)", c: "Tabor Hill", m: "2026-01", len: "25:52", lang: "en"}]
+};
 const WATCH_V = [["ja", "Gesehen"], ["teils", "Teilweise"], ["nein", "Nicht gesehen"]];
 const watchUi = { k: "", show: "", rev: {} };
 let WATCH_UC = null;
@@ -13559,6 +14096,34 @@ function watchStreamerHtml(s, k) {
   return `<div class="rrow"><span class="rl"><b>${esc(s.n)}</b> ${s.fav ? '<span class="badge ok">Deine Empfehlung</span> ' : ""}${s.rs.map(r => `<span class="badge">${esc(ROLE_SHORT[r])}</span>`).join(" ")}${plays ? ` <span class="badge ok">spielt ${esc(k)}</span>` : ""}
     ${s.h.length ? `<br><span class="small muted">Lieblingshelden: ${s.h.map(esc).join(", ")}</span>` : ""}<br><span class="small">${esc(s.note)}</span></span><span class="row" style="gap:6px">${links}</span></div>`;
 }
+// Guide-Videos: beim Helden seine Videos, bei einer Rolle das erste Video jedes Pool-Helden dieser Rolle (höchstens vier)
+function watchVideos(k) {
+  if (!bootIsRole(k)) return (HERO_VIDEOS[k] || []).map(v => Object.assign({ h: k }, v));
+  const r = bootRole(k);
+  return poolHeroes().filter(h => heroRole(h) === r && (HERO_VIDEOS[h] || []).length).slice(0, 4).map(h => Object.assign({ h }, HERO_VIDEOS[h][0]));
+}
+const watchVidUrl = v => "https://www.youtube.com/watch?v=" + encodeURIComponent(v.id);
+// TikTok: nur eine fertige Suche (TikTok sperrt automatische Suchen, deshalb keine ausgewählten Clips); «Deadpool (Vanguard)» → «Deadpool Vanguard»
+const watchTikTokUrl = h => "https://www.tiktok.com/search?q=" + encodeURIComponent(`Marvel Rivals ${String(h).replace(/\s*\((\w+)\)/, " $1")} guide`);
+const WATCH_MON = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const watchVidAge = v => v.m ? `hochgeladen etwa ${WATCH_MON[+v.m.slice(5, 7) - 1]} ${v.m.slice(0, 4)}` : "über ein Jahr alt";
+function watchVidHtml(v, showHero) {
+  return `<div class="rrow" data-vid="${esc(v.id)}"><span class="rl"><a href="${esc(watchVidUrl(v))}" target="_blank" rel="noopener"><b>${esc(v.t)}</b></a>${showHero ? ` <span class="badge">${esc(v.h)}</span>` : ""}
+    <br><span class="small muted">${esc(v.c)} · ${esc(v.len)} Min · ${v.lang === "de" ? "Deutsch" : "Englisch"} · ${esc(watchVidAge(v))}</span></span>
+    <span class="row" style="gap:6px"><a class="btn ghost small" href="${esc(watchVidUrl(v))}" target="_blank" rel="noopener">Auf YouTube</a></span></div>`;
+}
+function watchVideosCardHtml(k) {
+  const vs = watchVideos(k), role = bootIsRole(k);
+  const title = role ? `Guide-Videos für deine ${esc(ROLE_SHORT[bootRole(k)])}-Helden` : `Guide-Videos zu ${esc(k)}`;
+  const body = vs.length ? vs.map(v => watchVidHtml(v, role)).join("")
+    : `<p class="muted" style="margin:0">${role ? "In deinem Helden-Pool ist noch kein Held dieser Rolle. Wähle oben einen Helden, dann siehst du passende Videos." : "Für diesen Helden hat die Suche kein passendes Video gefunden."}</p>`;
+  const old = vs.some(v => !v.m), tts = role ? (vs.length ? vs.map(v => v.h) : [bootRole(k)]) : [k];
+  return `<div class="card" id="watchVids"><div class="card-head"><h2>${icon("play")}${title}</h2><span class="muted small">Stand ${esc(fmtDate(WATCH_VID_STAND))}</span></div>
+    ${body}
+    <div class="row" style="gap:6px;margin-top:8px">${tts.map(h => `<a class="btn ghost small" data-tt="${esc(h)}" href="${esc(watchTikTokUrl(h))}" target="_blank" rel="noopener">Auf TikTok suchen: ${esc(h)}</a>`).join("")}</div>
+    <p class="small muted" style="margin:4px 0 0">Die TikTok-Suche nach «Marvel Rivals … guide» ist nicht geprüft: Einzelne TikToks kann die App nicht auswählen. Kurze Clips zeigen oft nur einen Trick; achte auf das Datum.</p>
+    <p class="small muted" style="margin:8px 0 0">Ausgewählt aus der YouTube-Suche nach festen Regeln: Guide im Titel, 4 bis 45 Minuten, möglichst neu, genug Aufrufe, pro Kanal ein Video. Titel und Kanal sind geprüft, den Inhalt hat die App nicht geprüft. Seit dem Upload können Patches den Helden verändert haben: Achte auf die Season im Titel.${old ? " Für diesen Helden gab es kein passendes Video aus dem letzten Jahr." : ""}</p></div>`;
+}
 function watchSubjectHtml(k) {
   const pool = poolHeroes().filter(h => PROF[h]).slice(0, 12);
   const heroes = Object.keys(PROF).filter(h => heroByName(h)).sort((a, b) => a.localeCompare(b));
@@ -13569,7 +14134,7 @@ function watchSubjectHtml(k) {
 }
 function watchTaskHtml(k, t, ts) {
   const key = watchKey(k, t), rev = !!watchUi.rev[key], last = watchLast(key), tod = last && last.d === today() ? last.v : "";
-  const sug = watchSuggest(k).slice(0, 2), done = watchDoneN(k);
+  const sug = watchSuggest(k).slice(0, 2), done = watchDoneN(k), vid = watchVideos(k)[0];
   const mt = t.mt ? (bootIsRole(k) ? roleTasks(bootRole(k)) : heroTasks(k)).find(z => z.id === t.mt) : null;
   const next = watchCurrent(k);
   const think = t.think ? `<li><div><b>Erst im Kopf überlegen</b><p style="margin:4px 0">${esc(t.think)}</p>
@@ -13578,7 +14143,7 @@ function watchTaskHtml(k, t, ts) {
   return `<div class="card"><div class="card-head"><h2>${icon("play")}${esc(t.kind)}</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gesehen</span></div>
     <ol class="steps">${think}
       <li><div><b>Dann 10 bis 15 Minuten schauen</b><p style="margin:4px 0">${esc(t.ask)}</p>
-        ${sug.length ? `<span class="small muted">Zum Beispiel bei ${sug.map(s => `<b>${esc(s.n)}</b>`).join(" oder ")} (unten steht mehr). Schau lieber eine Aufnahme (VOD) als den Live-Stream: Du kannst pausieren und zurückspulen.</span>` : ""}</div></li>
+        ${vid || sug.length ? `<span class="small muted">Zum Beispiel ${vid ? `im Video «<a href="${esc(watchVidUrl(vid))}" target="_blank" rel="noopener">${esc(vid.t)}</a>» (${esc(vid.c)})` : ""}${vid && sug.length ? " oder " : ""}${sug.length ? `bei ${sug.map(s => `<b>${esc(s.n)}</b>`).join(" oder ")}` : ""} (unten steht mehr). Schau lieber eine Aufnahme als einen Live-Stream: Du kannst pausieren und zurückspulen.</span>` : ""}</div></li>
       <li><div><b>Wie lief es?</b>
         <div class="chips" style="margin:4px 0">${WATCH_V.map(([v, label]) => `<button type="button" class="chip ${tod === v ? "on" : ""}" data-wkey="${esc(key)}" data-wv="${v}" aria-pressed="${tod === v}">${label}</button>`).join("")}</div>
         <span class="small muted">«Nicht gesehen» heisst: Die Situation kam im Video nicht vor. Dann schau ein anderes Video, die Aufgabe bleibt offen.</span>
@@ -13596,6 +14161,7 @@ function renderWatch() {
   const sug = watchSuggest(k);
   el.innerHTML = `${watchSubjectHtml(k)}
     ${shown ? watchTaskHtml(k, shown, ts) : `<div class="card">${empty("Für diese Auswahl gibt es noch keine Aufgaben.", "heroes")}</div>`}
+    ${watchVideosCardHtml(k)}
     <div class="card"><div class="card-head"><h2>${icon("target")}Alle Aufgaben für ${esc(who)}</h2></div><ul class="wl">${list}</ul></div>
     <div class="card"><div class="card-head"><h2>${icon("play")}Streamer zum Anschauen</h2><span class="muted small">Stand ${esc(fmtDate(WATCH_STAND))}</span></div>
       ${sug.length ? sug.map(s => watchStreamerHtml(s, k)).join("") : '<p class="muted">Für diese Rolle gibt es keine Vorschläge.</p>'}
@@ -13620,11 +14186,12 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-watc
 function bootWatchHtml(k) {
   const ts = watchTasks(k);
   if (!ts.length) return "";
-  const cur = watchCurrent(k), done = watchDoneN(k);
+  const cur = watchCurrent(k), done = watchDoneN(k), vid = watchVideos(k)[0];
   return `<div class="card"><div class="card-head"><h2>${icon("play")}Von einem Streamer lernen</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gesehen</span></div>
     <p class="lead" style="margin:0 0 8px">Schau einem guten Spieler zu und achte nur auf eine Sache. Du überlegst zuerst im Kopf, schaust dann und sagst kurz, ob du es gesehen hast. Aufschreiben musst du nichts.</p>
     ${cur ? `<div class="swaprow"><b>Jetzt: ${esc(cur.kind)}</b><p style="margin:6px 0 0">${esc(cur.ask)}</p></div>` : '<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle Zuschau-Aufgaben gesehen.</b> Du kannst sie auf der Seite «Zuschauen» jederzeit nochmal öffnen.</div></div>'}
-    <div class="row mt"><button type="button" class="btn small" data-watchopen="${esc(k)}">Aufgabe und Streamer öffnen</button></div></div>`;
+    ${vid ? `<p class="small" style="margin:8px 0 0">Passendes Guide-Video: <a href="${esc(watchVidUrl(vid))}" target="_blank" rel="noopener">${esc(vid.t)}</a> <span class="muted">(${esc(vid.c)}, ${esc(watchVidAge(vid))})</span></p>` : ""}
+    <div class="row mt"><button type="button" class="btn small" data-watchopen="${esc(k)}">Aufgabe, Videos und Streamer öffnen</button></div></div>`;
 }
 
 // ---------- Verlauf: Tage, Wochen und Phasen vergleichen ----------
@@ -13843,7 +14410,7 @@ const PAGE_HELP = {
   heroes: ["Helden-Guide", ["Suche oben nach einem Helden oder filtere nach Rolle.", "Jede Karte zeigt Rolle, Stärken, Schwächen und Tipps. Aufklappen kannst du: Ult richtig einsetzen und kontern, alle Fähigkeiten, Team-Ups.", "Mit «Bootcamp» startest du den Kurs für diesen Helden."]],
   top: ["Rang-Weg", ["Oben wählst du deinen Rang. «Automatisch» nimmt den Rang aus deinem neusten importierten Match.", "«Stufe für Stufe» zeigt pro Rolle die Leiter von Bronze bis Eternity. Pro Stufe gibt es drei Häkchen: Tode, Hauptwert der Rolle und MVP/SVP, jeweils verglichen mit der Mitte der Spieler dieser Stufe.", "Das nächste Ziel ist die erste Stufe über deinem Rang, bei der noch ein Häkchen fehlt. «Was dir noch fehlt» zeigt, bei welchem Helden und welchem Wert.", "Weiter unten steht das Endziel Eternity mit den Werten der Besten. Die Zahlen sind Richtwerte aus echten Matches, keine Garantie für einen Aufstieg."]],
   progress: ["Verlauf", ["Oben wählst du die Einteilung (Tag, Woche oder Phase), die Rolle und den Modus.", "«Auf einen Blick» vergleicht deine Baseline (Tag 1) mit deinen letzten Matches. Grüne Pfeile heissen besser, rote schlechter.", "Mit «A gegen B» legst du zwei Abschnitte nebeneinander, zum Beispiel Tag 1 gegen Tag 6 oder eine Woche gegen die nächste.", "Wenige Matches schwanken stark: Werte mit weniger als fünf Matches sind grau und haben keinen Pfeil."]],
-  watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
+  watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Unter der Aufgabe stehen konkrete Guide-Videos zum gewählten Helden (Titel und Kanal geprüft, Inhalt nicht). Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
   review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
   weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten 12 Matches und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
@@ -13942,10 +14509,10 @@ function scheduleCarry(n) {
     if (!list.some(c => c.from === n && c.key === x.key && !c.done)) list.push({ id: `${n}-${x.key}-${list.length}`, from: n, key: x.key, to: -1, done: null });
   });
   const load = day => list.filter(c => c.to === day && !c.done).length;
+  const o = planOrder(), after = o.slice(o.indexOf(n) + 1);
   list.filter(c => c.to === -1).forEach(c => {
-    let day = n + 1;
-    while (day <= PLAN_N && (dayGet(day).done || load(day) >= 1)) day++;
-    c.to = day <= PLAN_N ? day : 0; moved.push(c);
+    const day = after.find(x => !dayGet(x).done && load(x) < 1);
+    c.to = day || 0; moved.push(c);
   });
   return moved;
 }
@@ -16018,11 +16585,14 @@ let startTab = "today";
 try { startTab = localStorage.getItem(STORE_KEY + "-tab") || "today"; } catch (e) {}
 if (IN_VIEWER) document.querySelectorAll('.side-foot a[href="../"]').forEach(a => { a.hidden = true; });
 if (BUILD_STAMP) { const el = $("#buildStamp"); el.textContent = "Version vom " + BUILD_STAMP; el.hidden = false; }
+// Persönlicher Link ?spieler=NAME: trägt den Namen ein, wenn noch keiner gespeichert ist (überschreibt nie einen vorhandenen)
+if (!IN_VIEWER) { let n = ""; try { n = (new URLSearchParams(location.search).get("spieler") || "").trim().slice(0, 40); } catch (e) { n = ""; } if (n && !(state.settings.playerName || "").trim()) { state.settings.playerName = n; saveLocal(); } }
 setSyncStatus(IN_VIEWER ? "init" : "local");
 showTab(document.getElementById("tab-" + startTab) ? startTab : "today");
 initCloud();
 initBridge();
 initWebSync();
+keepAsk();
 </script>
 </body>
 </html>
