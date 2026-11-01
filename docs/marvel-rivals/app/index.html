@@ -964,8 +964,14 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .ladbox .ladsteps { width: 64px; margin: 0; }
 .segper { display: block; margin-top: 2px; }
 .segper { color: var(--muted); }
+.bingoboard { display: grid; gap: 6px; margin-top: 6px; }
+.bingohead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bingo { display: grid; gap: 6px; }
-.bingo .chip { text-align: left; white-space: normal; }
+.btile { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; font-size: .9rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.btile:hover { border-color: var(--accent); }
+.btile .bchk { flex: 0 0 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.btile.on { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--surface)); }
+.btile.on .bchk { background: var(--good); border-color: var(--good); color: var(--bg); }
 .segstage.short { border-left-style: dashed; color: var(--muted); }
 .segstage { display: block; margin-top: 3px; padding-left: 8px; border-left: 3px solid var(--accent); font-size: .86rem; }
 .ladready { margin: 4px 0; }
@@ -7155,7 +7161,7 @@ function qnOpen() {
 // Punkt am Knopf «Notiz», solange eine Notiz angefangen ist (zum Beispiel Striche aus dem laufenden Match)
 function qnFabState() {
   const b = document.getElementById("qnFab"), d = qnDraft; if (!b) return;
-  const has = !!d && (Object.values(d.tally || {}).some(t => t.ok || t.no) || Object.keys(d.fx || {}).length > 0 || deathTotal(d.deaths) > 0 || !!d.text || d.ults !== null || !!(d.lad && (d.lad.ok || d.lad.no || d.lad.v)));
+  const has = !!d && (Object.values(d.tally || {}).some(t => t.ok || t.no) || Object.keys(d.fx || {}).length > 0 || deathTotal(d.deaths) > 0 || !!d.text || d.ults !== null || !!(d.lad && (d.lad.ok || d.lad.no || d.lad.v)) || !!(d.bingo && d.bingo.hit.length));
   b.classList.toggle("has", has); b.setAttribute("aria-label", has ? "Notiz zum Match (angefangen)" : "Notiz zum Match");
 }
 function qnClose() {
@@ -7178,8 +7184,6 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { qnDeathAdd(d, b.dataset.qndeath); qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; qnDeathDec(d, c); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qnrole) { d.role = b.dataset.qnrole; qnRedraw(`[data-qnrole="${d.role}"]`); }
-  else if (b.dataset.qnbingo) { const f = focusNow(), i = +b.dataset.qnbingo; if (!f) return; if (!d.bingo || d.bingo.k !== f.k) d.bingo = { k: f.k, items: bingoFor(today(), f.k), hit: [] };
-    d.bingo.hit = d.bingo.hit.includes(i) ? d.bingo.hit.filter(x => x !== i) : d.bingo.hit.concat([i]); qnRedraw(`[data-qnbingo="${i}"]`); }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
   else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
   else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
@@ -7199,7 +7203,7 @@ function qnClick(e) {
     { const f = focusNow();   // Bingo nur im Spass-Block; ohne eigene Bewertung zählt es für die Aufgabe (3 = Ja, 1–2 = Teilweise)
       if (!(f && f.seg && f.seg.bingo) || !keep.bingo || keep.bingo.k !== f.k) delete keep.bingo;
       else { const st = fxIt.find(x => x.src === "step"), h = keep.bingo.hit.length; if (st && !(keep.fx || {})[st.key] && h) { keep.fx = Object.assign({}, keep.fx, { [st.key]: h >= 3 ? "ja" : "teils" }); }
-        if (h >= 3) { toast("Bingo! Alle drei geschafft. 🎉"); celebrate(); } } }
+      } }
     state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
     qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
@@ -10910,12 +10914,33 @@ function bingoFor(date, k) {
   const out = []; while (out.length < 3) { const i = h % BINGO.length; if (!out.includes(i)) out.push(i); h = (h * 1103515245 + 12345) >>> 0; }
   return out;
 }
-const BINGO_SEG = "Spass-Block: Pro Match ein Bingo aus drei Dingen. Schaffst du alle drei? Abhaken in der Notiz.";
-function qnBingoHtml(d) {
-  const f = focusNow(); if (!f || !f.seg || !f.seg.bingo || d.prep) return "";
-  const items = bingoFor(today(), f.k), hit = (d.bingo && d.bingo.k === f.k ? d.bingo.hit : []) || [];
-  return `<div class="qnrow"><b class="small">Bingo für Match ${f.k}: ${hit.length} von 3</b><div class="bingo">${items.map(i => `<button type="button" class="chip ${hit.includes(i) ? "on" : ""}" data-qnbingo="${i}" aria-pressed="${hit.includes(i)}">${hit.includes(i) ? "✓ " : ""}${esc(BINGO[i])}</button>`).join("")}</div></div>`;
+const BINGO_SEG = "Spass-Block: Pro Match ein Bingo aus drei Dingen. Schaffst du alle drei?";
+// Bingo-Feld zum Abhaken: auf «Dein nächstes Match», im Block 4 und in der Notiz. Der Stand liegt im Notiz-Entwurf (qnDraft.bingo = { k, items, hit })
+// und wird mit der Notiz gespeichert; ein neues Match (anderes k) beginnt ein neues Bingo.
+const bingoCur = () => { const f = focusNow(); return f && f.seg && f.seg.bingo ? f : null; };
+const bingoHit = k => (qnDraft && qnDraft.bingo && qnDraft.bingo.k === k ? qnDraft.bingo.hit : []) || [];
+function bingoBoardHtml(k) {
+  const items = bingoFor(today(), k), hit = bingoHit(k);
+  return `<div class="bingoboard"><div class="small bingohead"><b>Bingo für Match ${k}</b><span class="badge ${hit.length >= 3 ? "ok" : ""}">${hit.length} von 3</span></div>
+    <div class="bingo">${items.map(i => `<button type="button" class="btile ${hit.includes(i) ? "on" : ""}" data-bingotick="${i}" data-k="${k}" aria-pressed="${hit.includes(i)}"><span class="bchk" aria-hidden="true">${hit.includes(i) ? "✓" : ""}</span><span>${esc(BINGO[i])}</span></button>`).join("")}</div>
+    ${hit.length >= 3 ? `<p class="small" style="margin:0"><b>Bingo!</b> Alle drei geschafft. Mit der Notiz zum Match wird es gespeichert.</p>` : `<p class="small muted" style="margin:0">Antippen, sobald es passiert ist. Gespeichert wird es mit der Notiz zum Match.</p>`}</div>`;
 }
+function qnBingoHtml(d) {
+  const f = bingoCur(); if (!f || d.prep) return "";
+  return `<div class="qnrow">${bingoBoardHtml(f.k)}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-bingotick]") : null; if (!b) return;
+  const f = bingoCur(), k = +b.dataset.k, i = +b.dataset.bingotick; if (!f || f.k !== k) return;
+  qnDraft = qnDraft || qnBlank();
+  if (!qnDraft.bingo || qnDraft.bingo.k !== k) qnDraft.bingo = { k, items: bingoFor(today(), k), hit: [] };
+  const had = qnDraft.bingo.hit.length;
+  qnDraft.bingo.hit = qnDraft.bingo.hit.includes(i) ? qnDraft.bingo.hit.filter(x => x !== i) : qnDraft.bingo.hit.concat([i]);
+  if (had < 3 && qnDraft.bingo.hit.length >= 3) { toast("Bingo! Alle drei geschafft. 🎉"); celebrate(); }
+  const sheet = document.getElementById("qnSheet");
+  if (sheet && !sheet.hidden) qnRedraw(`[data-bingotick="${i}"]`); else render();
+  qnFabState();
+});
 const LAD_MARK = { ja: "✓", teils: "~", nein: "✗" };
 // Unter den Aufgaben: Stand der Stufe (die Stufe selbst steht in jeder Aufgabe), Vorschlag und Weiter/Zurück
 function ladBoxHtml(n, key) {
@@ -10940,7 +10965,7 @@ function qnLadFor(d) {
 }
 const qnLadSub = (d, it) => { const L = it.src === "step" ? qnLadFor(d) : null; return L ? `<div class="small segstage"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L)}</div>` : ""; };
 const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null;
-  if (f && f.seg && f.seg.bingo) return `<ul class="wl small nmlad">${bingoFor(today(), f.k).map(i => `<li>${esc(BINGO[i])}</li>`).join("")}</ul>`;
+  if (f && f.seg && f.seg.bingo) return bingoBoardHtml(f.k);
   return L ? `<p class="small nmlad"><b>Dabei, Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L)}</p>` : ""; };
 // Mut-Leiter für Ranked solo: im Block nur die Frage nach dem Spielen und der Vorschlag für die nächste (oder vorige) Stufe
 function mutInlineHtml(n, key, played) {
@@ -11473,7 +11498,7 @@ function nmCardHtml() {
     ${seg.ex ? `<p class="small nmex"><b>Zum Beispiel:</b> ${esc(seg.ex)}</p>` : ""}
     ${seg.ok || seg.goal ? `<p class="small" style="margin:0 0 4px">${seg.goal ? `<b>Messbar:</b> ${esc(seg.goal)}.` : `<b>Geschafft, wenn</b> ${esc(seg.ok)}.`}${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""}</p>` : ""}
     ${seg.mini ? `<div class="row" style="margin:4px 0"><button class="btn small" type="button" data-pact="day" data-n="${f.n}">Mini-Ziel wählen</button></div>` : ""}
-    <p class="small muted" style="margin:6px 0 0">Nach dem Match bewertest du in der Notiz nur das: Ja, Teilweise oder Nein.</p>
+    ${seg.bingo ? "" : `<p class="small muted" style="margin:6px 0 0">Nach dem Match bewertest du in der Notiz nur das: Ja, Teilweise oder Nein.</p>`}
     ${nmPrepHtml(f)}
     ${next ? `<div class="nmnext small"><span class="muted">Danach, ${esc(focusRange(next))}${next.blk !== blk ? ` (${focusBlockLabel(next.blk.key)})` : ""}:</span> ${esc(next.t)}</div>` : ""}
     ${bg}</div>`;
@@ -11680,7 +11705,7 @@ function blockFocusHtml(n, s, note) {
   const L = ladFor(n, s.key), f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "", full = blk.segs.some(x => x.key === cur) ? cur : (blk.segs[0] || {}).key;
   return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
     ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
-    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${ladSame(L.t, x.t) ? "genau diese Aufgabe" : esc(L.t)}${ladExtraHtml(L)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}</span>`) : ""}${x.bingo ? `<span class="segstage"><b>Bingo${x.key === cur ? ` für Match ${f.k}` : ""}:</b> ${bingoFor(today(), x.key === cur ? f.k : x.a).map(i => esc(BINGO[i])).join(" · ")}</span>` : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${ladSame(L.t, x.t) ? "genau diese Aufgabe" : esc(L.t)}${ladExtraHtml(L)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}</span>`) : ""}${x.bingo ? (x.key === cur && bingoCur() ? bingoBoardHtml(f.k) : `<span class="segstage"><b>Bingo, zum Beispiel:</b> ${bingoFor(today(), x.a).map(i => esc(BINGO[i])).join(" · ")}</span>`) : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
 }
 
 
