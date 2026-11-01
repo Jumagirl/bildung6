@@ -962,7 +962,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .brlvl summary, .bralt summary { cursor: pointer; }
 .ladbox { margin: 6px 0 0; display: grid; gap: 2px; }
 .ladbox .ladsteps { width: 64px; margin: 0; }
-.segsit, .segper { display: block; margin-top: 2px; }
+.segper { display: block; margin-top: 2px; }
 .segper { color: var(--muted); }
 .bingo { display: grid; gap: 6px; }
 .bingo .chip { text-align: left; white-space: normal; }
@@ -10870,16 +10870,12 @@ function ladEval(id) {
   const s = ladStage(id), last = ladLog(id, s).slice(-3), ja = last.filter(v => v === "ja").length;
   return { s, last, ja, ready: ja >= 2 && s < LADDER[id].length };
 }
-// ---------- Abwechslung: Situation pro Match, Hinweise aus deinen Matches, Themen mischen, Bingo ----------
+// ---------- Abwechslung: Hinweise aus deinen Matches, Themen mischen, Bingo ----------
 // Wunsch der Nutzerin: Die Aufgaben fühlten sich monoton an (ein Satz für sechs Matches, Block 3 jeden zweiten Tag wörtlich gleich, Block 4 = Block 2).
-// 1) Situation pro Match: Bei Themen, die im Fight spielen, wechselt pro Match die Situation, auf die du besonders achtest (Aufgabe und Stufe bleiben).
-// 2) Aus deinen Matches: zur Stufe ein Hinweis aus den letzten 30 Matches (Ults, die dich erwischt haben, häufige Diver, häufigste Todesursache).
-// 3) Mischen: Am Vertiefen-Tag nimmt Block 3 ein früheres Thema, das noch nicht von allein läuft (wenn du kein Mini-Ziel gewählt hast).
-// 4) Bingo: Block 4 ist ein Spass-Block, pro Match drei Dinge zum Abhaken. Mischen und wechselnde Bedingungen gelten in der Lernforschung als
-// hilfreich (Interleaving, variables Üben); für Marvel Rivals ist das nicht untersucht.
-const SIT = ["im ersten Fight des Matches", "direkt nach jedem Respawn", "wenn ihr verteidigt", "wenn ihr angreift", "nach einem verlorenen Fight", "kurz vor Schluss oder in der Overtime", "wenn dein Team gerade jemanden verloren hat"];   // sieben, damit Match k und k+6 (neuer Block) verschieden sind
-const SIT_TOPICS = [2, 3, 4, 5, 7, 10, 14, 15, 16, 17];
-const ladSit = (L, n, k) => L && k && SIT_TOPICS.includes(L.id) ? SIT[(k - 1 + n) % SIT.length] : "";
+// 1) Aus deinen Matches: zur Stufe ein Hinweis aus den letzten 30 Matches (Ults, die dich erwischt haben, häufige Diver, häufigste Todesursache).
+// 2) Mischen: Am Vertiefen-Tag nimmt Block 3 ein früheres Thema, das noch nicht von allein läuft (wenn du kein Mini-Ziel gewählt hast).
+// 3) Bingo: Block 4 ist ein Spass-Block, pro Match drei Dinge zum Abhaken. Mischen gilt in der Lernforschung als hilfreich (Interleaving);
+// für Marvel Rivals ist das nicht untersucht.
 function ladPersonal(id) {
   const ms = state.matches.slice(-30), top = (c, k = 3) => Object.entries(c).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, k);
   if (id === 3) { const c = {}; ms.forEach(m => Object.entries(m.ultDeaths || {}).forEach(([h, x]) => { c[h] = (c[h] || 0) + (+x || 0); }));
@@ -10899,12 +10895,11 @@ function deepMixTopic(n) {
   return cand.map((t, i) => ({ t, p: prio(t), r: (i + n) % cand.length })).sort((a, b) => a.p - b.p || a.r - b.r)[0].t.id;
 }
 const deepMixOn = n => { const d = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1] : null; return !!(d && d.deep && !fxMiniText(n) && !focusRepeats()[0] && deepMixTopic(n)); };
-// Zeilen zur Stufe: Situation fürs Match k und Hinweis aus deinen Matches
+// Zeile zur Stufe: Hinweis aus deinen Matches
 // Sagt die Stufe fast dasselbe wie die Aufgabe (die meisten längeren Wörter gleich), steht sie nur kurz da
 const ladWords = t => new Set(String(t || "").toLowerCase().match(/[a-zäöü%0-9]{5,}/g) || []);
 const ladSame = (stage, task) => { const a = ladWords(stage), b = ladWords(task); return a.size > 0 && [...a].filter(w => b.has(w)).length / a.size >= 0.6; };
-const ladExtraHtml = (L, n, k) => { const sit = ladSit(L, n, k), per = L ? ladPersonal(L.id) : "";
-  return (sit ? `<span class="segsit"><b>Diesmal besonders:</b> ${esc(sit)}</span>` : "") + (per ? `<span class="segper">${esc(per)}</span>` : ""); };
+const ladExtraHtml = L => { const per = L ? ladPersonal(L.id) : ""; return per ? `<span class="segper">${esc(per)}</span>` : ""; };
 // Bingo: drei Dinge pro Match, je nach Datum und Match-Nummer anders. Nur Verhalten, das in jedem Match vorkommen kann, keine Spielwerte.
 const BINGO = ["Du rettest einen Mitspieler, der fast tot war.", "Du sagst eine gegnerische Ult an, bevor sie kommt.", "Du überlebst einen Fight, in dem du angesprungen wirst.",
   "Deine Ult dreht einen Fight.", "Du pingst ein Ziel, und dein Team greift es an.", "Du setzt ein Team-Up bewusst ein.", "Du bist an einem Pick beteiligt (Kill oder Assist).",
@@ -10943,10 +10938,10 @@ function qnLadFor(d) {
   const f = focusNow(); if (!f || !f.blk || f.done || d.prep) return null;
   return ladFor(f.n, f.blk.key);
 }
-const qnLadSub = (d, it) => { const L = it.src === "step" ? qnLadFor(d) : null, f = L ? focusNow() : null; return L ? `<div class="small segstage"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L, f.n, f.k)}</div>` : ""; };
+const qnLadSub = (d, it) => { const L = it.src === "step" ? qnLadFor(d) : null; return L ? `<div class="small segstage"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L)}</div>` : ""; };
 const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null;
   if (f && f.seg && f.seg.bingo) return `<ul class="wl small nmlad">${bingoFor(today(), f.k).map(i => `<li>${esc(BINGO[i])}</li>`).join("")}</ul>`;
-  return L ? `<p class="small nmlad"><b>Dabei, Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L, f.n, f.k)}</p>` : ""; };
+  return L ? `<p class="small nmlad"><b>Dabei, Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}${ladExtraHtml(L)}</p>` : ""; };
 // Mut-Leiter für Ranked solo: im Block nur die Frage nach dem Spielen und der Vorschlag für die nächste (oder vorige) Stufe
 function mutInlineHtml(n, key, played) {
   const S = mutState(), min = mutMin(n), st = mutStage(n), feel = S.feel.filter(f => f.stage === st), last2 = feel.slice(-2);
@@ -11685,7 +11680,7 @@ function blockFocusHtml(n, s, note) {
   const L = ladFor(n, s.key), f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "", full = blk.segs.some(x => x.key === cur) ? cur : (blk.segs[0] || {}).key;
   return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
     ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
-    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${ladSame(L.t, x.t) ? "genau diese Aufgabe" : esc(L.t)}${ladExtraHtml(L, n, x.key === cur ? f.k : x.a)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}, jedes Match eine andere Situation</span>`) : ""}${x.bingo ? `<span class="segstage"><b>Bingo${x.key === cur ? ` für Match ${f.k}` : ""}:</b> ${bingoFor(today(), x.key === cur ? f.k : x.a).map(i => esc(BINGO[i])).join(" · ")}</span>` : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${ladSame(L.t, x.t) ? "genau diese Aufgabe" : esc(L.t)}${ladExtraHtml(L)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}</span>`) : ""}${x.bingo ? `<span class="segstage"><b>Bingo${x.key === cur ? ` für Match ${f.k}` : ""}:</b> ${bingoFor(today(), x.key === cur ? f.k : x.a).map(i => esc(BINGO[i])).join(" · ")}</span>` : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
 }
 
 
