@@ -960,13 +960,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .brmut { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .brnow { margin: 4px 0 6px; }
 .brlvl summary, .bralt summary { cursor: pointer; }
-.ladbox { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 2px; }
-.ladhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.ladbox { margin: 6px 0 0; display: grid; gap: 2px; }
+.ladbox .ladsteps { width: 64px; margin: 0; }
+.segstage.short { border-left-style: dashed; color: var(--muted); }
+.segstage { display: block; margin-top: 3px; padding-left: 8px; border-left: 3px solid var(--accent); font-size: .86rem; }
+.ladready { margin: 4px 0; }
 .ladsteps { display: flex; gap: 4px; margin: 2px 0; }
 .ladsteps span { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
 .ladsteps span.done { background: var(--good); border-color: var(--good); }
 .ladsteps span.cur { background: var(--accent); border-color: var(--accent); }
-.ladctl { gap: 12px; margin-top: 2px; }
+.ladctl { gap: 10px; margin-top: 2px; align-items: center; }
 .nmlad { margin: 0 0 4px; }
 .aimcard { display: grid; gap: 6px; }
 .aimd { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
@@ -982,6 +985,13 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .ritl li.done b { color: var(--good-text); }
 .ritaim { margin-top: 8px; }
 .ritaim > summary { cursor: pointer; padding: 4px 0; }
+.qnline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.brhead .brchips { margin-top: 4px; }
+.bralt-quick { gap: 6px; align-items: center; }
+.brmore > summary { cursor: pointer; color: var(--muted); padding: 2px 0; }
+.brmore[open] { display: grid; gap: 8px; }
+.brsec { display: grid; gap: 4px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.brsec.row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .bralt-on { padding: 6px 8px; border-radius: 10px; background: var(--surface); border: 1px dashed var(--accent); }
 .brgrp { gap: 6px; align-items: center; }
 .nmnext { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
@@ -6795,7 +6805,7 @@ function fxForMatch(m) {
 // Bewertungszeilen, gleich aufgebaut wie die Fragen im Match-Log
 function fxRowsHtml(items, vals, attr, extra) {
   return items.map(it => { const cur = vals[it.key];
-    return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span></span>
+    return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span>${it.subHtml || ""}</span>
       <span class="chips">${it.scale.map(([v, label]) => `<button type="button" class="chip ${String(cur) === String(v) ? "on" : ""}" ${attr(it, v)} aria-pressed="${String(cur) === String(v)}">${label}</button>`).join("")}</span>${extra ? extra(it, cur) : ""}</div>`; }).join("");
 }
 const fxMissed = v => ["nein", "teils", "1", "2"].includes(String(v));
@@ -7059,7 +7069,7 @@ function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
   if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match, das nicht für die Blöcke zählt (Vorbereitung, Lektion, Mission, freies Spiel), fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
   return `<div class="qnrow"><b class="small">Dein Fokus: Denkst du dran? Klappt es?</b><span class="small muted">Während des Matches mit ✓ und ✗ mitzählen, danach bewerten.</span>
-    ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
+    ${items.length ? `<div class="fxrows">${fxRowsHtml(items.map(it => it.src === "step" ? Object.assign({}, it, { subHtml: qnLadSub(d, it) }) : it), fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
     <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
 }
 document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".fxdet")) fxPickOpen[e.target.closest("#qnSheet") ? "q" : "w"] = e.target.open; }, true);
@@ -7110,7 +7120,6 @@ function qnSheetHtml() {
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
-    ${qnLadHtml(d)}
     ${focusDay().n ? qnPurposeHtml(d) : ""}
     ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
       return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
@@ -7163,9 +7172,6 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { qnDeathAdd(d, b.dataset.qndeath); qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; qnDeathDec(d, c); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qnrole) { d.role = b.dataset.qnrole; qnRedraw(`[data-qnrole="${d.role}"]`); }
-  else if (b.dataset.qnladt || b.dataset.qnlad) { const L = qnLadFor(d); if (!L) return; if (!d.lad || d.lad.id !== L.id || d.lad.s !== L.s) d.lad = { id: L.id, s: L.s, ok: 0, no: 0 };
-    if (b.dataset.qnladt) { d.lad[b.dataset.qnladt]++; qnRedraw(`[data-qnladt="${b.dataset.qnladt}"]`); }
-    else { if (d.lad.v === b.dataset.qnlad) delete d.lad.v; else d.lad.v = b.dataset.qnlad; qnRedraw(`[data-qnlad="${b.dataset.qnlad}"]`); } }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
   else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
   else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
@@ -7179,9 +7185,9 @@ function qnClick(e) {
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
     fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
-    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog;
-    if (keep.lad && !qnLadFor(d)) delete keep.lad;   // Stufe gilt nur im Training (nicht bei Vorbereitung, Mission, freiem Spiel)
-    else if (keep.lad && !keep.lad.v) { const { ok = 0, no = 0 } = keep.lad; if (ok || no) keep.lad.v = ok && !no ? "ja" : ok && no ? "teils" : "nein"; else delete keep.lad; }
+    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog; delete keep.lad;
+    { const L = qnLadFor(d), st = fxIt.find(x => x.src === "step"), v = st && (d.fx || {})[st.key];   // Bewertung der Aufgabe zählt für die Stufe (nur im Training)
+      if (L && v) keep.lad = { id: L.id, s: L.s, v }; }
     state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
     qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
@@ -7217,6 +7223,11 @@ $("#qnOpen").addEventListener("click", e => {
   document.body.appendChild(b);
 })();
 // Im Trainingsplan: Stand der Notizen von heute
+// Eine Zeile unten in «Eine Sache pro Match»: Notiz nach jedem Match, mit Stand von heute
+function qnPlanLine() {
+  const ms = state.matches.filter(m => m.date === today()), withN = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length;
+  return `<div class="qnline small"><span><b>Nach jedem Match:</b> Notiz${ms.length ? ` · heute ${withN} von ${ms.length}` : ""}</span><button type="button" class="btn small ghost" data-qnopen>${icon("edit")}Notiz</button></div>`;
+}
 function qnPlanHtml() {
   const ms = state.matches.filter(m => m.date === today()), withN = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().length;
   return `<div class="qnplan"><span class="small"><b>Nach jedem Match:</b> Notiz in der Ladezeit (Knopf «Notiz» unten rechts). Heute ${ms.length ? `${withN} von ${plural(ms.length, "Match", "Matches")} mit Notiz` : "noch keine Matches vom Abgleich"}${waiting ? `, ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""}.</span><button type="button" class="btn small" data-qnopen>${icon("edit")}Notiz</button></div>`;
@@ -10480,7 +10491,7 @@ function planDayHtml(n) {
     + (start ? `<div class="psteps">${stepHtml(n, start, seenD)}</div>` : "")
     + foldHtml("d-len", "Ablauf und Matchlänge", `<details class="wiss"><summary><span class="num">?</span><b>So liest du den Ablauf (Bild)</b></summary><div class="wbody">${FIGS.dayflow(d.steps.map(x => x.key))}</div></details>${matchLenHtml()}`, { icon: "training", sub: blockText() })
     + (!start && !prepS.done && nextLabel ? `<div class="row"><button class="btn" type="button" data-pact="prep-ok" data-n="${n}">Bereit, weiter zu ${esc(nextLabel)} →</button></div>` : "");
-  const blockBody = s => (n === cur ? qnPlanHtml() : "") + blockFocusHtml(n, s.step) + ladBoxHtml(n, s.step.key) + (s.key === weakAt ? wkDayCardHtml(n) : "")
+  const blockBody = s => brBoxHtml(n, s.step.key) + blockFocusHtml(n, s.step, n === cur) + (s.key === weakAt ? wkDayCardHtml(n) : "")
     + nugBefore(n, s.step, d) + `<div class="psteps">${stepHtml(n, s.step, seenD)}</div>` + nugAfter(n, s.step, d) + (rvAnchor(d) === s.key ? rvPlanCardHtml(n) : "")
     + (funDay(n) && blocks.length && s.key === blocks[blocks.length - 1].key ? funPlanHtml(n) : "");
   const note = stepOf("note");
@@ -10726,30 +10737,28 @@ function brChip(x) {
   return `<span class="brchip ${st}" title="${esc(x.r.tip || "")}">${esc(x.r.label)}${mark}</span>`;
 }
 const brRulesChips = rules => rules.map(r => `<span class="brchip" title="${esc(r.tip || "")}">${esc(r.label)}</span>`).join("");
-// Box oben in jedem Block des Trainingstags
+// Box oben in jedem Block des Trainingstags: sichtbar nur die Regeln, was verpasst ist und was jetzt zu tun ist (Ersatz-Aufgabe, Frage der Mut-Leiter).
+// Alles zum Einstellen (anders gespielt, meist mit Freunden, Stufe der Mut-Leiter, Strenge) steht eingeklappt unter «Regeln anpassen».
 function brBoxHtml(n, key) {
   const st = brStatus(n, key);
   if (!st.length) return "";
   const lvl = brLevel(n), auto = String((state.settings || {}).ruleLevel || "auto") === "auto", ms = brBlockMatches(n, key);
   const drop = brDropped(n, key), miss = [...new Set(st.filter(x => !x.block && x.no).map(x => x.r.label).concat(drop.flatMap(x => x.miss.map(r => r.label))))], unk = st.some(x => !x.block && x.unk && (x.r.k === "group" || x.r.k === "voice"));
-  return `<div class="brbox"><div class="brhead"><b class="small">So spielst du diesen Block</b><span class="small muted">Regeln: ${BR_LEVEL_NAME[lvl]}${auto ? " (automatisch)" : ""}</span></div>
-    <div class="brchips">${st.map(brChip).join("")}</div>
-    ${miss.length ? `<p class="small brwarn">Verpasst: ${esc(miss.join(", "))}.${lvl >= 3 ? ` ${drop.length === 1 ? "Dieses Match zählt" : `Diese ${drop.length} Matches zählen`} nicht für den Block.` : lvl >= 2 ? " Beim nächsten Match erinnert dich die App daran." : " Das Match zählt trotzdem."}</p>` : ""}
-    ${unk && ms.length ? `<p class="small muted" style="margin:4px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
-    ${brMutBlock(n, key) ? mutHtml(n, key, ms.length) : ""}
-    ${brAltHtml(n, key, miss.length > 0)}
-    <div class="row small brgrp"><span class="muted">Du spielst meist</span>${[["stack", "mit Freunden"], ["", "solo oder gemischt"]].map(([v, l]) => `<button type="button" class="chip ${((state.settings || {}).usualGroup || "") === v ? "on" : ""}" data-brgrp="${v}" aria-pressed="${((state.settings || {}).usualGroup || "") === v}">${l}</button>`).join("")}</div>
-    <details class="small brlvl"><summary>Wie streng sind die Regeln?</summary><p style="margin:4px 0">Bis Tag 42 locker, bis Tag 70 mittel, ab Tag 71 streng, damit am Ende des Plans alles sitzt. ${esc(BR_LEVEL_NAME[lvl])}: ${esc(BR_LEVEL_TXT[lvl])}</p>
-      <div class="chips">${BR_LEVELS.map(([v, l]) => `<button type="button" class="chip ${String((state.settings || {}).ruleLevel || "auto") === v ? "on" : ""}" data-brlvl="${v}">${l}</button>`).join("")}</div></details></div>`;
-}
-// «Heute anders gespielt»: Ausweichen wählen, Ersatz-Aufgabe zeigen; offen, wenn eine Regel verpasst wurde, die man so ersetzen kann
-function brAltHtml(n, key, missed) {
-  const opts = brAltOpts(n, key), cur = brAlt(n, key);
-  if (!opts.length && !cur.length) return "";
-  const chips = [...new Set(opts.concat(cur))].map(a => `<button type="button" class="chip ${cur.includes(a) ? "on" : ""}" data-bralt="${a}" data-n="${n}" data-k="${key}" aria-pressed="${cur.includes(a)}">${esc(BR_ALT[a].label)}</button>`).join("");
-  return `${cur.length ? `<div class="bralt-on small"><b>Heute anders gespielt:</b> ${esc(cur.map(a => BR_ALT[a].label).join(", "))}. Die Matches zählen trotzdem für den Block.<ul class="wl" style="margin:4px 0 0">${cur.map(a => `<li><b>Ersatz-Aufgabe:</b> ${esc(BR_ALT[a].task)}</li>`).join("")}</ul></div>` : ""}
-    <details class="small bralt" ${missed && !cur.length ? "open" : ""}><summary>${cur.length ? "Ändern" : "Heute anders gespielt? Zum Beispiel im Stack Quick Match statt Ranked"}</summary>
-      <p class="small muted" style="margin:4px 0">Wähl, was heute anders war. Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe dazu.</p><div class="chips">${chips}</div></details>`;
+  const mut = brMutBlock(n, key), alt = brAlt(n, key), opts = brAltOpts(n, key);
+  const altChip = a => `<button type="button" class="chip ${alt.includes(a) ? "on" : ""}" data-bralt="${a}" data-n="${n}" data-k="${key}" aria-pressed="${alt.includes(a)}">${esc(BR_ALT[a].label)}</button>`;
+  return `<div class="brbox"><div class="brhead"><b class="small">So spielst du</b><div class="brchips">${st.map(brChip).join("")}</div></div>
+    ${miss.length ? `<p class="small brwarn">Verpasst: ${esc(miss.join(", "))}. ${lvl >= 3 ? (drop.length === 1 ? "Dieses Match zählt nicht für den Block." : `Diese ${drop.length} Matches zählen nicht für den Block.`) : lvl >= 2 ? "Beim nächsten Match erinnert dich die App." : "Das Match zählt trotzdem."}</p>` : ""}
+    ${alt.length ? `<p class="small bralt-on"><b>Heute anders gespielt</b> (${esc(alt.map(a => BR_ALT[a].label).join(", "))}). Ersatz-Aufgabe: ${esc(alt.map(a => BR_ALT[a].task).join(" "))}</p>`
+      : miss.length && opts.length ? `<div class="row small bralt-quick"><span class="muted">Heute anders gespielt?</span>${opts.map(altChip).join("")}</div>` : ""}
+    ${mut ? mutInlineHtml(n, key, ms.length) : ""}
+    <details class="small brmore"><summary>Regeln anpassen${mut ? ` · Mut-Leiter Stufe ${mutStage(n)}` : ""} · ${BR_LEVEL_NAME[lvl]}</summary>
+      ${unk && ms.length ? `<p class="muted" style="margin:6px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
+      ${opts.length || alt.length ? `<div class="brsec"><b>Heute anders gespielt?</b> <span class="muted">Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</span><div class="chips">${[...new Set(opts.concat(alt))].map(altChip).join("")}</div></div>` : ""}
+      <div class="brsec row brgrp"><b>Du spielst meist</b>${[["stack", "mit Freunden"], ["", "solo oder gemischt"]].map(([v, l]) => `<button type="button" class="chip ${((state.settings || {}).usualGroup || "") === v ? "on" : ""}" data-brgrp="${v}" aria-pressed="${((state.settings || {}).usualGroup || "") === v}">${l}</button>`).join("")}</div>
+      ${mut ? mutFullHtml(n) : ""}
+      <div class="brsec brlvl"><b>Wie streng?</b> <span class="muted">Bis Tag 42 locker, bis Tag 70 mittel, ab Tag 71 streng${auto ? " (automatisch)" : ""}. ${esc(BR_LEVEL_NAME[lvl])}: ${esc(BR_LEVEL_TXT[lvl])}</span>
+        <div class="chips">${BR_LEVELS.map(([v, l]) => `<button type="button" class="chip ${String((state.settings || {}).ruleLevel || "auto") === v ? "on" : ""}" data-brlvl="${v}">${l}</button>`).join("")}</div></div>
+    </details></div>`;
 }
 // ---------- Stufen-Aufgaben: pro Thema eine Leiter mit vier Stufen ----------
 // Wunsch der Nutzerin: in den Blöcken konkrete, zählbare Aufgaben, die langsam schwerer werden (zum Beispiel erst 1, dann 2 gegnerische Ults im Blick).
@@ -10827,15 +10836,13 @@ function ladEval(id) {
   return { s, last, ja, ready: ja >= 2 && s < LADDER[id].length };
 }
 const LAD_MARK = { ja: "✓", teils: "~", nein: "✗" };
+// Unter den Aufgaben: Stand der Stufe (die Stufe selbst steht in jeder Aufgabe), Vorschlag und Weiter/Zurück
 function ladBoxHtml(n, key) {
   const L = ladFor(n, key); if (!L) return "";
   const ev = ladEval(L.id);
-  return `<div class="ladbox"><div class="ladhead"><b class="small">Deine Stufen-Aufgabe</b><span class="small muted">${esc(L.topic)} · Stufe ${L.s} von ${L.n}</span></div>
-    <div class="ladsteps" aria-hidden="true">${LADDER[L.id].map((_, i) => `<span class="${i + 1 < L.s ? "done" : i + 1 === L.s ? "cur" : ""}"></span>`).join("")}</div>
-    <p style="margin:2px 0 4px">${esc(L.t)}</p>
-    <p class="small muted" style="margin:0">In der Notiz zählst du im Match mit ✓ und ✗ mit und bewertest danach. ${ev.last.length ? `Zuletzt auf dieser Stufe: ${ev.last.map(v => LAD_MARK[v] || "").join(" ")}` : "Auf dieser Stufe noch nichts bewertet."}</p>
-    ${ev.ready ? `<div class="note good" style="margin:6px 0 0"><span class="ni" aria-hidden="true">✓</span><div>In ${ev.ja} der letzten ${ev.last.length} Matches geklappt. Bereit für Stufe ${L.s + 1}? <i>${esc(LADDER[L.id][L.s])}</i> <button type="button" class="btn small" data-lad="up" data-id="${L.id}">Ja, nächste Stufe</button></div></div>` : ""}
-    <div class="row small ladctl">${L.s < L.n && !ev.ready ? `<button type="button" class="linkbtn small" data-lad="up" data-id="${L.id}">Ich bin bereit: nächste Stufe</button>` : ""}${L.s > 1 ? `<button type="button" class="linkbtn small" data-lad="down" data-id="${L.id}">Eine Stufe zurück</button>` : ""}</div></div>`;
+  return `<div class="ladbox small"><div class="row ladctl"><b>Stufe ${L.s} von ${L.n}</b><span class="ladsteps" aria-hidden="true">${LADDER[L.id].map((_, i) => `<span class="${i + 1 < L.s ? "done" : i + 1 === L.s ? "cur" : ""}"></span>`).join("")}</span>
+      <span class="muted">${ev.last.length ? `Zuletzt: ${ev.last.map(v => LAD_MARK[v] || "").join(" ")}` : "Zählt mit deiner Bewertung der Aufgabe in der Notiz"}</span>${L.s < L.n && !ev.ready ? `<button type="button" class="linkbtn small" data-lad="up" data-id="${L.id}">Ich bin bereit: nächste Stufe</button>` : ""}${L.s > 1 ? `<button type="button" class="linkbtn small" data-lad="down" data-id="${L.id}">Eine zurück</button>` : ""}</div>
+    ${ev.ready ? `<p class="ladready">In ${ev.ja} der letzten ${ev.last.length} Matches geklappt. Bereit für Stufe ${L.s + 1}: <i>${esc(LADDER[L.id][L.s])}</i> <button type="button" class="btn small" data-lad="up" data-id="${L.id}">Ja, nächste Stufe</button></p>` : ""}</div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest ? e.target.closest("[data-lad]") : null; if (!b) return;
@@ -10844,32 +10851,30 @@ document.addEventListener("click", e => {
   ladState()[id] = { s, at: Date.now() }; save(); render();
   toast(`Stufe ${s} von ${LADDER[id].length}: ${LADDER[id][s - 1]}`);
 });
-// Notiz: die Stufen-Aufgabe fürs aktuelle Match, mit Strichen im Match und Bewertung danach (ohne Bewertung schlägt die App sie aus den Strichen vor)
+// Notiz: Die Stufe steht direkt bei «Deine Aufgabe» (der einen Sache aus dem Plan). Deren Bewertung (oder der Vorschlag aus den Strichen)
+// zählt beim Speichern auch für die Stufe: q.lad = { id, s, v }. So bewertest du nur einmal.
 function qnLadFor(d) {
   const f = focusNow(); if (!f || !f.blk || f.done || d.prep) return null;
   return ladFor(f.n, f.blk.key);
 }
-function qnLadHtml(d) {
-  const L = qnLadFor(d); if (!L) return "";
-  const x = d.lad && d.lad.id === L.id && d.lad.s === L.s ? d.lad : {}, ok = x.ok || 0, no = x.no || 0, sug = !x.v ? (ok && !no ? "ja" : ok && no ? "teils" : no ? "nein" : "") : "";
-  return `<div class="qnrow"><b class="small">Stufen-Aufgabe (Stufe ${L.s} von ${L.n})</b><span class="small">${esc(L.t)}</span>
-    <div class="fxlive"><span class="small muted">Im Match:</span><button type="button" class="btn small ghost" data-qnladt="ok" aria-label="Geklappt, einen Strich mehr">✓ <b>${ok}</b></button><button type="button" class="btn small ghost" data-qnladt="no" aria-label="Nicht geklappt, einen Strich mehr">✗ <b>${no}</b></button>${sug ? `<span class="small muted">Vorschlag: <b>${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[sug]}</b> (gilt, wenn du nichts wählst)</span>` : ""}</div>
-    <div class="chips">${[["ja", "Ja"], ["teils", "Teilweise"], ["nein", "Nein"]].map(([v, l]) => `<button type="button" class="chip ${x.v === v ? "on" : ""}" data-qnlad="${v}" aria-pressed="${x.v === v}">${l}</button>`).join("")}</div></div>`;
-}
-const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null; return L ? `<p class="small nmlad"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</p>` : ""; };
-// Mut-Leiter für Ranked solo
-function mutHtml(n, key, played) {
+const qnLadSub = (d, it) => { const L = it.src === "step" ? qnLadFor(d) : null; return L ? `<div class="small segstage"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</div>` : ""; };
+const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null; return L ? `<p class="small nmlad"><b>Dabei, Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</p>` : ""; };
+// Mut-Leiter für Ranked solo: im Block nur die Frage nach dem Spielen und der Vorschlag für die nächste (oder vorige) Stufe
+function mutInlineHtml(n, key, played) {
   const S = mutState(), min = mutMin(n), st = mutStage(n), feel = S.feel.filter(f => f.stage === st), last2 = feel.slice(-2);
   const todayFeel = S.feel.find(f => f.n === n && f.key === key && f.d === today());
   const up = st < 4 && last2.length === 2 && last2.every(f => f.v === "gut"), down = !up && feel.length && feel[feel.length - 1].v === "zuviel" && st > min;
-  return `<div class="brmut"><b class="small">Mut-Leiter für Ranked solo</b> <span class="small muted">Jede Stufe zählt für den Block. Weiter geht es, wenn eine Stufe zweimal gut lief.</span>
+  const ask = played && !todayFeel ? `<div class="row small" style="gap:6px;align-items:center">Mut-Leiter Stufe ${st}: Wie ging es dir? ${[["gut", "Gut"], ["okay", "Geht so"], ["zuviel", "Zu viel"]].map(([v, l]) => `<button type="button" class="chip" data-mutfeel="${v}" data-n="${n}" data-k="${key}">${l}</button>`).join("")}</div>` : "";
+  return ask + (up ? `<p class="small" style="margin:0">Zweimal gut auf Stufe ${st}. Bereit für Stufe ${st + 1} («${esc(MUT[st + 1].t)}»)? <button type="button" class="btn small" data-mut="${st + 1}">Ja, nächste Stufe</button></p>` : "")
+    + (down ? `<p class="small" style="margin:0">Das ist okay. Bleib auf Stufe ${st}, oder geh eine zurück. <button type="button" class="btn ghost small" data-mut="${st - 1}">Eine Stufe zurück</button></p>` : "");
+}
+function mutFullHtml(n) {
+  const S = mutState(), min = mutMin(n), st = mutStage(n);
+  return `<div class="brsec brmut"><b>Mut-Leiter für Ranked solo</b> <span class="muted">Jede Stufe zählt für den Block. Weiter geht es, wenn eine Stufe zweimal gut lief.</span>
     <div class="chips" style="margin-top:4px">${[1, 2, 3, 4].map(i => `<button type="button" class="chip ${st === i ? "on" : ""}" data-mut="${i}" ${i < min ? "disabled" : ""} aria-pressed="${st === i}" title="${esc(MUT[i].s)}">${i} · ${esc(MUT[i].t)}</button>`).join("")}</div>
-    <p class="small" style="margin:4px 0 0"><b>Stufe ${st}:</b> ${esc(MUT[st].s)}${!S.stage && st === 4 ? " Traust du dich noch nicht? Wähl eine kleinere Stufe, sie zählt genauso." : ""}</p>
-    ${min > 1 ? `<p class="small muted" style="margin:2px 0 0">${n >= 99 ? "Ab Tag 99 gilt Stufe 4: Ranked solo, so wie du nach dem Plan spielen willst." : "Ab Tag 71 gilt mindestens Stufe 3, damit Ranked solo am Ende des Plans sitzt."}</p>` : ""}
-    ${played && !todayFeel ? `<div class="row small" style="gap:6px;margin-top:6px;align-items:center">Wie ging es dir mit Stufe ${st}? ${[["gut", "Gut"], ["okay", "Geht so"], ["zuviel", "Zu viel"]].map(([v, l]) => `<button type="button" class="chip" data-mutfeel="${v}" data-n="${n}" data-k="${key}">${l}</button>`).join("")}</div>` : todayFeel ? `<p class="small muted" style="margin:4px 0 0">Heute: ${esc({ gut: "gut", okay: "geht so", zuviel: "zu viel" }[todayFeel.v])} auf Stufe ${todayFeel.stage}.</p>` : ""}
-    ${up ? `<div class="note good" style="margin:6px 0 0"><span class="ni" aria-hidden="true">✓</span><div>Zweimal gut auf Stufe ${st}. Bereit für Stufe ${st + 1} («${esc(MUT[st + 1].t)}»)? <button type="button" class="btn small" data-mut="${st + 1}">Ja, nächste Stufe</button></div></div>` : ""}
-    ${down ? `<p class="small" style="margin:6px 0 0">Das ist okay. Bleib auf Stufe ${st}, oder geh eine zurück. <button type="button" class="btn ghost small" data-mut="${st - 1}">Eine Stufe zurück</button></p>` : ""}
-    <p class="small muted" style="margin:4px 0 0">Schritt für Schritt an etwas heranzugehen, das Angst macht, kennt man aus der Angstbehandlung. Ob es bei Ranked-Angst hilft, ist nicht untersucht.</p></div>`;
+    <p style="margin:4px 0 0"><b>Stufe ${st}:</b> ${esc(MUT[st].s)}${!S.stage && st === 4 ? " Traust du dich noch nicht? Wähl eine kleinere Stufe, sie zählt genauso." : ""}</p>
+    ${min > 1 ? `<p class="muted" style="margin:2px 0 0">${n >= 99 ? "Ab Tag 99 gilt Stufe 4: Ranked solo, so wie du nach dem Plan spielen willst." : "Ab Tag 71 gilt mindestens Stufe 3, damit Ranked solo am Ende des Plans sitzt."}</p>` : ""}
+    <p class="muted" style="margin:4px 0 0">Schritt für Schritt an etwas heranzugehen, das Angst macht, kennt man aus der Angstbehandlung. Ob es bei Ranked-Angst hilft, ist nicht untersucht.</p></div>`;
 }
 // «Heute»: Regeln fürs nächste Match und (ab Stufe Mittel) eine Erinnerung an das, was im letzten Match verpasst wurde
 function brNowHtml(f) {
@@ -11073,7 +11078,7 @@ function stepHtml(n, s, seen, o = {}) {
   const attr = o.carry ? `data-pcarry="${esc(o.carry.id)}"` : `data-pstep="${s.key}"`, id = (o.carry ? "pc" + o.carry.id : "ps" + s.key).replace(/[^\w-]/g, "_");
   const fullPlan = !o.carry && /^b[1-4]$/.test(s.key) && focusPlan(n).some(x => x.key === s.key);   // die eine Sache pro Match steht oben im Block
   return `<div class="pstep ${done ? "done" : ""} ${o.carry ? "carry" : ""}"><input type="checkbox" id="${id}" ${attr} ${done ? "checked" : ""} ${lock ? "disabled" : ""}>
-    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${/^b[1-4]$/.test(s.key) && !o.carry ? brBoxHtml(n, s.key) : ""}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}${fullPlan ? `<details class="pfull"${WRITE_RE.test(s.t || "") ? " open" : ""}><summary class="small">Ganze Anleitung aus dem Plan${s.practice ? " und Übungs-Helden" : ""}</summary><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}</details>`
+    <div class="pbody"><label for="${id}" class="pl">${esc(o.label || s.label)}</label>${blockModeBadge(n, s.key)}${auto}${lock ? `<div class="rvlock small">🔒 ${esc(lock)}. Das Häkchen setzt sich danach von selbst, sobald auch die Matches gespielt sind.</div>` : ""}${fullPlan ? `<details class="pfull"><summary class="small">Ganze Anleitung aus dem Plan${s.practice ? " und Übungs-Helden" : ""}${WRITE_RE.test(s.t || "") ? " · mit Feld zum Eintragen" : ""}</summary><div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}</details>`
       : `<div class="ptxt">${stepBodyHtml(n, s, seen)}</div>${swapHintHtml(s)}${s.practice && !o.carry ? practiceHtml(n, s.practice === "auto" ? practiceAuto(n) : s.practice, false, +s.key.slice(1) - 1) : ""}`}${s.key === "b3" && !o.carry ? mini3Html(n) : ""}</div></div>`;
 }
 // Schritte rund um Swap und Komposition zeigen, wo die App dabei hilft
@@ -11585,13 +11590,13 @@ document.addEventListener("change", e => {
   planRecheckBlocks(); save(); rvRerender();
 });
 // Trainingstag: oben im Block die Abschnitte mit je einer Sache, der aktuelle hervorgehoben
-function blockFocusHtml(n, s) {
+function blockFocusHtml(n, s, note) {
   const blk = focusPlan(n).find(x => x.key === s.key);
   if (!blk) return "";
-  const f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "";
+  const L = ladFor(n, s.key), f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "", full = blk.segs.some(x => x.key === cur) ? cur : (blk.segs[0] || {}).key;
   return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
     ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
-    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}</span></li>`).join("")}</ol></div>`;
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${esc(L.t)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}</span>`) : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
 }
 
 
@@ -13656,7 +13661,7 @@ function recallNugHtml(n) {
     ${shown && !rated ? `<p class="small muted" style="margin:8px 0 4px">Wie gut hattest du es im Kopf?</p>${nugRate(n, "recall", [[3, "Wusste ich"], [2, "Teilweise"], [1, "Nicht gewusst"]])}` : ""}
     ${rated ? `<p class="small nug-done">✓ Notiert. Diese Frage kommt in ${plural(nug.days || 1, "Tag", "Tagen")} wieder.${nug.r === 1 ? " Auch ein misslungener Abrufversuch hilft: Die Antwort bleibt danach besser hängen." : ""}</p>` : ""}`;
   return foldHtml(`nug-${n}-recall`, pre ? "Zwischenstopp: Vorab-Frage" : "Zwischenstopp: Abruf", body,
-    { icon: "quiz", cls: "nugfold", open: !rated, sub: rated ? "erledigt ✓" : pre ? "Rate zuerst, bevor du es liest. Das bereitet das Lernen vor." : "Erst überlegen, dann nachschauen. 1 Minute" });
+    { icon: "quiz", cls: "nugfold", open: false, sub: rated ? "erledigt ✓" : pre ? "Rate zuerst, bevor du es liest. Das bereitet das Lernen vor." : "Erst überlegen, dann nachschauen. 1 Minute" });
 }
 function tipPick(n) {
   const heroes = nugHeroes(), hero = [], tu = [], maps = [];
@@ -13678,7 +13683,7 @@ function tipNugHtml(n) {
       <textarea class="pfield" rows="2" data-nf="${n}|tip|ifthen" placeholder="Wenn …, dann …">${esc(nug.ifthen || "")}</textarea></label>
     <div class="row mt"><button type="button" class="btn small ${nug.ok ? "ghost" : ""}" data-pact="nug-ok" data-n="${n}" data-slot="tip">${nug.ok ? "✓ Gemerkt" : "Gemerkt"}</button>
       <span class="muted small">Quelle: marvelrivals.gg, Stand ${fmtDate(t.stand)}</span></div>`;
-  return foldHtml(`nug-${n}-tip`, "Zwischenstopp: Wusstest du?", body, { icon: "book", cls: "nugfold", open: !nug.ok, sub: nug.ok ? "gemerkt ✓" : esc(t.title) });
+  return foldHtml(`nug-${n}-tip`, "Zwischenstopp: Wusstest du?", body, { icon: "book", cls: "nugfold", open: false, sub: nug.ok ? "gemerkt ✓" : esc(t.title) });
 }
 function whyPick(n) {
   const hs = nugHeroes().filter(h => (PROF[h].ue || []).some(t => /^Typischer Fehler:/.test(t)));
@@ -13695,7 +13700,7 @@ function whyNugHtml(n) {
       <div class="row mt"><button type="button" class="btn small" data-pact="nug-show" data-n="${n}" data-slot="why">Antwort zeigen</button></div>`}
     ${shown && !rated ? `<p class="small muted" style="margin:8px 0 4px">Hattest du es im Kopf?</p>${nugRate(n, "why", [[3, "Ja"], [2, "Teilweise"], [1, "Neu für mich"]])}` : ""}
     ${rated ? `<p class="small nug-done">✓ Notiert.${nug.r === 1 ? " Gut, dass du es jetzt weisst. Achte im nächsten Match darauf." : ""}</p>` : ""}`;
-  return foldHtml(`nug-${n}-why`, "Zwischenstopp: Warum geht das schief?", body, { icon: "edit", cls: "nugfold", open: !rated, sub: rated ? "erledigt ✓" : "Erkläre dir selbst, was meist schiefgeht" });
+  return foldHtml(`nug-${n}-why`, "Zwischenstopp: Warum geht das schief?", body, { icon: "edit", cls: "nugfold", open: false, sub: rated ? "erledigt ✓" : "Erkläre dir selbst, was meist schiefgeht" });
 }
 // Lektionen früherer Tage (nach 1, 3 und 7 Tagen) und die Themen, die heute aufgefrischt werden
 const earlierIds = n => [n - 1, n - 3, n - 7].filter(x => x >= 1).flatMap(x => PLAN.days[x - 1].l.map(i => "L" + i)).concat(refreshIds(n)).filter((x, i, a) => a.indexOf(x) === i);
