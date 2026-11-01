@@ -10831,9 +10831,32 @@ function ladTopic(n) {
   c = [...new Set(c)].filter(id => LADDER[id]);
   return c.find(id => id !== 11) || c[0] || 0;
 }
+// Thema pro Block, damit sich die Blöcke eines Tages unterscheiden (Wunsch der Nutzerin): am Einführungstag aus dem Text des Blocks (Schlüsselwörter,
+// in dieser Reihenfolge geprüft), Block 1 sonst mit dem Thema des Tages; am Vertiefen-Tag Block 1 das Thema der gezielten Übung, Block 2 das zweite
+// Thema des Tages, Block 3 ein früheres Thema zum Mischen. Ein Block ohne passendes Thema bekommt keine Stufe, statt eine fremde zu wiederholen.
+const LAD_KW = [[10, /\bDive|Diver/], [15, /Heal-Aim|Fadenkreuz/], [12, /Team-Up/], [4, /Heal-Priorität|Heile |heilst|Heilreihenfolge/], [5, /Schaden|Aggro|Greif an/],
+  [7, /Ping|Voice|Ansage|ansagen|\bCall|Tilt|Diskussion/], [3, /\bUlts?\b|Ult-/], [6, /Komposition|Counter|Pick|Spielstil|Gegnerteam/], [14, /Unterzahl|Tempo|Rückzug|zurückzieh/],
+  [16, /Cooldown|Movement|Escape|Fluchtfähigkeit/], [13, /\bKarte|\bMap\b|Modus/], [2, /Position|Cover|Deckung|Teamnähe|Fluchtweg|nah bei deinem Team/], [1, /Todesursache|\bstirbst|Tod\b/],
+  [17, /Führung|Mitspieler lesen/], [18, /Atemz|Pause|mental/], [8, /\bTank|Vanguard/], [9, /\bDPS\b|Duelist|Flank/]];
+// Ein Thema, das ein früherer Block des Tages schon hat, zählt nicht noch einmal: dann gilt das nächste passende Schlüsselwort (oder keine Stufe).
+function ladTextTopic(t, used) { const hit = LAD_KW.find(([id, re]) => !used.includes(id) && LADDER[id] && re.test(t || "")); return hit ? hit[0] : 0; }
+const deepSecond = n => { const day = ladTopic(n); return PLAN.tracker.filter(t => t.neu.includes(n) || t.refresh.includes(n)).map(t => t.id).find(id => LADDER[id] && id !== day && id !== 11) || 0; };
+function ladBlockTopic(n, key) {
+  const d = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1] : null; if (!d || !/^b[1-3]$/.test(key || "")) return 0;
+  const day = ladTopic(n);
+  if (d.deep) return key === "b1" ? day : key === "b2" ? deepSecond(n) : deepMixOn(n) ? deepMixTopic(n) : 0;
+  const plan = focusPlan(n, true), used = [day];
+  if (key === "b1") return day;
+  for (const k of ["b2", "b3"]) {
+    const blk = plan.find(x => x.key === k), id = blk ? ladTextTopic(blk.segs.map(x => x.t).join(" "), used) : 0;
+    if (k === key) return id;
+    if (id) used.push(id);
+  }
+  return 0;
+}
 function ladFor(n, key) {
   if (!/^b[1-3]$/.test(key || "")) return null;
-  const id = key === "b3" && deepMixOn(n) ? deepMixTopic(n) : ladTopic(n); if (!LADDER[id]) return null;
+  const id = ladBlockTopic(n, key); if (!LADDER[id]) return null;
   const s = ladStage(id);
   return { id, s, n: LADDER[id].length, t: LADDER[id][s - 1], topic: (PLAN.tracker.find(x => x.id === id) || {}).topic || "" };
 }
@@ -10854,7 +10877,7 @@ function ladEval(id) {
 // 3) Mischen: Am Vertiefen-Tag nimmt Block 3 ein früheres Thema, das noch nicht von allein läuft (wenn du kein Mini-Ziel gewählt hast).
 // 4) Bingo: Block 4 ist ein Spass-Block, pro Match drei Dinge zum Abhaken. Mischen und wechselnde Bedingungen gelten in der Lernforschung als
 // hilfreich (Interleaving, variables Üben); für Marvel Rivals ist das nicht untersucht.
-const SIT = ["im ersten Fight des Matches", "direkt nach jedem Respawn", "wenn ihr verteidigt", "wenn ihr angreift", "nach einem verlorenen Fight", "kurz vor Schluss oder in der Overtime"];
+const SIT = ["im ersten Fight des Matches", "direkt nach jedem Respawn", "wenn ihr verteidigt", "wenn ihr angreift", "nach einem verlorenen Fight", "kurz vor Schluss oder in der Overtime", "wenn dein Team gerade jemanden verloren hat"];   // sieben, damit Match k und k+6 (neuer Block) verschieden sind
 const SIT_TOPICS = [2, 3, 4, 5, 7, 10, 14, 15, 16, 17];
 const ladSit = (L, n, k) => L && k && SIT_TOPICS.includes(L.id) ? SIT[(k - 1 + n) % SIT.length] : "";
 function ladPersonal(id) {
@@ -10870,13 +10893,16 @@ function ladPersonal(id) {
 }
 // Mischen am Vertiefen-Tag: gelernte Themen ausser dem des Tages, zuerst das, was am wenigsten von allein läuft (bei Gleichstand wechselt es mit dem Tag)
 function deepMixTopic(n) {
-  const day = ladTopic(n), cand = PLAN.tracker.filter(t => LADDER[t.id] && t.id !== day && t.id !== 11 && t.neu.some(x => x < n));
+  const day = ladTopic(n), sec = deepSecond(n), cand = PLAN.tracker.filter(t => LADDER[t.id] && t.id !== day && t.id !== sec && t.id !== 11 && t.neu.some(x => x < n));
   if (!cand.length) return 0;
   const prio = t => { const v = topicAuto(t); return v === 0 ? 1.5 : v; };
   return cand.map((t, i) => ({ t, p: prio(t), r: (i + n) % cand.length })).sort((a, b) => a.p - b.p || a.r - b.r)[0].t.id;
 }
 const deepMixOn = n => { const d = n >= 1 && n <= PLAN_N ? PLAN.days[n - 1] : null; return !!(d && d.deep && !fxMiniText(n) && !focusRepeats()[0] && deepMixTopic(n)); };
 // Zeilen zur Stufe: Situation fürs Match k und Hinweis aus deinen Matches
+// Sagt die Stufe fast dasselbe wie die Aufgabe (die meisten längeren Wörter gleich), steht sie nur kurz da
+const ladWords = t => new Set(String(t || "").toLowerCase().match(/[a-zäöü%0-9]{5,}/g) || []);
+const ladSame = (stage, task) => { const a = ladWords(stage), b = ladWords(task); return a.size > 0 && [...a].filter(w => b.has(w)).length / a.size >= 0.6; };
 const ladExtraHtml = (L, n, k) => { const sit = ladSit(L, n, k), per = L ? ladPersonal(L.id) : "";
   return (sit ? `<span class="segsit"><b>Diesmal besonders:</b> ${esc(sit)}</span>` : "") + (per ? `<span class="segper">${esc(per)}</span>` : ""); };
 // Bingo: drei Dinge pro Match, je nach Datum und Match-Nummer anders. Nur Verhalten, das in jedem Match vorkommen kann, keine Spielwerte.
@@ -11659,7 +11685,7 @@ function blockFocusHtml(n, s, note) {
   const L = ladFor(n, s.key), f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "", full = blk.segs.some(x => x.key === cur) ? cur : (blk.segs[0] || {}).key;
   return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
     ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
-    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${esc(L.t)}${ladExtraHtml(L, n, x.key === cur ? f.k : x.a)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}, jedes Match eine andere Situation</span>`) : ""}${x.bingo ? `<span class="segstage"><b>Bingo${x.key === cur ? ` für Match ${f.k}` : ""}:</b> ${bingoFor(today(), x.key === cur ? f.k : x.a).map(i => esc(BINGO[i])).join(" · ")}</span>` : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${ladSame(L.t, x.t) ? "genau diese Aufgabe" : esc(L.t)}${ladExtraHtml(L, n, x.key === cur ? f.k : x.a)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}, jedes Match eine andere Situation</span>`) : ""}${x.bingo ? `<span class="segstage"><b>Bingo${x.key === cur ? ` für Match ${f.k}` : ""}:</b> ${bingoFor(today(), x.key === cur ? f.k : x.a).map(i => esc(BINGO[i])).join(" · ")}</span>` : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
 }
 
 
