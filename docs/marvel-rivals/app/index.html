@@ -960,16 +960,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .brmut { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .brnow { margin: 4px 0 6px; }
 .brlvl summary, .bralt summary { cursor: pointer; }
-.ladbox { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--border); display: grid; gap: 2px; }
-.ladhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ladhead .ladsteps { width: 72px; margin: 0; }
-.ladt { margin: 2px 0; }
+.ladbox { margin: 6px 0 0; display: grid; gap: 2px; }
+.ladbox .ladsteps { width: 64px; margin: 0; }
+.segstage.short { border-left-style: dashed; color: var(--muted); }
+.segstage { display: block; margin-top: 3px; padding-left: 8px; border-left: 3px solid var(--accent); font-size: .86rem; }
 .ladready { margin: 4px 0; }
 .ladsteps { display: flex; gap: 4px; margin: 2px 0; }
 .ladsteps span { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
 .ladsteps span.done { background: var(--good); border-color: var(--good); }
 .ladsteps span.cur { background: var(--accent); border-color: var(--accent); }
-.ladctl { gap: 12px; margin-top: 2px; }
+.ladctl { gap: 10px; margin-top: 2px; align-items: center; }
 .nmlad { margin: 0 0 4px; }
 .aimcard { display: grid; gap: 6px; }
 .aimd { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
@@ -6805,7 +6805,7 @@ function fxForMatch(m) {
 // Bewertungszeilen, gleich aufgebaut wie die Fragen im Match-Log
 function fxRowsHtml(items, vals, attr, extra) {
   return items.map(it => { const cur = vals[it.key];
-    return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span></span>
+    return `<div class="rrow fxrow"><span class="rl"><span class="badge">${esc(it.tag)}</span><br><span class="small">${esc(it.t)}</span>${it.subHtml || ""}</span>
       <span class="chips">${it.scale.map(([v, label]) => `<button type="button" class="chip ${String(cur) === String(v) ? "on" : ""}" ${attr(it, v)} aria-pressed="${String(cur) === String(v)}">${label}</button>`).join("")}</span>${extra ? extra(it, cur) : ""}</div>`; }).join("");
 }
 const fxMissed = v => ["nein", "teils", "1", "2"].includes(String(v));
@@ -7069,7 +7069,7 @@ function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
   if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match, das nicht für die Blöcke zählt (Vorbereitung, Lektion, Mission, freies Spiel), fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
   return `<div class="qnrow"><b class="small">Dein Fokus: Denkst du dran? Klappt es?</b><span class="small muted">Während des Matches mit ✓ und ✗ mitzählen, danach bewerten.</span>
-    ${items.length ? `<div class="fxrows">${fxRowsHtml(items, fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
+    ${items.length ? `<div class="fxrows">${fxRowsHtml(items.map(it => it.src === "step" ? Object.assign({}, it, { subHtml: qnLadSub(d, it) }) : it), fx, (it, v) => `data-qnfx="${esc(it.key)}" data-v="${esc(v)}"`, (it, cur) => qnLiveHtml(d, it, cur))}</div>` : `<span class="small muted">Noch nichts ausgewählt. Wähl hier aus, worauf du in den nächsten Matches achtest.</span>`}
     <details class="fxdet" ${fxPickOpen.q || !items.length ? "open" : ""}><summary class="small">Worauf achtest du? Auswahl ändern (${items.length} von ${FX_MAX})</summary>${fxPickHtml("q")}</details></div>`;
 }
 document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".fxdet")) fxPickOpen[e.target.closest("#qnSheet") ? "q" : "w"] = e.target.open; }, true);
@@ -7120,7 +7120,6 @@ function qnSheetHtml() {
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
-    ${qnLadHtml(d)}
     ${focusDay().n ? qnPurposeHtml(d) : ""}
     ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
       return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
@@ -7173,9 +7172,6 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { qnDeathAdd(d, b.dataset.qndeath); qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; qnDeathDec(d, c); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qnrole) { d.role = b.dataset.qnrole; qnRedraw(`[data-qnrole="${d.role}"]`); }
-  else if (b.dataset.qnladt || b.dataset.qnlad) { const L = qnLadFor(d); if (!L) return; if (!d.lad || d.lad.id !== L.id || d.lad.s !== L.s) d.lad = { id: L.id, s: L.s, ok: 0, no: 0 };
-    if (b.dataset.qnladt) { d.lad[b.dataset.qnladt]++; qnRedraw(`[data-qnladt="${b.dataset.qnladt}"]`); }
-    else { if (d.lad.v === b.dataset.qnlad) delete d.lad.v; else d.lad.v = b.dataset.qnlad; qnRedraw(`[data-qnlad="${b.dataset.qnlad}"]`); } }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
   else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
   else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
@@ -7189,9 +7185,9 @@ function qnClick(e) {
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
     fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
-    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog;
-    if (keep.lad && !qnLadFor(d)) delete keep.lad;   // Stufe gilt nur im Training (nicht bei Vorbereitung, Mission, freiem Spiel)
-    else if (keep.lad && !keep.lad.v) { const { ok = 0, no = 0 } = keep.lad; if (ok || no) keep.lad.v = ok && !no ? "ja" : ok && no ? "teils" : "nein"; else delete keep.lad; }
+    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog; delete keep.lad;
+    { const L = qnLadFor(d), st = fxIt.find(x => x.src === "step"), v = st && (d.fx || {})[st.key];   // Bewertung der Aufgabe zählt für die Stufe (nur im Training)
+      if (L && v) keep.lad = { id: L.id, s: L.s, v }; }
     state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
     qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
@@ -10840,13 +10836,13 @@ function ladEval(id) {
   return { s, last, ja, ready: ja >= 2 && s < LADDER[id].length };
 }
 const LAD_MARK = { ja: "✓", teils: "~", nein: "✗" };
+// Unter den Aufgaben: Stand der Stufe (die Stufe selbst steht in jeder Aufgabe), Vorschlag und Weiter/Zurück
 function ladBoxHtml(n, key) {
   const L = ladFor(n, key); if (!L) return "";
   const ev = ladEval(L.id);
-  return `<div class="ladbox"><div class="ladhead small"><b>Deine Stufe ${L.s} von ${L.n}</b><span class="ladsteps" aria-hidden="true">${LADDER[L.id].map((_, i) => `<span class="${i + 1 < L.s ? "done" : i + 1 === L.s ? "cur" : ""}"></span>`).join("")}</span></div>
-    <p class="ladt">${esc(L.t)}</p>
-    ${ev.ready ? `<p class="small ladready">In ${ev.ja} der letzten ${ev.last.length} Matches geklappt. Bereit für Stufe ${L.s + 1}? <button type="button" class="btn small" data-lad="up" data-id="${L.id}">Ja, nächste Stufe</button></p>` : ""}
-    <div class="row small ladctl"><span class="muted">${ev.last.length ? `Zuletzt: ${ev.last.map(v => LAD_MARK[v] || "").join(" ")}` : "In der Notiz mit ✓ und ✗ mitzählen"}</span>${L.s < L.n && !ev.ready ? `<button type="button" class="linkbtn small" data-lad="up" data-id="${L.id}">Ich bin bereit: nächste Stufe</button>` : ""}${L.s > 1 ? `<button type="button" class="linkbtn small" data-lad="down" data-id="${L.id}">Eine zurück</button>` : ""}</div></div>`;
+  return `<div class="ladbox small"><div class="row ladctl"><b>Stufe ${L.s} von ${L.n}</b><span class="ladsteps" aria-hidden="true">${LADDER[L.id].map((_, i) => `<span class="${i + 1 < L.s ? "done" : i + 1 === L.s ? "cur" : ""}"></span>`).join("")}</span>
+      <span class="muted">${ev.last.length ? `Zuletzt: ${ev.last.map(v => LAD_MARK[v] || "").join(" ")}` : "Zählt mit deiner Bewertung der Aufgabe in der Notiz"}</span>${L.s < L.n && !ev.ready ? `<button type="button" class="linkbtn small" data-lad="up" data-id="${L.id}">Ich bin bereit: nächste Stufe</button>` : ""}${L.s > 1 ? `<button type="button" class="linkbtn small" data-lad="down" data-id="${L.id}">Eine zurück</button>` : ""}</div>
+    ${ev.ready ? `<p class="ladready">In ${ev.ja} der letzten ${ev.last.length} Matches geklappt. Bereit für Stufe ${L.s + 1}: <i>${esc(LADDER[L.id][L.s])}</i> <button type="button" class="btn small" data-lad="up" data-id="${L.id}">Ja, nächste Stufe</button></p>` : ""}</div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest ? e.target.closest("[data-lad]") : null; if (!b) return;
@@ -10855,19 +10851,14 @@ document.addEventListener("click", e => {
   ladState()[id] = { s, at: Date.now() }; save(); render();
   toast(`Stufe ${s} von ${LADDER[id].length}: ${LADDER[id][s - 1]}`);
 });
-// Notiz: die Stufen-Aufgabe fürs aktuelle Match, mit Strichen im Match und Bewertung danach (ohne Bewertung schlägt die App sie aus den Strichen vor)
+// Notiz: Die Stufe steht direkt bei «Deine Aufgabe» (der einen Sache aus dem Plan). Deren Bewertung (oder der Vorschlag aus den Strichen)
+// zählt beim Speichern auch für die Stufe: q.lad = { id, s, v }. So bewertest du nur einmal.
 function qnLadFor(d) {
   const f = focusNow(); if (!f || !f.blk || f.done || d.prep) return null;
   return ladFor(f.n, f.blk.key);
 }
-function qnLadHtml(d) {
-  const L = qnLadFor(d); if (!L) return "";
-  const x = d.lad && d.lad.id === L.id && d.lad.s === L.s ? d.lad : {}, ok = x.ok || 0, no = x.no || 0, sug = !x.v ? (ok && !no ? "ja" : ok && no ? "teils" : no ? "nein" : "") : "";
-  return `<div class="qnrow"><b class="small">Stufen-Aufgabe (Stufe ${L.s} von ${L.n})</b><span class="small">${esc(L.t)}</span>
-    <div class="fxlive"><span class="small muted">Im Match:</span><button type="button" class="btn small ghost" data-qnladt="ok" aria-label="Geklappt, einen Strich mehr">✓ <b>${ok}</b></button><button type="button" class="btn small ghost" data-qnladt="no" aria-label="Nicht geklappt, einen Strich mehr">✗ <b>${no}</b></button>${sug ? `<span class="small muted">Vorschlag: <b>${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[sug]}</b> (gilt, wenn du nichts wählst)</span>` : ""}</div>
-    <div class="chips">${[["ja", "Ja"], ["teils", "Teilweise"], ["nein", "Nein"]].map(([v, l]) => `<button type="button" class="chip ${x.v === v ? "on" : ""}" data-qnlad="${v}" aria-pressed="${x.v === v}">${l}</button>`).join("")}</div></div>`;
-}
-const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null; return L ? `<p class="small nmlad"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</p>` : ""; };
+const qnLadSub = (d, it) => { const L = it.src === "step" ? qnLadFor(d) : null; return L ? `<div class="small segstage"><b>Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</div>` : ""; };
+const ladNowHtml = f => { const L = f && f.blk ? ladFor(f.n, f.blk.key) : null; return L ? `<p class="small nmlad"><b>Dabei, Stufe ${L.s} von ${L.n}:</b> ${esc(L.t)}</p>` : ""; };
 // Mut-Leiter für Ranked solo: im Block nur die Frage nach dem Spielen und der Vorschlag für die nächste (oder vorige) Stufe
 function mutInlineHtml(n, key, played) {
   const S = mutState(), min = mutMin(n), st = mutStage(n), feel = S.feel.filter(f => f.stage === st), last2 = feel.slice(-2);
@@ -11602,10 +11593,10 @@ document.addEventListener("change", e => {
 function blockFocusHtml(n, s, note) {
   const blk = focusPlan(n).find(x => x.key === s.key);
   if (!blk) return "";
-  const f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "";
+  const L = ladFor(n, s.key), f = focusNow(), cur = f && !f.done && f.n === n ? f.seg.key : "", full = blk.segs.some(x => x.key === cur) ? cur : (blk.segs[0] || {}).key;
   return `<div class="bfocus"><div class="small"><b>Eine Sache pro Match</b>${blk.segs.length > 1 ? " · in dieser Reihenfolge" : ""}</div>
     ${blk.pre ? `<p class="small" style="margin:4px 0"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
-    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
+    <ol class="bfl">${blk.segs.map(x => `<li class="${x.key === cur ? "cur" : ""}"><span class="bfr">${esc(focusRange(x))}</span><span>${x.rep ? '<span class="badge">Wiederholung</span> ' : ""}${linkify(esc(x.t), new Set())}${x.rep ? `<span class="small muted"> · ${esc(x.rep)}</span>` : ""}${x.ex ? `<span class="small muted"> · Zum Beispiel: ${esc(x.ex)}</span>` : ""}${x.goal ? `<span class="small muted"> · Messbar: ${esc(x.goal)}.</span>${(() => { const ev = x.practice && n === planDay() ? practiceEval(x.practice, blk.bi) : null; return ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""; })()}` : x.ok ? `<span class="small muted"> · Geschafft, wenn ${esc(x.ok)}.</span>` : ""}${x.key === cur ? ' <span class="badge">jetzt</span>' : ""}${L ? (x.key === full ? `<span class="segstage"><b>Stufe ${L.s}:</b> ${esc(L.t)}</span>` : `<span class="segstage short">Dazu wie oben: Stufe ${L.s}</span>`) : ""}</span></li>`).join("")}</ol>${ladBoxHtml(n, s.key)}${note ? qnPlanLine() : ""}</div>`;
 }
 
 
