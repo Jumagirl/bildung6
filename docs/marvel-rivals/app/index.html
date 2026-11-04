@@ -1830,7 +1830,23 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .hchead.Vanguard .hcr { --c: var(--vanguard); } .hchead.Duelist .hcr { --c: var(--duelist); } .hchead.Strategist .hcr { --c: var(--strategist); }
 .hcgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .hcsec { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
-.hcsec[data-hcsec="foe"], .hcsec[data-hcsec="ult"] { grid-column: 1 / -1; }
+.hcsec[data-hcsec="foe"], .hcsec[data-hcsec="ult"], .hcsec[data-hcsec="pick"], .hcsec[data-hcsec="tip"], .hcsec[data-hcsec="help"], .hcsec[data-hcsec="weak"] { grid-column: 1 / -1; }
+.hcvrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 0; }
+.hcview { display: grid; grid-template-columns: 1fr 1fr; width: min(460px, 100%); }
+.hcview label { justify-content: center; text-align: center; padding: 6px 10px; font-size: .84rem; line-height: 1.25; }
+.hcpov { margin: 2px 0 2px; font-size: .8rem; font-weight: 700; color: var(--accent-strong); }
+.hcpov.foe { color: var(--bad); }
+.hcsub { margin: 8px 0 2px; font: 600 .7rem/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hcsub:first-child { margin-top: 0; }
+.hcfocus { display: flex; gap: 6px; align-items: flex-start; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--accent); }
+.hcfocus .i { width: 16px; height: 16px; flex: none; color: var(--accent-strong); }
+.hcback { display: inline-flex; align-items: center; gap: 4px; margin: 6px 0 0; }
+.hcback .i { width: 14px; height: 14px; }
+.hcmine { flex-basis: 100%; color: var(--muted); }
+.hcmine.bad { color: var(--bad); font-weight: 600; }
+.hcpick.foe { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); }
+.hcrankinfo { margin: 6px 0 0; }
+.hcmr.mine { background: color-mix(in srgb, var(--good) 8%, transparent); border-radius: 8px; padding: 8px; }
 .hcsec h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: .78rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .hcsec h3 .i { width: 16px; height: 16px; color: var(--accent-strong); }
 .hcbody { font-size: .9rem; line-height: 1.45; }
@@ -5218,9 +5234,9 @@ const hcNoSrc = t => String(t || "").replace(/\s*\((?:[^()]*(?:Guide|Patch|Wiki|
 const hcEscOf = h => { const x = PROF[h]; if (!x) return []; return (HC_ESC[h] || []).map(n => x.kit.find(k => k.n === n)).filter(Boolean)
   .map(k => { const s = hcSent(k.d), use = s.find((t, i) => i > 0 && HC_ESC_RX.test(t)); return { n: k.n, typ: k.typ, t: [s[0], use].filter(Boolean).join(" ") }; }); };
 const hcUe = (x, key) => { const u = (x.ue || []).find(t => new RegExp("^" + key).test(t)); return u ? u.replace(/^[^:]+:\s*/, "") : ""; };
-function hcUltKind(h) {
-  const t = (ULTS[h] || {}).types || [], def = t.some(x => /Heilung|Wiederbelebung/.test(x)), off = t.some(x => /Schaden|Kontrolle|Debuff/.test(x));
-  return def && off ? "defensiv und offensiv" : def ? "defensiv (rettet dein Team)" : off ? "offensiv (hilft beim Angriff)" : "";
+function hcUltKind(h, view) {
+  const t = (ULTS[h] || {}).types || [], def = t.some(x => /Heilung|Wiederbelebung/.test(x)), off = t.some(x => /Schaden|Kontrolle|Debuff/.test(x)), foe = view === "foe";
+  return def && off ? "defensiv und offensiv" : def ? (foe ? "defensiv (rettet das Gegnerteam)" : "defensiv (rettet dein Team)") : off ? (foe ? "offensiv (gefährlich für dein Team)" : "offensiv (hilft beim Angriff)") : "";
 }
 // «Was hilft»: zuerst ein Satz aus dem eigenen Profil, der gegen genau diesen Gegner eine eigene Fähigkeit nennt
 // (Ult-Konter «uk», Tipps, Ult-Einsatz), sonst der allgemeine Tipp gegen den Gegner (COUNTERPLAY), der am besten zum Problem passt
@@ -5263,7 +5279,38 @@ function hcDefault() {
   if (last && pool.includes(last.hero)) return last.hero;
   return pool.find(h => PROF[h]) || (last && last.hero) || Object.keys(PROF).find(h => heroRole(h) === myRole()) || Object.keys(PROF)[0];
 }
-const hcUi = { hero: "", open: new Set() };
+// Zwei Sichten der Karte: «me» = du spielst den Helden, «foe» = der Held ist im Gegnerteam.
+// Die Sicht kommt vom Ort, an dem du die Karte öffnest (data-hcview: Team-Seite, Gegner-Zeilen, Pool, Plan).
+// Ohne Angabe: Gegner im laufenden Match → «foe»; Held aus deinem Pool oder in den letzten 20 Matches gespielt → «me»; sonst «foe».
+const hcUi = { hero: "", open: new Set(), view: "me", prev: null, secs: [] };
+function hcDefaultView(h) {
+  const live = hcLive();
+  if (live.enemy.includes(h) && !live.team.includes(h)) return "foe";
+  const pool = typeof planPool === "function" ? planPool() : [];
+  return pool.includes(h) || state.matches.slice(-20).some(m => m.hero === h) ? "me" : "foe";
+}
+// Texte aus PROF sprechen meist die Person an, die den Helden spielt («du», «dein»). In der Gegner-Sicht zeigt die Karte nur Sätze ohne diese Anrede.
+const HC_DU = /\b(?:du|dich|dir|dein\w*)\b/i;
+// … und keine Befehlssätze an diese Person («Nutz sie zum Ausweichen», «Hebe ihn auf»)
+const HC_IMP = /^(?:Nutze?|Hebe?|Halte?|Spring|Geh|Bleib|Setze?|Zünde?|Spiel|Heile?|Lauf|Flieg|Wechsle?|Achte?|Warte?|Stell|Such|Zieh|Triff|Schiess|Leg|Bring|Lock|Merk|Mach|Hol|Drück|Fokussiere?|Nimm|Gib|Spar|Verwende|Benutze?|Wirf|Feuere?|Ziele?|Platziere?|Kombiniere?|Pass|Schütze?|Rette?)\b/;
+const hcOk = t => !!t && !HC_DU.test(t) && !HC_IMP.test(String(t).trim());
+const hcNeutral = l => (l || []).map(t => hcNoSrc(hcFirst(t))).filter(hcOk);
+// Meta-Sätze (Tierliste, Siegrate) helfen beim Kontern nicht
+const HC_META = /Tier-?List|Tierliste|Siegrate|Pickrate|Winrate|MetaBot/i;
+const hcShort = (t, n) => { t = String(t || ""); if (t.length <= n) return t; const c = t.slice(0, n), i = c.lastIndexOf(" "); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:]$/, "") + " …"; };
+const hcLi = a => a.filter(Boolean).map(t => `<li>${t}</li>`).join("");
+// Was du heute im Plan lernst (Thema des Plantags oder Wiederholung), bestimmt, welche Teile oben stehen
+const HC_FOCUS = { 3: { me: ["ult"], foe: ["ult"] }, 6: { me: ["foe", "pick"], foe: ["help"] }, 10: { me: ["foe"], foe: ["help", "weak"] }, 11: { me: ["str", "pick"] }, 12: { me: ["pick"] } };
+const HC_ORDER = { me: ["str", "esc", "ult", "foe", "pick", "tip"], foe: ["thr", "esc", "ult", "help", "weak"] };
+const HC_T = { me: { str: "Stärke", esc: "Escape", ult: "Ult", foe: "Wer kontert dich", pick: "Wann wählen", tip: "Merk dir" },
+  foe: { thr: "Gefahr", esc: "Fluchtweg", ult: "Ult", help: "Wer hilft dagegen", weak: "So spielst du dagegen" } };
+function hcFocus(view) {
+  let n = 0, rs = [];
+  try { n = planDayOf(today()) || 0; rs = n ? rulesForDay(n).filter(r => r.role === "day" || r.role === "again") : []; } catch (e) { rs = []; }
+  for (const r of rs) { const f = HC_FOCUS[r.t.id]; if (f && f[view]) return { secs: f[view], topic: r.t.topic, again: r.role === "again" }; }
+  return null;
+}
+const hcOrder = (view, focus) => { const base = HC_ORDER[view], f = focus ? focus.secs.filter(s => base.includes(s)) : []; return f.concat(base.filter(s => !f.includes(s))); };
 // Ein Abschnitt; im Selbsttest bleibt der Inhalt verdeckt, bis du ihn antippst (erst aus dem Kopf, dann prüfen)
 function hcSec(id, ic, title, q, body) {
   if (!body) return "";
@@ -5272,64 +5319,147 @@ function hcSec(id, ic, title, q, body) {
     ? `<button type="button" class="hcq" data-hcreveal="${id}"><b>${esc(q)}</b><span>Erst im Kopf beantworten, dann antippen</span></button>`
     : `<div class="hcbody">${body}</div>`}</section>`;
 }
-function heroCardHtml(h) {
-  const x = PROF[h];
-  if (!x) return `<p class="muted">Für ${esc(h)} gibt es noch kein geprüftes Profil.</p>`;
-  const live = hcLive(), U = ULTS[h], ult = x.ult || {}, kind = hcUltKind(h);
-  const li = a => a.filter(Boolean).map(t => `<li>${t}</li>`).join("");
-  // Stärke
-  const strong = `<p class="hclead">${esc(hcFirst(x.spielstil))}</p><ul class="hcl">${li(x.staerken.slice(0, 2).map(t => esc(hcNoSrc(hcFirst(t)))))}</ul>`;
-  // Escape
+const hcCardBtn = (h, view, label) => PROF[h] ? `<button type="button" class="linkbtn small" data-hcard="${esc(h)}" data-hcview="${view}" data-hcfrom="1">${esc(label)}</button>` : "";
+// Sicht «Du spielst»: Stärke, Escape, Ult, wer dich kontert, wann du den Helden wählst, Merksätze
+function hcMeParts(h, x, live) {
+  const U = ULTS[h], ult = x.ult || {}, kind = hcUltKind(h, "me");
+  const strong = `<p class="hclead">${esc(hcFirst(x.spielstil))}</p><ul class="hcl">${hcLi(x.staerken.slice(0, 2).map(t => esc(hcNoSrc(hcFirst(t)))))}</ul>`;
   const escs = hcEscOf(h);
-  const escHtml = (escs.length ? `<ul class="hcl">${li(escs.map(e => `<b>${esc(e.n)}</b> ${esc(e.t)}`))}</ul>` : `<p class="small" style="margin:0">Die Beschreibungen nennen keinen eigenen Escape. Dein Schutz sind Position, Deckung und dein Team.</p>`)
+  const escHtml = (escs.length ? `<ul class="hcl">${hcLi(escs.map(e => `<b>${esc(e.n)}</b> ${esc(e.t)}`))}</ul>` : `<p class="small" style="margin:0">Die Beschreibungen nennen keinen eigenen Escape. Dein Schutz sind Position, Deckung und dein Team.</p>`)
     + `<p class="small muted" style="margin:4px 0 0">Abklingzeit: in der Hero-Info im Spiel. Die App nennt keine Zahl ohne geprüfte Quelle.</p>`;
-  // Ult
   const when = hcFirst(hcUe(x, "Wann")), err = hcFirst(hcUe(x, "Typischer Fehler")), no = (x.ul || [])[0] ? hcFirst(x.ul[0]) : "";
   const uks = [...new Set(ultUk(h).map(k => k.held))];
   const ultHtml = ult.n ? `<p class="hclead"><b>${esc(ult.n)}</b>${kind ? ` <span class="badge" title="Abgeleitet aus dem Ult-Typ: ${esc(((U || {}).types || []).join(", "))}">${esc(kind)}</span>` : ""}</p>
-    <ul class="hcl">${li([when && `<b>Wann:</b> ${esc(hcNoSrc(when))}`, no && (/^Nicht\b/.test(no) ? `<b>Nicht</b>${esc(hcNoSrc(no).slice(5))}` : `<b>Nicht:</b> ${esc(hcNoSrc(no))}`), err && `<b>Typischer Fehler:</b> ${esc(hcNoSrc(err))}`])}</ul>
+    <ul class="hcl">${hcLi([when && `<b>Wann:</b> ${esc(hcNoSrc(when))}`, no && (/^Nicht\b/.test(no) ? `<b>Nicht</b>${esc(hcNoSrc(no).slice(5))}` : `<b>Nicht:</b> ${esc(hcNoSrc(no))}`), err && `<b>Typischer Fehler:</b> ${esc(hcNoSrc(err))}`])}</ul>
     ${uks.length ? `<p class="small" style="margin:4px 0 0"><b>Stoppt deine Ult:</b> ${uks.map(u => `<span class="hcname${live.enemy.includes(u) ? " live" : ""}">${esc(u)}</span>`).join(", ")}</p>` : ""}` : "";
-  // Schwierige Gegner mit Problem und Lösung (Matchup-Tabelle)
-  const foes = (x.counter || []).slice(0, 5).map(c => { const w = counterWhy(c.held, h); return { h: c.held, why: w ? hcNoSrc(hcFirst(w.text)) : "", from: w ? w.from : "", help: hcHelp(h, c.held, w ? w.text : "") }; })
-    .sort((a, b) => live.enemy.includes(b.h) - live.enemy.includes(a.h));
+  // Wer kontert dich: Gegner mit Problem und Lösung; jeder Name öffnet die Karte dieses Gegners in der Gegner-Sicht
+  // Dazu deine Matches mit diesem Helden: wer dir dabei Probleme machte (oben), und bis zu zwei Gegner, die die Quellen nicht nennen
+  const myMs = state.matches.filter(m => m.hero === h && (m.enemies || []).length), myAvg = myMs.length ? summary(myMs).wr : NaN;
+  const myVs = e => { const l = myMs.filter(m => m.enemies.includes(e)); return { s: summary(l), nem: l.filter(m => m.nemesis === e).length }; };
+  const myBad = v => (v.s.n >= 3 && isFinite(myAvg) && v.s.wr <= myAvg - 0.15) || v.nem >= 2;
+  const myScore = v => (v.s.n - v.s.w) + 1.5 * v.nem;   // Niederlagen und «grösstes Problem» (das zählt mehr)
+  const srcF = (x.counter || []).slice(0, 5).map(c => c.held);
+  const extra = [...new Set(myMs.flatMap(m => m.enemies))].filter(e => PROF[e] && !srcF.includes(e) && myBad(myVs(e))).sort((a, b) => myVs(a).s.wr - myVs(b).s.wr || myVs(b).nem - myVs(a).nem).slice(0, 2);
+  const foes = srcF.concat(extra).map(e => { const w = counterWhy(e, h), v = myVs(e); return { h: e, why: w ? hcNoSrc(hcFirst(w.text)) : "", from: w ? w.from : "", help: hcHelp(h, e, w ? w.text : ""), v, bad: myBad(v), own: extra.includes(e) }; })
+    .sort((a, b) => (live.enemy.includes(b.h) - live.enemy.includes(a.h)) || (b.bad - a.bad) || (myScore(b.v) - myScore(a.v)));
   const foeHtml = foes.length ? `<div class="hcmu">${foes.map(f => `<div class="hcmr${live.enemy.includes(f.h) ? " live" : ""}">
-      <div class="hcmh">${av(f.h, "sm")}<b>${esc(f.h)}</b>${live.enemy.includes(f.h) ? `<span class="badge bad">im Gegnerteam</span>` : ""}</div>
-      <div class="hcmp"><span class="muted small">Problem</span>${f.why ? esc(f.why) + (f.from === "Regel" ? ` <span class="muted small">(Faustregel der App)</span>` : "") : `<span class="muted">Die Quelle nennt keinen Grund.</span>`}</div>
+      <div class="hcmh">${av(f.h, "sm")}<b>${esc(f.h)}</b>${live.enemy.includes(f.h) ? `<span class="badge bad">im Gegnerteam</span>` : ""}${f.own ? `<span class="badge">aus deinen Matches</span>` : ""}${hcCardBtn(f.h, "foe", "Gegner-Karte")}
+        ${f.v.s.n ? `<span class="small hcmine${f.bad ? " bad" : ""}">Bei dir mit ${esc(h)}: ${f.v.s.w} von ${f.v.s.n} gewonnen${f.v.nem ? `, ${f.v.nem}× «grösstes Problem»` : ""}</span>` : ""}</div>
+      <div class="hcmp"><span class="muted small">Problem</span>${f.why ? esc(f.why) + (f.from === "Regel" ? ` <span class="muted small">(Faustregel der App)</span>` : "") : f.own ? `<span class="muted">Die Quellen nennen ${esc(f.h)} nicht als Konter. Das kommt aus deinen Matches.</span>` : `<span class="muted">Die Quelle nennt keinen Grund.</span>`}</div>
       ${f.help ? `<div class="hcmp"><span class="muted small">${f.help.own ? "Was hilft (aus deinem Heldenprofil)" : `Was hilft (allgemein gegen ${esc(f.h)})`}</span>${esc(hcFirst(f.help.t))}</div>` : ""}</div>`).join("")}</div>` : "";
-  // Partner und Team-Ups
+  // Wann wählen: gegen wen (aus den Profilen der Gegner), mit wem (Partner, Team-Ups), in welchem Teamstil (Faustregel der App)
+  // Varianten desselben Helden (Deadpool) zählen einmal
+  const goodAll = [...new Map(strongAgainstSrc(h).map(g => [g.target.replace(/ \(.*\)$/, ""), g])).values()];
+  const good = goodAll.slice().sort((a, b) => live.enemy.includes(b.target) - live.enemy.includes(a.target)).slice(0, 4);
   const partners = (x.synergie || []).slice(0, 4).map(s => { const tu = /^(?:Ihr |Sein |Seine )?Team-Up ([^:;(]+?)(?=[:;(]| nennt| wird| bleibt| greift|$)/.exec(s.warum);
-    return `<li><span class="hcname${live.team.includes(s.held) ? " live" : ""}">${av(s.held, "sm")}<b>${esc(s.held)}</b></span> ${tu ? `<span class="muted small">Team-Up ${esc(tu[1].trim())}</span>` : `<span class="muted small">${esc(hcNoSrc(hcFirst(s.warum)).slice(0, 90))}</span>`}${live.team.includes(s.held) ? ` <span class="badge ok">in deinem Team</span>` : ""}</li>`; });
-  const partHtml = partners.length ? `<ul class="hcl hcpart">${partners.join("")}</ul>` : "";
-  // Merksätze
+    return `<li><span class="hcname${live.team.includes(s.held) ? " live" : ""}">${av(s.held, "sm")}<b>${esc(s.held)}</b></span> ${tu ? `<span class="muted small">Team-Up ${esc(tu[1].trim())}</span>` : `<span class="muted small">${esc(hcShort(hcNoSrc(hcFirst(s.warum)), 90))}</span>`}${live.team.includes(s.held) ? ` <span class="badge ok">in deinem Team</span>` : ""}</li>`; });
+  const tags = heroTags(h), arch = ARCHETYPES.filter(a => tags.includes(a.tag) || (a.tag === "Poke" && tags.includes("Sniper")));
+  const liveGood = live.enemy.filter(e => goodAll.some(g => g.target === e)), liveBad = live.enemy.filter(e => (x.counter || []).some(c => c.held === e));
+  const pickHtml = (live.enemy.length && (liveGood.length || liveBad.length) ? `<p class="small hclive" style="margin:0 0 6px">Im laufenden Match laut den Profilen: ${[liveGood.length && `gut gegen ${liveGood.map(esc).join(", ")}`, liveBad.length && `gekontert von ${liveBad.map(esc).join(", ")}`].filter(Boolean).join(" · ")}</p>` : "")
+    + (good.length ? `<p class="hcsub">Gut gegen</p><ul class="hcl hcpart">${good.map(g => `<li><span class="hcname${live.enemy.includes(g.target) ? " live" : ""}">${av(g.target, "sm")}<b>${esc(g.target.replace(/ \(.*\)$/, ""))}</b></span>${live.enemy.includes(g.target) ? ` <span class="badge ok">im Gegnerteam</span>` : ""} <span class="muted small">${esc(hcShort(hcNoSrc(hcFirst(g.warum)), 110))}</span></li>`).join("")}</ul>` : "")
+    + (partners.length ? `<p class="hcsub">Passt zu</p><ul class="hcl hcpart">${partners.join("")}</ul>` : "")
+    + (arch.length ? `<p class="hcsub">Teamstil <span class="muted small">(Faustregel der App)</span></p><ul class="hcl">${hcLi(arch.map(a => `<b>${esc(a.name)}:</b> ${esc(hcFirst(a.idea))}`))}</ul>` : "");
   const tips = [hcFirst(x.tipps[0] || ""), hcFirst((x.tipps.find(t => /^Typischer Fehler/.test(t)) || ""))].filter((t, i, a) => t && a.indexOf(t) === i);
-  const mine = hcMine(h), note = (state.heroNotes[h] || "").trim();
+  return {
+    str: { ic: "sparkle", q: `Wofür ist ${h} gut?`, body: strong },
+    esc: { ic: "clock", q: "Welche Fähigkeit rettet dich?", body: escHtml },
+    ult: { ic: "zap", q: "Wann zündest du die Ult, und wann nicht?", body: ultHtml },
+    foe: { ic: "target", q: "Wer kontert dich, und was hilft?", body: foeHtml },
+    pick: { ic: "team", q: `Gegen wen und mit wem wählst du ${h}?`, body: pickHtml },
+    tip: { ic: "book", q: "Was ist der wichtigste Tipp?", body: tips.length ? `<ul class="hcl">${hcLi(tips.map(t => esc(hcNoSrc(t))))}</ul>` : "" }
+  };
+}
+// Sicht «Im Gegnerteam»: was den Helden gefährlich macht, wer dagegen hilft (dein Pool zuerst), seine Ult, sein Fluchtweg, wie du dagegen spielst
+function hcFoeParts(h, x, live) {
+  const pool = typeof planPool === "function" ? planPool() : [], inPool = p => pool.includes(p);
+  const lead = hcSent(x.spielstil).slice(0, 2).map(hcNoSrc).find(hcOk) || "";
+  const st = hcNeutral(x.staerken).filter(t => !HC_META.test(t)).slice(0, 2);
+  const thr = (lead || st.length) ? `${lead ? `<p class="hclead">${esc(lead)}</p>` : ""}${st.length ? `<ul class="hcl">${hcLi(st.map(esc))}</ul>` : ""}` : "";
+  // Wer hilft: Konter aus den Quellen (PROF[h].counter); nennen sie keinen Pool-Helden, ergänzt die App höchstens zwei aus deinem Pool nach Faustregel
+  const rows = (x.counter || []).map(c => { const w = counterWhy(c.held, h); return { h: c.held, why: w ? hcNoSrc(hcFirst(w.text)) : "", from: w ? w.from : "" }; });
+  const rule = rows.some(r => inPool(r.h)) ? [] : pool.filter(p => PROF[p] && p !== h && !rows.some(r => r.h === p) && counterReasons(p, h).length).slice(0, 2)
+    .map(p => ({ h: p, why: counterReasons(p, h)[0].why, from: "Regel" }));
+  const list = rows.concat(rule).sort((a, b) => (inPool(b.h) - inPool(a.h)) || (live.team.includes(b.h) - live.team.includes(a.h))).slice(0, 5);
+  const pc = typeof personalCounters === "function" ? personalCounters(h).slice(0, 2) : [];
+  const help = (list.length ? `<div class="hcmu">${list.map(r => `<div class="hcmr${inPool(r.h) ? " mine" : ""}">
+      <div class="hcmh">${av(r.h, "sm")}<b>${esc(r.h)}</b>${inPool(r.h) ? `<span class="badge ok">in deinem Pool</span>` : ""}${live.team.includes(r.h) ? `<span class="badge ok">in deinem Team</span>` : ""}</div>
+      <div class="hcmp"><span class="muted small">Warum</span>${r.why ? esc(r.why) + (r.from === "Regel" ? ` <span class="muted small">(Faustregel der App)</span>` : "") : `<span class="muted">Die Quelle nennt keinen Grund.</span>`}</div>
+      <div class="hcmp">${hcCardBtn(r.h, "me", `Karte: Du spielst ${r.h}`)}</div></div>`).join("")}</div>` : "")
+    + (pc.length ? `<p class="small" style="margin:6px 0 0"><b>Bei dir klappt gegen ${esc(h)}:</b> ${pc.map(([p, s]) => `${esc(p)} (${pct(s.wr)} Siege in ${s.n} Matches)`).join(", ")}</p>` : "");
+  // Ult: was sie macht, wie du reagierst, wer sie stoppt, wie oft sie dich getötet hat
+  const U = ULTS[h], ult = x.ult || {}, kind = hcUltKind(h, "foe");
+  const what = U && U.what ? U.what : (hcSent(ult.d).find(hcOk) || "");
+  const stops = [...new Map(ultUk(h).map(k => [k.held, k])).values()].sort((a, b) => (inPool(b.held) - inPool(a.held)) || (live.team.includes(b.held) - live.team.includes(a.held)));
+  const killed = state.matches.reduce((a, m) => a + (+((m.ultDeaths || {})[h]) || 0), 0);
+  const ultHtml = ult.n ? `<p class="hclead"><b>${esc(ult.n)}</b>${kind ? ` <span class="badge" title="Abgeleitet aus dem Ult-Typ: ${esc(((U || {}).types || []).join(", "))}">${esc(kind)}</span>` : ""}</p>
+    <ul class="hcl">${hcLi([what && `<b>Was sie macht:</b> ${esc(hcNoSrc(what))}`, U && U.counter && `<b>So reagierst du:</b> ${esc(U.counter)}`])}</ul>
+    ${stops.length ? `<p class="small" style="margin:4px 0 0"><b>Stoppt die Ult:</b> ${stops.map(k => `<span class="hcname${inPool(k.held) || live.team.includes(k.held) ? " live" : ""}">${esc(k.held)}</span> <span class="muted">(${esc(k.was)})</span>`).join(", ")}</p>` : ""}
+    ${killed ? `<p class="small" style="margin:4px 0 0">Diese Ult hat dich bisher <b>${killed}-mal</b> getötet (deine Einträge).</p>` : ""}` : "";
+  // Fluchtweg: nur Name und neutrale Sätze aus der Beschreibung
+  const escs = hcEscOf(h).map(e => ({ n: e.n, t: hcSent(e.t).filter(hcOk).join(" ") }));
+  const escHtml = (escs.length ? `<ul class="hcl">${hcLi(escs.map(e => `<b>${esc(e.n)}</b>${e.t ? " " + esc(e.t) : ""}`))}</ul><p class="small" style="margin:4px 0 0">Merk dir, wann ${esc(h)} das benutzt hat.</p>`
+    : `<p class="small" style="margin:0">Die Beschreibungen nennen keine eigene Fluchtfähigkeit für ${esc(h)}.</p>`)
+    + `<p class="small muted" style="margin:4px 0 0">Abklingzeit: in der Hero-Info im Spiel. Die App nennt keine Zahl ohne geprüfte Quelle.</p>`;
+  // So spielst du dagegen: Schwächen (neutral formuliert) und Gegen-Tipps
+  const wk = hcNeutral(x.schwaechen).filter(t => !HC_META.test(t)).slice(0, 2), cp = (COUNTERPLAY[h] || []).slice(0, 2), note = (state.counterNotes[h] || "").trim();
+  const weak = (wk.length ? `<p class="hcsub">Angreifbar</p><ul class="hcl">${hcLi(wk.map(esc))}</ul>` : "")
+    + (cp.length ? `<p class="hcsub">So spielst du dagegen</p><ul class="hcl">${hcLi(cp.map(esc))}</ul>` : "")
+    + (note ? `<p class="small hcnote"><b>Deine Notiz:</b> ${esc(note)}</p>` : "");
+  return {
+    thr: { ic: "sparkle", q: `Was macht ${h} gefährlich?`, body: thr },
+    esc: { ic: "clock", q: `Wie entkommt ${h}?`, body: escHtml },
+    ult: { ic: "zap", q: `Was macht die Ult von ${h}, und wer stoppt sie?`, body: ultHtml },
+    help: { ic: "target", q: `Wer hilft gegen ${h}, und warum?`, body: help },
+    weak: { ic: "book", q: `Wo ist ${h} angreifbar?`, body: weak }
+  };
+}
+function heroCardHtml(h, view) {
+  const x = PROF[h];
+  if (!x) { hcUi.secs = []; return `<p class="muted">Für ${esc(h)} gibt es noch kein geprüftes Profil.</p>`; }
+  view = view === "foe" || view === "me" ? view : hcDefaultView(h);
+  const live = hcLive(), focus = hcFocus(view), parts = view === "foe" ? hcFoeParts(h, x, live) : hcMeParts(h, x, live), T = HC_T[view];
+  const order = hcOrder(view, focus).filter(id => parts[id] && parts[id].body);
+  hcUi.secs = order;
+  const top = focus ? focus.secs.filter(s => order.includes(s)).map(s => `«${T[s]}»`) : [];
+  const fr = view === "foe" ? hcFoeRank().find(x => x.h === h) : null;
+  const vs = view === "foe" ? summary(state.matches.filter(m => (m.enemies || []).includes(h))) : null;
+  const mine = view === "foe" ? (fr ? hcFoeWhy(fr).join(" · ") : vs.n ? `${vs.n} ${vs.n === 1 ? "Match" : "Matches"} gegen ${h}, ${pct(vs.wr)} Siege` : "") : hcMine(h), note = view === "me" ? (state.heroNotes[h] || "").trim() : "";
+  const liveLine = view === "foe" ? (live.team.length ? `Dein Team im laufenden Match: ${live.team.map(esc).join(", ")}. Passende Zeilen sind markiert.` : "")
+    : (live.enemy.length ? `Gegnerteam im laufenden Match: ${live.enemy.map(esc).join(", ")}. Passende Zeilen sind markiert.` : "");
   return `<div class="hchead ${esc(heroRole(h))}">${av(h, "xl")}<div><div class="hcr">${roleIcon(heroRole(h))}${esc(ROLE_DE[heroRole(h)] || heroRole(h))}</div><h2 id="hcTitle">${esc(h)}</h2>
+      <div class="hcpov ${view}">${view === "foe" ? `Gegner-Sicht: ${esc(h)} ist im anderen Team` : `Deine Sicht: Du spielst ${esc(h)}`}</div>
       ${mine ? `<div class="small muted">Bei dir: ${esc(mine)}</div>` : ""}</div></div>
-    ${live.enemy.length ? `<p class="small hclive">Gegnerteam im laufenden Match: ${live.enemy.map(esc).join(", ")}. Passende Zeilen sind markiert.</p>` : ""}
-    <div class="hcgrid">
-      ${hcSec("str", "sparkle", "Stärke", `Wofür ist ${h} gut?`, strong)}
-      ${hcSec("esc", "clock", "Escape", "Welche Fähigkeit rettet dich?", escHtml)}
-      ${hcSec("ult", "zap", "Ult", "Wann zündest du die Ult, und wann nicht?", ultHtml)}
-      ${hcSec("foe", "target", "Schwierige Gegner", "Wer macht dir Probleme, und was hilft?", foeHtml)}
-      ${hcSec("par", "team", "Partner", `Mit wem passt ${h} gut zusammen?`, partHtml)}
-      ${hcSec("tip", "book", "Merk dir", "Was ist der wichtigste Tipp?", tips.length ? `<ul class="hcl">${li(tips.map(t => esc(hcNoSrc(t))))}</ul>` : "")}
-    </div>
+    ${liveLine ? `<p class="small hclive">${liveLine}</p>` : ""}
+    ${top.length ? `<p class="small hcfocus">${icon("target")}<span>Heute im Plan${focus.again ? " (Wiederholung)" : ""}: <b>${esc(focus.topic)}</b>. Darum ${top.length > 1 ? "stehen" : "steht"} ${esc(top.join(" und "))} oben.</span></p>` : ""}
+    <div class="hcgrid">${order.map(id => hcSec(id, parts[id].ic, T[id], parts[id].q, parts[id].body)).join("")}</div>
     ${note ? `<p class="small hcnote"><b>Deine Notiz:</b> ${esc(note)}</p>` : ""}
     <p class="small muted" style="margin:10px 0 0">Erstellt aus den Heldendaten der App, Stand ${esc(fmtDate(x.stand))}. Quellen, alle Fähigkeiten und Gegen-Tipps stehen im Helden-Guide.</p>`;
 }
 function hcSheetHtml() {
-  const h = hcUi.hero, all = planPool().filter(p => PROF[p]), pool = all.filter(p => heroRole(p) === heroRole(h)).slice(0, 8), rest = all.filter(p => !pool.includes(p));
-  const others = Object.keys(PROF).filter(p => !all.includes(p)).sort((a, b) => a.localeCompare(b)), opt = p => `<option value="${esc(p)}"${p === h ? " selected" : ""}>${esc(p)}</option>`;
-  return `<div class="hctop"><div class="hcpicks">${pool.map(p => `<button type="button" class="hcpick${p === h ? " on" : ""}" data-hcard="${esc(p)}" aria-pressed="${p === h}">${av(p, "sm")}<span>${esc(p)}</span></button>`).join("")}
-      <select class="hcsel" data-hcsel aria-label="Anderen Helden wählen"><option value="">${all.length ? "Anderer Held …" : "Held wählen …"}</option>${rest.length ? `<optgroup label="Dein Pool">${rest.map(opt).join("")}</optgroup>` : ""}<optgroup label="${all.length ? "Alle anderen Helden" : "Alle Helden"}">${others.map(opt).join("")}</optgroup></select></div>
+  const h = hcUi.hero, v = hcUi.view, all = planPool().filter(p => PROF[p]), live = hcLive();
+  const card = heroCardHtml(h, v);
+  // Oben: in der Gegner-Sicht die Gegner im laufenden Match, sonst die Pool-Helden derselben Rolle
+  const liveE = [...new Set(live.enemy)].filter(p => PROF[p]), rank = v === "foe" ? hcFoeRank() : [];
+  const chips = v === "foe" ? (liveE.length ? liveE.slice(0, 6) : rank.slice(0, 6).map(x => x.h)) : all.filter(p => heroRole(p) === heroRole(h)).slice(0, 8);
+  const probs = v === "foe" ? rank.slice(0, 10).map(x => x.h).filter(p => !chips.includes(p)) : [];
+  const rest = all.filter(p => !chips.includes(p) && !probs.includes(p)), others = Object.keys(PROF).filter(p => !all.includes(p) && !probs.includes(p)).sort((a, b) => a.localeCompare(b)), opt = p => `<option value="${esc(p)}"${p === h ? " selected" : ""}>${esc(p)}</option>`;
+  const hidden = hcUi.secs.filter(k => !hcUi.open.has(k)).length, pv = hcUi.prev;
+  return `<div class="hctop"><div class="hcpicks">${chips.map(p => `<button type="button" class="hcpick${p === h ? " on" : ""}" data-hcard="${esc(p)}" data-hcview="${v}" aria-pressed="${p === h}">${av(p, "sm")}<span>${esc(p)}</span></button>`).join("")}
+      <select class="hcsel" data-hcsel aria-label="Anderen Helden wählen"><option value="">${all.length ? "Anderer Held …" : "Held wählen …"}</option>${probs.length ? `<optgroup label="Weitere Problem-Gegner">${probs.map(opt).join("")}</optgroup>` : ""}${rest.length ? `<optgroup label="Dein Pool">${rest.map(opt).join("")}</optgroup>` : ""}<optgroup label="${all.length ? "Alle anderen Helden" : "Alle Helden"}">${others.map(opt).join("")}</optgroup></select></div>
       <button type="button" class="btn ghost small icon" data-hcclose aria-label="Schliessen">${icon("x")}</button></div>
+    ${v === "foe" && !liveE.length && chips.length ? `<p class="small muted hcrankinfo">Oben: deine Problem-Gegner. Zuerst zählen deine Matches (Niederlagen, «grösstes Problem» im Review, Ult-Tode), dann wie oft der Held vorkommt (Pickrate laut Rivals Data). Die Reihenfolge ist eine Schätzung der App.</p>` : ""}
+    ${pv ? `<button type="button" class="linkbtn small hcback" data-hcback>${icon("back")}Zurück zu ${esc(pv.hero)} (${pv.view === "foe" ? "Gegner-Sicht" : "du spielst"})</button>` : ""}
+    <div class="hcvrow"><span class="small muted">Sicht</span><div class="seg hcview" role="radiogroup" aria-label="Sicht der Karte">
+      <input type="radio" name="hcview" id="hcv-me" value="me" data-hcviewsw${v === "me" ? " checked" : ""}><label for="hcv-me">Du spielst ${esc(h)}</label>
+      <input type="radio" name="hcview" id="hcv-foe" value="foe" data-hcviewsw${v === "foe" ? " checked" : ""}><label for="hcv-foe">${esc(h)} im Gegnerteam</label></div></div>
     <div class="hcbar"><label class="hcqt"><input type="checkbox" data-hcquiz${state.settings.hcQuiz ? " checked" : ""}> Selbsttest: erst aus dem Kopf, dann aufdecken</label>
-      ${state.settings.hcQuiz && hcUi.open.size < 6 ? `<button type="button" class="linkbtn small" data-hcrevealall>Alles aufdecken</button>` : ""}</div>
-    <div class="hccard">${heroCardHtml(h)}</div>
+      ${state.settings.hcQuiz && hidden ? `<button type="button" class="linkbtn small" data-hcrevealall>Alles aufdecken</button>` : ""}</div>
+    <div class="hccard">${card}</div>
     <div class="row" style="gap:6px;margin-top:10px"><button type="button" class="btn ghost small" data-hcguide="${esc(h)}">Ganzes Profil im Helden-Guide</button></div>`;
 }
 let hcOpener = null;
-function openHeroCard(h) {
+// view: «me» oder «foe» (sonst wählt die App); prev: die Karte, von der aus du hierher gekommen bist (für «Zurück»)
+function openHeroCard(h, view, prev) {
   h = PROF[h] ? h : hcDefault();
   let bd = document.getElementById("hcsheet");
   if (!bd) {
@@ -5339,18 +5469,22 @@ function openHeroCard(h) {
     bd.addEventListener("click", e => {
       if (e.target === bd || e.target.closest("[data-hcclose]")) { closeHeroCard(); return; }
       const r = e.target.closest("[data-hcreveal]"); if (r) { hcUi.open.add(r.dataset.hcreveal); hcRender(); return; }
-      if (e.target.closest("[data-hcrevealall]")) { ["str", "esc", "ult", "foe", "par", "tip"].forEach(k => hcUi.open.add(k)); hcRender(); return; }
+      if (e.target.closest("[data-hcrevealall]")) { hcUi.secs.forEach(k => hcUi.open.add(k)); hcRender(); return; }
+      if (e.target.closest("[data-hcback]") && hcUi.prev) { const p = hcUi.prev; openHeroCard(p.hero, p.view); return; }
       const g = e.target.closest("[data-hcguide]"); if (g) { closeHeroCard(); openHeroSearch(g.dataset.hcguide); }
     });
     bd.addEventListener("change", e => {
       if (e.target.matches("[data-hcquiz]")) { state.settings.hcQuiz = e.target.checked; hcUi.open = new Set(); save(); hcRender(); }
+      if (e.target.matches("[data-hcviewsw]") && e.target.checked) { hcUi.view = e.target.value === "foe" ? "foe" : "me"; hcUi.open = new Set(); hcRender(); bd.firstElementChild.scrollTop = 0; }
       if (e.target.matches("[data-hcsel]") && e.target.value) openHeroCard(e.target.value);
     });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !bd.hidden) closeHeroCard(); });
   }
   if (bd.hidden) hcOpener = document.activeElement;
-  if (hcUi.hero !== h) hcUi.open = new Set();
-  hcUi.hero = h; hcMark(h);
+  const v = view === "me" || view === "foe" ? view : hcDefaultView(h);
+  if (hcUi.hero !== h || hcUi.view !== v) hcUi.open = new Set();
+  hcUi.prev = prev && prev.hero !== h ? prev : null;
+  hcUi.hero = h; hcUi.view = v; hcMark(h);
   hcRender();
   bd.hidden = false;
   bd.firstElementChild.scrollTop = 0;
@@ -5362,9 +5496,12 @@ function closeHeroCard() {
   if (hcOpener && hcOpener.focus && document.contains(hcOpener)) hcOpener.focus();
   hcOpener = null;
 }
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-hcard]"); if (b) { e.preventDefault(); openHeroCard(b.dataset.hcard); } });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-hcard]"); if (!b) return; e.preventDefault();
+  // Ein Link in der Karte (z. B. «Gegner-Karte») merkt sich die Karte davor, damit «Zurück» geht
+  const sh = document.getElementById("hcsheet"), from = sh && !sh.hidden && sh.contains(b) && b.dataset.hcfrom ? { hero: hcUi.hero, view: hcUi.view } : null;
+  openHeroCard(b.dataset.hcard, b.dataset.hcview, from); });
 // Schnellzugriff: auf «Heute» nur die Pool-Helden deiner Hauptrolle (höchstens 6), im Helden-Guide alle nach Rolle
-const hcChip = p => `<button type="button" class="hcpick" data-hcard="${esc(p)}" title="Hero-Karte ${esc(p)}">${av(p, "sm")}<span>${esc(p)}</span></button>`;
+const hcChip = p => `<button type="button" class="hcpick" data-hcard="${esc(p)}" data-hcview="me" title="Hero-Karte ${esc(p)}">${av(p, "sm")}<span>${esc(p)}</span></button>`;
 function hcPoolRowHtml(label) {
   const all = planPool().filter(p => PROF[p]), main = all.filter(p => heroRole(p) === myRole()), pool = (main.length ? main : all).slice(0, 6);
   if (!pool.length) return "";
@@ -5374,6 +5511,43 @@ function hcPoolGroupsHtml() {
   const all = planPool().filter(p => PROF[p]);
   return ["Strategist", "Vanguard", "Duelist"].map(r => [r, all.filter(p => heroRole(p) === r)]).filter(x => x[1].length)
     .map(([r, l]) => `<div class="hcrow"><span class="nmlbl">${esc(ROLE_DE[r] || r)}</span><div class="hcpicks">${l.map(hcChip).join("")}</div></div>`).join("");
+}
+// ---- Problem-Gegner: welche Gegner-Karten zuerst ----
+// Zuerst deine Matches (mehr Niederlagen als bei dir üblich; Sieg oder Niederlage gilt fürs ganze Team), «grösstes Problem» aus dem Review,
+// Tode durch die Ult des Helden; danach, wie oft der Held vorkommt: bei dir und laut Pickrate in deinem Rangbereich (Rivals Data).
+// Die Gewichte sind eine Schätzung der App, deshalb stehen die Gründe immer dabei.
+const HC_BANDS = [[22, "eternity_plus", "Eternity+"], [19, "celestial", "Celestial"], [16, "grandmaster_plus", "Grandmaster+"], [0, "diamond_plus", "Diamond+"]];
+function hcBand() {
+  const T = typeof TB === "function" ? TB() : null;
+  if (!T || !T.bands) return null;
+  const r = typeof rkMine === "function" ? rkMine() : null, lv = r ? r.lv : 0;
+  const b = r ? HC_BANDS.find(([min, k]) => lv >= min && T.bands[k]) : ["", "celestial_plus", "Celestial+"];
+  return b && T.bands[b[1]] ? { key: b[1], name: b[2], known: !!r, data: T.bands[b[1]] } : null;
+}
+function hcFoeRank() {
+  const ms = state.matches.filter(m => (m.enemies || []).length).slice(-150), N = ms.length, avg = N ? summary(ms).wr : NaN, band = hcBand(), out = {};
+  const get = h => out[h] || (out[h] = { h, list: [], nem: 0, ud: 0 });
+  ms.forEach(m => [...new Set(m.enemies)].forEach(e => { if (!PROF[e]) return; const x = get(e); x.list.push(m); if (m.nemesis === e) x.nem++; x.ud += +((m.ultDeaths || {})[e]) || 0; }));
+  if (band) Object.entries(band.data.heroes).forEach(([h, v]) => { if (PROF[h] && (v.pick || 0) >= 20) get(h); });
+  return Object.values(out).map(x => {
+    const s = summary(x.list), l = x.list.filter(m => m.result === "L").length, pick = band && band.data.heroes[x.h] ? band.data.heroes[x.h].pick : null;
+    const extraL = s.n && isFinite(avg) ? Math.max(0, l - s.n * (1 - avg)) : 0;
+    const prob = extraL + 1.5 * x.nem + 0.5 * x.ud, freq = (N >= 10 ? s.n / N : 0) + (pick != null ? pick / 100 : 0);
+    return { h: x.h, n: s.n, w: s.w, l, wr: s.wr, avg, nem: x.nem, ud: x.ud, pick, band, prob, score: prob + 2 * freq };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || b.n - a.n || a.h.localeCompare(b.h));
+}
+function hcFoeWhy(x) {
+  const r = [];
+  if (x.n) r.push(`${x.n}× gegen dich, ${x.w} gewonnen${x.n >= 3 && isFinite(x.avg) && x.wr < x.avg - 0.05 ? ` (${pct(x.wr)}, dein Schnitt ${pct(x.avg)})` : ""}`);
+  if (x.nem) r.push(`${x.nem}× «grösstes Problem»`);
+  if (x.ud) r.push(`seine Ult hat dich ${x.ud}× getötet`);
+  if (x.pick != null) r.push(`Pickrate ${numDe(Math.round(x.pick))} % in ${x.band.name}${x.band.known ? "" : " (dein Rang ist unbekannt)"}`);
+  return r;
+}
+const hcFoeChip = (x, on) => `<button type="button" class="hcpick foe${on ? " on" : ""}" data-hcard="${esc(x.h)}" data-hcview="foe" title="${esc(hcFoeWhy(x).join(" · "))}">${av(x.h, "sm")}<span>${esc(x.h)}</span></button>`;
+function hcFoeRowHtml(label, n) {
+  const r = hcFoeRank().slice(0, n || 6);
+  return r.length ? `<div class="hcrow"><span class="nmlbl">${esc(label)}</span><div class="hcpicks">${r.map(x => hcFoeChip(x)).join("")}</div></div>` : "";
 }
 
 // ---------- Meta & Patch ----------
@@ -8124,7 +8298,7 @@ function renderTeamCards() {
     const maxS = Math.max(1, ...scored.map(x => x.score));
     $("#picks").innerHTML = scored.length ? scored.map(x => `<div class="pick">
         ${av(x.h.name, "lg")}
-        <div><b>${esc(x.h.name)}</b> ${roleChip(x.h.role)} ${x.own.n ? `<span class="muted small">· du: ${pct(x.own.wr)} in ${plural(x.own.n, "Match", "Matches")}</span>` : ""}</div>
+        <div><b>${esc(x.h.name)}</b> ${roleChip(x.h.role)} ${x.own.n ? `<span class="muted small">· du: ${pct(x.own.wr)} in ${plural(x.own.n, "Match", "Matches")}</span>` : ""}${PROF[x.h.name] ? ` <button type="button" class="linkbtn small" data-hcard="${esc(x.h.name)}" data-hcview="me">Hero-Karte</button>` : ""}</div>
         <div class="score" title="Score ${x.score.toFixed(1)}"><div class="track"><span style="width:${Math.max(0, x.score) / maxS * 100}%"></span></div></div>
         <div class="why">${x.pro.length ? "✓ " + x.pro.join(" · ") : ""}${x.con.length ? `${x.pro.length ? "<br>" : ""}<span class="con">✕ ${x.con.join(" · ")}</span>` : ""}</div>
       </div>`).join("") + foldHtml("pick-rules", "Warum kontert wer wen? Die Spielstil-Regeln", table(["Gegner ist …", "Gekontert durch …", "Warum"], COUNTER_RULES.map(r => [`<span class="tag">${esc(r.target)}</span><br><span class="small muted">${esc(TAGS[r.target])}</span>`, r.by.map(b => `<span class="tag">${esc(b)}</span>`).join(""), esc(r.why)])), { icon: "book", sub: "Die Kürzel in Klammern bei den Vorschlägen" }) : empty("Keine passenden Helden – Filter anpassen.", "target");
@@ -8294,7 +8468,7 @@ function renderHeroes() {
   $("#roleFilter").innerHTML = ["", ...ROLES].map(r => `<span class="chip ${roleFilter === r ? "on" : ""}" data-r="${r}">${r || "Alle"}</span>`).join("");
   $("#roleFilter").querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { roleFilter = c.dataset.r; renderHeroes(); }));
   const q = $("#heroSearch").value.trim();
-  const hp = hcPoolGroupsHtml();
+  const hp = hcPoolGroupsHtml() + hcFoeRowHtml("Gegner-Karten: deine Problem-Gegner", 8);
   $("#hcPool").hidden = !hp;
   $("#hcPool").innerHTML = hp ? `<div class="card-head"><h2>${icon("book")}Deine Hero-Karten</h2></div><p class="small muted" style="margin:0 0 4px">Kurzer Steckbrief pro Held für vor oder während dem Match: Stärke, Escape, Ult, schwierige Gegner, Partner. Die App erstellt die Karten aus den geprüften Heldendaten.</p>${hp}` : "";
   $("#roleTips").innerHTML = `<div class="card-head"><h2>${icon("heroes")}Grundregeln ${roleFilter ? "· " + esc(ROLE_DE[roleFilter]) : "pro Rolle"}</h2></div>` + (roleFilter
@@ -9838,6 +10012,7 @@ function counterplayHtml(enemy) {
     <summary>${av(enemy)}<span class="cp-name"><b>${esc(enemy)}</b> ${roleChip(heroRole(enemy))}</span>
       <span class="cp-meta">${st.n ? `du: ${wrBadge(st)} <span class="muted small">in ${st.n}</span>` : ""}</span></summary>
     <div class="cp-body">
+      ${PROF[enemy] ? `<div class="row" style="gap:6px;margin:0 0 6px"><button type="button" class="btn small" data-hcard="${esc(enemy)}" data-hcview="foe">Hero-Karte: ${esc(enemy)} im Gegnerteam</button></div>` : ""}
       ${tips.length ? `<h3>So spielst du dagegen</h3><ul>${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
       ${ULTS[enemy] ? ultCounterHtml(enemy, true) : ""}
       ${best.length ? `<h3>Gute Antworten${pc.length ? " (zuerst deine bewährten)" : ""}</h3><div class="row" style="gap:6px">${best.map(h => heroChip(h)).join("")}</div>` : ""}
@@ -11951,7 +12126,7 @@ function nmCardHtml() {
     ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>${nmContHtml(f)}${nmPrepHtml(f)}` : ""}
     ${items.length ? `<div class="nmlbl">Achte nur auf ${items.length === 1 ? "eins" : "diese Punkte"}</div><ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>`
       : `<p class="small muted" style="margin:0">Heute gibt es keine Plan-Aufgabe fürs Match. Wähl dir eine Sache aus.</p>`}
-    ${hcPoolRowHtml("Hero-Karte vor dem Match")}
+    ${hcPoolRowHtml("Hero-Karte vor dem Match")}${hcFoeRowHtml("Gegner-Karten: deine Problem-Gegner", 4)}
     ${bg}</div>`;
   }
   const bg = nmBackgroundHtml(f);
@@ -11968,7 +12143,7 @@ function nmCardHtml() {
     ${seg.ok || seg.goal ? `<p class="small" style="margin:0 0 4px">${seg.goal ? `<b>Messbar:</b> ${esc(seg.goal)}.` : `<b>Geschafft, wenn</b> ${esc(seg.ok)}.`}${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""}</p>` : ""}
     ${seg.mini ? `<div class="row" style="margin:4px 0"><button class="btn small" type="button" data-pact="day" data-n="${f.n}">Mini-Ziel wählen</button></div>` : ""}
     ${seg.bingo ? "" : `<p class="small muted" style="margin:6px 0 0">Nach dem Match bewertest du in der Notiz nur das: Ja, Teilweise oder Nein.</p>`}
-    ${hcPoolRowHtml("Hero-Karte vor dem Match")}
+    ${hcPoolRowHtml("Hero-Karte vor dem Match")}${hcFoeRowHtml("Gegner-Karten: deine Problem-Gegner", 4)}
     ${nmPrepHtml(f)}
     ${next ? `<div class="nmnext small"><span class="muted">Danach, ${esc(focusRange(next))}${next.blk !== blk ? ` (${focusBlockLabel(next.blk.key)})` : ""}:</span> ${esc(next.t)}</div>` : ""}
     ${bg}</div>`;
@@ -17680,7 +17855,7 @@ function linkify(h, seen) {
   const t = String(h).replace(/\bHero-Karte(n?)\b/g, "\u0001$1\u0002"), out = seen ? glossLink(linkifyBase(t), seen) : linkifyBase(t);
   // Nennt der Text einen Helden, öffnet der Link dessen Karte (sonst die Karte des Helden, den du zuletzt gespielt hast)
   const named = out.includes("\u0001") && typeof PROF !== "undefined" ? (Object.keys(PROF).map(n => [n, out.indexOf(esc(n))]).filter(x => x[1] >= 0).sort((a, b) => a[1] - b[1])[0] || [""])[0] : "";
-  return out.replace(/\u0001(n?)\u0002/g, (m, n) => `<button type="button" class="linkbtn" data-hcard="${esc(named)}">Hero-Karte${n}</button>`);
+  return out.replace(/\u0001(n?)\u0002/g, (m, n) => `<button type="button" class="linkbtn" data-hcard="${esc(named)}" data-hcview="me">Hero-Karte${n}</button>`);
 }
 
 const gtip = document.createElement("div");
