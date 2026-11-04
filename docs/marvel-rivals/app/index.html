@@ -421,6 +421,12 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .qnhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .qnhead h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
 .qnblk .chips { margin-top: 4px; }
+.qnprio { display: flex; gap: 6px; align-items: flex-start; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; border: 1px dashed var(--accent); }
+.qnprio .i { width: 16px; height: 16px; flex: none; color: var(--accent-strong); }
+.qnmore { margin: 6px 0 0; border-top: 1px solid var(--border); padding-top: 6px; }
+.qnmore > summary { cursor: pointer; padding: 6px 0; }
+.qnallt { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--muted); }
+.qnallt input { width: 16px; height: 16px; margin: 0; }
 .qnrow { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
 .qnrow input[type="text"] { width: 100%; }
 .qntwo { flex-direction: row; flex-wrap: wrap; gap: 14px 28px; }
@@ -7540,23 +7546,47 @@ function qnAssignAll() {
   return ch;
 }
 const qnSummary = q => [(QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+// Notiz nach Lernstand: Welche Felder gehören zu dem, was du gerade lernst? Aus «Dein Fokus» (gewählte Punkte und Aufgabe des Blocks)
+// und dem Thema des Tages. Findet die App nichts, zeigt die Notiz alles wie bisher.
+const QN_PRIO = [["ult", /\bUlts?\b|\bUlt-|Ultimate/i], ["death", /\bTod\b|\bTode\b|Todesursach|stirbst|sterben|überleb|\bPosition|Deckung|Rückzug/i], ["stack", /\bVoice\b|Kommunikation|\bCalls?\b/i]];
+const QN_PRIO_LABEL = { ult: "Ults", death: "Tode", stack: "Solo oder Stack", extra: "Zusatz des Tages" };
+function qnPrio(d) {
+  if (!d || d.prep) return [];
+  const f = focusNow(), n = focusDay().n, texts = fxChosen(today()).map(x => x.t);
+  if (f && f.seg) texts.push(f.seg.t);
+  try { if (n) rulesForDay(n).filter(r => r.role === "day").forEach(r => texts.push(r.t.topic)); } catch (e) { /* ohne Plan */ }
+  const all = texts.join(" \n "), out = QN_PRIO.filter(([, rx]) => rx.test(all)).map(([k]) => k);
+  const rules = f && f.blk ? brRules(f.n, f.blk.key) : [];
+  if (!out.includes("stack") && rules.some(r => r.k === "voice")) out.push("stack");   // der Block verlangt Voice oder ein Stumm-Match (Solo/Stack allein ist kein Lernthema: ohne Angabe zählt das Match trotzdem)
+  if (qnExtraLabel()) out.push("extra");   // Zusatz des Tages ist eine Aufgabe aus dem Plan
+  return QN_PRIO.map(x => x[0]).concat("extra").filter(k => out.includes(k));
+}
 function qnSheetHtml() { qnForce = qnDraft && !qnDraft.prep ? qnDraft.blk || "" : ""; try { return qnSheetHtml0(); } finally { qnForce = ""; } }
 function qnSheetHtml0() {
   const d = qnDraft, n = qnToday().length + state.matches.filter(m => m.date === today() && !state.qnotes.some(q => q.match === m.id)).length, extra = qnExtraLabel();
   const seg = (k, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${d[k] === v ? "on" : ""}" data-qn="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${l}</button>`).join("")}</div>`;
   const step = (k, label) => `<span class="qnstep"><span class="small">${label}</span><button type="button" data-qnstep="${k}" data-d="-1" aria-label="${label}: weniger">−</button><b aria-live="polite">${d[k] ?? "–"}</b><button type="button" data-qnstep="${k}" data-d="1" aria-label="${label}: mehr">+</button></span>`;
+  // Was du gerade lernst, steht oben; der Rest ist zugeklappt und lässt sich auch später im Review nachtragen (Tode, Ults)
+  const prio = qnPrio(d), focus = !d.prep && fxChosen(today()).length > 0, more = (prio.length > 0 || focus) && !state.settings.qnAll;
+  const parts = {
+    stack: `${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
+      return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}`,
+    ult: `<div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>`,
+    death: qnDeathHtml(d),
+    extra: `${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}`
+  };
+  const rest = ["stack", "ult", "death", "extra"].filter(k => !prio.includes(k)).map(k => parts[k]).join("") + `<label class="qnrow"><b class="small">Ein Satz: Was nimmst du mit?</b><input type="text" data-qntext="text" value="${esc(d.text)}" placeholder="z. B. zu früh vorgelaufen, nächstes Mal hinter dem Tank bleiben"></label>`;
+  const filled = !!(d.stack || d.voice || d.ults !== null || d.ultHit !== null || deathTotal(d.deaths) > 0 || deathTotal(d.ultDeaths) > 0 || (d.extra && !prio.includes("extra")) || d.text);
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
     ${qnFxHtml(d)}
     ${qnBingoHtml(d)}
+    ${prio.length || focus ? `<p class="small qnprio">${icon("target")}<span>${prio.length ? `Zuerst das, was du gerade lernst: <b>${prio.map(k => QN_PRIO_LABEL[k]).join(", ")}</b>.` : "Heute zählt vor allem «Dein Fokus»."} Alles andere ist freiwillig${more ? " und steht unten unter «Mehr eintragen»" : ""}. Tode und Ults kannst du auch später im Review nachtragen.</span></p>` : ""}
+    ${prio.map(k => parts[k]).join("")}
     ${focusDay().n ? qnPurposeHtml(d) : ""}
     ${qnBlkHtml(d)}
-    ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
-      return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
-    <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
-    ${qnDeathHtml(d)}
-    ${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}
-    <label class="qnrow"><b class="small">Ein Satz: Was nimmst du mit?</b><input type="text" data-qntext="text" value="${esc(d.text)}" placeholder="z. B. zu früh vorgelaufen, nächstes Mal hinter dem Tank bleiben"></label>
+    ${more ? `<details class="qnmore"${filled ? " open" : ""}><summary><b class="small">Mehr eintragen</b> <span class="small muted">freiwillig: ${["stack", "ult", "death", "extra"].filter(k => !prio.includes(k) && (k !== "extra" || extra)).map(k => QN_PRIO_LABEL[k]).concat("ein Satz").join(", ")}</span></summary>${rest}
+      <label class="small qnallt"><input type="checkbox" data-qnall> Immer alles offen zeigen</label></details>` : rest + (prio.length || focus ? `<label class="small qnallt"><input type="checkbox" data-qnall checked> Immer alles offen zeigen</label>` : "")}
     <div class="row mt"><button class="btn" type="button" data-qnsave>${icon("check")}Notiz speichern</button><button class="btn ghost" type="button" data-qnclose>Abbrechen</button><span class="small muted">Heute ${plural(qnToday().length, "Notiz", "Notizen")} offen</span></div>`;
 }
 let qnOpener = null;
@@ -7568,6 +7598,7 @@ function qnOpen() {
     document.body.appendChild(bd);
     bd.addEventListener("click", qnClick);
     bd.addEventListener("input", e => { const t = e.target; if (t.dataset.qntext && qnDraft) qnDraft[t.dataset.qntext] = t.value; });
+    bd.addEventListener("change", e => { if (e.target.matches("[data-qnall]")) { state.settings.qnAll = e.target.checked; save(); qnRedraw("[data-qnall]"); } });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !bd.hidden) qnClose(); });
   }
   qnOpener = document.activeElement;
