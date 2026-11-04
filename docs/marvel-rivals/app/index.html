@@ -7487,7 +7487,7 @@ function qnBlkHtml(d) {
   if (!n || n > PLAN_N) return "";
   const plan = focusPlan(n), auto = focusNow(null), ak = auto && !auto.done ? auto.blk.key : "", cur = d.blk || ak, f = d.blk ? focusNow(d.blk) : auto;
   if (plan.length < 2 && !d.blk) return "";
-  return `<div class="qnrow qnblk"><b class="small">Block dieses Matches</b><span class="small muted">${d.blk ? (f && f.extra ? `Von dir gewählt: zusätzliches Match in ${focusBlockLabel(d.blk)}. Die App zählt den nächsten Block danach weiter.` : `Von dir gewählt: ${focusBlockLabel(d.blk)}.`) : ak ? `Die App zählt: ${focusBlockLabel(ak)}.` : "Alle Blöcke sind gespielt."} Mehr Matches mit einer Aufgabe gespielt als geplant? Tipp den Block an, zu dem dieses Match gehört.</span>
+  return `<div class="qnrow qnblk"><b class="small">Block dieses Matches</b><span class="small muted">${d.blk ? (f && f.extra ? `Von dir gewählt: zusätzliches Match in ${focusBlockLabel(d.blk)}. Die Aufgabe oben passt dazu, der nächste Block beginnt danach.` : `Von dir gewählt: ${focusBlockLabel(d.blk)}. Die Aufgabe oben passt dazu.`) : `${ak ? `Die App zählt: ${focusBlockLabel(ak)}.` : "Alle Blöcke sind gespielt."} Mehr Matches mit einer Aufgabe gespielt als geplant? Tipp den Block an, zu dem dieses Match gehört.`}</span>
     <div class="chips">${plan.map(b => `<button type="button" class="chip ${cur === b.key ? "on" : ""}" data-qnblk="${b.key}" aria-pressed="${cur === b.key}">${esc(focusBlockLabel(b.key))}${b.key === ak ? ` <span class="small muted">(App)</span>` : ""}</button>`).join("")}</div></div>`;
 }
 function qnFxHtml(d) {
@@ -7547,10 +7547,10 @@ function qnSheetHtml0() {
   const step = (k, label) => `<span class="qnstep"><span class="small">${label}</span><button type="button" data-qnstep="${k}" data-d="-1" aria-label="${label}: weniger">−</button><b aria-live="polite">${d[k] ?? "–"}</b><button type="button" data-qnstep="${k}" data-d="1" aria-label="${label}: mehr">+</button></span>`;
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
-    ${qnBlkHtml(d)}
     ${qnFxHtml(d)}
     ${qnBingoHtml(d)}
     ${focusDay().n ? qnPurposeHtml(d) : ""}
+    ${qnBlkHtml(d)}
     ${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
       return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}
     <div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>
