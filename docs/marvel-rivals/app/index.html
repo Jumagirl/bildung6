@@ -420,6 +420,7 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .qnsheet { width: min(560px, 100%); }
 .qnhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .qnhead h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.qnblk .chips { margin-top: 4px; }
 .qnrow { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
 .qnrow input[type="text"] { width: 100%; }
 .qntwo { flex-direction: row; flex-wrap: wrap; gap: 14px 28px; }
@@ -7478,6 +7479,17 @@ function qnLiveHtml(d, it, cur) {
     ${(t.log || []).length ? `<button type="button" class="linkbtn small" data-qntally-undo="${esc(it.key)}">↶ zurück</button>` : ""}
     ${sug ? `<span class="small muted">Vorschlag: <b>${esc(fxLabel(it.key, sug))}</b> (gilt, wenn du nichts wählst)</span>` : ""}</div>`;
 }
+// Block wählen: Spielst du mehr Matches mit einer Aufgabe als geplant, tippst du den Block an, zu dem dieses Match gehört.
+// Die Aufgabe und die Zählung der Blöcke richten sich dann danach (gespeichert als q.blk, später m.blk).
+function qnBlkHtml(d) {
+  if (d.prep) return "";
+  const fd = focusDay(), n = fd.n;
+  if (!n || n > PLAN_N) return "";
+  const plan = focusPlan(n), auto = focusNow(null), ak = auto && !auto.done ? auto.blk.key : "", cur = d.blk || ak, f = d.blk ? focusNow(d.blk) : auto;
+  if (plan.length < 2 && !d.blk) return "";
+  return `<div class="qnrow qnblk"><b class="small">Block dieses Matches</b><span class="small muted">${d.blk ? (f && f.extra ? `Von dir gewählt: zusätzliches Match in ${focusBlockLabel(d.blk)}. Die App zählt den nächsten Block danach weiter.` : `Von dir gewählt: ${focusBlockLabel(d.blk)}.`) : ak ? `Die App zählt: ${focusBlockLabel(ak)}.` : "Alle Blöcke sind gespielt."} Mehr Matches mit einer Aufgabe gespielt als geplant? Tipp den Block an, zu dem dieses Match gehört.</span>
+    <div class="chips">${plan.map(b => `<button type="button" class="chip ${cur === b.key ? "on" : ""}" data-qnblk="${b.key}" aria-pressed="${cur === b.key}">${esc(focusBlockLabel(b.key))}${b.key === ak ? ` <span class="small muted">(App)</span>` : ""}</button>`).join("")}</div></div>`;
+}
 function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
   if (d.prep && !items.length) return `<div class="qnrow"><b class="small">Dein Fokus</b><span class="small muted">Bei einem Match, das nicht für die Blöcke zählt (Vorbereitung, Lektion, Mission, freies Spiel), fragt die Notiz keine Aufgabe aus dem Plan ab.</span></div>`;
@@ -7507,6 +7519,7 @@ function qnApply(q, m) {
   if (q.text) m.notes = m.notes ? m.notes + "\n" + q.text : q.text;
   if (q.prep && !m.stepPick) m.stepPick = qnPurpose(q);   // in der Notiz als Vorbereitung oder Lektion, Mission oder freies Spiel angegeben
   if (q.mission && !m.mission) m.mission = q.mission;
+  if (q.blk && !q.prep && !m.blk && !m.stepPick) m.blk = q.blk;   // in der Notiz gewählter Block
   if (q.lad && q.lad.v && !m.lad) m.lad = q.lad;
   if (q.bingo && !m.bingo) m.bingo = q.bingo;
   if (q.fxKeys && q.fxKeys.length) {
@@ -7527,12 +7540,14 @@ function qnAssignAll() {
   return ch;
 }
 const qnSummary = q => [(QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
-function qnSheetHtml() {
+function qnSheetHtml() { qnForce = qnDraft && !qnDraft.prep ? qnDraft.blk || "" : ""; try { return qnSheetHtml0(); } finally { qnForce = ""; } }
+function qnSheetHtml0() {
   const d = qnDraft, n = qnToday().length + state.matches.filter(m => m.date === today() && !state.qnotes.some(q => q.match === m.id)).length, extra = qnExtraLabel();
   const seg = (k, opts) => `<div class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${d[k] === v ? "on" : ""}" data-qn="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${l}</button>`).join("")}</div>`;
   const step = (k, label) => `<span class="qnstep"><span class="small">${label}</span><button type="button" data-qnstep="${k}" data-d="-1" aria-label="${label}: weniger">−</button><b aria-live="polite">${d[k] ?? "–"}</b><button type="button" data-qnstep="${k}" data-d="1" aria-label="${label}: mehr">+</button></span>`;
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
+    ${qnBlkHtml(d)}
     ${qnFxHtml(d)}
     ${qnBingoHtml(d)}
     ${focusDay().n ? qnPurposeHtml(d) : ""}
@@ -7587,6 +7602,12 @@ function qnClick(e) {
   else if (b.dataset.qndeath) { qnDeathAdd(d, b.dataset.qndeath); qnRedraw(`[data-qndeath="${b.dataset.qndeath}"]`); }
   else if (b.dataset.qndeathDec) { const c = b.dataset.qndeathDec; qnDeathDec(d, c); qnRedraw(`[data-qndeath="${c}"]`); }
   else if (b.dataset.qnrole) { d.role = b.dataset.qnrole; qnRedraw(`[data-qnrole="${d.role}"]`); }
+  else if (b.dataset.qnblk) {
+    const k = b.dataset.qnblk, auto = focusNow(null), ak = auto && !auto.done ? auto.blk.key : "", old = focusNow(d.blk || null);
+    if (k === ak || d.blk === k) delete d.blk; else d.blk = k;
+    const nw = focusNow(d.blk || null), ok = old && old.seg ? "step:" + old.seg.key : "", nk = nw && nw.seg ? "step:" + nw.seg.key : "";
+    if (ok && nk && ok !== nk) { if (d.fx && d.fx[ok] && !d.fx[nk]) { d.fx[nk] = d.fx[ok]; delete d.fx[ok]; } if (d.tally && d.tally[ok] && !d.tally[nk]) { d.tally[nk] = d.tally[ok]; delete d.tally[ok]; } }
+    qnRedraw(`[data-qnblk="${k}"]`); }
   else if (b.dataset.qn) { d[b.dataset.qn] = d[b.dataset.qn] === b.dataset.v ? "" : b.dataset.v; qnRedraw(`[data-qn="${b.dataset.qn}"][data-v="${b.dataset.v}"]`); }
   else if (b.dataset.qntally) { const k = b.dataset.qntally; d.tally = d.tally || {}; const t = d.tally[k] = Object.assign({ ok: 0, no: 0, log: [] }, d.tally[k]); t[b.dataset.t]++; t.log = [...(t.log || []), b.dataset.t]; qnRedraw(`[data-qntally="${k.replace(/"/g, '\\"')}"][data-t="${b.dataset.t}"]`); }
   else if (b.dataset.qntallyUndo) { const k = b.dataset.qntallyUndo, t = (d.tally || {})[k]; if (t && t.log && t.log.length) { const last = t.log.pop(); t[last] = Math.max(0, t[last] - 1); } qnRedraw(); }
@@ -7595,7 +7616,10 @@ function qnClick(e) {
     qnRedraw(`[data-qnprep="${v}"]`); }
   else if (b.dataset.qnmis) { d.mission = d.mission === b.dataset.qnmis ? "" : b.dataset.qnmis; if (!d.mission) delete d.mission; qnRedraw(`[data-qnmis="${b.dataset.qnmis}"]`); }
   else if (b.dataset.qnfx) { const k = b.dataset.qnfx; d.fx = d.fx || {}; if (d.fx[k] === b.dataset.v) delete d.fx[k]; else d.fx[k] = b.dataset.v; qnRedraw(`[data-qnfx="${k.replace(/"/g, '\\"')}"][data-v="${b.dataset.v}"]`); }
-  else if (b.hasAttribute("data-qnsave")) {
+  else if (b.hasAttribute("data-qnsave")) { qnForce = d.prep ? "" : d.blk || ""; try { qnSaveDraft(d); } finally { qnForce = ""; } }
+}
+function qnSaveDraft(d) {
+  {
     const ts = Date.now();
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
@@ -7608,7 +7632,7 @@ function qnClick(e) {
       else { const st = fxIt.find(x => x.src === "step"), h = keep.bingo.hit.length; if (st && !(keep.fx || {})[st.key] && h) { keep.fx = Object.assign({}, keep.fx, { [st.key]: h >= 3 ? "ja" : "teils" }); }
       } }
     state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
-    qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
+    qnForce = ""; qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
     toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
   }
 }
@@ -11349,9 +11373,7 @@ const brMiss = (n, key, m) => brRules(n, key).filter(r => brCheck(r, m) === fals
 // Stufe «Streng»: Matches mit verpasster Regel zählen nicht. Der Reihe nach, weil ein ausgelassenes Match die Blöcke der späteren verschiebt.
 function brStrictFilter(n, ms) {
   if (!(n >= 1 && n <= PLAN_N) || brLevel(n) < 3) return ms;
-  const B = blockMatches(), keys = PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k));
-  let k = 0;
-  return ms.filter(m => { const key = keys[Math.floor(k / B)] || "b4"; if (brMiss(n, key, m).length) return false; k++; return true; });
+  return blockSeq(ms, blockKeysOf(n), blockMatches(), n, (m, key) => brMiss(n, key, m).length > 0).out.filter(e => !e.dropped).map(e => e.x);
 }
 // Matches eines Blocks (wie im Review und bei «Dein nächstes Match» gezählt). Pro Plantag einmal berechnet, bis sich etwas ändert.
 let brMemo = { sig: "", byN: {} };
@@ -11371,12 +11393,8 @@ function brDropped(n, key) {
   brBlockMatches(n, key);
   const M = brMemo.byN[n];
   if (!M._dropped) {
-    const B = blockMatches(), keys = PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k)), out = [];
-    let k = 0;
-    state.matches.filter(m => { const d = matchDay(m); return d && d.n === n && !planSkip(m); }).sort((a, b) => matchTime(a) - matchTime(b)).forEach(m => {
-      const bk = keys[Math.floor(k / B)] || "b4", miss = brMiss(n, bk, m);
-      if (miss.length) out.push({ m, key: bk, miss }); else k++;
-    });
+    const out = [], list = state.matches.filter(m => { const d = matchDay(m); return d && d.n === n && !planSkip(m); }).sort((a, b) => matchTime(a) - matchTime(b));
+    blockSeq(list, blockKeysOf(n), blockMatches(), n, (m, key) => { const miss = brMiss(n, key, m); if (miss.length) out.push({ m, key, miss }); return miss.length > 0; });
     M._dropped = out;
   }
   return M._dropped.filter(x => x.key === key);
@@ -11788,7 +11806,8 @@ function prBase() {
   const ms = state.matches.filter(m => m.date < today()).slice(-20), t = ms.filter(m => m.dur > 0 && m.dmg !== null && m.dmg !== undefined), acc = ms.filter(m => m.acc > 0);
   return { d: ms.length >= 5 ? ms.reduce((a, m) => a + (+m.d || 0), 0) / ms.length : null, dmg10: t.length >= 5 ? t.reduce((a, m) => a + m.dmg, 0) / t.reduce((a, m) => a + m.dur, 0) * 10 : null, acc: acc.length >= 5 ? acc.reduce((a, m) => a + m.acc, 0) / acc.length : null };
 }
-const blockMatchesToday = bi => { const B = blockMatches(); return planMatchesToday(planDay()).slice().sort((a, b) => matchTime(a) - matchTime(b)).slice(bi * B, (bi + 1) * B); };
+const blockMatchesToday = bi => { const B = blockMatches(), n = planDay(), ms = planMatchesToday(n).slice().sort((a, b) => matchTime(a) - matchTime(b));
+  return blockSeq(ms, blockKeysOf(n), B, n).out.filter(e => e.bi === bi).map(e => e.x); };   // ohne eigene Wahl höchstens B, mit Zusatz-Matches auch mehr
 const block3Matches = () => blockMatchesToday(2);
 // Thema für «gezielt üben» am Vertiefen-Tag ohne festes Thema (nach Tests): das gelernte Thema, das am wenigsten von allein läuft
 function practiceAuto(n) {
@@ -12091,6 +12110,27 @@ function planWinList(n, w, date) {
   return brStrictFilter(n, ms.filter(x => !planDayManual(x.date) || state.plan.dayByDate[x.date] === n).sort((a, b) => matchTime(a) - matchTime(b)));
 }
 // Plantag fürs nächste Match und seine bisherigen Matches (list); prevN = davon an einem früheren Spieltag (prev)
+// Block pro Match eines Plantags, der Reihe nach: je B Matches pro Block. Hast du den Block selbst gewählt (Notiz: m.blk / q.blk,
+// Review: Abschnitt in m.stepPick vom selben Plantag), gilt dieser, und die Zählung geht dort weiter. Ein Zusatz-Match in Block 1
+// schiebt Block 2 also nicht nach vorn. drop(x, key): Match zählt nicht (strenge Regeln), bleibt aber dem Block zugeordnet.
+const blkKeyOf = (x, n) => { if (!x) return ""; if (/^b[1-4]$/.test(x.blk || "")) return x.blk; const mm = /^(\d+):(b[1-4]):\d+$/.exec(x.stepPick || ""); return mm && (!n || +mm[1] === n) ? mm[2] : ""; };
+function blockSeq(items, keys, B, n, drop) {
+  const nb = keys.length, cnt = Array(nb + 1).fill(0), out = [];
+  let cur = 0;
+  items.forEach(x => {
+    const mk = blkKeyOf(x, n), mi = mk === "b4" ? nb : keys.indexOf(mk);
+    if (mi >= 0) cur = mi; else while (cur < nb && cnt[cur] >= B) cur++;
+    const key = cur < nb ? keys[cur] : "b4";
+    if (drop && drop(x, key)) { out.push({ x, bi: cur, key, pos: 0, dropped: true, manual: mi >= 0 }); return; }
+    cnt[cur]++;
+    out.push({ x, bi: cur, key, pos: cnt[cur], manual: mi >= 0 });
+  });
+  let next = cur; while (next < nb && cnt[next] >= B) next++;
+  return { out, cnt, next, nb };
+}
+// Matches, die für die Blöcke 1 bis idx+1 zählen (pro Block höchstens B): ohne eigene Wahl genau die Anzahl Matches, wie bisher
+const blockSeqDone = (S, idx, B) => S.cnt.slice(0, idx + 1).reduce((a, c) => a + Math.min(c, B), 0);
+const blockKeysOf = n => n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k)) : [];
 function focusDay() {
   if (!planStarted()) return { n: 0, since: 0, list: [], prevN: 0, prev: "" };
   const d = today(), L = planLive(), man = planDayManual(d), n = man ? planDayOf(d) : planOpenAfter(d);
@@ -12100,19 +12140,26 @@ function focusDay() {
 // Wie viele Matches schon gespielt sind: Matches des Plantags (Abgleich oder von Hand), dazu Notizen von heute, die noch auf ihr Match warten
 const focusPlayed = f => f.list.length + qnToday().filter(q => !q.prep && (!f.since || (q.ts || 0) > f.since)).length;
 // Die eine Sache fürs nächste Match (nur heute, an einem Plantag)
-function focusNow() {
+// force: Block, den du in der Notiz gewählt hast («b1» … «b4»); ohne Angabe gilt die offene Notiz (qnForce), null = nur die Zählung der App
+let qnForce = "";
+function focusNow(force) {
   const fd = focusDay(), { n } = fd;
   if (!n || n > PLAN_N || (dayGet(n).done && dayGet(n).done < today())) return null;
   const plan = focusPlan(n);
   if (!plan.length) return null;
-  const B = blockMatches(), st = dayGet(n).steps || {}, played = focusPlayed(fd), blocks = plan.filter(x => x.key !== "b4");
-  const biCount = Math.floor(played / B), biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
-  const bi = Math.max(biCount, biT), k = bi > biCount ? bi * B + 1 : played + 1;
+  if (force === undefined) force = qnForce;
+  const B = blockMatches(), st = dayGet(n).steps || {}, blocks = plan.filter(x => x.key !== "b4"), keys = blocks.map(x => x.key);
+  const items = fd.list.concat(qnToday().filter(q => !q.prep && (!fd.since || (q.ts || 0) > fd.since)).sort((a, b) => (a.ts || 0) - (b.ts || 0)));
+  const S = blockSeq(items, keys, B, n), real = items.length + 1;
+  const biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
+  const want = force ? (force === "b4" ? blocks.length : keys.indexOf(force)) : -1;
+  const bi = want >= 0 ? want : Math.max(S.next, biT), pos = (S.cnt[Math.min(bi, S.nb)] || 0) + 1;
+  const k = want < 0 && bi > S.next ? bi * B + 1 : bi < blocks.length ? bi * B + Math.min(pos, B) : blocks.length * B + pos;
   const blk = plan.find(x => x.bi === bi) || (bi >= blocks.length ? plan.find(x => x.key === "b4") : null);
-  if (!blk) return { n, k, done: true, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
+  if (!blk) return { n, k, real, done: true, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
   const i = Math.max(0, blk.segs.findIndex(s => k >= s.a && (s.b === null || k <= s.b))), seg = blk.segs[i] || blk.segs[blk.segs.length - 1];
   const flat = plan.flatMap(x => x.segs.map(s => Object.assign({ blk: x }, s))), at = flat.findIndex(s => s.key === seg.key), next = at >= 0 ? flat[at + 1] || null : null;
-  return { n, k, B, blk, seg, next, first: k === seg.a, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
+  return { n, k, real, B, blk, seg, next, first: k === seg.a, forced: want >= 0, extra: want >= 0 && pos > B && bi < blocks.length, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
 }
 const focusBlockLabel = key => key === "b4" ? "Block 4+" : "Block " + key[1];
 const focusRange = s => s.b === null ? `ab Match ${s.a}` : s.a === s.b ? `Match ${s.a}` : `Match ${s.a} bis ${s.b}`;
@@ -12131,7 +12178,7 @@ function nmCardHtml() {
   }
   const bg = nmBackgroundHtml(f);
   const { seg, blk, next, k } = f, ev = seg.practice && f.n === planDay() ? practiceEval(seg.practice, blk.bi) : null;
-  return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${k} ${f.prevN ? `von Tag ${f.n}` : "heute"} · ${focusBlockLabel(blk.key)}</span></div>
+  return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${f.real || k} ${f.prevN ? `von Tag ${f.n}` : "heute"} · ${focusBlockLabel(blk.key)}</span></div>
     ${nmContHtml(f)}
     ${brNowHtml(f)}
     ${blk.pre && f.first ? `<p class="small nmpre"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
@@ -12159,8 +12206,8 @@ const nmTime = t => new Date(t).toLocaleTimeString("de-CH", { hour: "2-digit", m
 // Nach «zählt nicht»: Blöcke, die die App selbst abgehakt hat (st.auto) und für die jetzt Matches fehlen, wieder öffnen. Selbst gesetzte Häkchen bleiben.
 function planRecheckBlocks() {
   const n = focusDay().n; if (!n || n > PLAN_N) return;
-  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]), have = planMatchesToday(n).length, B = blockMatches();
-  keys.forEach((k, i) => { if (st.auto && st.auto[k] && st.steps[k] === true && have < B * (i + 1)) { delete st.steps[k]; delete st.auto[k]; } });
+  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]), B = blockMatches(), S = blockSeq(planMatchesToday(n).slice().sort((a, b) => matchTime(a) - matchTime(b)), keys, B, n);
+  keys.forEach((k, i) => { if (st.auto && st.auto[k] && st.steps[k] === true && blockSeqDone(S, i, B) < B * (i + 1)) { delete st.steps[k]; delete st.auto[k]; } });
 }
 function nmPrepHtml(f) {
   const lp = state.plan.lastPrep, m = lp && lp.kind === "m" ? state.matches.find(x => x.id === lp.id) : null, q = lp && lp.kind === "q" ? state.qnotes.find(x => x.id === lp.id) : null;
@@ -12244,10 +12291,11 @@ function matchFocusSeg(m) {
   if (!w || !w.n || w.n > PLAN_N) return null;
   const list = planWinList(w.n, w, m.date), k = list.findIndex(x => x.id === m.id) + 1;
   if (k < 1) return null;
-  const plan = focusPlan(w.n, true), B = blockMatches(), blocks = plan.filter(x => x.key !== "b4"), bi = Math.floor((k - 1) / B);
+  const plan = focusPlan(w.n, true), B = blockMatches(), blocks = plan.filter(x => x.key !== "b4"), e = blockSeq(list, blocks.map(x => x.key), B, w.n).out[k - 1], bi = e.bi;
   const blk = bi < blocks.length ? blocks[bi] : plan.find(x => x.key === "b4");
   if (!blk) return null;
-  const seg = blk.segs.find(x => k >= x.a && (x.b === null || k <= x.b)) || blk.segs[blk.segs.length - 1];
+  const kk = bi < blocks.length ? bi * B + Math.min(e.pos, B) : blocks.length * B + e.pos;   // Abschnitt nach der Stelle im Block (ein Zusatz-Match bleibt im letzten)
+  const seg = blk.segs.find(x => kk >= x.a && (x.b === null || kk <= x.b)) || blk.segs[blk.segs.length - 1];
   return Object.assign({}, seg, { n: w.n, k, blk: blk.key, cross: list[0].date < m.date });
 }
 // Ein Abschnitt aus seinem Schlüssel «Tag:Block:Nummer» (für die Wahl im Review)
@@ -12642,7 +12690,8 @@ function autoStepEval(n, s, carryIdx) {
   const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
-    const B = blockMatches(), ms = planMatchesToday(n).length, since = focusDay().prev;
+    const B = blockMatches(), all = planMatchesToday(n).slice().sort((a, b) => matchTime(a) - matchTime(b)), since = focusDay().prev;
+    const ms = idx < own.length ? blockSeqDone(blockSeq(all, own, B, n), idx, B) : all.length;   // selbst gewählte Blöcke zählen dort (ein Zusatz-Match füllt keinen anderen Block)
     const r = autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches ${since ? `seit dem ${fmtDate(since)}` : "heute"}`), lock = carryIdx >= 0 ? "" : rvLock(n, s);
     if (lock && r.done) { r.done = false; r.wait = lock; }
     return r;
