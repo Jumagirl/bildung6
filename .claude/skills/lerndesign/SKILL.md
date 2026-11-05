@@ -31,7 +31,8 @@ Grundlage: Dunlosky et al. (2013), Cepeda et al. (2006), Roediger & Karpicke (20
 
 ## Fallstricke
 - Abrufen ohne Antwortkontrolle; Abstände zu gross; nur Leichtes üben; Wissens-Check nur zu den Themen von heute.
-- Neues Wissen nur dann einbauen, wenn es belegt ist. Keine erfundenen Spielfakten, keine Zahlen ausser aus den Patch-Notes von Season 10 und 10.5.
+- Neues Wissen nur dann einbauen, wenn es belegt ist.
+- Gegner-Picks sieht man nicht in der Heldenwahl und nicht beim Laden, sondern meist erst nach dem ersten Fight oder dem ersten eigenen Tod (Beobachtung der Nutzerin im Spiel, 05.11.2026). Keine Aufgaben wie «beim Laden das Gegnerteam ansehen» oder «den Pick nach der gegnerischen Comp wählen»: Der Pick richtet sich nach dem eigenen Team, auf die Gegner reagiert man mit einem Wechsel. Keine erfundenen Spielfakten, keine Zahlen ausser aus den Patch-Notes von Season 10 und 10.5.
 
 ## Wo es in der App steckt
 `docs/marvel-rivals/app/index.html`: Abschnitt «Wiederholungs-System, Zwischenstopps in den Blöcken, Rückblick» (`leitner`, `nugQuestion`, `recallNugHtml`, `tipNugHtml`, `whyNugHtml`, `reflectionHtml`), `startKnow` (gemischter Tages-Check), `renderKnow` (Sicherheit). Beschreibung für Nutzer: `docs/marvel-rivals/index.md`, Abschnitt «Lernmethoden hinter der App».
