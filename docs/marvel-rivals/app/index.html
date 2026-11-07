@@ -1874,6 +1874,32 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .hclive { margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--accent-soft); }
 .hcnote { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--gold); background: var(--gold-soft); border-radius: 6px; }
 .hcrow { display: grid; gap: 4px; margin: 8px 0 2px; }
+.vidfile { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 18px 12px; border: 2px dashed var(--accent); border-radius: 12px; background: var(--accent-soft); cursor: pointer; text-align: center; font-weight: 600; }
+.vidfile input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.vidfile:focus-within { outline: 2px solid var(--accent); }
+.vidrecent { margin: 8px 0 0; }
+.vidrecent ul { margin: 4px 0 0; padding-left: 18px; }
+.vidname { overflow-wrap: anywhere; }
+.vidwrap { background: #000; border-radius: 10px; overflow: hidden; }
+.vidwrap video { display: block; width: 100%; max-height: 70vh; background: #000; }
+.vidnav { gap: 6px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.vidrow { display: grid; gap: 4px; margin: 4px 0 8px; }
+.vidrow select { max-width: 100%; }
+.vidbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.vidbtns kbd { font: 600 .7rem/1 var(--font-display); padding: 2px 5px; border-radius: 4px; border: 1px solid currentColor; opacity: .7; margin-left: 4px; }
+.vidbtns .btn.bad { border-color: var(--bad); }
+.vidbtns .btn.ok { border-color: var(--good); }
+.vidpend { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--accent); background: var(--accent-soft); display: grid; gap: 6px; }
+.vidpend input { width: 100%; }
+.vidh { margin: 12px 0 6px; font-size: .95rem; }
+.vidlist { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; }
+.vidlist li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; background: var(--surface-2); font-size: .88rem; }
+.vidlist li.oth { opacity: .6; }
+.vidlist li.pend { outline: 2px solid var(--accent); }
+.vidlist .linkbtn { font-variant-numeric: tabular-nums; }
+.vidsum { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); display: grid; gap: 6px; }
+.rvvid { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 4px 0; }
+.rvvid .i { width: 15px; height: 15px; color: var(--accent-strong); }
 @media (max-width: 640px) {
   .hcgrid { grid-template-columns: minmax(0, 1fr); }
   .hcmr { grid-template-columns: minmax(0, 1fr); }
@@ -2221,6 +2247,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 <section id="tab-bootcamp" hidden><div id="bootBody"></div></section>
 <section id="tab-watch" hidden><div id="watchBody"></div></section>
 <section id="tab-review" hidden><div id="reviewBody"></div></section>
+<section id="tab-video" hidden><div id="videoBody"></div></section>
 <section id="tab-top" hidden><div id="topBody"></div></section>
 <section id="tab-weak" hidden><div id="weakBody"></div></section>
 <section id="tab-progress" hidden><div id="progressBody"></div></section>
@@ -4195,6 +4222,7 @@ const TITLES = {
   bootcamp: ["Helden-Bootcamp", "Pro Held vier Stufen von den Grundlagen zum Experten, pro Rolle ein Kurs, mit Aufgaben fürs Match"],
   watch: ["Zuschauen", "Von guten Spielern lernen: Aufgaben, Guide-Videos pro Held und Streamer"],
   review: ["Review", "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann alle anderen"],
+  video: ["Video-Review", "Eigene Aufnahmen anschauen und Tode, Ults und Fights mit der Zeit markieren"],
   top: ["Rang-Weg", "Stufe für Stufe von Bronze bis Eternity: was Spieler jedes Rangs erreichen und wie weit du in jeder Rolle schon bist"],
   weak: ["Schwächen", "Was bei welchem Helden besser werden kann, und was du dafür tust"],
   progress: ["Verlauf", "Tage, Wochen und Phasen vergleichen und sehen, was besser geworden ist"]
@@ -4208,12 +4236,12 @@ const AREAS = [
   { id: "week", label: "Woche", icon: "week", info: "Wochenziel und alle Aufgaben der Woche: was läuft und wo du es abhakst", tabs: ["goals"] },
   { id: "learn", label: "Lernen", icon: "book", info: "Trainingsplan, Lektionen und Helden-Bootcamp; unter «Mehr»: Quiz, Schwächen, Zuschauen und Lexikon", tabs: ["plan", "lessons", "bootcamp", "quiz", "weak", "watch", "lexicon"], core: 3 },
   { id: "play", label: "Spielen", icon: "play", info: "Matches, Dashboard und Squad; unter «Mehr»: Auswertung, Verlauf und Rang-Weg", tabs: ["log", "dashboard", "squad", "analysis", "progress", "top"], core: 3 },
-  { id: "review", label: "Review", icon: "replay", info: "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann der Rest", tabs: ["review"] },
+  { id: "review", label: "Review", icon: "replay", info: "Replays auswerten: zuerst Matches mit Notiz, dann deine Schwächen, dann der Rest; im Video-Review deine eigenen Aufnahmen", tabs: ["review", "video"] },
   { id: "heroes", label: "Helden", icon: "heroes", info: "Helden-Guide und Team & Counter; unter «Mehr»: Team-Ups und Meta", tabs: ["heroes", "team", "teamups", "meta"], core: 2 },
   { id: "coach", label: "Coach", icon: "ai", info: "Daten & Sync und Training; unter «Mehr»: KI-Coach", tabs: ["data", "training", "ai"], core: 2 }
 ];
 const subMore = {};   // welcher Bereich seine «Mehr»-Zeile gerade offen hat
-const NAV_LABEL = { today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Rang-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Matches", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Woche", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
+const NAV_LABEL = { video: "Video-Review", today: "Heute", plan: "Trainingsplan", lessons: "Lektionen", quiz: "Quiz", bootcamp: "Helden-Bootcamp", watch: "Zuschauen", review: "Review", top: "Rang-Weg", weak: "Schwächen", lexicon: "Lexikon", log: "Matches", analysis: "Auswertung", dashboard: "Dashboard", squad: "Squad", progress: "Verlauf", heroes: "Helden-Guide", team: "Team & Counter", meta: "Meta & Patch", teamups: "Team-Ups", maps: "Karten", goals: "Woche", training: "Training", ai: "KI-Coach", data: "Daten & Sync" };
 const areaOf = tab => AREAS.find(a => a.tabs.includes(tab)) || AREAS[0];
 const areaLast = {};
 function renderNav(name) {
@@ -4269,7 +4297,8 @@ function loadState(raw) {
   st.boot = Object.assign({}, st.boot);   // Helden-Bootcamp: Fortschritt, eigene Antworten und Test pro Held
   st.watch = Object.assign({ log: [] }, st.watch);   // Zuschauen: deine Antworten zu den Streamer-Aufgaben
   st.pro = Object.assign({ notes: [] }, st.pro);   // Profi-Notizbuch
-  if (!Array.isArray(st.qnotes)) st.qnotes = [];   // Schnellnotizen nach dem Match, bis sie einem Match zugeordnet sind
+  if (!Array.isArray(st.qnotes)) st.qnotes = [];
+  if (!st.vids || typeof st.vids !== "object" || Array.isArray(st.vids)) st.vids = {};   // Video-Review: Markierungen pro Aufnahme (das Video selbst bleibt auf dem PC)   // Schnellnotizen nach dem Match, bis sie einem Match zugeordnet sind
   if (!Array.isArray(st.pro.notes)) st.pro.notes = [];
   st.rv = Object.assign({ pins: {}, missions: [], badges: {} }, st.rv);   // Review: Auswahl des Tages, Schwächen-Missionen, Abzeichen
   if (!st.rv.pins || typeof st.rv.pins !== "object") st.rv.pins = {};
@@ -13670,7 +13699,7 @@ function rvMatchHtml(x, open, L) {
     ${hasSheet(m) ? `<div><button type="button" class="btn ghost small" data-msheet="${m.id}">${icon("analysis")}Match-Tabelle: alle 12 Spieler</button></div>` : ""}
     ${mixText(m) ? `<p class="small muted" style="margin:0">${esc(mixText(m))} Ordne trotzdem alle Tode zu. Für Vergleiche pro Held zählt nur der Anteil von ${esc(m.hero)}.</p>` : ""}
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
-    ${rvNoteHtml(m)}${rvCounterHint(m)}${rvRulesHtml(m)}
+    ${rvNoteHtml(m)}${vidRvHtml(m)}${rvCounterHint(m)}${rvRulesHtml(m)}
     ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>${stepIt ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${stepIt ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
       (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<label class="small fxwhy">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>`
         : fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
@@ -15891,6 +15920,7 @@ const PAGE_HELP = {
   watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Unter der Aufgabe stehen konkrete Guide-Videos zum gewählten Helden (Titel und Kanal geprüft, Inhalt nicht). Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
   review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
+  video: ["Video-Review", ["Wähl oben eine Aufnahme von deinem PC (MP4). Sie bleibt auf dem PC, die App merkt sich nur deine Markierungen.", "Prüf das Match darunter. Die App schlägt eins vor, wenn der Dateiname oder das Dateidatum die Aufnahmezeit verrät.", "Beim Anschauen tippst du bei jedem Tod auf «Tod» (Taste T) und wählst die Ursache. Genauso deine Ult (U), Gegner-Ults (G), gewonnene (W) und verlorene Fights (V), gute Momente (B) und Notizen (N).", "Ein Tipp auf eine Zeit in der Liste springt fünf Sekunden davor ins Video. Unten übernimmst du Todesursachen und Ults ins Match; im Review steht beim Match, was du markiert hast."]],
   weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten 12 Matches und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
@@ -18056,12 +18086,193 @@ chipGroup($("#goodChips"), GOODS);
 chipGroup($("#teamGoodChips"), TEAM_GOOD);
 chipGroup($("#teamBadChips"), TEAM_BAD);
 chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
+// ---------- Video-Review: eigene Aufnahmen (MP4) im Browser ansehen und Momente markieren ----------
+// Das Video bleibt auf dem PC: Die App spielt die gewählte Datei über eine lokale Adresse (blob:) ab und lädt nichts hoch.
+// Gespeichert werden nur die Markierungen: state.vids[key] = { name, size, start, dur, at, marks: [{ id, t, k, c, v, h, n, mid }] }.
+// key = Dateiname + Grösse: Wählst du dieselbe Datei wieder, sind die Markierungen wieder da. Jede Markierung gehört zum Match,
+// das gerade oben gewählt ist (mid); so geht auch eine lange Aufnahme mit mehreren Matches. Aufnahmezeit: aus dem Dateinamen
+// (NVIDIA, OBS, Xbox Game Bar), sonst Änderungsdatum der Datei minus Länge. Automatisches Erkennen kommt später (Schritt 2).
+const VID_KINDS = {
+  death: { l: "Tod", key: "t" }, ult: { l: "Meine Ult", key: "u" }, eult: { l: "Gegner-Ult", key: "g" },
+  win: { l: "Fight gewonnen", key: "w" }, loss: { l: "Fight verloren", key: "v" }, good: { l: "Gut gemacht", key: "b" }, note: { l: "Notiz", key: "n" }
+};
+const VID_ULT = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
+const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false };
+const vidStore = () => (state.vids = state.vids && typeof state.vids === "object" ? state.vids : {});
+const vidKey = f => f.name + "|" + f.size;
+const vidRec = () => vidUi.key ? vidStore()[vidUi.key] : null;
+const vidFmt = t => { t = Math.max(0, Math.floor(+t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); };
+// Aufnahmezeit aus dem Dateinamen: «2026.11.04 - 21.33.12» (NVIDIA), «2026-11-04 21-33-12» (OBS, Xbox Game Bar), «20261104_213312»
+function vidNameTime(name) {
+  const m = /(20\d\d)[.\-_]?(\d\d)[.\-_]?(\d\d)[ _\-T.]+(\d\d)[.\-_:h]?(\d\d)[.\-_:m]?(\d\d)/.exec(String(name || ""));
+  if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31 || +m[4] > 23 || +m[5] > 59 || +m[6] > 59) return 0;
+  const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+  return isFinite(d) ? d : 0;
+}
+// Matches, die zur Aufnahme passen: im Zeitraum der Aufnahme zuerst, dann die nächsten (höchstens 6 Stunden daneben); ohne Zeit die neuesten
+function vidCands(start, dur) {
+  const ms = state.matches.slice().filter(m => m.hero);
+  if (!start) return ms.sort((a, b) => matchTime(b) - matchTime(a)).slice(0, 10).map(m => ({ m, d: null, inside: false }));
+  const end = start + (dur || 0) * 1000, pad = 5 * 60e3;
+  return ms.map(m => { const t = matchTime(m), inside = t >= start - pad && t <= end + pad; return { m, inside, d: inside ? Math.abs(t - start) / 10 : Math.min(Math.abs(t - start), Math.abs(t - end)) }; })
+    .filter(x => x.inside || x.d <= 6 * 3600e3).sort((a, b) => (b.inside - a.inside) || a.d - b.d).slice(0, 10);
+}
+const vidMatchLabel = m => { const tt = m.ts ? new Date(m.ts).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" }) : ""; return `${fmtDate(m.date)}${tt ? " " + tt : ""} · ${m.hero} · ${m.result === "W" ? "Sieg" : m.result === "L" ? "Niederlage" : "?"}${m.mode ? " · " + m.mode : ""}`; };
+// Alle Markierungen zu einem Match (aus allen Aufnahmen)
+const vidMarksFor = mid => Object.values(vidStore()).flatMap(r => (r.marks || []).filter(x => x.mid === mid));
+function vidSum(marks) {
+  const d = marks.filter(x => x.k === "death"), u = marks.filter(x => x.k === "ult"), causes = {};
+  d.forEach(x => { if (x.c) causes[x.c] = (causes[x.c] || 0) + 1; });
+  return { deaths: d.length, causes, ults: u.length, hit: u.reduce((a, x) => a + (x.v === "ja" ? 1 : x.v === "teils" ? 0.5 : 0), 0), rated: u.filter(x => x.v).length,
+    win: marks.filter(x => x.k === "win").length, loss: marks.filter(x => x.k === "loss").length, n: marks.length };
+}
+const vidSumText = s => [s.deaths && `${s.deaths} ${s.deaths === 1 ? "Tod" : "Tode"}`, s.ults && `${s.ults} ${s.ults === 1 ? "Ult" : "Ults"}`, (s.win || s.loss) && `Fights ${s.win}:${s.loss}`].filter(Boolean).join(", ");
+// Review: Hinweis auf Markierungen und Weg ins Video-Review
+function vidRvHtml(m) {
+  const mk = vidMarksFor(m.id), s = vidSum(mk);
+  return `<p class="small rvvid">${icon("play")}${mk.length ? `<span><b>Video-Markierungen:</b> ${s.n} (${esc(vidSumText(s) || "Notizen")})</span>` : `<span class="muted">Hast du das Match aufgenommen? Im Video-Review markierst du Tode, Ults und Fights mit der Zeit.</span>`} <button type="button" class="linkbtn small" data-vidopen="${esc(m.id)}">${mk.length ? "Im Video-Review öffnen" : "Video dazu ansehen"}</button></p>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-vidopen]"); if (!b) return; vidUi.mid = b.dataset.vidopen; showTab("video"); window.scrollTo({ top: 0 }); });
+
+function vidOpenFile(f) {
+  if (!f) return;
+  if (vidUi.url) { try { URL.revokeObjectURL(vidUi.url); } catch (e) { /* alt */ } }
+  vidUi.file = f; vidUi.key = vidKey(f); vidUi.url = URL.createObjectURL(f); vidUi.err = ""; vidUi.pend = "";
+  const V = vidStore(), rec = V[vidUi.key] || (V[vidUi.key] = { name: f.name, size: f.size, start: vidNameTime(f.name), dur: 0, at: Date.now(), marks: [] });
+  rec.at = Date.now();
+  if (!vidUi.mid) { const last = rec.marks.length ? rec.marks[rec.marks.length - 1].mid : ""; vidUi.mid = last || ""; }
+  save();
+  renderVideo(true);
+}
+function vidLoaded(v) {
+  const rec = vidRec(); if (!rec) return;
+  rec.dur = Math.round(v.duration || 0);
+  if (!rec.start && vidUi.file && vidUi.file.lastModified && rec.dur) rec.start = vidUi.file.lastModified - rec.dur * 1000;   // Ende der Aufnahme minus Länge
+  if (!vidUi.mid) { const c = vidCands(rec.start, rec.dur); if (c[0] && c[0].inside) vidUi.mid = c[0].m.id; }
+  save(); vidParts();
+}
+function vidAdd(k) {
+  const v = $("#vidEl"), rec = vidRec(); if (!v || !rec) return;
+  const mk = { id: newId(), t: Math.round(v.currentTime * 10) / 10, k, mid: vidUi.mid || "" };
+  rec.marks.push(mk); rec.at = Date.now(); save();
+  vidUi.pend = ["death", "ult", "eult", "note"].includes(k) ? mk.id : "";
+  if (k === "note") v.pause();
+  vidParts();
+  if (k === "note") { const i = $("#vidNote"); if (i) i.focus(); }
+}
+const vidMark = id => { const r = vidRec(); return r ? r.marks.find(x => x.id === id) : null; };
+function vidPendHtml() {
+  const mk = vidMark(vidUi.pend); if (!mk) return "";
+  const at = `<span class="small muted">bei ${vidFmt(mk.t)}</span>`;
+  if (mk.k === "death") return `<div class="vidpend"><b class="small">Tod ${at}: woran lag es?</b><div class="chips">${QN_CATS.map(c => `<button type="button" class="chip${mk.c === c ? " on" : ""}" data-vidset="c" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>`;
+  if (mk.k === "ult") return `<div class="vidpend"><b class="small">Deine Ult ${at}: Wirkung?</b><div class="chips">${VID_ULT.map(([v, l]) => `<button type="button" class="chip${mk.v === v ? " on" : ""}" data-vidset="v" data-v="${v}">${l}</button>`).join("")}</div></div>`;
+  if (mk.k === "eult") { const m = state.matches.find(x => x.id === mk.mid), en = ((m && m.enemies) || []).filter(h => ultOf(h));
+    return en.length ? `<div class="vidpend"><b class="small">Gegner-Ult ${at}: von wem?</b><div class="chips">${en.map(h => `<button type="button" class="chip${mk.h === h ? " on" : ""}" data-vidset="h" data-v="${esc(h)}">${esc(h)}</button>`).join("")}</div></div>` : ""; }
+  if (mk.k === "note") return `<div class="vidpend"><label class="small"><b>Notiz ${at}</b><input type="text" id="vidNote" data-vidnote="${esc(mk.id)}" value="${esc(mk.n || "")}" placeholder="z. B. hier zu weit vorne geheilt"></label></div>`;
+  return "";
+}
+function vidMarkLabel(mk) {
+  const k = VID_KINDS[mk.k] || { l: mk.k }, ul = VID_ULT.find(x => x[0] === mk.v);
+  return `<b>${esc(k.l)}</b>${mk.c ? " · " + esc(mk.c) : ""}${ul && mk.k === "ult" ? " · " + esc(ul[1]) : ""}${mk.h ? " · " + esc(mk.h) : ""}${mk.n ? ` · <span class="muted">${esc(mk.n)}</span>` : ""}`;
+}
+// Teile, die sich beim Markieren ändern; der Player selbst bleibt stehen (sonst springt das Video zurück)
+function vidParts() {
+  const rec = vidRec(), box = $("#vidParts"); if (!box || !rec) return;
+  const cands = vidCands(rec.start, rec.dur), cur = state.matches.find(m => m.id === vidUi.mid);
+  const list = cur && !cands.some(c => c.m.id === cur.id) ? [{ m: cur, inside: false }].concat(cands) : cands;
+  const marks = rec.marks.slice().sort((a, b) => a.t - b.t), here = marks.filter(x => x.mid === vidUi.mid), s = vidSum(here);
+  const other = [...new Set(marks.filter(x => x.mid && x.mid !== vidUi.mid).map(x => x.mid))].length;
+  box.innerHTML = `<div class="vidrow"><label class="small"><b>Match für die Markierungen</b>
+      <select id="vidMatch"><option value="">– noch kein Match –</option>${list.map(c => `<option value="${esc(c.m.id)}"${c.m.id === vidUi.mid ? " selected" : ""}>${esc(vidMatchLabel(c.m))}${c.inside ? " (passt zur Aufnahmezeit)" : ""}</option>`).join("")}</select></label>
+      <span class="small muted">${rec.start ? `Aufnahme ab ${new Date(rec.start).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}${rec.dur ? `, ${vidFmt(rec.dur)} lang` : ""}. ` : ""}Mehrere Matches in einer Aufnahme? Wechsle hier das Match, bevor du weiter markierst.</span></div>
+    <div class="vidbtns">${Object.entries(VID_KINDS).map(([k, x]) => `<button type="button" class="btn small${k === "death" || k === "loss" ? " bad" : k === "win" || k === "good" ? " ok" : ""}" data-vidadd="${k}">${esc(x.l)} <kbd>${x.key.toUpperCase()}</kbd></button>`).join("")}</div>
+    ${vidPendHtml()}
+    <p class="small muted" style="margin:6px 0 0">Tasten am PC: Leertaste Pause, ← und → 5 Sekunden, Buchstaben wie auf den Knöpfen. Markiert wird immer die aktuelle Stelle im Video.</p>
+    <h3 class="vidh">Markierungen${cur ? ` zu diesem Match: ${here.length}` : ""}${other ? ` <span class="small muted">(dazu ${other} weitere Matches in dieser Aufnahme)</span>` : ""}</h3>
+    ${marks.length ? `<ol class="vidlist">${marks.map(x => `<li class="${x.mid === vidUi.mid ? "" : "oth"}${x.id === vidUi.pend ? " pend" : ""}"><button type="button" class="linkbtn" data-vidjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span>${vidMarkLabel(x)}${x.mid && x.mid !== vidUi.mid ? ` <span class="small muted">(anderes Match)</span>` : ""}</span><button type="button" class="linkbtn small" data-videdit="${esc(x.id)}" aria-label="Ändern">ändern</button><button type="button" class="linkbtn small" data-viddel="${esc(x.id)}" aria-label="Löschen">✕</button></li>`).join("")}</ol>` : `<p class="small muted">Noch keine Markierungen. Spiel das Video ab und tipp bei einem Tod auf «Tod» (oder Taste T).</p>`}
+    ${cur && here.length ? `<div class="vidsum"><b class="small">Ins Match übernehmen</b><span class="small">${esc(vidSumText(s) || "nur Notizen")}${s.deaths && Object.keys(s.causes).length ? ` · Ursachen: ${esc(Object.entries(s.causes).map(([c, n]) => `${c} ${n}×`).join(", "))}` : ""}</span>
+      <div class="row" style="gap:6px">${s.deaths ? `<button type="button" class="btn small" data-vidtake="death">Todesursachen übernehmen</button>` : ""}${s.ults ? `<button type="button" class="btn small" data-vidtake="ult">Ults übernehmen</button>` : ""}<button type="button" class="btn ghost small" data-rv-go="${esc(cur.id)}">Zum Review dieses Matches</button></div></div>` : ""}`;
+}
+// Markierungen ins Match: Todesursachen (nur markierte Ursachen) und Ults; bestehende Werte werden erst nach Rückfrage ersetzt
+async function vidTake(what) {
+  const m = state.matches.find(x => x.id === vidUi.mid); if (!m) return;
+  const s = vidSum(vidMarksFor(m.id));
+  if (what === "death") {
+    const n = Object.values(s.causes).reduce((a, b) => a + b, 0);
+    if (!n) { toast("Wähl zuerst bei den Toden eine Ursache."); return; }
+    if (deathTotal(m.deathCauses) > 0 && !(await askConfirm(`Das Match hat schon ${deathTotal(m.deathCauses)} Todesursachen. Durch die ${n} aus dem Video ersetzen?`, "Ersetzen"))) return;
+    m.deathCauses = Object.assign({}, s.causes);
+    toast(`${n} Todesursachen ins Match übernommen.`);
+  } else {
+    if (m.ults !== null && m.ults !== undefined && !(await askConfirm(`Das Match hat schon ${m.ults} Ults eingetragen. Durch ${s.ults} aus dem Video ersetzen?`, "Ersetzen"))) return;
+    m.ults = s.ults; m.ultHit = s.rated ? s.hit : null;
+    toast(`${s.ults} Ults ins Match übernommen${s.rated ? `, ${numDe(s.hit)} mit Wirkung` : ""}.`);
+  }
+  save(); vidParts();
+}
+function renderVideo(fresh) {
+  const el = $("#videoBody"); if (!el) return;
+  const V = vidStore(), rec = vidRec(), recent = Object.entries(V).sort((a, b) => (b[1].at || 0) - (a[1].at || 0)).slice(0, 6);
+  if (!vidUi.bound) vidBind(el);
+  if (!fresh && rec && $("#vidEl") && $("#vidEl").dataset.key === vidUi.key) { vidParts(); return; }
+  el.innerHTML = `<div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
+      <p class="small" style="margin:0 0 8px">Wähl eine Aufnahme von deinem PC (MP4). Das Video bleibt auf deinem PC: Die App lädt nichts hoch und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
+      <label class="vidfile"><input type="file" id="vidFile" accept="video/*,.mp4,.mov,.webm,.mkv"><span>${icon("upload")}Video auswählen oder hierher ziehen</span></label>
+      ${recent.length ? `<details class="small vidrecent"${rec ? "" : " open"}><summary>Zuletzt bearbeitet</summary><ul>${recent.map(([k, r]) => `<li>${esc(r.name)} · ${(r.marks || []).length} Markierungen${k === vidUi.key ? " <b>(offen)</b>" : ""}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Zum Weitermachen wählst du die Datei oben noch einmal aus. Aus Sicherheitsgründen darf die App Dateien nicht selbst öffnen.</p></details>` : ""}
+      <p class="small muted" style="margin:6px 0 0">Am besten geht MP4 (H.264), wie NVIDIA, Medal oder die Xbox Game Bar es speichern. OBS speichert oft MKV; stell dort für den Review MP4 ein.</p></div>
+    ${rec ? `<div class="card vidplay"><div class="card-head"><h2 class="vidname">${esc(rec.name)}</h2></div>
+      <div class="vidwrap"><video id="vidEl" data-key="${esc(vidUi.key)}" src="${vidUi.url}" controls playsinline preload="metadata"></video></div>
+      ${vidUi.err ? `<p class="small bad">${esc(vidUi.err)}</p>` : ""}
+      <div class="row vidnav"><button type="button" class="btn ghost small" data-vidstep="-5">−5 s</button><button type="button" class="btn ghost small" data-vidstep="5">+5 s</button>
+        <span class="small muted">Tempo</span>${[0.5, 1, 2].map(r => `<button type="button" class="btn ghost small" data-vidrate="${r}">${String(r).replace(".", ",")}×</button>`).join("")}</div>
+      <div id="vidParts"></div></div>` : ""}
+    <div class="card"><div class="card-head"><h2>${icon("ai")}Schritt 2: automatisch erkennen</h2></div><p class="small" style="margin:0">Später soll die App Tode und Kills selbst im Video finden (Bilderkennung). Das kommt als Versuch, sobald du den Review-Helfer ein paar Mal benutzt hast. Ob es zuverlässig klappt, ist offen.</p></div>`;
+  const v = $("#vidEl");
+  if (v) {
+    v.addEventListener("loadedmetadata", () => vidLoaded(v));
+    v.addEventListener("error", () => { vidUi.err = "Dieses Video kann der Browser hier nicht abspielen. Am besten geht MP4 mit H.264. Klappt es auch damit nicht, ist das Abspielen in dieser Ansicht vielleicht gesperrt: Sag Claude Bescheid."; renderVideo(true); });
+    vidParts();
+  }
+}
+function vidBind(el) {
+  vidUi.bound = true;
+  el.addEventListener("change", e => {
+    if (e.target.id === "vidFile" && e.target.files && e.target.files[0]) vidOpenFile(e.target.files[0]);
+    if (e.target.id === "vidMatch") { vidUi.mid = e.target.value; vidUi.pend = ""; vidParts(); }
+  });
+  el.addEventListener("input", e => { const i = e.target.closest("[data-vidnote]"); if (!i) return; const mk = vidMark(i.dataset.vidnote); if (mk) { mk.n = i.value; save(); } });
+  el.addEventListener("keydown", e => { if (e.target.matches("[data-vidnote]") && e.key === "Enter") { vidUi.pend = ""; vidParts(); const v = $("#vidEl"); if (v) v.focus(); } });
+  el.addEventListener("dragover", e => { if (e.target.closest(".vidfile")) e.preventDefault(); });
+  el.addEventListener("drop", e => { const z = e.target.closest(".vidfile"); if (!z) return; e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) vidOpenFile(f); });
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const v = $("#vidEl");
+    if (b.dataset.vidadd) vidAdd(b.dataset.vidadd);
+    else if (b.dataset.vidset) { const mk = vidMark(vidUi.pend); if (mk) { mk[b.dataset.vidset] = mk[b.dataset.vidset] === b.dataset.v ? "" : b.dataset.v; if (!mk[b.dataset.vidset]) delete mk[b.dataset.vidset]; save(); vidUi.pend = ""; vidParts(); } }
+    else if (b.dataset.vidjump && v) { const mk = vidMark(b.dataset.vidjump); if (mk) { v.currentTime = Math.max(0, mk.t - 5); v.play().catch(() => {}); } }
+    else if (b.dataset.videdit) { vidUi.pend = vidUi.pend === b.dataset.videdit ? "" : b.dataset.videdit; vidParts(); }
+    else if (b.dataset.viddel) { const r = vidRec(); if (r) { r.marks = r.marks.filter(x => x.id !== b.dataset.viddel); if (vidUi.pend === b.dataset.viddel) vidUi.pend = ""; save(); vidParts(); } }
+    else if (b.dataset.vidstep && v) v.currentTime = Math.max(0, v.currentTime + +b.dataset.vidstep);
+    else if (b.dataset.vidrate && v) v.playbackRate = +b.dataset.vidrate;
+    else if (b.dataset.vidtake) vidTake(b.dataset.vidtake);
+  });
+  document.addEventListener("keydown", e => {
+    if (currentTab() !== "video" || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target; if (t && (t.matches("input, textarea, select") || t.isContentEditable)) return;
+    const v = $("#vidEl"); if (!v) return;
+    if (e.key === " ") { e.preventDefault(); if (v.paused) v.play().catch(() => {}); else v.pause(); return; }
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime + (e.key === "ArrowLeft" ? -5 : 5)); return; }
+    const k = Object.keys(VID_KINDS).find(x => VID_KINDS[x].key === e.key.toLowerCase());
+    if (k) { e.preventDefault(); vidAdd(k); }
+  });
+}
+
 function render() {
   applyPoolToPlan();
   if (qnAssignAll()) saveCore();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
      quiz: renderQuizTab, plan: renderPlan, lexicon: renderLexicon, heroes: renderHeroes,
-     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, watch: renderWatch, review: renderReview, top: renderTop, weak: renderWeak, progress: renderProgress, squad: renderSquad })[currentTab()]();
+     training: renderTraining, goals: renderGoals, ai: renderAI, data: renderData, meta: renderMeta, teamups: renderTeamups, bootcamp: renderBootcamp, watch: renderWatch, review: renderReview, video: () => renderVideo(), top: renderTop, weak: renderWeak, progress: renderProgress, squad: renderSquad })[currentTab()]();
   renderLevelChip();
 }
 let resizeT = null;
