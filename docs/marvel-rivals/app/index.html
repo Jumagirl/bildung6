@@ -11775,7 +11775,7 @@ const brAltChip = (n, key, alt) => a => `<button type="button" class="chip ${alt
 // Auswahl «Heute anders?»: immer sichtbar, solange es Ausweich-Möglichkeiten gibt; dazu «Block verschieben»
 function brAltRowHtml(n, key) {
   const alt = brAlt(n, key), opts = [...new Set(brAltOpts(n, key).concat(alt))];
-  return `<div class="row small bralt-quick"><span class="muted">${alt.length ? "Heute so gespielt:" : "Heute anders?"}</span>${opts.map(brAltChip(n, key, alt)).join("")}${alt.length ? "" : `<button type="button" class="chip" data-brskip="${key}" data-n="${n}">Block verschieben</button>`}</div>`;
+  return `<div class="row small bralt-quick"><span class="muted">${alt.length ? "In diesem Block so gespielt:" : "Dieser Block heute anders?"}</span>${opts.map(brAltChip(n, key, alt)).join("")}${alt.length ? "" : `<button type="button" class="chip" data-brskip="${key}" data-n="${n}">Block verschieben</button>`}</div>`;
 }
 function brBoxHtml(n, key) {
   if (brSkipped(n, key)) return brSkipHtml(n, key);
@@ -11792,7 +11792,7 @@ function brBoxHtml(n, key) {
     ${mut ? mutInlineHtml(n, key, ms.length) : ""}
     <details class="small brmore"><summary>Regeln anpassen${mut ? ` · Mut-Leiter Stufe ${mutStage(n)}` : ""} · ${BR_LEVEL_NAME[lvl]}</summary>
       ${unk && ms.length ? `<p class="muted" style="margin:6px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
-      ${opts.length || alt.length ? `<p class="muted" style="margin:6px 0 0">«Heute anders?» oben: Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</p>` : ""}
+      ${opts.length || alt.length ? `<p class="muted" style="margin:6px 0 0">«Dieser Block heute anders?» oben gilt nur für diesen Block, die anderen bleiben wie geplant. Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</p>` : ""}
       <div class="brsec row brgrp"><b>Du spielst meist</b>${[["stack", "mit Freunden"], ["", "solo oder gemischt"]].map(([v, l]) => `<button type="button" class="chip ${((state.settings || {}).usualGroup || "") === v ? "on" : ""}" data-brgrp="${v}" aria-pressed="${((state.settings || {}).usualGroup || "") === v}">${l}</button>`).join("")}</div>
       ${mut ? mutFullHtml(n) : ""}
       <div class="brsec brlvl"><b>Wie streng?</b> <span class="muted">Bis Tag 42 locker, bis Tag 70 mittel, ab Tag 71 streng${auto ? " (automatisch)" : ""}. ${esc(BR_LEVEL_NAME[lvl])}: ${esc(BR_LEVEL_TXT[lvl])}</span>
