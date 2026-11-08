@@ -423,6 +423,8 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .qnquick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
 .ptrow .pttime { font-variant-numeric: tabular-nums; min-width: 3.2em; color: var(--muted); }
 .ptrow.wait .sp b { color: var(--warn); }
+.nmdone { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--border); }
+.nmdone .chips { flex-basis: 100%; }
 .qnsheet { width: min(560px, 100%); }
 .qnhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .qnhead h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
@@ -7583,7 +7585,7 @@ function qnApply(q, m) {
   if (q.blk && !q.prep && !m.blk && !m.stepPick) m.blk = q.blk;   // in der Notiz gewählter Block
   if (q.lad && q.lad.v && !m.lad) m.lad = q.lad;
   if (q.bingo && !m.bingo) m.bingo = q.bingo;
-  if (q.fxKeys && q.fxKeys.length) {
+  if (q.fxKeys && q.fxKeys.length && !q.played) {   // «gespielt» ohne Bewertung: keine Notiz am Match
     const items = fxForMatch({ hero: m.hero, date: m.date, qn: { fxKeys: q.fxKeys, fxT: q.fxT } });
     items.forEach(it => { const v = (q.fx || {})[it.key], has = fxGet(m, it); if (v && (has === undefined || has === "")) fxSet(m, it, v); });
     fxMark(m, items);
@@ -7708,29 +7710,32 @@ function qnClick(e) {
 }
 // Hat die Notiz nichts Eigenes (nur Zweck oder Block), wird sie ein Eintrag «Match gespielt». Ein «gespielt»-Eintrag zum selben Match geht in der
 // Notiz auf: über «Doch eine Notiz dazu» (d.fromPlayed) oder wenn die Notiz kurz danach kommt (QN_MERGE_MS, kürzer als jedes Match).
+// Nicht bei einem weiteren schnellen Eintrag («gespielt» oder Bewertung): Den hast du nach der Rückfrage bewusst als neues Match bestätigt.
 const QN_MERGE_MS = 4 * 60e3;
-function qnSaveDraft(d) {
+function qnSaveDraft(d, silent) {
   {
     const now = Date.now(), played = !qnHasContent(d);
-    const pl = d.fromPlayed ? state.qnotes.find(x => x.id === d.fromPlayed && !x.match) : state.qnotes.filter(x => x.played && !x.match && x.date === today() && now - (x.ts || 0) < QN_MERGE_MS).pop();
+    const pl = d.fromPlayed ? state.qnotes.find(x => x.id === d.fromPlayed && !x.match) : played || d.quick ? null : state.qnotes.filter(x => (x.played || x.quick) && !x.match && x.date === today() && now - (x.ts || 0) < QN_MERGE_MS).pop();
     if (pl) state.qnotes = state.qnotes.filter(x => x !== pl);
     const ts = d.fromTs || (pl && pl.ts) || now;
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
     fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
     const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog; delete keep.lad; delete keep.fromPlayed; delete keep.fromTs;
-    if (played) { ["deaths", "ultDeaths", "fx", "tally", "mini", "stack", "voice", "extra", "text", "bingo"].forEach(k => delete keep[k]); keep.played = 1; }
+    if (played) { ["deaths", "ultDeaths", "fx", "tally", "mini", "stack", "voice", "extra", "text", "bingo"].forEach(k => delete keep[k]); keep.played = 1; keep.quick = 1; }
     { const L = qnLadFor(d), st = fxIt.find(x => x.src === "step"), v = st && (d.fx || {})[st.key];   // Bewertung der Aufgabe zählt für die Stufe (nur im Training)
-      if (L && v) keep.lad = { id: L.id, s: L.s, v }; }
+      if (L && v) keep.lad = { id: L.id, s: L.s, v }; else if (L && st) keep.ladAt = { id: L.id, s: L.s }; }   // ladAt: für eine Bewertung später («Match eingetragen»)
     { const f = focusNow();   // Bingo nur im Spass-Block; ohne eigene Bewertung zählt es für die Aufgabe (3 = Ja, 1–2 = Teilweise)
       if (!(f && f.seg && f.seg.bingo) || !keep.bingo || keep.bingo.k !== f.k) delete keep.bingo;
       else { const st = fxIt.find(x => x.src === "step"), h = keep.bingo.hit.length; if (st && !(keep.fx || {})[st.key] && h) { keep.fx = Object.assign({}, keep.fx, { [st.key]: h >= 3 ? "ja" : "teils" }); }
       } }
-    const q = Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length && !played ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {});
+    const q = Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {});
     state.qnotes.push(q);
     qnForce = ""; qnDraft = null; qnAssignAll(); planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
+    if (silent) return q;
     if (played && !d.fromPlayed && !pl) qpOpen(q);
     else toast(played ? "Als «gespielt» eingetragen. Die App ordnet es dem Match zu, sobald es vom Abgleich da ist." : "Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
+    return q;
   }
 }
 document.addEventListener("click", e => { if (e.target.closest("[data-qnopen]")) qnOpen(); });
@@ -7773,13 +7778,24 @@ function qnLastTs() {
   const t = today();
   return Math.max(0, ...state.qnotes.filter(q => q.date === t).map(q => q.ts || 0), ...state.matches.filter(m => m.date === t).map(m => Math.max(m.played || 0, (m.qn || {}).noted || 0)));
 }
-function qnPlayedTap() {
-  if (qnHasContent(qnDraft)) { qnOpen(); toast("Du hast für dieses Match schon etwas notiert. Speichere die Notiz, dann zählt das Match."); return; }
+// v: Bewertung der Aufgabe dieses Matches («ja», «teils», «nein») direkt von «Dein nächstes Match»; ohne v nur «gespielt» mit Bestätigung.
+// Eine angefangene Notiz (Striche aus dem Match) geht mit: Mit Bewertung wird sie gespeichert, ohne öffnet sich die Notiz.
+function qnPlayedTap(v) {
+  if (!v && qnHasContent(qnDraft)) { qnOpen(); toast("Du hast für dieses Match schon etwas notiert. Speichere die Notiz, dann zählt das Match."); return; }
   const now = Date.now(), ago = now - qnLastTs();
   const go = () => {
-    const q = { id: newId(), ts: Date.now(), date: today(), played: 1, ults: null, ultHit: null };
-    state.qnotes.push(q); qnAssignAll(); save(); render(); qnFabState();
-    qpOpen(q);
+    const d = qnHasContent(qnDraft) ? qnDraft : qnBlank();
+    d.quick = 1;
+    qnForce = d.prep ? "" : d.blk || "";
+    let q;
+    try {
+      const st = fxChosen(today()).find(x => x.src === "step");
+      if (v && st && !d.prep) d.fx = Object.assign({}, d.fx, { [st.key]: v });
+      q = qnSaveDraft(d, true);
+    } finally { qnForce = ""; }
+    if (!v) { qpOpen(q); return; }
+    const bt = qpBlockText(q, q.match ? state.matches.find(x => x.id === q.match) : null);
+    toast(`Match eingetragen, Aufgabe: ${(TASK_V.find(x => x[0] === v) || ["", v])[1]}.${bt ? " " + bt : ""} Ändern unter «Heute gespielt».`);
   };
   if (ago < QN_AGAIN_MS) askConfirm(`Du hast ${ago < 60e3 ? "gerade eben" : "vor einer Minute"} schon ein Match eingetragen. Noch ein weiteres Match eintragen?`, "Ja, noch ein Match").then(ok => { if (ok) go(); });
   else go();
@@ -7798,6 +7814,30 @@ function qnSetMatchPurpose(m, v) {
   m.stepPick = v === "1" ? "prep" : v;
   if (v === "mission") { const open = qnMisOpen(); if (!qnMisOf(m.mission) && open.length === 1) m.mission = open[0].id; } else delete m.mission;
 }
+// Die Aufgabe des Matches («Deine Aufgabe»): beim Eintrag gemerkt (fxKeys/fxT), beim schon zugeordneten Match aus dem Match
+function qpTask(q, m) {
+  if (m) { if (planSkip(m)) return null; const it = fxForMatch(m).find(x => x.src === "step"); return it ? { key: it.key, t: it.t, v: fxGet(m, it), it } : null; }
+  if (q.prep) return null;
+  const k = (q.fxKeys || []).find(x => x.startsWith("step:"));
+  return k ? { key: k, t: ((q.fxT || {})[k] || {}).t || "", v: (q.fx || {})[k] } : null;
+}
+// Bewerten oder Bewertung zurücknehmen. Mit Bewertung ist der Eintrag eine kurze Notiz (zählt als Notiz), ohne wieder nur «gespielt».
+function qpRate(q, m, v) {
+  const tk = qpTask(q, m); if (!tk) return;
+  const nv = tk.v === v ? "" : v;
+  if (m) { fxSet(m, tk.it, nv); if (nv) fxMark(m, [tk.it]); if (q.ladAt && nv) m.lad = { id: q.ladAt.id, s: q.ladAt.s, v: nv }; return; }
+  q.fx = Object.assign({}, q.fx);
+  if (nv) q.fx[tk.key] = nv; else delete q.fx[tk.key];
+  if (Object.keys(q.fx).length) delete q.played; else { q.played = 1; delete q.fx; }
+  if (q.ladAt && nv) q.lad = { id: q.ladAt.id, s: q.ladAt.s, v: nv }; else delete q.lad;
+}
+// Zweck nicht mehr Training: Die Aufgabe aus dem Plan galt nicht, ihre Bewertung fällt weg
+function qpDropStep(q) {
+  if (!q.fx) return;
+  Object.keys(q.fx).forEach(k => { if (k.startsWith("step:")) delete q.fx[k]; });
+  delete q.lad;
+  if (!Object.keys(q.fx).length) { delete q.fx; if (q.quick) q.played = 1; }
+}
 // In welchem Block zählt das Match?
 function qpBlockText(q, m) {
   const fd = focusDay(); if (!fd.n || fd.n > PLAN_N) return "";
@@ -7813,8 +7853,13 @@ function qpHtml() {
   const m = q.match ? state.matches.find(x => x.id === q.match) : null, fd = focusDay(), inPlan = fd.n >= 1 && fd.n <= PLAN_N;
   const cur = m ? qnMatchPurposeKey(m) : qnPurposeKey(q), n = state.matches.filter(x => x.date === today()).length + qnToday().length;
   const hint = cur === "0" ? `<span class="small muted">${esc(qpBlockText(q, m))}</span>` : cur === "mission" ? qnMissionHtml(m || q) : `<span class="small muted">${esc(QN_PURPOSE_HINT[cur === "1" ? "prep" : cur] || "")}</span>`;
+  const tk = cur === "0" ? qpTask(q, m) : null;
+  const rate = tk ? `<div class="qnrow"><b class="small">Deine Aufgabe in diesem Match: Hat es geklappt?</b><span class="small">${esc(tk.t)}</span>
+    <div class="chips">${TASK_V.map(([k, l]) => `<button type="button" class="chip ${tk.v === k ? "on" : ""}" data-qprate="${k}" aria-pressed="${tk.v === k}">${l}</button>`).join("")}</div>
+    <span class="small muted">Freiwillig. Bewerte nur, wenn du es weisst. Das Match zählt auch ohne Bewertung.</span></div>` : "";
   return `<div class="qnhead"><div><h2 id="qpTitle">${icon("check")}Match eingetragen</h2><span class="small muted">${nmTime(q.ts)} · heute ${plural(n, "Match", "Matches")}</span></div><button class="btn ghost small" type="button" data-qpclose aria-label="Schliessen">✕</button></div>
     <p class="small" style="margin:0 0 10px">${m ? `Das Match ist schon vom Abgleich da: <b>${esc(m.hero)}</b>, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.ts ? `, ${nmTime(m.ts)}` : ""}. Der Eintrag gehört jetzt dazu.` : "Das Match zählt ab sofort. Held, Ergebnis und Werte holt der Abgleich später. Die App ordnet den Eintrag dann selbst zu."}</p>
+    ${rate}
     ${inPlan ? `<div class="qnrow"><b class="small">Wofür war das Match?</b><div class="chips">${QN_PURPOSE.map(([k, l]) => `<button type="button" class="chip ${k === cur ? "on" : ""}" data-qppurp="${k}" aria-pressed="${k === cur}">${l}</button>`).join("")}</div>${hint}</div>` : ""}
     <div class="row mt"><button class="btn" type="button" data-qpclose>Fertig</button><button class="btn ghost" type="button" data-qpnote>${icon("edit")}Doch eine Notiz dazu</button>${m ? "" : `<button class="btn ghost" type="button" data-qpundo>Rückgängig</button>`}</div>`;
 }
@@ -7847,7 +7892,8 @@ function qpClick(e) {
   if (e.target === bd || e.target.closest("[data-qpclose]")) { qpClose(); return; }
   const b = e.target.closest("button"); if (!b || !q) return;
   const m = q.match ? state.matches.find(x => x.id === q.match) : null;
-  if (b.dataset.qppurp) { const v = b.dataset.qppurp; if (m) qnSetMatchPurpose(m, v); else qnSetPurpose(q, v); planRecheckBlocks(); save(); render(); qpRedraw(`[data-qppurp="${v}"]`); }
+  if (b.dataset.qppurp) { const v = b.dataset.qppurp; if (m) qnSetMatchPurpose(m, v); else { qnSetPurpose(q, v); if (v !== "0") qpDropStep(q); } planRecheckBlocks(); save(); render(); qpRedraw(`[data-qppurp="${v}"]`); }
+  else if (b.dataset.qprate) { qpRate(q, m, b.dataset.qprate); save(); render(); qnFabState(); qpRedraw(`[data-qprate="${b.dataset.qprate}"]`); }
   else if (b.dataset.qnmis) { const t = m || q; if (t.mission === b.dataset.qnmis) delete t.mission; else t.mission = b.dataset.qnmis; save(); render(); qpRedraw(`[data-qnmis="${b.dataset.qnmis}"]`); }
   else if (b.hasAttribute("data-qpundo")) { state.qnotes = state.qnotes.filter(x => x !== q); qpRef = null; planRecheckBlocks(); save(); qpClose(); render(); qnFabState(); toast("Eintrag entfernt. Das Match zählt nicht mehr."); }
   else if (b.hasAttribute("data-qpnote")) { qpClose(); qnFromPlayed(q, m); }
@@ -7859,6 +7905,7 @@ function qnFromPlayed(q, m) {
   if (v !== "0") qnSetPurpose(d, v); else { delete d.prep; delete d.purpose; }
   const mis = (m || q).mission; if (mis) d.mission = mis;
   if (!m && q.blk) d.blk = q.blk;
+  if (!m && q.fx) d.fx = Object.assign({}, d.fx, q.fx);
   qnDraft = d; qnOpen();
 }
 // ---------- Heute gespielt ----------
@@ -7867,7 +7914,8 @@ function playedRowHtml(r) {
   if (r.q) {
     const q = r.q, inPlan = focusDay().n >= 1 && focusDay().n <= PLAN_N, p = qnPurpose(q);
     const pu = p ? (QN_PURPOSE_NAME[p] || "") + (p === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : "") : inPlan ? "Training" : "";
-    return `<div class="orow ptrow wait"><span class="pttime">${nmTime(q.ts || 0)}</span><span class="sp small"><b>${q.played ? "Gespielt" : "Notiz"}</b> · wartet auf den Abgleich${pu ? ` · ${esc(pu)}` : ""}</span>${q.played ? `<button class="btn ghost small" type="button" data-qpedit="${q.id}">Ändern</button>` : ""}</div>`;
+    const tk = qpTask(q, null), rv = tk && tk.v ? (TASK_V.find(x => x[0] === tk.v) || ["", ""])[1] : "";
+    return `<div class="orow ptrow wait"><span class="pttime">${nmTime(q.ts || 0)}</span><span class="sp small"><b>${q.played || q.quick ? "Gespielt" : "Notiz"}</b> · wartet auf den Abgleich${pu ? ` · ${esc(pu)}` : ""}${rv ? ` · Aufgabe: ${esc(rv)}` : ""}</span>${q.played || q.quick ? `<button class="btn ghost small" type="button" data-qpedit="${q.id}">Ändern</button>` : ""}</div>`;
   }
   const m = r.m, noted = (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn;
   return `<div class="orow ptrow"><span class="pttime">${m.ts ? nmTime(m.ts) : "–"}</span>${resultPill(m.result)}${heroChip(m.hero)}<span class="sp small muted">${m.k ?? "–"}/${m.d ?? "–"}/${m.a ?? "–"}${noted ? " · Notiz ✓" : m.played ? " · von dir als gespielt eingetragen" : ""}${planSkip(m) ? ` · ${esc(QN_PURPOSE_NAME[m.stepPick] || "")}` : ""}</span></div>`;
@@ -7889,6 +7937,8 @@ function playedTodayHtml() {
 document.addEventListener("click", e => {
   if (!e.target.closest) return;
   if (e.target.closest("[data-qplayed]")) { qnPlayedTap(); return; }
+  const rn = e.target.closest("[data-qprate-now]");
+  if (rn) { qnPlayedTap(rn.dataset.qprateNow); return; }
   const ed = e.target.closest("[data-qpedit]");
   if (ed) { const q = state.qnotes.find(x => x.id === ed.dataset.qpedit); if (q) qpOpen(q); }
 });
@@ -12425,7 +12475,8 @@ function nmCardHtml() {
     ${seg.ex ? `<p class="small nmex"><b>Zum Beispiel:</b> ${esc(seg.ex)}</p>` : ""}
     ${seg.ok || seg.goal ? `<p class="small" style="margin:0 0 4px">${seg.goal ? `<b>Messbar:</b> ${esc(seg.goal)}.` : `<b>Geschafft, wenn</b> ${esc(seg.ok)}.`}${ev ? ` <span class="badge ${ev.done ? "ok" : ""}">${ev.done ? "geschafft ✓" : `${ev.have} von ${ev.need}`}</span>` : ""}</p>` : ""}
     ${seg.mini ? `<div class="row" style="margin:4px 0"><button class="btn small" type="button" data-pact="day" data-n="${f.n}">Mini-Ziel wählen</button></div>` : ""}
-    ${seg.bingo ? "" : `<p class="small muted" style="margin:6px 0 0">Nach dem Match bewertest du in der Notiz nur das: Ja, Teilweise oder Nein.</p>`}
+    <div class="nmdone"><b class="small">Match fertig?</b> ${seg.bingo ? `<span class="small muted">Trag es ein, die Bingo-Felder zählen in der Notiz.</span>` : `<span class="small muted">Hat es geklappt? Ein Tipp trägt das Match ein, ohne Notiz.</span>`}
+      <div class="chips">${seg.bingo ? "" : TASK_V.map(([k, l]) => `<button type="button" class="chip" data-qprate-now="${k}">${l}</button>`).join("")}<button type="button" class="chip" data-qplayed>${seg.bingo ? "Gespielt" : "Nur gespielt"}</button><button type="button" class="chip" data-qnopen>${icon("edit")}Notiz</button></div></div>
     ${hcPoolRowHtml("Hero-Karte vor dem Match")}${hcFoeRowHtml("Gegner-Karten: deine Problem-Gegner", 4)}
     ${nmPrepHtml(f)}
     ${next ? `<div class="nmnext small"><span class="muted">Danach, ${esc(focusRange(next))}${next.blk !== blk ? ` (${focusBlockLabel(next.blk.key)})` : ""}:</span> ${esc(next.t)}</div>` : ""}
