@@ -420,6 +420,9 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .qnfab.alt { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .qnfab.alt svg.i { color: var(--good-text); }
 @media (max-width: 900px) { .qnfabs { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); right: 14px; } .qnfab { padding: 10px 14px; } }
+.bser { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.bserlist { margin: 6px 0 8px; padding-left: 20px; display: grid; gap: 4px; }
+.bserrows { margin-top: 8px; }
 .brwhat { margin: 6px 0 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
 .qnquick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
 .ptrow .pttime { font-variant-numeric: tabular-nums; min-width: 3.2em; color: var(--muted); }
@@ -7244,7 +7247,7 @@ function fxAll(date, hero) {
   const g = activeGoal(), gf = g && goalTasks(g).find(t => t.kind === "Match-Fokus");
   if (gf && !(l && l.focus === gf.text)) out.push({ key: "goal:" + g.id, src: "goal", tag: "Wochenziel", t: gf.text });
   if (planStarted()) rulesForDay(n).forEach(r => out.push({ key: "rule:" + r.t.id, src: "rule", tag: r.role === "day" ? "Thema des Tages" : r.role === "again" ? "Wiederholung" : "Grundregel", t: r.t.topic }));
-  const tk = hero ? taskRowsFor(hero) : Object.keys(state.boot || {}).filter(k => bootGet(k) && bootValid(k)).map(k => ({ k, t: taskCurrent(k) })).filter(x => x.t);
+  const tk = hero ? taskRowsFor(hero) : Object.keys(state.boot || {}).filter(k => bootGet(k) && bootValid(k)).map(k => ({ k, t: bootSerNext(k) || taskCurrent(k) })).filter(x => x.t);
   tk.forEach(x => out.push({ key: "task:" + taskKey(x.k, x.t), src: "task", tag: bootIsRole(x.k) ? "Rolle " + ROLE_SHORT[bootRole(x.k)] : x.k, t: x.t.text }));
   const own = ((state.focusSel || {}).own || "").trim();
   if (own) out.push({ key: "own", src: "own", tag: "Eigenes Ziel", t: own });
@@ -12626,10 +12629,11 @@ function nmBackgroundHtml(f, noExtra) {
   if (rs.length) parts.push(`<div class="nmbgsec"><b class="small">Grundregeln</b><ul class="wl">${rs.map(r => `<li>${esc(r.t.topic)} ${ruleDots(r.t)}</li>`).join("")}</ul></div>`);
   if (gf) parts.push(`<div class="nmbgsec"><b class="small">Wochenziel: ${esc(g.title)}</b><p class="small" style="margin:2px 0 0">${esc(gf.text)}</p></div>`);
   if (mis.length) parts.push(`<div class="nmbgsec"><b class="small">${plural(mis.length, "Mission", "Missionen")}</b>${mis.map(wkMissionHtml).join("")}</div>`);
+  const bs = bootSerTodayHtml(); if (bs) parts.push(bs);
   const cr = counterRules(myRole()), crx = cr.length ? cr[(planStarted() ? planDay() : 0) % cr.length] : null;
   if (crx) parts.push(`<div class="nmbgsec"><b class="small">Konter zum Lernen</b><p class="small" style="margin:2px 0 0">${esc(counterRuleText(crx))}</p><p class="small muted" style="margin:2px 0 0">Gegner, die dir oft begegnen; jeden Tag eine andere Regel, nur Konter mit Quelle.</p></div>`);
   if (!parts.length) return "";
-  const n = extra.length + rs.length + (gf ? 1 : 0) + mis.length + (crx ? 1 : 0);
+  const n = extra.length + rs.length + (gf ? 1 : 0) + mis.length + (crx ? 1 : 0) + (bs ? 1 : 0);
   return `<details class="nmbg"${UIFOLD["nm-bg"] ? " open" : ""} data-f="nm-bg"><summary><span>Läuft nebenbei</span> <span class="small muted">${plural(n, "Punkt", "Punkte")}, nicht aktiv dran denken</span></summary>
     <p class="small muted" style="margin:6px 0">Das musst du dir nicht vornehmen. Es läuft im Hintergrund mit, und die App fragt ab und zu nach.${f && !f.done ? " Im Match zählt nur die eine Sache oben." : ""}</p>${parts.join("")}
     <div class="row" style="margin-top:6px"><button class="linkbtn small" type="button" data-fxgo="1">Etwas zusätzlich wählen</button></div></details>`;
@@ -15335,6 +15339,68 @@ const bootMastered = k => { const n = tasksOf(k).length; return (bootIsRole(k) ?
 const TASK_V = [["ja", "Ja"], ["teils", "Teilweise"], ["nein", "Nein"]];
 function taskDots(key) { const l = taskLog(key).slice(-3); return l.length ? `<span class="rdots" title="Letzte Antworten, neueste rechts: grün ja, gelb teilweise, rot nein">${l.map(v => `<i class="${v === "ja" ? "auto" : v === "teils" ? "bewusst" : "nein"}"></i>`).join("")}</span>` : ""; }
 
+// ---------- Match-Serie pro Stufe ----------
+// Wunsch der Nutzerin (08.11.2026): Im Bootcamp gab es Fragen und Wissen, aber kaum sichtbare Match-Aufgaben. Gewünscht: zum Beispiel 5 Matches mit
+// einer Aufgabe zum Rantasten an den Helden, passend zur Stufe. Pro offener Stufe startest du eine Serie von BOOT_SER_N Matches mit dem Helden.
+// Jedes Match hat eine Aufgabe (eine Sache pro Match): in Stufe 1 zuerst das Rantasten, dann die Aufgaben der Stufe, die am wenigsten gemeisterten
+// zuerst, bei Bedarf noch einmal. Die Reihenfolge wird beim Start festgelegt (b.ser = { T, since, ids }). Gezählt werden deine Matches mit dem Helden
+// seit dem Start (Abgleich oder von Hand); ein Eintrag «Gespielt» kennt den Helden erst mit dem Abgleich. Bewerten ist freiwillig und landet wie im
+// Match-Log in m.tasks. Messbare Ziele der Stufe misst die App über dieselben Matches (AUTO_N = 5). Rantasten und «Frei üben» sind Verhalten,
+// keine Spielfakten. Ob eine feste Serie schneller zum Ziel führt, ist für Marvel Rivals nicht untersucht.
+const BOOT_SER_N = 5;
+const bootSerTier = h => Math.min(4, bootLevel(h) + 1);
+function bootSerTask(h, id) {
+  if (id === "r1") return { id, kind: "Rantasten", text: `Spiel ${h} in Ruhe und setz jede Fähigkeit mindestens einmal bewusst ein. Merk dir, welche dir am meisten gebracht hat und welche du noch nicht verstehst.` };
+  if (/^rz[1-4]$/.test(id)) return { id, kind: "Frei üben", text: `Spiel ${h} und achte auf die Aufgabe dieser Stufe, die bisher am schlechtesten geklappt hat.` };
+  return heroTasks(h).find(t => t.id === id) || null;
+}
+function bootSerIds(h, T) {
+  const ts = heroTasks(h).filter(t => t.tier === T && !t.auto), order = ts.map((t, i) => [t, i]).sort((a, b) => (taskMastered(taskKey(h, a[0])) - taskMastered(taskKey(h, b[0]))) || a[1] - b[1]).map(x => x[0].id);
+  const out = T === 1 ? ["r1"] : [];
+  for (let i = 0; out.length < BOOT_SER_N && order.length; i++) out.push(order[i % order.length]);
+  while (out.length < BOOT_SER_N) out.push("rz" + T);
+  return out;
+}
+const bootSer = h => { const b = bootGet(h); return !bootIsRole(h) && b && b.ser && Array.isArray(b.ser.ids) ? b.ser : null; };
+const bootSerMatches = (h, ser) => state.matches.filter(m => m.hero === h && matchTime(m) > ser.since).sort((a, b) => matchTime(a) - matchTime(b)).slice(0, ser.ids.length);
+// Aufgabe fürs nächste Match mit dem Helden, solange eine Serie läuft (sonst null)
+function bootSerNext(h) {
+  const ser = bootSer(h); if (!ser) return null;
+  const n = bootSerMatches(h, ser).length;
+  return n < ser.ids.length ? bootSerTask(h, ser.ids[n]) : null;
+}
+function bootSerHtml(h) {
+  if (bootIsRole(h) || !bootGet(h)) return "";
+  const ser = bootSer(h), T = ser ? ser.T : bootSerTier(h), N = BOOT_SER_N, name = BOOT_TIERS[T - 1].name;
+  if (!ser) {
+    const ids = bootSerIds(h, T);
+    return `<div class="bser"><b>Match-Serie Stufe ${T} · ${esc(name)}: ${N} Matches mit ${esc(h)}</b>
+      <p class="small" style="margin:4px 0">Jedes Match eine Aufgabe${T === 1 ? ", zuerst zum Rantasten" : ""}. Die App zählt deine Matches mit ${esc(h)} selbst, sobald der Abgleich sie bringt. Bewerten ist freiwillig.</p>
+      <ol class="small bserlist">${ids.map(id => { const t = bootSerTask(h, id); return t ? `<li><b>${esc(t.kind)}:</b> ${esc(t.text)}</li>` : ""; }).join("")}</ol>
+      <div class="row"><button type="button" class="btn small" data-bser="start">Serie starten</button></div></div>`;
+  }
+  const ms = bootSerMatches(h, ser), slots = ser.ids.map(id => bootSerTask(h, id)), done = ms.length >= ser.ids.length;
+  const rate = (m, t) => { const key = taskKey(h, t), cur = (m.tasks || {})[key];
+    return `<span class="chips">${TASK_V.map(([v, l]) => `<button type="button" class="chip ${cur === v ? "on" : ""}" data-bsrate="${v}" data-mid="${esc(m.id)}" data-key="${esc(key)}" aria-pressed="${cur === v}">${l}</button>`).join("")}</span>`; };
+  const rows = ms.map((m, i) => { const t = slots[i]; return t ? `<div class="orow"><span class="small"><b>${i + 1}.</b> ${fmtDate(m.date)}${m.ts ? " " + nmTime(m.ts) : ""}</span>${resultPill(m.result)}<span class="sp small"><b>${esc(t.kind)}:</b> ${esc(t.text)}</span>${rate(m, t)}</div>` : ""; }).join("");
+  const next = done ? null : slots[ms.length], ja = ms.filter((m, i) => slots[i] && (m.tasks || {})[taskKey(h, slots[i])] === "ja").length;
+  const autos = heroTasks(h).filter(t => t.tier === T && t.auto);
+  return `<div class="bser"><div class="row between"><b>Match-Serie Stufe ${T} · ${esc(name)}</b><span class="badge ${done ? "ok" : ""}">${Math.min(ms.length, N)} von ${N} Matches</span></div>
+    <div class="track" style="margin:6px 0"><span style="width:${Math.min(1, ms.length / N) * 100}%"></span></div>
+    ${next ? `<div class="swaprow"><b>Nächstes Match mit ${esc(h)} (${ms.length + 1} von ${N}): ${esc(next.kind)}</b><p style="margin:6px 0 0">${esc(next.text)}</p></div>
+      <p class="small muted" style="margin:6px 0 0">Gezählt werden Matches mit ${esc(h)} seit dem Start. Mit «Gespielt» eingetragene Matches zählen, sobald der Abgleich den Helden kennt.</p>`
+      : `<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Serie geschafft.</b> ${ja ? `${plural(ja, "Match", "Matches")} mit «Ja».` : "Bewerte die Matches unten, dann siehst du, was sitzt."}${autos.length ? ` Messbar über diese Matches: ${autos.map(t => `${esc(t.kind)} ${autoTaskDone(h, t) ? "✓" : `(${esc(autoTaskEval(h, t).info)})`}`).join(" · ")}.` : ""}${bootTierPassed(h, T) || T === 4 ? "" : ` Für Stufe ${T + 1} fehlt noch der Stufentest.`}</div></div>`}
+    ${rows ? `<div class="bserrows"><b class="small">Deine Matches der Serie</b> <span class="small muted">Hat die Aufgabe geklappt? Freiwillig.</span>${rows}</div>` : ""}
+    <div class="row mt">${done ? `<button type="button" class="btn small" data-bser="start">Neue Serie (Stufe ${bootSerTier(h)})</button>` : ""}<button type="button" class="btn ghost small" data-bser="stop">${done ? "Serie schliessen" : "Serie abbrechen"}</button></div></div>`;
+}
+// Auf «Heute»: laufende Serien, nebenbei (gilt nur, wenn du diesen Helden spielst)
+function bootSerTodayHtml() {
+  const list = Object.keys(state.boot || {}).filter(h => bootValid(h) && bootSerNext(h));
+  if (!list.length) return "";
+  return `<div class="nmbgsec"><b class="small">Bootcamp-Serie</b><ul class="wl">${list.map(h => { const ser = bootSer(h), n = bootSerMatches(h, ser).length, t = bootSerNext(h);
+    return `<li><b>Wenn du ${esc(h)} spielst</b> (Match ${n + 1} von ${ser.ids.length}): ${esc(t.kind)}. ${esc(t.text)} <button type="button" class="linkbtn small" data-bootopen="${esc(h)}">Bootcamp</button></li>`; }).join("")}</ul></div>`;
+}
+
 // Quiz in der Station
 function bootStart(kind, h, ids, extra) {
   const qs = ids.map(bootGen).filter(Boolean);
@@ -15578,7 +15644,8 @@ function bootTasksHtml(k) {
   const all = role ? `<ul class="wl">${ts.map(t => bootTaskRow(k, t, cur)).join("")}</ul>`
     : BOOT_TIERS.map(T => { const tt = ts.filter(t => t.tier === T.n); return tt.length ? `<div class="btgroup"><b class="small">Stufe ${T.n} · ${esc(T.name)}</b>${bootTierOpen(k, T.n) ? "" : ' <span class="muted small">🔒 öffnet sich mit Stufe ' + T.n + "</span>"}<ul class="wl">${tt.map(t => bootTaskRow(k, t, cur)).join("")}</ul></div>` : ""; }).join("");
   return `<div class="card"><div class="card-head"><h2>${icon("target")}Im Match üben</h2><span class="badge ${done === ts.length ? "ok" : ""}">${done} von ${ts.length} gemeistert</span></div>
-    <p class="lead" style="margin:0 0 8px">Eine Aufgabe nach der anderen. Spiel dein nächstes Match ${esc(who)} und achte nur auf die aktuelle Aufgabe. Danach trägst du unter «Matches» bei «Bootcamp-Aufgabe» ein, ob du sie umgesetzt hast. Zwei von drei Malen «Ja» heisst gemeistert.${role ? "" : " Mit jeder Stufe kommen schwerere Aufgaben dazu; ab Stufe 3 misst die App einige selbst an deinen letzten Matches."}</p>
+    ${role ? "" : bootSerHtml(k)}
+    <p class="lead" style="margin:0 0 8px">Eine Aufgabe nach der anderen. Spiel dein nächstes Match ${esc(who)} und achte nur auf die aktuelle Aufgabe. Danach trägst du ein, ob du sie umgesetzt hast: in der Match-Serie oben, in der Notiz (unter «Worauf achtest du?») oder unter «Matches» bei «Bootcamp-Aufgabe». Zwei von drei Malen «Ja» heisst gemeistert.${role ? "" : " Mit jeder Stufe kommen schwerere Aufgaben dazu; ab Stufe 3 misst die App einige selbst an deinen letzten Matches."}</p>
     ${!bootGet(k) ? `<div class="note info"><span class="ni" aria-hidden="true">i</span><div>Die Aufgaben werden aktiv, sobald du den Kurs beginnst (Station 1 reicht). Du kannst sie auch jetzt schon freischalten.<div class="row mt"><button type="button" class="btn small" data-btaskstart>Aufgaben jetzt freischalten</button></div></div></div>`
     : cur ? `<div class="swaprow"><b>Jetzt: ${esc(cur.kind)}</b> ${taskDots(taskKey(k, cur))}<p style="margin:6px 0 0">${esc(cur.text)}</p></div>` : autoCur ? "" : '<div class="note good"><span class="ni" aria-hidden="true">✓</span><div><b>Alle offenen Aufgaben gemeistert.</b> ' + (role || bootLevel(k) === 4 ? "Bleib dran: Die Auffrischen-Fragen und die Grundregeln halten es frisch." : "Mit dem nächsten Stufentest kommen neue dazu.") + "</div></div>"}
     ${bootGet(k) && autoCur ? `<div class="swaprow mt"><b>Messbares Ziel: ${esc(autoCur.kind)}</b> <span class="badge">misst die App</span><p style="margin:6px 0 0">${esc(autoCur.text)}</p><p class="small muted" style="margin:4px 0 0">${esc(autoTaskEval(k, autoCur).info)}</p></div>` : ""}
@@ -15663,6 +15730,11 @@ $("#bootBody").addEventListener("click", e => {
   if (t.dataset.bhero !== undefined) { Object.assign(bootUi, { hero: t.dataset.bhero, st: 0, sess: null }); renderBootcamp(); window.scrollTo({ top: 0 }); }
   else if (t.dataset.roleskip !== undefined) { state.app = state.app || { seen: {}, tour: {} }; state.app.roleSkip = Object.assign({}, state.app.roleSkip, { [t.dataset.roleskip]: true }); save(); renderBootcamp(); }
   else if (t.hasAttribute("data-btaskstart")) { bootOf(h); save(); renderBootcamp(); toast("Aufgaben sind aktiv. Du siehst sie beim Match loggen."); }
+  else if (t.dataset.bser === "start") { const b = bootOf(h), T = bootSerTier(h); b.ser = { T, since: Date.now(), ids: bootSerIds(h, T) }; b.last = today(); save(); renderBootcamp(); toast(`Serie gestartet: die nächsten ${BOOT_SER_N} Matches mit ${h}.`); }
+  else if (t.dataset.bser === "stop") { const b = bootGet(h), done = b && b.ser && bootSerMatches(h, b.ser).length >= b.ser.ids.length;
+    askConfirm(done ? "Serie schliessen? Deine Bewertungen bleiben in den Matches." : "Serie abbrechen? Deine Bewertungen bleiben in den Matches.", done ? "Schliessen" : "Abbrechen").then(ok => { if (!ok || !b) return; delete b.ser; save(); renderBootcamp(); }); }
+  else if (t.dataset.bsrate) { const m = state.matches.find(x => x.id === t.dataset.mid), key = t.dataset.key, v = t.dataset.bsrate;
+    if (m) { m.tasks = Object.assign({}, m.tasks); if (m.tasks[key] === v) delete m.tasks[key]; else m.tasks[key] = v; save(); renderBootcamp(); } }
   else if (t.hasAttribute("data-bback")) { Object.assign(bootUi, { hero: "", sess: null }); renderBootcamp(); }
   else if (t.dataset.bstep !== undefined) { bootUi.st = +t.dataset.bstep; bootUi.sess = null; renderBootcamp(); }
   else if (t.dataset.bflt !== undefined) { const k = t.dataset.bflt; if (k === "pool") bootUi.pool = !bootUi.pool; else bootUi.role = t.dataset.v; renderBootcamp(); }
@@ -15694,7 +15766,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-boot
 // Match-Log: Bootcamp-Aufgaben des gewählten Helden und seiner Rolle
 function taskRowsFor(hero) {
   const rows = [];
-  if (hero && bootGet(hero)) { const c = taskCurrent(hero); if (c) rows.push({ k: hero, t: c }); }
+  if (hero && bootGet(hero)) { const c = bootSerNext(hero) || taskCurrent(hero); if (c) rows.push({ k: hero, t: c }); }
   const r = hero ? heroRole(hero) : "";
   if (r && r !== "?" && bootGet("R:" + r)) { const c = taskCurrent("R:" + r); if (c) rows.push({ k: "R:" + r, t: c }); }
   return rows;
