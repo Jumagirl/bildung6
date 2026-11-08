@@ -1,0 +1,42 @@
+name: rivals-video
+# Baut das PC-Programm «Rivals Video» als Windows-Programm (RivalsVideo.exe).
+# Bei jedem Push mit Änderungen im Ordner rivals-video: Selbsttest, Bau, nochmals Selbsttest mit dem fertigen Programm,
+# Ergebnis als Artefakt. Bei einem Tag «video-v…» zusätzlich eine Vorab-Version (Release) zum Herunterladen.
+on:
+  push:
+    branches: [claude/marvel-rivals-improvement-app-e4l00i, main]
+    paths: ["rivals-video/**", ".github/workflows/rivals-video.yml"]
+    tags: ["video-v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pakete installieren
+        run: pip install -r rivals-video/requirements.txt pyinstaller==6.11.1
+      - name: Selbsttest (Python)
+        working-directory: rivals-video
+        run: python rivals_video.py --selftest
+      - name: Programm bauen
+        working-directory: rivals-video
+        run: pyinstaller --noconfirm --onefile --name RivalsVideo --add-data "rv_ui.html;." --collect-all imageio_ffmpeg --hidden-import rv_core rivals_video.py
+      - name: Selbsttest (fertiges Programm)
+        working-directory: rivals-video
+        run: .\dist\RivalsVideo.exe --selftest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RivalsVideo
+          path: rivals-video/dist/RivalsVideo.exe
+          retention-days: 30
+      - name: Vorab-Version veröffentlichen
+        if: startsWith(github.ref, 'refs/tags/video-v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" rivals-video/dist/RivalsVideo.exe --title "Rivals Video ${GITHUB_REF_NAME#video-v}" --notes-file rivals-video/RELEASE.md --prerelease

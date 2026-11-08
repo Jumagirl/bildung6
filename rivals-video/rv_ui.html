@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rivals Video</title>
+<style>
+:root {
+  --bg: #0f1420; --surface: #171e2d; --surface-2: #1f2840; --border: #2c3754; --fg: #e8ecf4; --muted: #98a3bb;
+  --accent: #e9b949; --accent-soft: rgba(233, 185, 73, .14); --good: #3ecf8e; --bad: #f2667a; --team: #4fd1c5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
+header h1 span { color: var(--accent); }
+.work { font-size: .85rem; color: var(--muted); }
+.work b { color: var(--fg); }
+main { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 16px; padding: 16px 20px 40px; }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
+.card h2 { font-size: 1rem; margin: 0; }
+.col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.small { font-size: .85rem; } .muted { color: var(--muted); }
+button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--fg); padding: 5px 10px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #1b1404; border-color: var(--accent); font-weight: 600; }
+button.ok { border-color: var(--good); } button.bad { border-color: var(--bad); }
+button.link { background: none; border: 0; color: var(--accent); padding: 0 2px; text-decoration: underline; }
+button.chip { border-radius: 999px; padding: 2px 10px; font-size: .85rem; }
+button.chip.on { background: var(--accent-soft); border-color: var(--accent); }
+kbd { font: 600 .7rem/1 monospace; border: 1px solid currentColor; border-radius: 4px; padding: 1px 4px; margin-left: 4px; opacity: .7; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--surface-2); cursor: pointer; border: 1px solid transparent; }
+.list li.sel { border-color: var(--accent); }
+.list li .nm { overflow-wrap: anywhere; font-size: .88rem; }
+.badge { font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+.badge.ok { border-color: var(--good); color: var(--good); } .badge.run { border-color: var(--accent); color: var(--accent); } .badge.err { border-color: var(--bad); color: var(--bad); }
+video { width: 100%; max-height: 62vh; background: #000; border-radius: 10px; display: block; }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.items li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 8px; background: var(--surface-2); }
+.items li.open { outline: 1px dashed var(--accent); } .items li.no { opacity: .55; }
+.items .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sub { display: grid; gap: 6px; padding: 6px 0 0; grid-column: 1 / -1; }
+.rev { padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent); }
+.prog { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.prog span { display: block; height: 100%; background: var(--accent); }
+input[type=text] { font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; min-width: 0; flex: 1 1 260px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; } td, th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.empty { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Rivals <span>Video</span></h1>
+  <span class="work" id="work"></span>
+</header>
+<main>
+  <div class="col">
+    <section class="card" id="folderCard"></section>
+    <section class="card"><h2>Deine Videos</h2><div id="list"></div></section>
+    <section class="card" id="learnCard"></section>
+    <section class="card small"><h2>Rivals Coach</h2>
+      <p style="margin:0">So kommen die Ergebnisse in Rivals Coach: dort <b>Review → Video-Review → «Ganzen Ordner wählen»</b> und diesen Ordner wählen. Rivals Coach liest die Datei <code id="dataFile"></code> und ordnet alles deinen Matches zu.</p>
+    </section>
+  </div>
+  <div class="col" id="main"></div>
+</main>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = t => { t = Math.max(0, Math.floor(+t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); };
+const get = p => fetch(p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN), { cache: "no-store" }).then(r => r.json());
+const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(b || {}) }).then(r => r.json()).then(j => { if (j && j.error) { alert(j.error); throw new Error(j.error); } return j; });
+const KEYS = { death: "t", kill: "k", ult: "u", eult: "g", win: "w", loss: "v", good: "b", note: "n" };
+const ULT_V = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
+const EV_L = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
+let S = null, sel = "", V = null, pend = "", review = null, sig = "";
+
+function statusBadge(v) {
+  if (v.done) return '<span class="badge ok">✓ ausgewertet</span>';
+  if (v.status === "läuft") return '<span class="badge run">läuft …</span>';
+  if (v.status === "wartet") return '<span class="badge">wartet</span>';
+  if (v.status === "fehler") return '<span class="badge err">Fehler</span>';
+  return `<span class="badge${v.open ? " run" : ""}">${v.open ? v.open + " offen" : "geprüft"}</span>`;
+}
+function renderTop() {
+  const w = S.work;
+  $("#work").innerHTML = w.key ? `Wertet aus: <b>${esc(w.name)}</b> ${Math.round((w.p || 0) * 100)} %` : `Version ${esc(S.version)} · bereit`;
+  $("#dataFile").textContent = S.dataFile;
+  $("#folderCard").innerHTML = `<h2>Ordner</h2><div class="small" style="overflow-wrap:anywhere">${esc(S.folder)}</div>
+    <p class="small muted" style="margin:0">Neue Videos vom USB-Stick in <b>Neu</b> kopieren. Das Programm wertet sie von selbst aus. Abgeschlossene kommen nach <b>Ausgewertet</b>.</p>
+    <div class="row"><button data-act="open" data-sub="Neu">Ordner «Neu» öffnen</button><button data-act="choose">Anderen Ordner wählen</button></div>
+    <details class="small"><summary>Ordner von Hand eingeben</summary><div class="row" style="margin-top:6px"><input type="text" id="folderIn" placeholder="C:\\Users\\…\\Claude\\Rivals Videos"><button data-act="setFolder">Übernehmen</button></div></details>`;
+}
+function renderList() {
+  const vs = S.videos;
+  $("#list").innerHTML = vs.length ? `<ul class="list">${vs.map(v => `<li data-sel="${v.id}" class="${v.id === sel ? "sel" : ""}"><span class="nm">${esc(v.name)}${v.dur ? ` <span class="muted">· ${fmt(v.dur)}</span>` : ""}</span>${statusBadge(v)}</li>`).join("")}</ul>
+    <p class="small muted" style="margin:0">${vs.filter(v => v.done).length} von ${vs.length} ausgewertet</p>`
+    : `<div class="empty small">Noch keine Videos. Kopier Aufnahmen in den Ordner «Neu».</div>`;
+}
+function renderLearn() {
+  const r = S.learn.report, row = (k, l) => { const x = r[k] || {}; return `<tr><td>${l}</td><td>${x.stimmt || 0}</td><td>${x.falsch || 0}</td><td>${x.angepasst ? "angepasst" : "Start"}</td></tr>`; };
+  $("#learnCard").innerHTML = `<h2>Was das Programm gelernt hat</h2>
+    <table><tr><th></th><th>stimmt</th><th>falsch</th><th>Schwelle</th></tr>${row("death", "Tod")}${row("kill", "Kill")}${row("ult", "Ult")}</table>
+    <p class="small" style="margin:0">Tod: <b>${String(S.learn.lead).replace(".", ",")} s</b> vor der gelben Zahl ${r.tod_zeit.korrekturen >= 2 ? `(aus ${r.tod_zeit.korrekturen} Korrekturen von dir)` : "(Startwert, noch zu wenig Korrekturen)"}.</p>
+    <p class="small muted" style="margin:0">Je mehr du mit «Stimmt», «Stimmt nicht» und «Tod ist hier» antwortest, desto genauer wird es. Danach kannst du alle Videos neu auswerten lassen; deine Antworten bleiben.</p>
+    <div class="row"><button data-act="reall">Alle Videos mit neuem Wissen neu auswerten</button></div>`;
+}
+function segments() {
+  if (!V) return [];
+  const pts = [];
+  V.events.filter(e => e.ok !== false).forEach(e => pts.push({ t: e.t, k: e.k }));
+  V.marks.filter(m => !V.events.some(e => e.mk === m.id)).forEach(m => pts.push({ t: m.t, k: m.k }));
+  const win = { death: [10, 2], kill: [4, 2], ult: [2, 6] };
+  const segs = pts.map(p => { const w = win[p.k] || [5, 3]; return { s: Math.max(0, p.t - w[0]), e: p.t + w[1], l: [EV_L[p.k] || S.kinds[p.k] || p.k] }; }).sort((a, b) => a.s - b.s);
+  const out = [];
+  segs.forEach(g => { const last = out[out.length - 1]; if (last && g.s <= last.e + 1) { last.e = Math.max(last.e, g.e); last.l.push(...g.l); } else out.push({ ...g, l: [...g.l] }); });
+  return out;
+}
+function markLabel(m) {
+  const u = ULT_V.find(x => x[0] === m.v);
+  return `<b>${esc(S.kinds[m.k] || m.k)}</b>${m.c ? " · " + esc(m.c) : ""}${u && m.k === "ult" ? " · " + u[1] : ""}${m.n ? ` · <span class="muted">${esc(m.n)}</span>` : ""}${m.missed ? ' <span class="badge">übersehen</span>' : ""}`;
+}
+function markSub(m) {
+  if (m.id !== pend) return "";
+  if (m.k === "death") return `<div class="sub"><span class="small">Woran lag es?</span><div class="row">${S.causes.map(c => `<button class="chip${m.c === c ? " on" : ""}" data-set="c" data-v="${esc(c)}" data-mid="${m.id}">${esc(c)}</button>`).join("")}</div>
+    <div class="row small"><button data-here="${m.id}">Tod ist hier (aktuelle Stelle im Video)</button><span class="muted">Spul genau an deinen Tod und tipp darauf. Daraus lernt das Programm die richtige Zeit.</span></div></div>`;
+  if (m.k === "ult") return `<div class="sub"><span class="small">Wirkung deiner Ult?</span><div class="row">${ULT_V.map(([v, l]) => `<button class="chip${m.v === v ? " on" : ""}" data-set="v" data-v="${v}" data-mid="${m.id}">${l}</button>`).join("")}</div></div>`;
+  return `<div class="sub"><input type="text" data-note="${m.id}" value="${esc(m.n || "")}" placeholder="Notiz, z. B. hier zu weit vorne geheilt"></div>`;
+}
+function renderParts() {
+  const box = $("#parts"); if (!box || !V) return;
+  const evs = V.events.slice().sort((a, b) => a.t - b.t), marks = V.marks.slice().sort((a, b) => a.t - b.t), open = evs.filter(e => typeof e.ok !== "boolean").length, segs = segments();
+  box.innerHTML = `
+    <div class="row">${Object.entries(KEYS).map(([k, key]) => `<button data-add="${k}" class="${k === "death" || k === "loss" ? "bad" : k === "kill" || k === "win" || k === "good" ? "ok" : ""}">${esc(S.kinds[k])}<kbd>${key.toUpperCase()}</kbd></button>`).join("")}</div>
+    <p class="small muted" style="margin:0">Tasten: Leertaste Pause, ← → 5 Sekunden, Buchstaben wie auf den Knöpfen.</p>
+    ${review ? `<div class="rev row"><b>Kurz-Review: Stück ${review.i + 1} von ${review.segs.length}</b><span class="small">${esc(review.segs[review.i].l.join(", "))} · ${fmt(review.segs[review.i].s)}–${fmt(review.segs[review.i].e)}</span><button data-rv="-1">Zurück</button><button data-rv="1">Weiter</button><button data-rv="0">Beenden</button></div>`
+      : segs.length ? `<div class="row"><button class="primary" data-act="review">Kurz-Review starten</button><span class="small muted">${segs.length} Stücke, zusammen ${fmt(segs.reduce((a, g) => a + g.e - g.s, 0))} statt ${fmt(V.dur)}</span></div>` : ""}
+    <h2>Funde des Programms${open ? ` <span class="badge run">${open} offen</span>` : ""}</h2>
+    ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Nichts gefunden.</p>`)
+      : V.status === "fehler" ? `<p class="small" style="color:var(--bad);margin:0">${esc(V.error || "Fehler beim Auswerten")}</p>` : `<p class="small muted" style="margin:0">Wird ausgewertet …</p>`}
+    <h2>Deine Markierungen</h2>
+    ${marks.length ? `<ul class="items">${marks.map(m => `<li class="${m.id === pend ? "open" : ""}"><button class="link" data-jump="${m.t - (m.k === "death" ? 10 : 3)}">▶ ${fmt(m.t)}</button><span>${markLabel(m)}</span><span class="acts"><button class="link" data-edit="${m.id}">${m.id === pend ? "fertig" : "ändern"}</button><button class="link" data-del="${m.id}" aria-label="Löschen">✕</button></span>${markSub(m)}</li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine. «Stimmt» bei einem Fund macht daraus eine Markierung.</p>`}
+    <div class="card" style="background:var(--surface-2)">${V.done ? `<b>✓ Abgeschlossen</b><span class="small">Die Datei liegt in «Ausgewertet» als <b>${esc(V.name)}</b>.</span><div class="row"><button data-act="reopen">Wieder öffnen</button><button data-act="open" data-sub="Ausgewertet">Ordner «Ausgewertet» öffnen</button></div>`
+      : `<div class="row"><button class="primary" data-act="finish">✓ Auswertung abschliessen</button><span class="small muted">Verschiebt das Video nach «Ausgewertet» und nennt es «${esc(V.doneName)}».</span></div>`}</div>`;
+}
+function renderMain() {
+  const m = $("#main");
+  if (!sel || !V) { m.innerHTML = `<div class="empty">Wähl links ein Video.</div>`; return; }
+  if (!$("#vid") || $("#vid").dataset.id !== V.id) {
+    m.innerHTML = `<section class="card"><h2 style="overflow-wrap:anywhere">${esc(V.name)}</h2>
+      <video id="vid" data-id="${V.id}" src="/media/${V.id}?token=${encodeURIComponent(TOKEN)}" controls preload="metadata"></video>
+      <div class="row"><button data-step="-5">−5 s</button><button data-step="5">+5 s</button><span class="small muted">Tempo</span>${[0.5, 1, 1.5, 2].map(r => `<button data-rate="${r}">${String(r).replace(".", ",")}×</button>`).join("")}</div>
+      <div id="parts" style="display:grid;gap:10px"></div></section>`;
+    $("#vid").addEventListener("timeupdate", onTime);
+  }
+  renderParts();
+}
+function onTime() {
+  if (!review) return;
+  const v = $("#vid"), g = review.segs[review.i];
+  if (v.currentTime >= g.e - 0.05) {
+    if (review.i + 1 < review.segs.length) { review.i++; v.currentTime = review.segs[review.i].s; renderParts(); }
+    else { review = null; v.pause(); renderParts(); }
+  }
+}
+async function loadVideo() { V = sel ? await get("/api/video/" + sel) : null; if (V && V.error) V = null; renderMain(); }
+async function poll() {
+  try {
+    S = await get("/api/state");
+    renderTop(); renderList(); renderLearn();
+    const cur = S.videos.find(v => v.id === sel), s2 = cur ? [cur.status, cur.events, cur.marks, cur.open, cur.done, cur.analyzed].join("|") : "";
+    if (sel && !cur) { sel = ""; V = null; renderMain(); }
+    else if (s2 !== sig && !document.activeElement.matches("input[data-note]")) { sig = s2; await loadVideo(); }
+  } catch (e) { $("#work").textContent = "Keine Verbindung zum Programm. Läuft das Fenster «Rivals Video» noch?"; }
+}
+function addMark(k) {
+  const v = $("#vid"); if (!v || !V) return;
+  post("/api/mark/add", { id: V.id, t: v.currentTime, k }).then(r => { V = r; const nm = V.marks[V.marks.length - 1]; pend = ["death", "ult", "note"].includes(k) ? nm.id : ""; if (k === "note") v.pause(); renderParts(); });
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button, li[data-sel]"); if (!b) return;
+  const v = $("#vid"), d = b.dataset;
+  if (d.sel) { sel = d.sel; review = null; pend = ""; sig = ""; renderList(); await loadVideo(); return; }
+  if (d.act === "open") post("/api/folder/open", { sub: d.sub || "" });
+  else if (d.act === "choose") post("/api/folder/choose").then(() => { sel = ""; V = null; poll(); });
+  else if (d.act === "setFolder") post("/api/folder/set", { folder: $("#folderIn").value }).then(() => { sel = ""; V = null; poll(); });
+  else if (d.act === "reall") post("/api/reanalyze").then(() => setTimeout(poll, 1500));
+  else if (d.act === "review") { const segs = segments(); if (segs.length && v) { review = { segs, i: 0 }; v.currentTime = segs[0].s; v.play().catch(() => {}); renderParts(); } }
+  else if (d.rv !== undefined) { if (!review || !v) return; const step = +d.rv; if (!step) { review = null; v.pause(); } else { review.i = Math.max(0, Math.min(review.segs.length - 1, review.i + step)); v.currentTime = review.segs[review.i].s; v.play().catch(() => {}); } renderParts(); }
+  else if (d.act === "finish") { const open = V.events.filter(x => typeof x.ok !== "boolean").length; if (open && !confirm(`${open} Funde sind noch nicht beantwortet. Trotzdem abschliessen?`)) return; V = await post("/api/finish", { id: V.id }); sel = V.id; sig = ""; renderMain(); poll(); }
+  else if (d.act === "reopen") { V = await post("/api/reopen", { id: V.id }); renderParts(); poll(); }
+  else if (d.ans) { V = await post("/api/answer", { id: V.id, eid: d.ans, ok: d.v === "null" ? null : d.v === "true" }); const e = V.events.find(x => x.id === d.ans); if (e && e.ok === true && e.mk && (e.k === "death" || e.k === "ult")) pend = e.mk; renderParts(); poll(); }
+  else if (d.add) addMark(d.add);
+  else if (d.jump !== undefined && v) { v.currentTime = Math.max(0, +d.jump); v.play().catch(() => {}); }
+  else if (d.edit) { pend = pend === d.edit ? "" : d.edit; renderParts(); }
+  else if (d.del) { await post("/api/mark/delete", { id: V.id, mid: d.del }); if (pend === d.del) pend = ""; await loadVideo(); poll(); }
+  else if (d.set) { const m = V.marks.find(x => x.id === d.mid); const val = m && m[d.set] === d.v ? "" : d.v; V = await post("/api/mark/update", { id: V.id, mid: d.mid, fields: { [d.set]: val } }); if (d.set !== "c") pend = ""; renderParts(); }
+  else if (d.here && v) { V = await post("/api/mark/update", { id: V.id, mid: d.here, fields: { t: v.currentTime } }); renderParts(); poll(); }
+  else if (d.step && v) v.currentTime = Math.max(0, v.currentTime + +d.step);
+  else if (d.rate && v) v.playbackRate = +d.rate;
+});
+document.addEventListener("change", e => { const i = e.target.closest("input[data-note]"); if (i && V) post("/api/mark/update", { id: V.id, mid: i.dataset.note, fields: { n: i.value } }).then(r => { V = r; }); });
+document.addEventListener("keydown", e => {
+  const t = e.target; if (e.ctrlKey || e.metaKey || e.altKey || (t && t.matches("input, textarea, select"))) { if (t && t.matches("input[data-note]") && e.key === "Enter") { t.blur(); pend = ""; renderParts(); } return; }
+  const v = $("#vid"); if (!v) return;
+  if (e.key === " ") { e.preventDefault(); v.paused ? v.play().catch(() => {}) : v.pause(); return; }
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime + (e.key === "ArrowLeft" ? -5 : 5)); return; }
+  const k = Object.keys(KEYS).find(x => KEYS[x] === e.key.toLowerCase()); if (k) { e.preventDefault(); addMark(k); }
+});
+poll(); setInterval(poll, 2000);
+</script>
+</body>
+</html>

@@ -18110,7 +18110,7 @@ const VID_KINDS = {
   win: { l: "Fight gewonnen", key: "w" }, loss: { l: "Fight verloren", key: "v" }, good: { l: "Gut gemacht", key: "b" }, note: { l: "Notiz", key: "n" }
 };
 const VID_ULT = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
-const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false, folder: null, folderName: "" };
+const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false, folder: null, folderName: "", pcInfo: null };
 const vidStore = () => (state.vids = state.vids && typeof state.vids === "object" ? state.vids : {});
 const vidKey = f => f.name + "|" + f.size;
 const vidRec = () => vidUi.key ? vidStore()[vidUi.key] : null;
@@ -18193,7 +18193,7 @@ function vidPendHtml() {
 }
 function vidMarkLabel(mk) {
   const k = VID_KINDS[mk.k] || { l: mk.k }, ul = VID_ULT.find(x => x[0] === mk.v);
-  return `<b>${esc(k.l)}</b>${mk.c ? " · " + esc(mk.c) : ""}${ul && mk.k === "ult" ? " · " + esc(ul[1]) : ""}${mk.h ? " · " + esc(mk.h) : ""}${mk.n ? ` · <span class="muted">${esc(mk.n)}</span>` : ""}`;
+  return `<b>${esc(k.l)}</b>${mk.pc ? ' <span class="badge" title="aus dem PC-Programm">PC</span>' : ""}${mk.c ? " · " + esc(mk.c) : ""}${ul && mk.k === "ult" ? " · " + esc(ul[1]) : ""}${mk.h ? " · " + esc(mk.h) : ""}${mk.n ? ` · <span class="muted">${esc(mk.n)}</span>` : ""}`;
 }
 // Teile, die sich beim Markieren ändern; der Player selbst bleibt stehen (sonst springt das Video zurück)
 function vidParts() {
@@ -18430,10 +18430,65 @@ function vidFolderHtml() {
   if (!fs.length) return `<p class="small muted" style="margin:6px 0 0">In diesem Ordner sind keine Videos.</p>`;
   const rows = fs.map((f, i) => ({ f, i, r: vidRecOf(f) })), done = rows.filter(x => x.r && x.r.done).length;
   rows.sort((a, b) => (!!(a.r && a.r.done) - !!(b.r && b.r.done)) || (b.f.lastModified || 0) - (a.f.lastModified || 0));
-  return `<div class="vidfold"><b class="small">${fs.length} ${fs.length === 1 ? "Video" : "Videos"} im Ordner${vidUi.folderName ? ` «${esc(vidUi.folderName)}»` : ""}, ${done} ausgewertet</b>
+  const pc = vidUi.pcInfo ? `<p class="small" style="margin:0">✓ Daten vom PC-Programm «Rivals Video» übernommen: ${plural(vidUi.pcInfo.recs, "Aufnahme", "Aufnahmen")}, ${plural(vidUi.pcInfo.marks, "Markierung", "Markierungen")}${vidUi.pcInfo.updated ? ` (Stand ${esc(String(vidUi.pcInfo.updated).replace("T", " ").slice(0, 16))})` : ""}.</p>` : "";
+  return `${pc}<div class="vidfold"><b class="small">${fs.length} ${fs.length === 1 ? "Video" : "Videos"} im Ordner${vidUi.folderName ? ` «${esc(vidUi.folderName)}»` : ""}, ${done} ausgewertet</b>
     <ul class="vidrlist">${rows.map(x => `<li class="${x.r && x.r.done ? "done" : ""}">${x.r ? vidStatusHtml(x.r) : `<span class="badge">neu</span>`} <span class="vidname">${esc(x.f.name)}</span>${vidKey(x.f) === vidUi.key ? " <b>(gerade offen)</b>" : ` <button type="button" class="linkbtn small" data-vidpick="${x.i}">öffnen</button>`}</li>`).join("")}</ul></div>`;
 }
 function vidFolderDraw() { const el = $("#vidFolder"); if (el) el.innerHTML = vidFolderHtml(); }
+// PC-Programm «Rivals Video»: Es schreibt seine Ergebnisse in «rivals-video-daten.json» in seinem Ordner. Wählst du hier mit
+// «Ganzen Ordner wählen» diesen Ordner, übernimmt die App deine bestätigten Markierungen (nicht die offenen Funde), den Status
+// «ausgewertet» und die Aufnahmezeit. Markierungen aus dem Programm tragen die Kennung «pc-…»; sie werden bei jedem Import ersetzt.
+// Zuordnung zum Match: Matches, die in die Aufnahme fallen (vidCands), pro Markierung das zeitlich nächste. Ohne passendes Match bleibt
+// das Feld leer, dann wählst du das Match im Video-Review selbst.
+const PC_DATA = "rivals-video-daten.json";
+function vidPcMid(rec, t) {
+  const inside = vidCands(rec.start, rec.dur).filter(c => c.inside).map(c => c.m);
+  if (!inside.length) return "";
+  if (inside.length === 1 || !rec.start) return inside[0].id;
+  const at = rec.start + (+t || 0) * 1000;
+  return inside.slice().sort((a, b) => Math.abs(matchTime(a) - at) - Math.abs(matchTime(b) - at))[0].id;
+}
+function vidImportPc(d) {
+  if (!d || d.format !== "rivals-video" || !d.videos || typeof d.videos !== "object") return null;
+  const V = vidStore(), res = { recs: 0, marks: 0, done: 0, took: 0 };
+  Object.values(d.videos).forEach(v => {
+    if (!v || typeof v !== "object" || !v.name || !(v.size > 0)) return;
+    const key = v.name + "|" + v.size;
+    let rec = V[key];
+    if (!rec) { const old = Object.keys(V).find(k => V[k] && V[k].size === v.size); if (old) { rec = V[key] = V[old]; delete V[old]; rec.name = v.name; } }
+    if (!rec) rec = V[key] = { name: v.name, size: v.size, start: 0, dur: 0, at: Date.now(), marks: [] };
+    if (!Array.isArray(rec.marks)) rec.marks = [];
+    if (+v.start > 0) rec.start = +v.start;
+    if (+v.dur > 0) rec.dur = Math.round(+v.dur);
+    rec.pc = 1;
+    const keep = {}; rec.marks.filter(m => String(m.id).startsWith("pc-")).forEach(m => { keep[m.id] = m.mid; });
+    rec.marks = rec.marks.filter(m => !String(m.id).startsWith("pc-"));
+    (Array.isArray(v.marks) ? v.marks : []).forEach(m => {
+      if (!m || !VID_KINDS[m.k] || !isFinite(+m.t)) return;
+      const id = "pc-" + String(m.id || "").slice(0, 20), mk = { id, t: Math.round(+m.t * 10) / 10, k: m.k, mid: keep[id] || vidPcMid(rec, m.t), pc: 1 };
+      if (m.c && QN_CATS.includes(m.c)) mk.c = m.c;
+      if (m.v && VID_ULT.some(x => x[0] === m.v)) mk.v = m.v;
+      if (m.h) mk.h = String(m.h).slice(0, 40);
+      if (m.n) mk.n = String(m.n).slice(0, 300);
+      rec.marks.push(mk); res.marks++;
+    });
+    if (v.done) {
+      rec.done = +v.done; res.done++;
+      // wie «Auswertung abschliessen»: ins Match, wo dort noch nichts steht
+      [...new Set(rec.marks.map(m => m.mid).filter(Boolean))].forEach(mid => {
+        const m = state.matches.find(x => x.id === mid); if (!m) return;
+        const sm = vidSum(vidMarksFor(mid)), nC = Object.values(sm.causes).reduce((a, b) => a + b, 0);
+        if (nC && !deathTotal(m.deathCauses)) { m.deathCauses = Object.assign({}, sm.causes); res.took++; }
+        if (sm.ults && (m.ults === null || m.ults === undefined)) { m.ults = sm.ults; m.ultHit = sm.rated ? sm.hit : null; res.took++; }
+      });
+      if (!rec.doneMid) rec.doneMid = (rec.marks.find(m => m.mid) || {}).mid || "";
+    }
+    rec.at = Date.now(); res.recs++;
+  });
+  vidUi.pcInfo = { at: Date.now(), updated: d.updated || "", ...res };
+  save();
+  return res;
+}
 function renderVideo(fresh) {
   const el = $("#videoBody"); if (!el) return;
   const rec = vidRec();
@@ -18468,6 +18523,11 @@ function vidBind(el) {
     if (e.target.id === "vidDir" && e.target.files) {
       const all = [...e.target.files], first = all[0] && all[0].webkitRelativePath ? all[0].webkitRelativePath.split("/")[0] : "";
       vidUi.folder = all.filter(f => VID_EXT.test(f.name) || /^video\//.test(f.type || "")); vidUi.folderName = first;
+      try { e.target.value = ""; } catch (err) { /* derselbe Ordner soll erneut wählbar sein */ }
+      const pcf = all.find(f => f.name === PC_DATA);
+      if (pcf) pcf.text().then(t => { let d = null; try { d = JSON.parse(t); } catch (err) { d = null; } const r = vidImportPc(d);
+        toast(r ? `Vom PC-Programm übernommen: ${r.recs} ${r.recs === 1 ? "Aufnahme" : "Aufnahmen"}, ${r.marks} Markierungen${r.took ? `, ${r.took} Werte ins Match` : ""}.` : "Die Datei des PC-Programms liess sich nicht lesen.");
+        vidFolderDraw(); vidRecentDraw(); }).catch(() => toast("Die Datei des PC-Programms liess sich nicht lesen."));
       vidFolderDraw();
     }
     if (e.target.id === "vidMatch") { vidUi.mid = e.target.value; vidUi.pend = ""; vidParts(); }
