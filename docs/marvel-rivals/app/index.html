@@ -1899,6 +1899,9 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .vidlist .linkbtn { font-variant-numeric: tabular-nums; }
 .vidsum { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); display: grid; gap: 6px; }
 .rvvid { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 4px 0; }
+.vidprog { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin: 6px 0; }
+.vidprog span { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+.vidscanlist { margin-top: 4px; }
 .rvvid .i { width: 15px; height: 15px; color: var(--accent-strong); }
 @media (max-width: 640px) {
   .hcgrid { grid-template-columns: minmax(0, 1fr); }
@@ -15920,7 +15923,7 @@ const PAGE_HELP = {
   watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Unter der Aufgabe stehen konkrete Guide-Videos zum gewählten Helden (Titel und Kanal geprüft, Inhalt nicht). Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
   review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
-  video: ["Video-Review", ["Wähl oben eine Aufnahme von deinem PC (MP4). Sie bleibt auf dem PC, die App merkt sich nur deine Markierungen.", "Prüf das Match darunter. Die App schlägt eins vor, wenn der Dateiname oder das Dateidatum die Aufnahmezeit verrät.", "Beim Anschauen tippst du bei jedem Tod auf «Tod» (Taste T) und wählst die Ursache. Genauso deine Ult (U), Gegner-Ults (G), gewonnene (W) und verlorene Fights (V), gute Momente (B) und Notizen (N).", "Ein Tipp auf eine Zeit in der Liste springt fünf Sekunden davor ins Video. Unten übernimmst du Todesursachen und Ults ins Match; im Review steht beim Match, was du markiert hast."]],
+  video: ["Video-Review", ["Wähl oben eine Aufnahme von deinem PC (MP4). Sie bleibt auf dem PC, die App merkt sich nur deine Markierungen.", "Prüf das Match darunter. Die App schlägt eins vor, wenn der Dateiname oder das Dateidatum die Aufnahmezeit verrät.", "Beim Anschauen tippst du bei jedem Tod auf «Tod» (Taste T) und wählst die Ursache. Genauso deine Ult (U), Gegner-Ults (G), gewonnene (W) und verlorene Fights (V), gute Momente (B) und Notizen (N).", "Ein Tipp auf eine Zeit in der Liste springt fünf Sekunden davor ins Video. Unten übernimmst du Todesursachen und Ults ins Match; im Review steht beim Match, was du markiert hast.", "Neu als Versuch: «Video durchsuchen» schlägt dir Tode, Kills und Ults vor. Du sagst bei jedem Fund «Stimmt» oder «Stimmt nicht»."]],
   weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten 12 Matches und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
@@ -18091,9 +18094,9 @@ chipGroup($("#newHeroTags"), Object.keys(TAGS), true);
 // Gespeichert werden nur die Markierungen: state.vids[key] = { name, size, start, dur, at, marks: [{ id, t, k, c, v, h, n, mid }] }.
 // key = Dateiname + Grösse: Wählst du dieselbe Datei wieder, sind die Markierungen wieder da. Jede Markierung gehört zum Match,
 // das gerade oben gewählt ist (mid); so geht auch eine lange Aufnahme mit mehreren Matches. Aufnahmezeit: aus dem Dateinamen
-// (NVIDIA, OBS, Xbox Game Bar), sonst Änderungsdatum der Datei minus Länge. Automatisches Erkennen kommt später (Schritt 2).
+// (NVIDIA, OBS, Xbox Game Bar), sonst Änderungsdatum der Datei minus Länge. Automatisches Erkennen: Schritt 2 weiter unten (Versuch).
 const VID_KINDS = {
-  death: { l: "Tod", key: "t" }, ult: { l: "Meine Ult", key: "u" }, eult: { l: "Gegner-Ult", key: "g" },
+  death: { l: "Tod", key: "t" }, kill: { l: "Kill", key: "k" }, ult: { l: "Meine Ult", key: "u" }, eult: { l: "Gegner-Ult", key: "g" },
   win: { l: "Fight gewonnen", key: "w" }, loss: { l: "Fight verloren", key: "v" }, good: { l: "Gut gemacht", key: "b" }, note: { l: "Notiz", key: "n" }
 };
 const VID_ULT = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
@@ -18124,9 +18127,9 @@ function vidSum(marks) {
   const d = marks.filter(x => x.k === "death"), u = marks.filter(x => x.k === "ult"), causes = {};
   d.forEach(x => { if (x.c) causes[x.c] = (causes[x.c] || 0) + 1; });
   return { deaths: d.length, causes, ults: u.length, hit: u.reduce((a, x) => a + (x.v === "ja" ? 1 : x.v === "teils" ? 0.5 : 0), 0), rated: u.filter(x => x.v).length,
-    win: marks.filter(x => x.k === "win").length, loss: marks.filter(x => x.k === "loss").length, n: marks.length };
+    win: marks.filter(x => x.k === "win").length, loss: marks.filter(x => x.k === "loss").length, kills: marks.filter(x => x.k === "kill").length, n: marks.length };
 }
-const vidSumText = s => [s.deaths && `${s.deaths} ${s.deaths === 1 ? "Tod" : "Tode"}`, s.ults && `${s.ults} ${s.ults === 1 ? "Ult" : "Ults"}`, (s.win || s.loss) && `Fights ${s.win}:${s.loss}`].filter(Boolean).join(", ");
+const vidSumText = s => [s.deaths && `${s.deaths} ${s.deaths === 1 ? "Tod" : "Tode"}`, s.kills && `${s.kills} ${s.kills === 1 ? "Kill" : "Kills"}`, s.ults && `${s.ults} ${s.ults === 1 ? "Ult" : "Ults"}`, (s.win || s.loss) && `Fights ${s.win}:${s.loss}`].filter(Boolean).join(", ");
 // Review: Hinweis auf Markierungen und Weg ins Video-Review
 function vidRvHtml(m) {
   const mk = vidMarksFor(m.id), s = vidSum(mk);
@@ -18137,6 +18140,8 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 function vidOpenFile(f) {
   if (!f) return;
   if (vidUi.url) { try { URL.revokeObjectURL(vidUi.url); } catch (e) { /* alt */ } }
+  if (vidScanUi.run) vidScanUi.stop = true;
+  vidScanUi.err = "";
   vidUi.file = f; vidUi.key = vidKey(f); vidUi.url = URL.createObjectURL(f); vidUi.err = ""; vidUi.pend = "";
   const V = vidStore(), rec = V[vidUi.key] || (V[vidUi.key] = { name: f.name, size: f.size, start: vidNameTime(f.name), dur: 0, at: Date.now(), marks: [] });
   rec.at = Date.now();
@@ -18185,13 +18190,14 @@ function vidParts() {
   box.innerHTML = `<div class="vidrow"><label class="small"><b>Match für die Markierungen</b>
       <select id="vidMatch"><option value="">– noch kein Match –</option>${list.map(c => `<option value="${esc(c.m.id)}"${c.m.id === vidUi.mid ? " selected" : ""}>${esc(vidMatchLabel(c.m))}${c.inside ? " (passt zur Aufnahmezeit)" : ""}</option>`).join("")}</select></label>
       <span class="small muted">${rec.start ? `Aufnahme ab ${new Date(rec.start).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}${rec.dur ? `, ${vidFmt(rec.dur)} lang` : ""}. ` : ""}Mehrere Matches in einer Aufnahme? Wechsle hier das Match, bevor du weiter markierst.</span></div>
-    <div class="vidbtns">${Object.entries(VID_KINDS).map(([k, x]) => `<button type="button" class="btn small${k === "death" || k === "loss" ? " bad" : k === "win" || k === "good" ? " ok" : ""}" data-vidadd="${k}">${esc(x.l)} <kbd>${x.key.toUpperCase()}</kbd></button>`).join("")}</div>
+    <div class="vidbtns">${Object.entries(VID_KINDS).map(([k, x]) => `<button type="button" class="btn small${k === "death" || k === "loss" ? " bad" : k === "win" || k === "good" || k === "kill" ? " ok" : ""}" data-vidadd="${k}">${esc(x.l)} <kbd>${x.key.toUpperCase()}</kbd></button>`).join("")}</div>
     ${vidPendHtml()}
     <p class="small muted" style="margin:6px 0 0">Tasten am PC: Leertaste Pause, ← und → 5 Sekunden, Buchstaben wie auf den Knöpfen. Markiert wird immer die aktuelle Stelle im Video.</p>
     <h3 class="vidh">Markierungen${cur ? ` zu diesem Match: ${here.length}` : ""}${other ? ` <span class="small muted">(dazu ${other} weitere Matches in dieser Aufnahme)</span>` : ""}</h3>
     ${marks.length ? `<ol class="vidlist">${marks.map(x => `<li class="${x.mid === vidUi.mid ? "" : "oth"}${x.id === vidUi.pend ? " pend" : ""}"><button type="button" class="linkbtn" data-vidjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span>${vidMarkLabel(x)}${x.mid && x.mid !== vidUi.mid ? ` <span class="small muted">(anderes Match)</span>` : ""}</span><button type="button" class="linkbtn small" data-videdit="${esc(x.id)}" aria-label="Ändern">ändern</button><button type="button" class="linkbtn small" data-viddel="${esc(x.id)}" aria-label="Löschen">✕</button></li>`).join("")}</ol>` : `<p class="small muted">Noch keine Markierungen. Spiel das Video ab und tipp bei einem Tod auf «Tod» (oder Taste T).</p>`}
     ${cur && here.length ? `<div class="vidsum"><b class="small">Ins Match übernehmen</b><span class="small">${esc(vidSumText(s) || "nur Notizen")}${s.deaths && Object.keys(s.causes).length ? ` · Ursachen: ${esc(Object.entries(s.causes).map(([c, n]) => `${c} ${n}×`).join(", "))}` : ""}</span>
       <div class="row" style="gap:6px">${s.deaths ? `<button type="button" class="btn small" data-vidtake="death">Todesursachen übernehmen</button>` : ""}${s.ults ? `<button type="button" class="btn small" data-vidtake="ult">Ults übernehmen</button>` : ""}<button type="button" class="btn ghost small" data-rv-go="${esc(cur.id)}">Zum Review dieses Matches</button></div></div>` : ""}`;
+  vidScanDraw();   // Trefferquote und «übersehen» hängen an deinen Markierungen
 }
 // Markierungen ins Match: Todesursachen (nur markierte Ursachen) und Ults; bestehende Werte werden erst nach Rückfrage ersetzt
 async function vidTake(what) {
@@ -18210,6 +18216,132 @@ async function vidTake(what) {
   }
   save(); vidParts();
 }
+// Schritt 2 (Versuch): Video durchsuchen. Ein zweites, unsichtbares Video spult die Aufnahme Sekunde für Sekunde durch.
+// Jedes Bild wird verkleinert auf eine Leinwand gezeichnet (alles bleibt auf dem PC), dann misst die App Farben in festen Bereichen:
+// gelbe Zahl oben links = tot (auch während der Kill-Cam; dann zeigt das Spiel die Anzeigen des Gegners, die zählen nicht),
+// heller Balken in der Kill-Anzeige oben rechts = eigener Kill, goldenes Ult-Feld unten rechts, das verschwindet = eigene Ult.
+// Bereiche und Schwellen stammen aus 8 Screenshots vom 08.11.2026 (Notiz «Video-Erkennung» im Gehirn). Jeder Fund ist ein
+// Vorschlag mit «Stimmt» oder «Stimmt nicht»; die Messwerte (f) bleiben gespeichert, damit Claude die Schwellen nachstellen kann.
+// rec.scan = { at, v, n, res: [{ id, t, k: death|kill|ult, f: { cnt, feed, ug }, ok: null|true|false, mk }] }
+const VID_SCAN = {
+  v: 1, step: 1, w: 480,
+  r: { cnt: [0, 0.02, 0.10, 0.13], feed: [0.70, 0.02, 0.99, 0.14], ult: [0.89, 0.84, 0.98, 0.97] },
+  dead: 0.05, deadGap: 3, kill: 0.012, killQuiet: 0.005, ultOn: 0.012, ultOff: 0.004
+};
+const VID_SCAN_K = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
+const vidScanUi = { run: false, stop: false, p: 0, err: "" };
+// Messwerte eines Bildes: Anteil gelber Pixel (Zahl oben links), Anteil heller Zeilen (Kill-Anzeige), Anteil goldener Pixel (Ult-Feld)
+function vidFeat(ctx, W, H) {
+  const box = r => { const x = Math.floor(r[0] * W), y = Math.floor(r[1] * H), w = Math.max(1, Math.floor((r[2] - r[0]) * W)), h = Math.max(1, Math.floor((r[3] - r[1]) * H)); return { d: ctx.getImageData(x, y, w, h).data, w, h }; };
+  let a = box(VID_SCAN.r.cnt), n = 0;
+  for (let i = 0; i < a.d.length; i += 4) { const r = a.d[i], g = a.d[i + 1], b = a.d[i + 2]; if (r > 200 && g > 170 && b < 110 && r - b > 110) n++; }
+  const cnt = n / (a.w * a.h);
+  a = box(VID_SCAN.r.feed); let rows = 0;
+  for (let y = 0; y < a.h; y++) {
+    let m = 0;
+    for (let x = 0; x < a.w; x++) { const i = (y * a.w + x) * 4, r = a.d[i], g = a.d[i + 1], b = a.d[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mn > 175 && mx - mn < 45) m++; }
+    if (m / a.w > 0.45) rows++;
+  }
+  const feed = rows / a.h;
+  a = box(VID_SCAN.r.ult); n = 0;
+  for (let i = 0; i < a.d.length; i += 4) { const r = a.d[i], g = a.d[i + 1], b = a.d[i + 2]; if (r > 140 && g > 100 && b < 90 && r - b > 80 && r >= g) n++; }
+  const ug = n / (a.w * a.h);
+  return { cnt: Math.round(cnt * 1000) / 1000, feed: Math.round(feed * 1000) / 1000, ug: Math.round(ug * 1000) / 1000 };
+}
+// Aus der Messreihe [{ t, cnt, feed, ug }] die Funde machen
+function vidScanEvents(S) {
+  const C = VID_SCAN, out = [];
+  let dead = false, lastDead = -1e9, prevFeed = 0, ready = 0;
+  S.forEach(s => {
+    if (s.cnt > C.dead) {
+      if (!dead && s.t - lastDead > C.deadGap) out.push({ t: s.t, k: "death", f: s });
+      dead = true; lastDead = s.t; ready = 0; prevFeed = s.feed;
+      return;   // während des Tods (Kill-Cam) gehören Kill-Anzeige und Ult-Feld dem Gegner
+    }
+    dead = false;
+    const after = s.t - lastDead <= 1.5;   // kurz nach dem Wiedereinstieg nichts werten
+    if (!after && s.feed > C.kill && (prevFeed < C.killQuiet || s.feed > prevFeed * 1.6 + 0.01)) out.push({ t: s.t, k: "kill", f: s });
+    prevFeed = s.feed;
+    if (s.ug > C.ultOn) ready++;
+    else if (s.ug < C.ultOff) { if (ready >= 2 && !after) out.push({ t: s.t, k: "ult", f: s }); ready = 0; }
+  });
+  return out;
+}
+async function vidScan() {
+  const rec = vidRec(); if (!rec || !vidUi.url || vidScanUi.run) return;
+  Object.assign(vidScanUi, { run: true, stop: false, p: 0, err: "" }); vidScanDraw();
+  const v = document.createElement("video"); v.muted = true; v.preload = "auto"; v.playsInline = true;
+  const once = ev => new Promise((res, rej) => {
+    const ok = () => { clean(); res(); }, bad = () => { clean(); rej(new Error(ev)); };
+    const clean = () => { v.removeEventListener(ev, ok); v.removeEventListener("error", bad); };
+    v.addEventListener(ev, ok); v.addEventListener("error", bad);
+  });
+  try {
+    const meta = once("loadedmetadata"); v.src = vidUi.url; await meta;
+    const dur = v.duration || rec.dur || 0, W = VID_SCAN.w, H = Math.max(1, Math.round(W * (v.videoHeight || 9) / (v.videoWidth || 16)));
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d", { willReadFrequently: true }), S = [];
+    for (let t = 0.5; t < dur; t += VID_SCAN.step) {
+      if (vidScanUi.stop) break;
+      const sk = once("seeked"); v.currentTime = t; await sk;
+      ctx.drawImage(v, 0, 0, W, H);
+      S.push(Object.assign({ t: Math.round(t * 10) / 10 }, vidFeat(ctx, W, H)));
+      vidScanUi.p = dur ? t / dur : 0;
+      if (S.length % 10 === 0) vidScanDraw();
+    }
+    if (!vidScanUi.stop) {
+      const old = (rec.scan && rec.scan.res) || [];
+      rec.scan = { at: Date.now(), v: VID_SCAN.v, n: S.length, res: vidScanEvents(S).map(e => {
+        const o = old.find(x => x.k === e.k && Math.abs(x.t - e.t) <= 2 && typeof x.ok === "boolean");
+        return { id: newId(), t: e.t, k: e.k, f: { cnt: e.f.cnt, feed: e.f.feed, ug: e.f.ug }, ok: o ? o.ok : null, mk: o ? o.mk || "" : "" };
+      }) };
+      save();
+    }
+  } catch (e) {
+    vidScanUi.err = "Das Durchsuchen hat nicht geklappt. Vielleicht darf die App die Bilder in dieser Ansicht nicht lesen, oder der Browser kann das Video nicht spulen. Sag Claude Bescheid, was hier steht: " + ((e && e.message) || "unbekannt");
+  }
+  vidScanUi.run = false;
+  try { v.removeAttribute("src"); v.load(); } catch (e) { /* egal */ }
+  vidScanDraw();
+}
+// Wie oft lag die App richtig, und was hat sie übersehen (Markierungen von dir ohne Fund in der Nähe)?
+function vidScanStats() {
+  const s = {}; Object.keys(VID_SCAN_K).forEach(k => { s[k] = { ok: 0, no: 0, miss: 0 }; });
+  Object.values(vidStore()).forEach(r => {
+    if (!r.scan || !Array.isArray(r.scan.res)) return;
+    r.scan.res.forEach(x => { if (s[x.k] && x.ok === true) s[x.k].ok++; else if (s[x.k] && x.ok === false) s[x.k].no++; });
+    (r.marks || []).forEach(m => { if (s[m.k] && !r.scan.res.some(x => x.k === m.k && Math.abs(x.t - m.t) <= 4)) s[m.k].miss++; });
+  });
+  return s;
+}
+function vidScanHtml(rec) {
+  if (!rec) return "";
+  if (vidScanUi.run) { const p = Math.round(vidScanUi.p * 100); return `<p class="small" style="margin:0">Die App spult das Video durch: <b>${p} %</b>. Du kannst währenddessen weiter schauen.</p><div class="vidprog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><span style="width:${p}%"></span></div><button type="button" class="btn ghost small" data-vidscan="stop">Abbrechen</button>`; }
+  const sc = rec.scan, res = sc && Array.isArray(sc.res) ? sc.res.slice().sort((a, b) => a.t - b.t) : null, st = vidScanStats();
+  const statTxt = Object.entries(VID_SCAN_K).map(([k, l]) => { const x = st[k]; return x.ok + x.no ? `${l} ${x.ok} von ${x.ok + x.no} richtig${x.miss ? `, ${x.miss} übersehen` : ""}` : x.miss ? `${l}: ${x.miss} übersehen` : ""; }).filter(Boolean).join(" · ");
+  const open = res ? res.filter(x => x.ok === null || x.ok === undefined).length : 0;
+  return `<p class="small" style="margin:0">Versuch: Die App spult das Video auf deinem PC durch und sucht drei Dinge: <b>deine Tode</b> (gelbe Zahl oben links), <b>deine Kills</b> (deine helle Zeile in der Kill-Anzeige) und <b>deine Ult</b> (das goldene Ult-Feld verschwindet). Du bestätigst jeden Fund. Nichts verlässt deinen PC.</p>
+    ${vidScanUi.err ? `<p class="small bad">${esc(vidScanUi.err)}</p>` : ""}
+    <div class="row" style="gap:6px;margin:8px 0"><button type="button" class="btn small" data-vidscan="go">${res ? "Noch einmal durchsuchen" : "Video durchsuchen"}</button>${res ? `<span class="small muted">${res.length ? `${res.length} Funde${open ? `, ${open} offen` : ""}` : "Nichts gefunden"}</span>` : ""}</div>
+    ${res && res.length ? `<ol class="vidlist vidscanlist">${res.map(x => `<li class="${x.ok === true ? "" : x.ok === false ? "oth" : "pend"}"><button type="button" class="linkbtn" data-vidscanjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span><b>${esc(VID_SCAN_K[x.k] || x.k)}</b>${x.ok === true ? " ✓" : x.ok === false ? ` <span class="muted">· stimmt nicht</span>` : "?"}</span>${typeof x.ok === "boolean" ? `<button type="button" class="linkbtn small" data-vidscanreset="${esc(x.id)}">ändern</button><span></span>` : `<button type="button" class="btn small ok" data-vidscanok="${esc(x.id)}">Stimmt</button><button type="button" class="btn ghost small" data-vidscanno="${esc(x.id)}">Stimmt nicht</button>`}</li>`).join("")}</ol>` : ""}
+    ${statTxt ? `<p class="small" style="margin:8px 0 0"><b>So oft lag die App bisher richtig:</b> ${esc(statTxt)}</p>` : ""}
+    <p class="small muted" style="margin:6px 0 0">Gebaut aus deinen Screenshots vom 08.11.2026. Ob es bei anderen Helden und Maps klappt, ist offen. Mit jedem «Stimmt» und «Stimmt nicht» kann Claude die Erkennung genauer einstellen. Was die App übersieht, markierst du wie bisher selbst.</p>`;
+}
+function vidScanDraw() { const el = $("#vidScan"); if (el) el.innerHTML = vidScanHtml(vidRec()); }
+const vidScanRes = id => { const r = vidRec(); return r && r.scan && Array.isArray(r.scan.res) ? r.scan.res.find(x => x.id === id) : null; };
+// «Stimmt»: als Markierung übernehmen (oder an eine vorhandene in der Nähe hängen), bei Tod und Ult gleich nach Ursache oder Wirkung fragen
+function vidScanConfirm(id, yes) {
+  const rec = vidRec(), x = vidScanRes(id); if (!rec || !x) return;
+  x.ok = !!yes;
+  if (yes) {
+    const near = rec.marks.find(m => m.k === x.k && Math.abs(m.t - x.t) <= 4 && (m.mid || "") === (vidUi.mid || ""));
+    const mk = near || { id: newId(), t: x.t, k: x.k, mid: vidUi.mid || "", auto: 1 };
+    if (!near) rec.marks.push(mk);
+    x.mk = mk.id;
+    vidUi.pend = (x.k === "death" && !mk.c) || (x.k === "ult" && !mk.v) ? mk.id : "";
+  }
+  rec.at = Date.now(); save(); vidParts(); vidScanDraw();
+}
 function renderVideo(fresh) {
   const el = $("#videoBody"); if (!el) return;
   const V = vidStore(), rec = vidRec(), recent = Object.entries(V).sort((a, b) => (b[1].at || 0) - (a[1].at || 0)).slice(0, 6);
@@ -18226,7 +18358,7 @@ function renderVideo(fresh) {
       <div class="row vidnav"><button type="button" class="btn ghost small" data-vidstep="-5">−5 s</button><button type="button" class="btn ghost small" data-vidstep="5">+5 s</button>
         <span class="small muted">Tempo</span>${[0.5, 1, 2].map(r => `<button type="button" class="btn ghost small" data-vidrate="${r}">${String(r).replace(".", ",")}×</button>`).join("")}</div>
       <div id="vidParts"></div></div>` : ""}
-    <div class="card"><div class="card-head"><h2>${icon("ai")}Schritt 2: automatisch erkennen</h2></div><p class="small" style="margin:0">Später soll die App Tode und Kills selbst im Video finden (Bilderkennung). Das kommt als Versuch, sobald du den Review-Helfer ein paar Mal benutzt hast. Ob es zuverlässig klappt, ist offen.</p></div>`;
+    <div class="card"><div class="card-head"><h2>${icon("ai")}Schritt 2: automatisch erkennen</h2><span class="badge">Versuch</span></div>${rec ? `<div id="vidScan">${vidScanHtml(rec)}</div>` : `<p class="small" style="margin:0">Wähl oben ein Video. Dann kann die App es durchsuchen und dir deine Tode, Kills und Ults vorschlagen. Du bestätigst jeden Fund.</p>`}</div>`;
   const v = $("#vidEl");
   if (v) {
     v.addEventListener("loadedmetadata", () => vidLoaded(v));
@@ -18255,6 +18387,12 @@ function vidBind(el) {
     else if (b.dataset.vidstep && v) v.currentTime = Math.max(0, v.currentTime + +b.dataset.vidstep);
     else if (b.dataset.vidrate && v) v.playbackRate = +b.dataset.vidrate;
     else if (b.dataset.vidtake) vidTake(b.dataset.vidtake);
+    else if (b.dataset.vidscan === "go") vidScan();
+    else if (b.dataset.vidscan === "stop") { vidScanUi.stop = true; }
+    else if (b.dataset.vidscanok) vidScanConfirm(b.dataset.vidscanok, true);
+    else if (b.dataset.vidscanno) vidScanConfirm(b.dataset.vidscanno, false);
+    else if (b.dataset.vidscanreset) { const x = vidScanRes(b.dataset.vidscanreset); if (x) { x.ok = null; save(); vidScanDraw(); } }
+    else if (b.dataset.vidscanjump && v) { const x = vidScanRes(b.dataset.vidscanjump); if (x) { v.currentTime = Math.max(0, x.t - 5); v.play().catch(() => {}); } }
   });
   document.addEventListener("keydown", e => {
     if (currentTab() !== "video" || e.ctrlKey || e.metaKey || e.altKey) return;
