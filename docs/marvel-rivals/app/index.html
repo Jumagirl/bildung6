@@ -18218,7 +18218,8 @@ async function vidTake(what) {
 }
 // Schritt 2 (Versuch): Video durchsuchen. Ein zweites, unsichtbares Video spult die Aufnahme Sekunde für Sekunde durch.
 // Jedes Bild wird verkleinert auf eine Leinwand gezeichnet (alles bleibt auf dem PC), dann misst die App Farben in festen Bereichen:
-// gelbe Zahl oben links = tot (auch während der Kill-Cam; dann zeigt das Spiel die Anzeigen des Gegners, die zählen nicht),
+// gelbe Zahl oben links = Zeit bis zum Wiedereinstieg (zählt von 15 Sekunden auf 0). Ihr Auftauchen ist der Tod; solange sie läuft,
+// zeigt das Spiel die Sicht eines Gegners oder eines Teammates, deren Anzeigen zählen nicht. Ein kurzes Aufblitzen (unter 3 Bildern) ist kein Tod.
 // heller Balken in der Kill-Anzeige oben rechts = eigener Kill, goldenes Ult-Feld unten rechts, das verschwindet = eigene Ult.
 // Bereiche und Schwellen stammen aus 8 Screenshots vom 08.11.2026 (Notiz «Video-Erkennung» im Gehirn). Jeder Fund ist ein
 // Vorschlag mit «Stimmt» oder «Stimmt nicht»; die Messwerte (f) bleiben gespeichert, damit Claude die Schwellen nachstellen kann.
@@ -18226,7 +18227,7 @@ async function vidTake(what) {
 const VID_SCAN = {
   v: 1, step: 1, w: 480,
   r: { cnt: [0, 0.02, 0.10, 0.13], feed: [0.70, 0.02, 0.99, 0.14], ult: [0.89, 0.84, 0.98, 0.97] },
-  dead: 0.05, deadGap: 3, kill: 0.012, killQuiet: 0.005, ultOn: 0.012, ultOff: 0.004
+  dead: 0.05, deadGap: 3, deadMin: 3, kill: 0.012, killQuiet: 0.005, ultOn: 0.012, ultOff: 0.004
 };
 const VID_SCAN_K = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
 const vidScanUi = { run: false, stop: false, p: 0, err: "" };
@@ -18251,14 +18252,17 @@ function vidFeat(ctx, W, H) {
 // Aus der Messreihe [{ t, cnt, feed, ug }] die Funde machen
 function vidScanEvents(S) {
   const C = VID_SCAN, out = [];
-  let dead = false, lastDead = -1e9, prevFeed = 0, ready = 0;
+  // Zeit bis zum Wiedereinstieg: zusammenhängende Strecken mit gelber Zahl (Lücken bis deadGap Sekunden gehören dazu)
+  const runs = []; let run = null;
+  S.forEach(s => { if (s.cnt > C.dead) { if (run && s.t - run.end <= C.deadGap) { run.end = s.t; run.n++; } else runs.push(run = { start: s.t, end: s.t, n: 1, f: s }); } });
+  const deathAt = new Set(runs.filter(r => r.n >= C.deadMin).map(r => r.start));
+  let lastDead = -1e9, prevFeed = 0, ready = 0;
   S.forEach(s => {
     if (s.cnt > C.dead) {
-      if (!dead && s.t - lastDead > C.deadGap) out.push({ t: s.t, k: "death", f: s });
-      dead = true; lastDead = s.t; ready = 0; prevFeed = s.feed;
-      return;   // während des Tods (Kill-Cam) gehören Kill-Anzeige und Ult-Feld dem Gegner
+      if (deathAt.has(s.t)) out.push({ t: s.t, k: "death", f: s });
+      lastDead = s.t; ready = 0; prevFeed = s.feed;
+      return;   // solange die Zahl läuft, zeigt das Spiel die Sicht eines Gegners oder Teammates: deren Anzeigen zählen nicht
     }
-    dead = false;
     const after = s.t - lastDead <= 1.5;   // kurz nach dem Wiedereinstieg nichts werten
     if (!after && s.feed > C.kill && (prevFeed < C.killQuiet || s.feed > prevFeed * 1.6 + 0.01)) out.push({ t: s.t, k: "kill", f: s });
     prevFeed = s.feed;
@@ -18320,7 +18324,7 @@ function vidScanHtml(rec) {
   const sc = rec.scan, res = sc && Array.isArray(sc.res) ? sc.res.slice().sort((a, b) => a.t - b.t) : null, st = vidScanStats();
   const statTxt = Object.entries(VID_SCAN_K).map(([k, l]) => { const x = st[k]; return x.ok + x.no ? `${l} ${x.ok} von ${x.ok + x.no} richtig${x.miss ? `, ${x.miss} übersehen` : ""}` : x.miss ? `${l}: ${x.miss} übersehen` : ""; }).filter(Boolean).join(" · ");
   const open = res ? res.filter(x => x.ok === null || x.ok === undefined).length : 0;
-  return `<p class="small" style="margin:0">Versuch: Die App spult das Video auf deinem PC durch und sucht drei Dinge: <b>deine Tode</b> (gelbe Zahl oben links), <b>deine Kills</b> (deine helle Zeile in der Kill-Anzeige) und <b>deine Ult</b> (das goldene Ult-Feld verschwindet). Du bestätigst jeden Fund. Nichts verlässt deinen PC.</p>
+  return `<p class="small" style="margin:0">Versuch: Die App spult das Video auf deinem PC durch und sucht drei Dinge: <b>deine Tode</b> (oben links startet die gelbe Zahl bis zum Wiedereinstieg), <b>deine Kills</b> (deine helle Zeile in der Kill-Anzeige) und <b>deine Ult</b> (das goldene Ult-Feld verschwindet). Du bestätigst jeden Fund. Nichts verlässt deinen PC.</p>
     ${vidScanUi.err ? `<p class="small bad">${esc(vidScanUi.err)}</p>` : ""}
     <div class="row" style="gap:6px;margin:8px 0"><button type="button" class="btn small" data-vidscan="go">${res ? "Noch einmal durchsuchen" : "Video durchsuchen"}</button>${res ? `<span class="small muted">${res.length ? `${res.length} Funde${open ? `, ${open} offen` : ""}` : "Nichts gefunden"}</span>` : ""}</div>
     ${res && res.length ? `<ol class="vidlist vidscanlist">${res.map(x => `<li class="${x.ok === true ? "" : x.ok === false ? "oth" : "pend"}"><button type="button" class="linkbtn" data-vidscanjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span><b>${esc(VID_SCAN_K[x.k] || x.k)}</b>${x.ok === true ? " ✓" : x.ok === false ? ` <span class="muted">· stimmt nicht</span>` : "?"}</span>${typeof x.ok === "boolean" ? `<button type="button" class="linkbtn small" data-vidscanreset="${esc(x.id)}">ändern</button><span></span>` : `<button type="button" class="btn small ok" data-vidscanok="${esc(x.id)}">Stimmt</button><button type="button" class="btn ghost small" data-vidscanno="${esc(x.id)}">Stimmt nicht</button>`}</li>`).join("")}</ol>` : ""}
