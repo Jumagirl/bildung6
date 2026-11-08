@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 FPS = 4                      # Bilder pro Sekunde für die Messung (Browser-Version: 1)
 W, H = 480, 270              # Messbild (Bereiche sind relativ, das Seitenverhältnis spielt kaum eine Rolle)
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}
@@ -545,18 +545,40 @@ class Store:
             self.save()
 
     def finish(self, key: str) -> str:
-        """Abschliessen: nach «Ausgewertet» verschieben und umbenennen. Gibt den neuen Schlüssel zurück."""
+        """Abschliessen: als ausgewertet markieren, nach «Ausgewertet» verschieben und umbenennen. Gibt den Schlüssel zurück.
+        Ist die Datei noch offen (Windows: «von einem anderen Prozess verwendet», etwa weil der Browser sie gerade abspielt),
+        bleibt sie vorerst liegen; das Programm verschiebt sie später (pending_moves)."""
         with self.lock:
             rec = self.data["videos"][key]
-            src = self.base / rec["path"]
+            rec["done"] = int(time.time() * 1000)
             name = done_name(rec)
             dst = self.base / SUB_DONE / name
+            src = self.base / rec["path"]
             i = 2
             while dst.exists() and dst.resolve() != src.resolve():
                 dst = self.base / SUB_DONE / f"{Path(name).stem} ({i}){Path(name).suffix}"
                 i += 1
-            if src.exists() and dst.resolve() != src.resolve():
-                os.replace(src, dst)
+            rec["moveTo"] = str(dst.relative_to(self.base))
+            self.save()
+        for _ in range(12):   # ohne Sperre warten, damit der Browser die Datei loslassen kann
+            nk = self.try_move(key)
+            if nk:
+                return nk
+            time.sleep(0.5)
+        return key
+
+    def try_move(self, key: str) -> str:
+        """Verschiebt eine abgeschlossene Aufnahme, falls noch nicht geschehen. Gibt den neuen Schlüssel zurück oder ""."""
+        with self.lock:
+            rec = self.data["videos"].get(key)
+            if not rec or not rec.get("moveTo"):
+                return key if rec else ""
+            src, dst = self.base / rec["path"], self.base / rec["moveTo"]
+            try:
+                if src.exists() and dst.resolve() != src.resolve():
+                    os.replace(src, dst)
+            except OSError:
+                return ""
             new_key = vid_key(dst.name, rec["size"])
             if new_key != key:
                 self.data["videos"][new_key] = self.data["videos"].pop(key)
@@ -564,15 +586,23 @@ class Store:
                 if oc.exists():
                     os.replace(oc, nc)
             rec = self.data["videos"][new_key]
-            rec.setdefault("names", []).append(rec["name"])
-            rec.update(name=dst.name, path=str(dst.relative_to(self.base)), folder=SUB_DONE, id=vid_id(new_key),
-                       done=int(time.time() * 1000))
+            if rec["name"] != dst.name:
+                rec.setdefault("names", []).append(rec["name"])
+            rec.update(name=dst.name, path=str(dst.relative_to(self.base)), folder=SUB_DONE, id=vid_id(new_key))
+            rec.pop("moveTo", None)
             self.save()
             return new_key
+
+    def pending_moves(self):
+        with self.lock:
+            keys = [k for k, v in self.data["videos"].items() if v.get("moveTo") and v.get("done")]
+        for k in keys:
+            self.try_move(k)
 
     def reopen(self, key: str):
         with self.lock:
             self.data["videos"][key].pop("done", None)
+            self.data["videos"][key].pop("moveTo", None)
             self.save()
 
 

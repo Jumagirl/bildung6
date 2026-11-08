@@ -86,6 +86,7 @@ class App:
         while not self.stop.is_set():
             try:
                 store = self.store
+                store.pending_moves()
                 todo = store.sync_files()
                 if self.redo_all:
                     self.redo_all = False
@@ -144,7 +145,7 @@ class App:
         k, v = self.store.by_id(vid)
         if not v:
             return None
-        out = {x: v.get(x) for x in ("id", "name", "folder", "status", "error", "start", "dur", "done", "events", "marks")}
+        out = {x: v.get(x) for x in ("id", "name", "folder", "status", "error", "start", "dur", "done", "events", "marks", "moveTo")}
         out["doneName"] = rc.done_name(v)
         return out
 
