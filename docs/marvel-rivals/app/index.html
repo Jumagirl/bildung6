@@ -14273,13 +14273,19 @@ function rvStreak() {
 }
 
 // ---------- Schwächen pro Held und kleine Missionen ----------
-// Aus deinen Matches mit einem Helden (letzte 12) sucht die App Auffälligkeiten: mehr Tode als Spieler eine Stufe über dir mit demselben Helden im selben Modus (oder als früher), eine häufige
+// Aus deinen Matches mit einem Helden (letzte 30, einstellbar: wkLast) sucht die App Auffälligkeiten: mehr Tode als Spieler eine Stufe über dir mit demselben Helden im selben Modus (oder als früher), eine häufige
 // Todesursache, wenig Heilung/Schaden/Geblockt, Ults ohne Wirkung, ein Gegner, gegen den es selten klappt. Zu jeder Auffälligkeit gehören
 // die passenden Lektionen und Übungen aus den Wochenzielen (GOAL_TOPICS) und eine Mission über die nächsten drei Matches mit diesem Helden.
 // Die Missionen prüft die App allein aus deinen Zahlen. Kleine Stichproben: Es sind Hinweise, keine Urteile.
-const WK_MIN = 3, WK_LAST = 12, WK_OPEN_MAX = 3;
+const WK_MIN = 3, WK_OPEN_MAX = 3;
+// Wie viele Matches pro Held die App anschaut, einstellbar (Wunsch der Nutzerin am 08.11.2026: mehr als die letzten 12). 0 = alle.
+// Mehr Matches machen die Aussage sicherer, Fortschritte der letzten Tage fallen dann aber weniger auf. «Früher» sind die bis zu 30 Matches davor.
+const WK_WINDOWS = [12, 30, 60, 0], WK_DEFAULT = 30;
+const wkLast = () => { const v = state.settings ? state.settings.wkLast : undefined; return WK_WINDOWS.includes(v) ? (v || Infinity) : WK_DEFAULT; };
+const wkMine = list => wkLast() === Infinity ? list : list.slice(-wkLast());
+const wkLastTxt = () => wkLast() === Infinity ? "alle deine Matches" : `deine letzten ${wkLast()} Matches`;
 function wkHeroes() {
-  const by = group(state.matches.slice(-80), m => m.hero), pool = poolHeroes(), hs = Object.keys(by).filter(h => by[h].length >= WK_MIN), found = {};
+  const by = group(wkLast() === Infinity ? state.matches : state.matches.slice(-80), m => m.hero), pool = poolHeroes(), hs = Object.keys(by).filter(h => by[h].length >= WK_MIN), found = {};
   hs.forEach(h => { found[h] = wkFind(h).length > 0; });   // Helden mit Funden zuerst, dann dein Pool, dann nach Anzahl der Matches
   return hs.sort((a, b) => (found[b] - found[a]) || (pool.includes(b) - pool.includes(a)) || by[b].length - by[a].length);
 }
@@ -14287,11 +14293,11 @@ const wkTopic = id => GOAL_TOPICS.find(t => t.id === id);
 // Vergleichswert der Besten für denselben Helden, wenn die Daten ihn kennen (pro 10 Minuten)
 const tbEvid = (h, k) => { const b = typeof tbHero === "function" ? tbHero(h) : null; return b && b.e && b.e[k] ? ` Zum Vergleich: Eternity-Spieler mit ${h} kommen im Median auf ${TB_METRICS[k].fmt(b.e[k][1])} pro 10 Min${b.c && b.c[k] ? `, Celestial-Spieler auf ${TB_METRICS[k].fmt(b.c[k][1])}` : ""}.` : ""; };
 function wkFind(hero) {
-  const all = heroOnly(state.matches), mine = all.filter(m => m.hero === hero).slice(-WK_LAST);
+  const all = heroOnly(state.matches), heroAll = all.filter(m => m.hero === hero), mine = wkMine(heroAll);
   if (mine.length < WK_MIN) return [];
   // Verglichen wird nur mit demselben Helden: zuerst mit Spielern eine Stufe über deinem Rang im selben Modus (rvTbRef), sonst mit deinen
   // früheren Matches mit diesem Helden. Andere Helden derselben Rolle spielen sich anders (Cloak & Dagger stirbt anders als Mantis).
-  const older = all.filter(m => m.hero === hero).slice(0, -WK_LAST).slice(-30);
+  const older = wkLast() === Infinity ? [] : heroAll.slice(0, -wkLast()).slice(-30);
   const s = summary(mine), so = older.length >= 5 ? summary(older) : null, out = [];
   // Für den Vergleich mit anderen Spielern zählen nur deine Matches im häufigsten Modus (Quick Match oder Competitive), damit die Werte passen
   const modes = group(mine, m => m.mode || ""), mode = Object.keys(modes).sort((a, b) => modes[b].length - modes[a].length)[0] || "";
@@ -14452,21 +14458,27 @@ function wkWeakHtml(w) {
       <button type="button" class="btn small" data-wk="accept" data-hero="${esc(w.hero)}" data-w="${w.id}">Mission annehmen</button></div>`) : ""}</div>`;
 }
 function wkHeroCardHtml(h, ws) {
-  const mine = heroOnly(state.matches.filter(m => m.hero === h)), s = summary(mine.slice(-WK_LAST));
-  return `<div class="card wkcard"><div class="card-head"><h2>${heroChip(h)}</h2><span class="muted small">${plural(Math.min(mine.length, WK_LAST), "Match", "Matches")} · ${pct(s.wr)} Siege${isFinite(s.d) ? ` · Ø ${numDe(s.d.toFixed(1))} Tode` : ""}</span></div>${ws.map(wkWeakHtml).join("")}</div>`;
+  const mine = wkMine(heroOnly(state.matches.filter(m => m.hero === h))), s = summary(mine);
+  return `<div class="card wkcard"><div class="card-head"><h2>${heroChip(h)}</h2><span class="muted small">${plural(mine.length, "Match", "Matches")} · ${pct(s.wr)} Siege${isFinite(s.d) ? ` · Ø ${numDe(s.d.toFixed(1))} Tode` : ""}</span></div>${ws.map(wkWeakHtml).join("")}</div>`;
 }
 function renderWeak() {
   const el = $("#weakBody"), heroes = wkHeroes(), rv = rvState();
   const found = heroes.map(h => [h, wkFind(h)]), withF = found.filter(x => x[1].length), plain = found.filter(x => !x[1].length).map(x => x[0]);
   const open = rv.missions.filter(x => x.status === "open"), closed = rv.missions.filter(x => x.status !== "open").slice(-6).reverse();
   el.innerHTML = `<div class="card"><div class="card-head"><h2>${icon("target")}Schwächen-Training</h2></div>
-    <p class="lead">Die App schaut sich deine letzten ${WK_LAST} Matches pro Held an und sucht, was sich lohnt: mehr Tode als Spieler eine Stufe über deinem Rang mit demselben Helden (Quick Match mit Quick Match, Competitive mit Competitive), eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen. Jeder Held wird nur mit sich selbst verglichen: mit der Mitte der Spieler eine Stufe über deinem Rang auf genau diesem Helden (deinen Rang wählst du auf «Rang-Weg»), sonst mit deinen früheren Matches mit ihm. Ohne Rang gilt in Competitive die Mitte der Celestial-Spieler, in Quick Match zählen dann nur deine eigenen Matches. Nie mit anderen Helden, denn Cloak & Dagger spielt sich anders als Mantis.</p>
+    <p class="lead">Die App schaut sich ${wkLastTxt()} pro Held an und sucht, was sich lohnt: mehr Tode als Spieler eine Stufe über deinem Rang mit demselben Helden (Quick Match mit Quick Match, Competitive mit Competitive), eine häufige Todesursache, wenig Heilung oder Schaden, Ults ohne Wirkung, ein Gegner, gegen den es nicht läuft. Zu jedem Fund gibt es passende Lektionen und Übungen sowie eine kleine Mission über die nächsten 3 Matches. Die Missionen prüft die App allein aus deinen Zahlen. Jeder Held wird nur mit sich selbst verglichen: mit der Mitte der Spieler eine Stufe über deinem Rang auf genau diesem Helden (deinen Rang wählst du auf «Rang-Weg»), sonst mit deinen früheren Matches mit ihm. Ohne Rang gilt in Competitive die Mitte der Celestial-Spieler, in Quick Match zählen dann nur deine eigenen Matches. Nie mit anderen Helden, denn Cloak & Dagger spielt sich anders als Mantis.</p>
+    <div class="chips wkwin"><span class="small muted">Matches pro Held:</span>${WK_WINDOWS.map(v => { const on = (v || Infinity) === wkLast(); return `<button type="button" class="chip ${on ? "on" : ""}" data-wkwin="${v}" aria-pressed="${on}">${v || "Alle"}</button>`; }).join("")}</div>
+    <p class="small muted" style="margin:4px 0 8px">Mehr Matches machen die Aussage sicherer. Was sich in den letzten Tagen verbessert hat, fällt dann aber weniger auf. «Früher» heisst: die bis zu 30 Matches davor${wkLast() === Infinity ? "; bei «Alle» gibt es kein «früher», nur den Vergleich mit Spielern über deinem Rang" : ""}.</p>
     <p class="small muted" style="margin:0">Das sind Hinweise aus kleinen Stichproben, keine Urteile. Ob Missionen dein Spiel verbessern, ist für Marvel Rivals nicht untersucht.</p></div>
     ${open.length ? `<div class="card"><div class="card-head"><h2>${icon("check")}Offene Missionen</h2><span class="badge">${open.length} von ${WK_OPEN_MAX}</span></div>${open.map(wkMissionHtml).join("")}</div>` : ""}
     ${heroes.length ? withF.slice(0, 8).map(([h, ws]) => wkHeroCardHtml(h, ws)).join("") : empty(`Noch kein Held mit mindestens ${WK_MIN} Matches. Sobald du ${WK_MIN} Matches mit einem Helden hast, zeigt die App hier, was sich lohnt.`, "heroes")}
-    ${plain.length ? foldHtml("wk-plain", "Ohne Auffälligkeit", `<p class="lead" style="margin:0 0 8px">Bei diesen Helden sieht die App in deinen Zahlen keinen klaren Hebel. Das heisst nicht, dass alles perfekt ist: Trag im Review Todesursachen ein, dann wird die Auswertung genauer.</p>${table(["Held", "#Matches", "#Siege", "#Ø Tode"], plain.map(h => { const m = state.matches.filter(x => x.hero === h).slice(-WK_LAST), s = summary(m); return [heroChip(h), m.length, pct(s.wr), isFinite(s.d) ? numDe(s.d.toFixed(1)) : "–"]; }))}`, { icon: "heroes", sub: plain.length === 1 ? plain[0] : `${plain.length} Helden` }) : ""}
+    ${plain.length ? foldHtml("wk-plain", "Ohne Auffälligkeit", `<p class="lead" style="margin:0 0 8px">Bei diesen Helden sieht die App in deinen Zahlen keinen klaren Hebel. Das heisst nicht, dass alles perfekt ist: Trag im Review Todesursachen ein, dann wird die Auswertung genauer.</p>${table(["Held", "#Matches", "#Siege", "#Ø Tode"], plain.map(h => { const m = wkMine(state.matches.filter(x => x.hero === h)), s = summary(m); return [heroChip(h), m.length, pct(s.wr), isFinite(s.d) ? numDe(s.d.toFixed(1)) : "–"]; }))}`, { icon: "heroes", sub: plain.length === 1 ? plain[0] : `${plain.length} Helden` }) : ""}
     ${closed.length ? foldHtml("wk-closed", "Abgeschlossene Missionen", closed.map(wkMissionHtml).join(""), { icon: "check", sub: `${plural(rv.missions.filter(x => x.status === "done").length, "Mission", "Missionen")} geschafft` }) : ""}`;
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-wkwin]") : null; if (!b) return;
+  state.settings.wkLast = +b.dataset.wkwin; save(); rvRerender();
+});
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-wk]");
   if (!b) return;
@@ -16150,7 +16162,7 @@ const PAGE_HELP = {
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
   review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
   video: ["Video-Review", ["Wähl oben eine Aufnahme von deinem PC (MP4). Sie bleibt auf dem PC, die App merkt sich nur deine Markierungen.", "Prüf das Match darunter. Die App schlägt eins vor, wenn der Dateiname oder das Dateidatum die Aufnahmezeit verrät.", "Beim Anschauen tippst du bei jedem Tod auf «Tod» (Taste T) und wählst die Ursache. Genauso deine Ult (U), Gegner-Ults (G), gewonnene (W) und verlorene Fights (V), gute Momente (B) und Notizen (N).", "Ein Tipp auf eine Zeit in der Liste springt fünf Sekunden davor ins Video. Unten übernimmst du Todesursachen und Ults ins Match; im Review steht beim Match, was du markiert hast.", "Neu als Versuch: «Video durchsuchen» schlägt dir Tode, Kills und Ults vor. Du sagst bei jedem Fund «Stimmt» oder «Stimmt nicht».", "Bist du fertig, tippst du auf «Auswertung abschliessen». Oben in «Deine Aufnahmen» siehst du dann, welche Aufnahmen schon ausgewertet sind."]],
-  weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten 12 Matches und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
+  weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten Matches (Standard 30, oben einstellbar: 12, 30, 60 oder alle) und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
 function renderPageHelp(name) {
