@@ -1909,6 +1909,8 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .vidrlist { margin: 4px 0 0; padding-left: 0; list-style: none; display: grid; gap: 4px; }
 .vidrlist li { overflow-wrap: anywhere; }
 .vidrlist li.done { opacity: .75; }
+.vidfile.vidfolder { margin-top: 8px; padding: 12px; border-style: dotted; }
+.vidfold { margin: 8px 0 0; display: grid; gap: 4px; }
 .rvvid .i { width: 15px; height: 15px; color: var(--accent-strong); }
 @media (max-width: 640px) {
   .hcgrid { grid-template-columns: minmax(0, 1fr); }
@@ -4308,7 +4310,8 @@ function loadState(raw) {
   st.watch = Object.assign({ log: [] }, st.watch);   // Zuschauen: deine Antworten zu den Streamer-Aufgaben
   st.pro = Object.assign({ notes: [] }, st.pro);   // Profi-Notizbuch
   if (!Array.isArray(st.qnotes)) st.qnotes = [];
-  if (!st.vids || typeof st.vids !== "object" || Array.isArray(st.vids)) st.vids = {};   // Video-Review: Markierungen pro Aufnahme (das Video selbst bleibt auf dem PC)   // Schnellnotizen nach dem Match, bis sie einem Match zugeordnet sind
+  if (!st.vids || typeof st.vids !== "object" || Array.isArray(st.vids)) st.vids = {};
+  Object.keys(st.vids).forEach(k => { const r = st.vids[k]; if (!r || typeof r !== "object" || Array.isArray(r)) delete st.vids[k]; else if (!Array.isArray(r.marks)) r.marks = []; });   // Video-Review: Markierungen pro Aufnahme (das Video selbst bleibt auf dem PC)   // Schnellnotizen nach dem Match, bis sie einem Match zugeordnet sind
   if (!Array.isArray(st.pro.notes)) st.pro.notes = [];
   st.rv = Object.assign({ pins: {}, missions: [], badges: {} }, st.rv);   // Review: Auswahl des Tages, Schwächen-Missionen, Abzeichen
   if (!st.rv.pins || typeof st.rv.pins !== "object") st.rv.pins = {};
@@ -18107,14 +18110,14 @@ const VID_KINDS = {
   win: { l: "Fight gewonnen", key: "w" }, loss: { l: "Fight verloren", key: "v" }, good: { l: "Gut gemacht", key: "b" }, note: { l: "Notiz", key: "n" }
 };
 const VID_ULT = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
-const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false };
+const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false, folder: null, folderName: "" };
 const vidStore = () => (state.vids = state.vids && typeof state.vids === "object" ? state.vids : {});
 const vidKey = f => f.name + "|" + f.size;
 const vidRec = () => vidUi.key ? vidStore()[vidUi.key] : null;
 const vidFmt = t => { t = Math.max(0, Math.floor(+t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); };
-// Aufnahmezeit aus dem Dateinamen: «2026.11.04 - 21.33.12» (NVIDIA), «2026-11-04 21-33-12» (OBS, Xbox Game Bar), «20261104_213312»
+// Aufnahmezeit aus dem Dateinamen: «2026.11.04 - 21.33.12» (NVIDIA), «2026-11-04 21-33-12» (OBS, Xbox Game Bar), «20261104_213312», «20261104213312»
 function vidNameTime(name) {
-  const m = /(20\d\d)[.\-_]?(\d\d)[.\-_]?(\d\d)[ _\-T.]+(\d\d)[.\-_:h]?(\d\d)[.\-_:m]?(\d\d)/.exec(String(name || ""));
+  const m = /(?:^|\D)(20\d\d)[.\-_]?(\d\d)[.\-_]?(\d\d)[ _\-T.]*(\d\d)[.\-_:h]?(\d\d)[.\-_:m]?(\d\d)(?!\d)/.exec(String(name || ""));   // auch kompakt «20261107203512»
   if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31 || +m[4] > 23 || +m[5] > 59 || +m[6] > 59) return 0;
   const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
   return isFinite(d) ? d : 0;
@@ -18406,7 +18409,7 @@ async function vidDone() {
   toast(`Aufnahme abgeschlossen${took.length ? `. Ins Match übernommen: ${took.join(" und ")}` : ""}.`);
 }
 function vidRecentHtml() {
-  const V = vidStore(), all = Object.entries(V).sort((a, b) => (b[1].start || b[1].at || 0) - (a[1].start || a[1].at || 0));
+  const V = vidStore(), all = Object.entries(V).filter(([, r]) => r && typeof r === "object").sort((a, b) => (b[1].start || b[1].at || 0) - (a[1].start || a[1].at || 0));
   if (!all.length) return "";
   const done = all.filter(([, r]) => r.done).length, rec = vidRec();
   return `<details class="small vidrecent"${rec ? "" : " open"}><summary>Deine Aufnahmen: ${done} von ${all.length} ausgewertet</summary><ul class="vidrlist">${all.slice(0, 30).map(([k, r]) => {
@@ -18414,7 +18417,23 @@ function vidRecentHtml() {
     return `<li class="${r.done ? "done" : ""}">${vidStatusHtml(r)} <span class="vidname">${esc(r.name)}</span>${m ? ` <span class="muted">· ${esc(vidMatchLabel(m))}</span>` : ""}${k === vidUi.key ? " <b>(gerade offen)</b>" : ""}</li>`;
   }).join("")}</ul><p class="muted" style="margin:4px 0 0">Zum Weitermachen wählst du die Datei oben noch einmal aus. Aus Sicherheitsgründen darf die App Dateien nicht selbst öffnen.</p></details>`;
 }
-function vidRecentDraw() { const el = $("#vidRecent"); if (el) el.innerHTML = vidRecentHtml(); const st = $("#vidStatus"); if (st) st.innerHTML = vidStatusHtml(vidRec()); }
+function vidRecentDraw() { vidFolderDraw(); const el = $("#vidRecent"); if (el) el.innerHTML = vidRecentHtml(); const st = $("#vidStatus"); if (st) st.innerHTML = vidStatusHtml(vidRec()); }
+// Ganzer Ordner: Die Ordnerwahl des Browsers (webkitdirectory) gibt der App die Dateien im Ordner. Sie liest nur Namen, Grösse und
+// Datum; geöffnet (abgespielt) wird erst die Datei, die du antippst. Nichts wird hochgeladen, auch wenn der Browser «hochladen» fragt.
+// Die Liste lebt nur bis zum Neuladen (vidUi.folder); auf den Ordner selbst darf die App ohne deine Wahl nicht zugreifen.
+const VID_EXT = /\.(mp4|webm|mov|mkv|m4v)$/i;
+const vidDirOk = (() => { try { return "webkitdirectory" in document.createElement("input"); } catch (e) { return false; } })();
+const vidRecOf = f => { const V = vidStore(); return V[vidKey(f)] || Object.values(V).find(r => r && r.size === f.size) || null; };
+function vidFolderHtml() {
+  const fs = vidUi.folder;
+  if (!fs) return "";
+  if (!fs.length) return `<p class="small muted" style="margin:6px 0 0">In diesem Ordner sind keine Videos.</p>`;
+  const rows = fs.map((f, i) => ({ f, i, r: vidRecOf(f) })), done = rows.filter(x => x.r && x.r.done).length;
+  rows.sort((a, b) => (!!(a.r && a.r.done) - !!(b.r && b.r.done)) || (b.f.lastModified || 0) - (a.f.lastModified || 0));
+  return `<div class="vidfold"><b class="small">${fs.length} ${fs.length === 1 ? "Video" : "Videos"} im Ordner${vidUi.folderName ? ` «${esc(vidUi.folderName)}»` : ""}, ${done} ausgewertet</b>
+    <ul class="vidrlist">${rows.map(x => `<li class="${x.r && x.r.done ? "done" : ""}">${x.r ? vidStatusHtml(x.r) : `<span class="badge">neu</span>`} <span class="vidname">${esc(x.f.name)}</span>${vidKey(x.f) === vidUi.key ? " <b>(gerade offen)</b>" : ` <button type="button" class="linkbtn small" data-vidpick="${x.i}">öffnen</button>`}</li>`).join("")}</ul></div>`;
+}
+function vidFolderDraw() { const el = $("#vidFolder"); if (el) el.innerHTML = vidFolderHtml(); }
 function renderVideo(fresh) {
   const el = $("#videoBody"); if (!el) return;
   const rec = vidRec();
@@ -18423,6 +18442,9 @@ function renderVideo(fresh) {
   el.innerHTML = `<div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
       <p class="small" style="margin:0 0 8px">Wähl eine Aufnahme von deinem PC (MP4). Das Video bleibt auf deinem PC: Die App lädt nichts hoch und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
       <label class="vidfile"><input type="file" id="vidFile" accept="video/*,.mp4,.mov,.webm,.mkv"><span>${icon("upload")}Video auswählen oder hierher ziehen</span></label>
+      ${vidDirOk ? `<label class="vidfile vidfolder"><input type="file" id="vidDir" webkitdirectory multiple><span>${icon("list")}Ganzen Ordner wählen</span></label>
+      <p class="small muted" style="margin:4px 0 0">Wähl zum Beispiel deinen Ordner «Rivals Aufnahmen». Die App zeigt dann alle Videos darin mit «neu», «noch offen» oder «ausgewertet». Der Browser fragt dabei, ob er die Dateien «hochladen» soll: Die App lädt trotzdem nichts hoch, sie liest nur Namen und Grösse.</p>` : ""}
+      <div id="vidFolder">${vidFolderHtml()}</div>
       <div id="vidRecent">${vidRecentHtml()}</div>
       <p class="small muted" style="margin:6px 0 0">Am besten geht MP4 (H.264), wie NVIDIA, Medal oder die Xbox Game Bar es speichern. OBS speichert oft MKV; stell dort für den Review MP4 ein.</p></div>
     ${rec ? `<div class="card vidplay"><div class="card-head"><h2 class="vidname">${esc(rec.name)}</h2><span id="vidStatus">${vidStatusHtml(rec)}</span></div>
@@ -18443,6 +18465,11 @@ function vidBind(el) {
   vidUi.bound = true;
   el.addEventListener("change", e => {
     if (e.target.id === "vidFile" && e.target.files && e.target.files[0]) vidOpenFile(e.target.files[0]);
+    if (e.target.id === "vidDir" && e.target.files) {
+      const all = [...e.target.files], first = all[0] && all[0].webkitRelativePath ? all[0].webkitRelativePath.split("/")[0] : "";
+      vidUi.folder = all.filter(f => VID_EXT.test(f.name) || /^video\//.test(f.type || "")); vidUi.folderName = first;
+      vidFolderDraw();
+    }
     if (e.target.id === "vidMatch") { vidUi.mid = e.target.value; vidUi.pend = ""; vidParts(); }
   });
   el.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("[data-vidnm]")) e.target.select(); });
@@ -18461,6 +18488,7 @@ function vidBind(el) {
     else if (b.dataset.vidstep && v) v.currentTime = Math.max(0, v.currentTime + +b.dataset.vidstep);
     else if (b.dataset.vidrate && v) v.playbackRate = +b.dataset.vidrate;
     else if (b.dataset.vidtake) vidTake(b.dataset.vidtake);
+    else if (b.dataset.vidpick && vidUi.folder) { const f = vidUi.folder[+b.dataset.vidpick]; if (f) { vidUi.mid = ""; vidOpenFile(f); window.scrollTo({ top: 0 }); } }
     else if (b.dataset.viddone) vidDone();
     else if (b.dataset.vidreopen) { const r = vidRec(); if (r) { delete r.done; delete r.doneMid; save(); vidParts(); } }
     else if (b.dataset.vidcopy) { const i = el.querySelector("[data-vidnm]"); if (i) { const ok = () => toast("Name kopiert. Jetzt im Explorer die Datei anklicken, F2 drücken und einfügen."); try { navigator.clipboard.writeText(i.value).then(ok, () => { i.focus(); i.select(); toast("Name markiert. Mit Strg+C kopieren."); }); } catch (e) { i.focus(); i.select(); } } }
