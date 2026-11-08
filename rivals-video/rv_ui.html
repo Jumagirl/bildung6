@@ -74,8 +74,15 @@ const TOKEN = "__TOKEN__";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = t => { t = Math.max(0, Math.floor(+t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); };
-const get = p => fetch(p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN), { cache: "no-store" }).then(r => r.json());
-const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(b || {}) }).then(r => r.json()).then(j => { if (j && j.error) { alert(j.error); throw new Error(j.error); } return j; });
+// Alter Schlüssel (Programm neu gestartet, Tab offen geblieben): Seite einmal neu laden, dann gilt der neue
+function reloadOnce() {
+  let last = 0; try { last = +sessionStorage.getItem("rvReload") || 0; } catch (e) { /* egal */ }
+  if (Date.now() - last > 15000) { try { sessionStorage.setItem("rvReload", String(Date.now())); } catch (e) { /* egal */ } location.reload(); return true; }
+  return false;
+}
+const check = j => { if (j && j.code === "token" && reloadOnce()) throw new Error("neu laden"); return j; };
+const get = p => fetch(p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN), { cache: "no-store" }).then(r => r.json()).then(check).then(j => { if (j && j.error) throw new Error(j.error); return j; });
+const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(b || {}) }).then(r => r.json()).then(check).then(j => { if (j && j.error) { alert(j.code === "token" ? "Die Seite ist veraltet. Bitte mit F5 neu laden." : j.error); throw new Error(j.error); } return j; });
 const KEYS = { death: "t", kill: "k", ult: "u", eult: "g", win: "w", loss: "v", good: "b", note: "n" };
 const ULT_V = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
 const EV_L = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
@@ -177,7 +184,7 @@ async function poll() {
     const cur = S.videos.find(v => v.id === sel), s2 = cur ? [cur.status, cur.events, cur.marks, cur.open, cur.done, cur.analyzed].join("|") : "";
     if (sel && !cur) { sel = ""; V = null; renderMain(); }
     else if (s2 !== sig && !document.activeElement.matches("input[data-note]")) { sig = s2; await loadVideo(); }
-  } catch (e) { $("#work").textContent = "Keine Verbindung zum Programm. Läuft das Fenster «Rivals Video» noch?"; }
+  } catch (e) { if (e.message !== "neu laden") $("#work").textContent = /Failed|NetworkError|fetch/i.test(e.message) ? "Keine Verbindung zum Programm. Läuft das Fenster «Rivals Video» noch?" : "Fehler: " + e.message + " (Seite mit F5 neu laden)"; }
 }
 function addMark(k) {
   const v = $("#vid"); if (!v || !V) return;

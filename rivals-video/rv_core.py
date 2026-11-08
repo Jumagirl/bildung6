@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 FPS = 4                      # Bilder pro Sekunde für die Messung (Browser-Version: 1)
 W, H = 480, 270              # Messbild (Bereiche sind relativ, das Seitenverhältnis spielt kaum eine Rolle)
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}

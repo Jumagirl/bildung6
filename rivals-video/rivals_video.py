@@ -63,7 +63,10 @@ def default_folder() -> Path:
 
 class App:
     def __init__(self, folder: Path):
-        self.token = secrets.token_urlsafe(16)
+        cfg = load_config()   # der Schlüssel bleibt über Neustarts gleich, damit offene Browser-Tabs weiter gehen
+        self.token = cfg.get("token") or secrets.token_urlsafe(16)
+        if cfg.get("token") != self.token:
+            cfg["token"] = self.token; save_config(cfg)
         self.lock = threading.RLock()
         self.work = {"key": "", "name": "", "p": 0.0, "msg": ""}
         self.wake = threading.Event()
@@ -170,8 +173,8 @@ def make_handler(app: App, port: int):
             self.end_headers()
             self.wfile.write(body)
 
-        def _deny(self, code=403, msg="nicht erlaubt"):
-            self._json({"error": msg}, code)
+        def _deny(self, code=403, msg="nicht erlaubt", why=""):
+            self._json({"error": msg, "code": why}, code)
 
         def do_GET(self):
             if not self._ok_host():
@@ -187,7 +190,7 @@ def make_handler(app: App, port: int):
                 self.end_headers()
                 return self.wfile.write(body)
             if (q.get("token") or [""])[0] != app.token:
-                return self._deny()
+                return self._deny(why="token")
             if u.path == "/api/state":
                 return self._json(app.state())
             if u.path.startswith("/api/video/"):
@@ -241,8 +244,10 @@ def make_handler(app: App, port: int):
                 pass
 
         def do_POST(self):
-            if not self._ok_host() or self.headers.get("X-Token") != app.token:
+            if not self._ok_host():
                 return self._deny()
+            if self.headers.get("X-Token") != app.token:
+                return self._deny(why="token")
             try:
                 n = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(n) or b"{}") if n else {}
@@ -319,6 +324,8 @@ def choose_folder(current: Path) -> str:
 def free_port(start: int) -> int:
     for port in range(start, start + 30):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if os.name != "nt":   # nach einem Neustart denselben Port nehmen (wie der Server selbst)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("127.0.0.1", port))
                 return port
