@@ -18227,7 +18227,7 @@ async function vidTake(what) {
 const VID_SCAN = {
   v: 1, step: 1, w: 480,
   r: { cnt: [0, 0.02, 0.10, 0.13], feed: [0.70, 0.02, 0.99, 0.14], ult: [0.89, 0.84, 0.98, 0.97] },
-  dead: 0.05, deadGap: 3, deadMin: 3, kill: 0.012, killQuiet: 0.005, ultOn: 0.012, ultOff: 0.004
+  dead: 0.05, deadGap: 3, deadMin: 3, deadLead: 1, kill: 0.012, killQuiet: 0.005, ultOn: 0.012, ultOff: 0.004
 };
 const VID_SCAN_K = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
 const vidScanUi = { run: false, stop: false, p: 0, err: "" };
@@ -18259,7 +18259,7 @@ function vidScanEvents(S) {
   let lastDead = -1e9, prevFeed = 0, ready = 0;
   S.forEach(s => {
     if (s.cnt > C.dead) {
-      if (deathAt.has(s.t)) out.push({ t: s.t, k: "death", f: s });
+      if (deathAt.has(s.t)) out.push({ t: Math.max(0, Math.round((s.t - C.deadLead) * 10) / 10), k: "death", f: s });   // die Zahl kommt laut Nutzerin minimal verzögert (Schätzung: 1 s)
       lastDead = s.t; ready = 0; prevFeed = s.feed;
       return;   // solange die Zahl läuft, zeigt das Spiel die Sicht eines Gegners oder Teammates: deren Anzeigen zählen nicht
     }
