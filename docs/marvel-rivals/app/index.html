@@ -420,6 +420,7 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .qnfab.alt { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .qnfab.alt svg.i { color: var(--good-text); }
 @media (max-width: 900px) { .qnfabs { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); right: 14px; } .qnfab { padding: 10px 14px; } }
+.brwhat { margin: 6px 0 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
 .qnquick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
 .ptrow .pttime { font-variant-numeric: tabular-nums; min-width: 3.2em; color: var(--muted); }
 .ptrow.wait .sp b { color: var(--warn); }
@@ -2371,6 +2372,7 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 <!-- DATA -->
 <section id="tab-data" hidden>
+  <div class="card" id="platCard"></div>
   <div class="card">
     <div class="card-head"><h2 data-icon="data">Speicherort</h2></div>
     <div class="sync-status" id="storageInfo"></div>
@@ -4346,6 +4348,35 @@ function loadState(raw) {
   return st;
 }
 let state = loadState();
+// ---------- Plattform (Wunsch der Nutzerin am 08.11.2026: Sie spielt auf der PS5, die App ging von PC aus) ----------
+// Die Quellen (Heldenprofile PROF, Spielsysteme SYS) nennen Tasten am PC. Ausser am PC lässt die App sie weg oder sagt neutral, was gemeint ist
+// (Linksklick ist am PC der Normalangriff, Leertaste der Sprung). Controller-Tasten nennt sie nicht, weil die Quellen sie nicht angeben.
+// Die Texte werden an Ort und Stelle ersetzt; die Originale bleiben in PLAT_SRC, damit der Wechsel zurück auf PC ohne Neuladen geht.
+const PLATFORMS = [["ps5", "PS5"], ["xbox", "Xbox"], ["pc", "PC"]];
+const PLAT_RD = { pc: 1, ps5: 2, xbox: 4 }, PLAT_NAME_RD = { 1: "PC", 2: "PlayStation", 4: "Xbox" };   // Plattform-Nummern bei Rivals Data (Tierliste)
+const platform = () => { const v = (state.settings || {}).platform; return PLAT_RD[v] ? v : ""; };
+const PLAT_TX = [[/ \(Rechtsklick\)/g, ""], [/heraus \(Linksklick\) stürmst/g, "heraus mit dem Normalangriff stürmst"], [/ \(Linksklick\)/g, ""], [/ \(Shift\)/g, ""],
+  [/\(Leertaste halten\)/g, "(Sprung gedrückt halten)"], [/Halte die Maus gedrückt auf/g, "Halte den Normalangriff gedrückt auf"],
+  [/hilft eine hohe Maus-Empfindlichkeit \(Casual-Tierliste\)/g, "hilft eine hohe Empfindlichkeit (Casual-Tierliste, dort für die Maus genannt)"],
+  [/auf der rechten Maustaste Psionic/g, "auf der rechten Maustaste (am PC) Psionic"], [/\(am PC mit M öffnen, dann den Ping-Knopf drücken\)/g, "(Karte öffnen, dann den Ping-Knopf drücken)"],
+  [/wählst du mit Rechtsklick einen/g, "wählst du einen"], [/beschreibt als Beispiel, Shift entgegen/g, "beschreibt als Beispiel, Shift (am PC) entgegen"], [/„Rechtsklick auf Gelände“/g, "„Rechtsklick auf Gelände“ (am PC)"]];
+const PLAT_SRC = {};
+let platApplied = null;   // für welche Plattform die Texte gerade stehen; render() gleicht ab (PROF und SYS sind hier noch nicht definiert)
+function platWalk(o, orig, pc) {
+  Object.keys(o).forEach(k => {
+    const v = o[k], w = orig[k];
+    if (typeof w === "string") o[k] = pc ? w : PLAT_TX.reduce((t, [rx, r]) => t.replace(rx, r), w);
+    else if (v && typeof v === "object" && w && typeof w === "object") platWalk(v, w, pc);
+  });
+}
+function platApply() {
+  const pc = platform() === "pc";
+  [["PROF", PROF], ["SYS", SYS]].forEach(([k, o]) => {
+    if (!PLAT_SRC[k]) PLAT_SRC[k] = JSON.parse(JSON.stringify(o));
+    platWalk(o, PLAT_SRC[k], pc);
+  });
+  platApplied = platform();
+}
 
 // ---------- Speicherung: Konto (online) oder Browser (lokal) ----------
 // Online-Version: privat im Claude-Konto (db-Capability, data/users/<id>/...), auf allen Geräten gleich.
@@ -5814,7 +5845,7 @@ function renderToday() {
   if (!g) prep.push({ done: false, t: "Wochenziel setzen", s: "Einmal pro Woche: ein Ziel gibt dem Training Richtung · im Reiter «Woche»", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
   // 2) Spielen
   const withN = tm.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().filter(q => !q.played).length, pend = qnToday().length;
-  if (inPlan && !trainedToday) { const st = dayGet(cur).steps || {}, bd = ["b1", "b2", "b3"].every(k => st[k] || !PLAN.days[cur - 1].steps.some(x => x.key === k));
+  if (inPlan && !trainedToday) { const st = dayGet(cur).steps || {}, bd = ["b1", "b2", "b3"].every(k => st[k] || brSkipped(cur, k) || !PLAN.days[cur - 1].steps.some(x => x.key === k));
     play.push({ done: bd, t: `Block 1 bis 3 spielen`, s: `${tm.length + pend} von ${3 * B} Matches heute${pend ? ` (${pend} noch ohne Abgleich)` : ""} · die Aufgaben stehen im Trainingstag bei den Blöcken`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Zu den Blöcken</button>` }); }
   else if (!tm.length && !pend) play.push({ done: false, t: "Spielen und festhalten", s: "Spiel deine Matches. Nach jedem Match: kurze Notiz oder «Gespielt».", a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
   play.push({ done: tm.length > 0 && withN >= tm.length, t: "Nach jedem Match: Notiz", s: `${tm.length ? `${withN} von ${plural(tm.length, "Match", "Matches")} mit Notiz` : "Noch keine Matches vom Abgleich"}${waiting ? ` · ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""} · im Match mit ✓ und ✗ mitzählen, danach bewerten`,
@@ -7420,7 +7451,7 @@ function rvNoteHtml(m) {
   if (!q.noted) return "";
   const tl = k => { const t = (q.tally || {})[k]; return t && (t.ok || t.no) ? ` (✓${t.ok} ✗${t.no})` : ""; };
   const fx = fxForMatch(m).map(it => { const v = fxGet(m, it); return v === undefined || v === "" ? "" : `${it.tag}: ${fxLabel(it.key, v)}${tl(it.key)}`; }).filter(Boolean);
-  const bits = [...fx, q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra || ""].filter(Boolean);
+  const bits = [...fx, q.stack === "stack" ? "Stack" : q.stack === "duo" ? "Duo" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra || ""].filter(Boolean);
   return `<div class="note info rvnoted" style="margin:0"><span class="ni" aria-hidden="true">✎</span><div><b>Das hast du beim Spielen notiert</b>${bits.length ? `<br>${esc(bits.join(" · "))}` : ""}${m.notes ? `<br>«${esc(m.notes)}»` : ""}
     <br><span class="small muted">Tode und Ults aus der Notiz stehen unten schon drin. Schau dir im Replay die Stellen genauer an und ergänze, was dir auffällt.</span></div></div>`;
 }
@@ -7544,7 +7575,7 @@ function qnBlkHtml(d) {
   const plan = focusPlan(n), auto = focusNow(null), ak = auto && !auto.done ? auto.blk.key : "", cur = d.blk || ak, f = d.blk ? focusNow(d.blk) : auto;
   if (plan.length < 2 && !d.blk) return "";
   return `<div class="qnrow qnblk"><b class="small">Block dieses Matches</b><span class="small muted">${d.blk ? (f && f.extra ? `Von dir gewählt: zusätzliches Match in ${focusBlockLabel(d.blk)}. Die Aufgabe oben passt dazu, der nächste Block beginnt danach.` : `Von dir gewählt: ${focusBlockLabel(d.blk)}. Die Aufgabe oben passt dazu.`) : `${ak ? `Die App zählt: ${focusBlockLabel(ak)}.` : "Alle Blöcke sind gespielt."} Mehr Matches mit einer Aufgabe gespielt als geplant? Tipp den Block an, zu dem dieses Match gehört.`}</span>
-    <div class="chips">${plan.map(b => `<button type="button" class="chip ${cur === b.key ? "on" : ""}" data-qnblk="${b.key}" aria-pressed="${cur === b.key}">${esc(focusBlockLabel(b.key))}${b.key === ak ? ` <span class="small muted">(App)</span>` : ""}</button>`).join("")}</div></div>`;
+    <div class="chips">${plan.filter(b => !brSkipped(n, b.key)).map(b => `<button type="button" class="chip ${cur === b.key ? "on" : ""}" data-qnblk="${b.key}" aria-pressed="${cur === b.key}">${esc(focusBlockLabel(b.key))}${b.key === ak ? ` <span class="small muted">(App)</span>` : ""}</button>`).join("")}</div></div>`;
 }
 function qnFxHtml(d) {
   const items = fxChosen(today()).filter(it => !d.prep || it.src !== "step"), fx = d.fx || {};
@@ -7603,11 +7634,11 @@ function qnAssignAll() {
   if (ch) state.qnotes = state.qnotes.filter(q => !q.match);
   return ch;
 }
-const qnSummary = q => [q.played ? "Gespielt, ohne Notiz" : "", (QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+const qnSummary = q => [q.played ? "Gespielt, ohne Notiz" : "", (QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "duo" ? "Duo" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
 // Notiz nach Lernstand: Welche Felder gehören zu dem, was du gerade lernst? Aus «Dein Fokus» (gewählte Punkte und Aufgabe des Blocks)
 // und dem Thema des Tages. Findet die App nichts, zeigt die Notiz alles wie bisher.
 const QN_PRIO = [["ult", /\bUlts?\b|\bUlt-|Ultimate/i], ["death", /\bTod\b|\bTode\b|Todesursach|stirbst|sterben|überleb|\bPosition|Deckung|Rückzug/i], ["stack", /\bVoice\b|Kommunikation|\bCalls?\b/i]];
-const QN_PRIO_LABEL = { ult: "Ults", death: "Tode", stack: "Solo oder Stack", extra: "Zusatz des Tages" };
+const QN_PRIO_LABEL = { ult: "Ults", death: "Tode", stack: "Solo, Duo oder Stack", extra: "Zusatz des Tages" };
 function qnPrio(d) {
   if (!d || d.prep) return [];
   const f = focusNow(), n = focusDay().n, texts = fxChosen(today()).map(x => x.t);
@@ -7628,7 +7659,7 @@ function qnSheetHtml0() {
   const prio = qnPrio(d), focus = !d.prep && fxChosen(today()).length > 0, more = (prio.length > 0 || focus) && !state.settings.qnAll;
   const parts = {
     stack: `${(() => { const f = focusNow(), rules = f && f.blk && !d.prep ? brRules(f.n, f.blk.key) : [], g = rules.find(r => r.k === "group"), v = rules.find(r => r.k === "voice");
-      return `<div class="qnrow qntwo"><div><b class="small">Solo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}`,
+      return `<div class="qnrow qntwo"><div><b class="small">Solo, Duo oder Stack</b>${g ? ` <span class="small muted">Plan: ${esc(g.label)}</span>` : ""}${seg("stack", [["solo", "Solo"], ["duo", "Duo"], ["stack", "Stack"]])}</div><div><b class="small">Voice</b>${v ? ` <span class="small muted">Plan: ${esc(v.label)}</span>` : ""}${seg("voice", [["ja", "Ja"], ["nein", "Nein"]])}</div></div>`; })()}`,
     ult: `<div class="qnrow"><b class="small">Ults</b><div class="qnsteps">${step("ults", "eingesetzt")}${step("ultHit", "mit Wirkung")}</div></div>`,
     death: qnDeathHtml(d),
     extra: `${extra ? `<label class="qnrow"><b class="small">Zusatz des Tages</b><span class="small muted">${esc(extra)}</span><input type="text" data-qntext="extra" value="${esc(d.extra)}" placeholder="Kurz eintragen"></label>` : ""}`
@@ -8379,7 +8410,7 @@ function renderMetaCard(ms) {
   }
   const meta = metaMap(), rd = rdMap();
   const m = state.sync.meta;
-  $("#metaInfo").textContent = `Sync vom ${fmtDate(state.sync.at)}${m ? ` · Tierlist: ${m.rank || "?"}${m.updated ? `, Stand ${fmtDate(m.updated) || m.updated}` : ""}` : ""}`;
+  $("#metaInfo").textContent = `Sync vom ${fmtDate(state.sync.at)}${m ? ` · Tierlist: ${m.rank || "?"}${PLAT_NAME_RD[m.platform] ? `, ${PLAT_NAME_RD[m.platform]}` : ""}${m.updated ? `, Stand ${fmtDate(m.updated) || m.updated}` : ""}` : ""}`;
   const app = group(ms, x => x.hero);
   const heroes = [...new Set(Object.keys(app).concat([...rd.keys()]))]
     .map(h => ({ h, a: summary(app[h] || []), r: rd.get(h), g: meta.get(h) }))
@@ -9334,10 +9365,23 @@ $("#aiCopy").addEventListener("click", () => copyText(buildPrompt(), "Prompt kop
 // ---------- Daten & Sync ----------
 function syncCommand() {
   const name = (state.settings.playerName || "DeinName").replace(/"/g, "");
-  return `python rivals_sync.py "${name}"`;
+  return `python rivals_sync.py "${name}"${PLAT_RD[platform()] && platform() !== "pc" ? ` --platform ${PLAT_RD[platform()]}` : ""}`;
 }
+function renderPlatCard() {
+  const el = $("#platCard"); if (!el) return;
+  const p = platform(), m = state.sync && state.sync.meta, mp = m && PLAT_NAME_RD[m.platform];
+  el.innerHTML = `<div class="card-head"><h2>${icon("heroes")}Deine Plattform</h2></div>
+    <div class="chips">${PLATFORMS.map(([k, l]) => `<button type="button" class="chip ${p === k ? "on" : ""}" data-plat="${k}" aria-pressed="${p === k}">${l}</button>`).join("")}</div>
+    <p class="small muted" style="margin:6px 0 0">${p === "pc" ? "Die App nennt bei Fähigkeiten die Tasten am PC (zum Beispiel Rechtsklick oder Shift), so wie die Quellen sie angeben." : "Die Quellen nennen bei Fähigkeiten die Tasten am PC (Rechtsklick, Shift, Leertaste, Maus). Die App lässt sie weg oder sagt es neutral (zum Beispiel «Normalangriff»). Tasten für den Controller nennt sie nicht, weil die Quellen sie nicht angeben."}${mp ? ` Die Tierliste im Abgleich stammt von ${mp}-Spielern${p && PLAT_NAME_RD[PLAT_RD[p]] !== mp ? `, nicht von ${(PLATFORMS.find(x => x[0] === p) || [, ""])[1]}-Spielern` : ""}.` : ""}</p>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest("[data-plat]") : null; if (!b) return;
+  state.settings.platform = b.dataset.plat; save(); render();
+  toast(`Gespeichert: Du spielst auf ${(PLATFORMS.find(x => x[0] === b.dataset.plat) || [, ""])[1]}.`);
+});
 function renderData() {
   renderStorageInfo();
+  renderPlatCard();
   renderBridge();
   $("#scriptLinkWrap").hidden = IN_VIEWER;
   $("#syncPlayer").value = state.settings.playerName || "";
@@ -10337,7 +10381,7 @@ function metaPicks() {
       // Fehlen im Sync Werte für eine Rolle, die gespeicherte Momentaufnahme zeigen
       if (!out[r].length) out[r] = META_SNAPSHOT.picks[r].map(([h, wr]) => [h, `${wr} (${META_SNAPSHOT.label})`]);
     });
-    return { label: `Rivals Data · Sync vom ${fmtDate(state.sync.at)}${state.sync.meta.rank ? ` · ${state.sync.meta.rank}` : ""}`, picks: out };
+    return { label: `Rivals Data · Sync vom ${fmtDate(state.sync.at)}${state.sync.meta.rank ? ` · ${state.sync.meta.rank}` : ""}${PLAT_NAME_RD[state.sync.meta.platform] ? ` · ${PLAT_NAME_RD[state.sync.meta.platform]}` : ""}`, picks: out };
   }
   return META_SNAPSHOT;
 }
@@ -11611,20 +11655,35 @@ function brRaw(n, key) {
 // (dayGet(n).alt[key] = Liste aus «qm», «stack», «voice»): Die betroffene Regel wird ersetzt, die Matches zählen auch in der Stufe streng,
 // dafür gilt eine Ersatz-Aufgabe, die den Zweck der Regel aufgreift. Die Ersatz-Aufgaben sind Vorschläge der App, keine belegte Methode.
 const brStackPref = () => (state.settings || {}).usualGroup === "stack";
+// Seit Version 86 in beide Richtungen (Wunsch der Nutzerin: am Kommunikationstag nur Block 1 im Duo, danach solo): solo statt Stack, ohne Voice
+// statt mit, zu zweit (Duo) statt solo, Ranked statt Quick Match. Pings gibt es am PC und auf der Konsole (SYS «Pings und Voice»).
+const BR_TASK_GROUP = "Triff deine Entscheidungen so, als wärst du solo: Frag dich vor jedem Fight selbst, wo du stehst und wen du schützt, statt nur auf die Absprachen zu hören.";
 const BR_ALT = {
   qm: { k: "mode", label: "Quick Match statt Ranked", task: "Spiel jedes Match wie ein Ranked-Match: ein Held aus deinem Pool, nichts ausprobieren, und nach einer Niederlage kurz durchatmen." },
-  stack: { k: "group", label: "Im Stack statt solo", task: "Triff deine Entscheidungen so, als wärst du solo: Frag dich vor jedem Fight selbst, wo du stehst und wen du schützt, statt nur auf die Absprachen zu hören." },
-  voice: { k: "voice", label: "Mit Voice statt ohne", task: "Sprich im Voice nur kurz und klar, so knapp wie ein Ping: Ziel, Ult bereit, Rückzug." }
+  ranked: { k: "mode", label: "Ranked statt Quick Match", task: "Im Ranked spielst du nur, was schon sitzt. Die neue Aufgabe des Blocks übst du weiter, sobald du wieder ungewertet spielst." },
+  stack: { k: "group", label: "Im Stack statt solo", task: BR_TASK_GROUP },
+  duo: { k: "group", label: "Zu zweit (Duo) statt solo", task: BR_TASK_GROUP },
+  solo: { k: "group", label: "Solo statt zu zweit oder im Stack", task: "Absprachen machst du mit Pings: Sag pro Fight mindestens eine Sache per Ping an (Ziel, Ult bereit, Rückzug) und reagier auf die Pings der anderen." },
+  voice: { k: "voice", label: "Mit Voice statt ohne", task: "Sprich im Voice nur kurz und klar, so knapp wie ein Ping: Ziel, Ult bereit, Rückzug." },
+  mute: { k: "voice", label: "Ohne Voice statt mit", task: "Was du sonst im Voice sagst, sagst du mit Pings: Ziel, Ult bereit, Rückzug. Kurz und rechtzeitig." }
 };
+// Ersatz-Aufgaben ohne Doppel (solo und ohne Voice sagen beide: mit Pings)
+const brAltTasks = alt => [...new Set(alt.filter(a => !(a === "mute" && alt.includes("solo"))).map(a => BR_ALT[a].task))].join(" ");
 const brAlt = (n, key) => ((dayGet(n).alt || {})[key] || []).filter(a => BR_ALT[a]);
-// Welche Ausweich-Möglichkeiten ein Block hat: Ranked → Quick Match, solo → Stack, ohne Voice oder Stumm-Match → mit Voice
+// Welche Ausweich-Möglichkeiten ein Block hat: Ranked ↔ Quick Match, solo → Duo oder Stack, Stack → solo, ohne Voice ↔ mit Voice
 function brAltOpts(n, key) {
-  const r = brRaw(n, key), out = [];
-  if (r.some(x => x.k === "mode" && x.v === "ranked")) out.push("qm");
-  if (!brStackPref() && r.some(x => x.k === "group" && x.v === "solo")) out.push("stack");
-  if (r.some(x => x.k === "voice" && x.v !== "ja")) out.push("voice");
+  const r = brRaw(n, key), out = [], mode = r.find(x => x.k === "mode"), grp = r.find(x => x.k === "group"), vc = r.find(x => x.k === "voice");
+  if (mode && mode.v === "ranked") out.push("qm");
+  if (mode && mode.v === "qm") out.push("ranked");
+  if (grp && grp.v === "solo" && !brStackPref()) out.push("duo", "stack");
+  if (grp && grp.v === "stack") out.push("solo");
+  if (vc && vc.v !== "ja") out.push("voice");
+  if (vc && vc.v === "ja") out.push("mute");
   return out;
 }
+// Block auf später verschieben (dayGet(n).skip): Die Matches gehen in den nächsten Block, beim Abschluss des Tages wandert der Block als
+// Nachhol-Block in die nächsten Tage (scheduleCarry). Für den Fall, dass ein Block heute nicht passt (zum Beispiel Kommunikation ohne Duo).
+const brSkipped = (n, key) => ((dayGet(n).skip) || []).includes(key);
 const brMutBlock = (n, key) => { const r = brRaw(n, key); return !brStackPref() && r.some(x => x.k === "mode" && x.v === "ranked") && r.some(x => x.k === "group" && x.v === "solo"); };
 // Regeln, die gelten (mit Grundeinstellung, Stufe der Mut-Leiter und «Heute anders gespielt»)
 function brRules(n, key) {
@@ -11641,7 +11700,7 @@ function brRules(n, key) {
 function brCheck(rule, m) {
   const q = (m && m.qn) || {};
   if (rule.k === "mode") return !m.mode || !rule.v || rule.v === "ranked1" ? null : rule.v === "ranked" ? m.mode === "Competitive" : m.mode !== "Competitive";
-  if (rule.k === "group") return q.stack && rule.v ? q.stack === rule.v : null;
+  if (rule.k === "group") return q.stack && rule.v ? (rule.v === "stack" ? q.stack === "stack" || q.stack === "duo" : q.stack === rule.v) : null;
   if (rule.k === "voice" && (rule.v === "ja" || rule.v === "nein")) return q.voice ? q.voice === rule.v : null;
   return null;
 }
@@ -11650,7 +11709,7 @@ function brBlockCheck(rule, ms, full) {
   const v = m => (m.qn || {}).voice;
   if (rule.k === "voice" && rule.v === "stumm1") return ms.some(m => v(m) === "nein") ? true : full ? false : null;
   if (rule.k === "voice" && rule.v === "both") return ms.some(m => v(m) === "nein") && ms.some(m => v(m) === "ja") ? true : full ? false : null;
-  if (rule.k === "mode" && rule.v === "ranked1") return ms.some(m => m.mode === "Competitive" && (m.qn || {}).stack !== "stack") ? true : full ? false : null;
+  if (rule.k === "mode" && rule.v === "ranked1") return ms.some(m => m.mode === "Competitive" && !["stack", "duo"].includes((m.qn || {}).stack)) ? true : full ? false : null;
   return undefined;
 }
 const brMiss = (n, key, m) => brRules(n, key).filter(r => brCheck(r, m) === false);
@@ -11700,21 +11759,37 @@ function brChip(x) {
 const brRulesChips = rules => rules.map(r => `<span class="brchip" title="${esc(r.tip || "")}">${esc(r.label)}</span>`).join("");
 // Box oben in jedem Block des Trainingstags: sichtbar nur die Regeln, was verpasst ist und was jetzt zu tun ist (Ersatz-Aufgabe, Frage der Mut-Leiter).
 // Alles zum Einstellen (anders gespielt, meist mit Freunden, Stufe der Mut-Leiter, Strenge) steht eingeklappt unter «Regeln anpassen».
+function brSkipHtml(n, key) {
+  return `<div class="brbox"><p class="small bralt-on"><b>Auf später verschoben.</b> Die Matches zählen jetzt für den nächsten Block. Wenn du den Tag abschliesst, kommt dieser Block an einem der nächsten Tage als Nachhol-Block wieder.</p>
+    <div class="row small"><button type="button" class="btn small ghost" data-brskip-undo="${key}" data-n="${n}">Rückgängig</button></div></div>`;
+}
+// Passt die Ersatz-Aufgabe nicht, gibt es zwei weitere Wege: Block verschieben oder Schwächen-Training (zählt nicht für den Block)
+function brWhatNowHtml(n, key) {
+  return `<div class="small brwhat"><b>Passt das heute nicht?</b> Verschieb den Block: Dann spielst du jetzt den nächsten, und dieser kommt an einem der nächsten Tage wieder. Oder mach ein Schwächen-Training; das zählt nicht für den Block.
+    <div class="row" style="gap:6px;margin-top:4px"><button type="button" class="btn small ghost" data-brskip="${key}" data-n="${n}">Block verschieben</button><button type="button" class="btn small ghost" data-go="weak">Schwächen-Training</button></div></div>`;
+}
+const brAltChip = (n, key, alt) => a => `<button type="button" class="chip ${alt.includes(a) ? "on" : ""}" data-bralt="${a}" data-n="${n}" data-k="${key}" aria-pressed="${alt.includes(a)}">${esc(BR_ALT[a].label)}</button>`;
+// Auswahl «Heute anders?»: immer sichtbar, solange es Ausweich-Möglichkeiten gibt; dazu «Block verschieben»
+function brAltRowHtml(n, key) {
+  const alt = brAlt(n, key), opts = [...new Set(brAltOpts(n, key).concat(alt))];
+  return `<div class="row small bralt-quick"><span class="muted">${alt.length ? "Heute so gespielt:" : "Heute anders?"}</span>${opts.map(brAltChip(n, key, alt)).join("")}${alt.length ? "" : `<button type="button" class="chip" data-brskip="${key}" data-n="${n}">Block verschieben</button>`}</div>`;
+}
 function brBoxHtml(n, key) {
+  if (brSkipped(n, key)) return brSkipHtml(n, key);
   const st = brStatus(n, key);
   if (!st.length) return "";
   const lvl = brLevel(n), auto = String((state.settings || {}).ruleLevel || "auto") === "auto", ms = brBlockMatches(n, key);
   const drop = brDropped(n, key), miss = [...new Set(st.filter(x => !x.block && x.no).map(x => x.r.label).concat(drop.flatMap(x => x.miss.map(r => r.label))))], unk = st.some(x => !x.block && x.unk && (x.r.k === "group" || x.r.k === "voice"));
   const mut = brMutBlock(n, key), alt = brAlt(n, key), opts = brAltOpts(n, key);
-  const altChip = a => `<button type="button" class="chip ${alt.includes(a) ? "on" : ""}" data-bralt="${a}" data-n="${n}" data-k="${key}" aria-pressed="${alt.includes(a)}">${esc(BR_ALT[a].label)}</button>`;
   return `<div class="brbox"><div class="brhead"><b class="small">So spielst du</b><div class="brchips">${st.map(brChip).join("")}</div></div>
     ${miss.length ? `<p class="small brwarn">Verpasst: ${esc(miss.join(", "))}. ${lvl >= 3 ? (drop.length === 1 ? "Dieses Match zählt nicht für den Block." : `Diese ${drop.length} Matches zählen nicht für den Block.`) : lvl >= 2 ? "Beim nächsten Match erinnert dich die App." : "Das Match zählt trotzdem."}</p>` : ""}
-    ${alt.length ? `<p class="small bralt-on"><b>Heute anders gespielt</b> (${esc(alt.map(a => BR_ALT[a].label).join(", "))}). Ersatz-Aufgabe: ${esc(alt.map(a => BR_ALT[a].task).join(" "))}</p>`
-      : miss.length && opts.length ? `<div class="row small bralt-quick"><span class="muted">Heute anders gespielt?</span>${opts.map(altChip).join("")}</div>` : ""}
+    ${alt.length ? `<p class="small bralt-on"><b>Heute anders gespielt</b> (${esc(alt.map(a => BR_ALT[a].label).join(", "))}). Ersatz-Aufgabe: ${esc(brAltTasks(alt))}</p>` : ""}
+    ${opts.length || alt.length ? brAltRowHtml(n, key) : ""}
+    ${alt.length ? brWhatNowHtml(n, key) : ""}
     ${mut ? mutInlineHtml(n, key, ms.length) : ""}
     <details class="small brmore"><summary>Regeln anpassen${mut ? ` · Mut-Leiter Stufe ${mutStage(n)}` : ""} · ${BR_LEVEL_NAME[lvl]}</summary>
       ${unk && ms.length ? `<p class="muted" style="margin:6px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
-      ${opts.length || alt.length ? `<div class="brsec"><b>Heute anders gespielt?</b> <span class="muted">Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</span><div class="chips">${[...new Set(opts.concat(alt))].map(altChip).join("")}</div></div>` : ""}
+      ${opts.length || alt.length ? `<p class="muted" style="margin:6px 0 0">«Heute anders?» oben: Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</p>` : ""}
       <div class="brsec row brgrp"><b>Du spielst meist</b>${[["stack", "mit Freunden"], ["", "solo oder gemischt"]].map(([v, l]) => `<button type="button" class="chip ${((state.settings || {}).usualGroup || "") === v ? "on" : ""}" data-brgrp="${v}" aria-pressed="${((state.settings || {}).usualGroup || "") === v}">${l}</button>`).join("")}</div>
       ${mut ? mutFullHtml(n) : ""}
       <div class="brsec brlvl"><b>Wie streng?</b> <span class="muted">Bis Tag 42 locker, bis Tag 70 mittel, ab Tag 71 streng${auto ? " (automatisch)" : ""}. ${esc(BR_LEVEL_NAME[lvl])}: ${esc(BR_LEVEL_TXT[lvl])}</span>
@@ -11936,9 +12011,11 @@ function brNowHtml(f) {
   if (!rules.length) return "";
   const last = (f.list || []).slice(-1)[0], ls = last ? matchFocusSeg(last) : null, lm = ls ? brMiss(ls.n, ls.blk, last) : [];
   const again = brLevel(f.n) >= 2 ? lm.filter(r => rules.some(x => x.k === r.k && x.v === r.v)) : [];
-  const alt = brAlt(f.n, f.blk.key);
+  const alt = brAlt(f.n, f.blk.key), opts = brAltOpts(f.n, f.blk.key);
   return `<div class="brnow"><span class="nmlbl">So spielst du</span><div class="brchips">${brRulesChips(rules)}</div>
-    ${alt.length ? `<p class="small" style="margin:4px 0 0"><b>Ersatz-Aufgabe:</b> ${esc(alt.map(a => BR_ALT[a].task).join(" "))}</p>` : ""}
+    ${alt.length ? `<p class="small" style="margin:4px 0 0"><b>Ersatz-Aufgabe:</b> ${esc(brAltTasks(alt))}</p>` : ""}
+    ${opts.length || alt.length ? brAltRowHtml(f.n, f.blk.key) : ""}
+    ${alt.length ? `<p class="small muted" style="margin:4px 0 0">Passt das heute nicht? <button type="button" class="linkbtn small" data-brskip="${f.blk.key}" data-n="${f.n}">Block verschieben</button> · <button type="button" class="linkbtn small" data-go="weak">Schwächen-Training</button></p>` : ""}
     ${again.length ? `<p class="small brwarn">Im letzten Match verpasst: ${esc(again.map(r => r.label).join(", "))}. Diesmal bitte einhalten.</p>` : ""}</div>`;
 }
 // Review: Regeln des Blocks mit Antwort auf solo/Stack und Voice
@@ -11951,21 +12028,26 @@ function rvRulesHtml(m) {
   const row = r => {
     const c = brCheck(r, m), mk = c === true ? '<span class="badge ok">eingehalten</span>' : c === false ? '<span class="badge bad">verpasst</span>' : "";
     if (r.k === "mode") return `<div class="brrow"><span class="small"><b>${esc(r.label)}</b>${m.mode ? ` <span class="muted">· gespielt: ${esc(m.mode)}</span>` : ""}</span>${mk}</div>`;
-    const f = r.k === "group" ? "stack" : "voice", opts = r.k === "group" ? [["solo", "Solo"], ["stack", "Stack"]] : [["ja", "Mit Voice"], ["nein", "Ohne Voice"]];
+    const f = r.k === "group" ? "stack" : "voice", opts = r.k === "group" ? [["solo", "Solo"], ["duo", "Duo"], ["stack", "Stack"]] : [["ja", "Mit Voice"], ["nein", "Ohne Voice"]];
     return `<div class="brrow"><span class="small"><b>${esc(r.label)}</b></span><span class="chips">${opts.map(([v, l]) => `<button type="button" class="chip ${q[f] === v ? "on" : ""}" data-rv="br" data-id="${m.id}" data-f="${f}" data-v="${v}" aria-pressed="${q[f] === v}">${l}</button>`).join("")}</span>${mk}</div>`;
   };
   return `<div class="brbox"><div class="brhead"><b class="small">Regeln in diesem Block</b><span class="small muted">${focusBlockLabel(s.blk)} von Tag ${s.n} · ${BR_LEVEL_NAME[lvl]}</span></div>${rules.map(row).join("")}
     ${lvl >= 3 ? `<p class="small muted" style="margin:4px 0 0">Streng: Ein Match mit verpasster Regel zählt nicht für den Block.</p>` : ""}</div>`;
 }
 document.addEventListener("click", e => {
-  const b = e.target.closest ? e.target.closest("[data-mut],[data-mutfeel],[data-brlvl],[data-brgrp],[data-bralt]") : null; if (!b || b.disabled) return;
+  const b = e.target.closest ? e.target.closest("[data-mut],[data-mutfeel],[data-brlvl],[data-brgrp],[data-bralt],[data-brskip],[data-brskip-undo]") : null; if (!b || b.disabled) return;
   const S = mutState();
   if (b.dataset.mut) { S.stage = Math.min(4, Math.max(1, +b.dataset.mut)); toast(`Mut-Leiter: Stufe ${S.stage} («${MUT[S.stage].t}»).`); }
   else if (b.dataset.mutfeel) { const n = +b.dataset.n; S.feel.push({ d: today(), n, key: b.dataset.k, stage: mutStage(n), v: b.dataset.mutfeel }); S.feel = S.feel.slice(-40); }
   else if (b.dataset.brlvl) { state.settings.ruleLevel = b.dataset.brlvl; planRecheckBlocks(); }
   else if (b.hasAttribute("data-brgrp")) { state.settings.usualGroup = b.dataset.brgrp; toast(b.dataset.brgrp === "stack" ? "Gespeichert: Du spielst meist mit Freunden. Solo-Blöcke gelten jetzt auch im Stack." : "Gespeichert: Solo-Blöcke gelten wieder solo."); planRecheckBlocks(); }
   else if (b.dataset.bralt) { const n = +b.dataset.n, st = dayEnsure(n), alt = st.alt = st.alt || {}, a = b.dataset.bralt, cur = alt[b.dataset.k] || [];
-    alt[b.dataset.k] = cur.includes(a) ? cur.filter(x => x !== a) : cur.concat([a]); if (!alt[b.dataset.k].length) delete alt[b.dataset.k]; planRecheckBlocks(); }
+    alt[b.dataset.k] = cur.includes(a) ? cur.filter(x => x !== a) : cur.filter(x => !BR_ALT[x] || BR_ALT[x].k !== BR_ALT[a].k).concat([a]); if (!alt[b.dataset.k].length) delete alt[b.dataset.k]; planRecheckBlocks(); }
+  else if (b.dataset.brskip) { const n = +b.dataset.n, k = b.dataset.brskip, st = dayEnsure(n);
+    st.skip = [...new Set([...(st.skip || []), k])]; if (st.auto && st.auto[k]) { delete st.steps[k]; delete st.auto[k]; }
+    planRecheckBlocks(); toast(`${focusBlockLabel(k)} kommt später wieder. Jetzt ist der nächste Block dran.`); }
+  else if (b.dataset.brskipUndo) { const n = +b.dataset.n, k = b.dataset.brskipUndo, st = dayEnsure(n);
+    st.skip = (st.skip || []).filter(x => x !== k); if (!st.skip.length) delete st.skip; planRecheckBlocks(); toast(`${focusBlockLabel(k)} ist wieder heute dran.`); }
   save(); render();
 });
 // Kurzfassung für den Tagesplan: welcher Modus in welchem Block
@@ -12342,26 +12424,28 @@ function focusPlan(n, plain) {
   if (!d) return [];
   const B = blockMatches(), keys = d.steps.filter(x => /^b[1-3]$/.test(x.key)).map(x => x.key), out = [];
   if (d.deep) {
-    const F = focusDeep(n, d, plain);
-    keys.forEach((k, bi) => { const f = F[k]; if (f) out.push({ key: k, bi, pre: f.pre || "", segs: f.segs.map((s, i) => Object.assign({ a: bi * B + 1, b: (bi + 1) * B, key: `${n}:${k}:${i}` }, s, { t: s.rep ? s.t : focusFmt(s.t) })) }); });
-    if (d.steps.some(x => x.key === "b4")) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: keys.length * B + 1, b: null, t: BINGO_SEG, bingo: true, key: `${n}:b4:0` }] });
+    const F = focusDeep(n, d, plain), live = keys.filter(k => F[k] && !brSkipped(n, k)), ni = (k, bi) => live.includes(k) ? live.indexOf(k) : bi;   // Match-Nummern nach den Blöcken, die heute zählen
+    keys.forEach((k, bi) => { const f = F[k]; if (f) out.push({ key: k, bi, pre: f.pre || "", segs: f.segs.map((s, i) => Object.assign({ a: ni(k, bi) * B + 1, b: (ni(k, bi) + 1) * B, key: `${n}:${k}:${i}` }, s, { t: s.rep ? s.t : focusFmt(s.t) })) }); });
+    if (d.steps.some(x => x.key === "b4")) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: live.length * B + 1, b: null, t: BINGO_SEG, bingo: true, key: `${n}:b4:0` }] });
     return out;
   }
   const T = FOCUS_PLAN[d.base];
   if (!T) return [];
   const reps = plain ? [] : focusRepeats();
   let ri = 0, ci = 0;
-  keys.forEach((k, bi) => {
+  const live = keys.filter(k => T[k] && T[k].length && !brSkipped(n, k)), ni = (k, bi) => live.includes(k) ? live.indexOf(k) : bi;
+  keys.forEach((k, bi0) => {
     const L = T[k]; if (!L || !L.length) return;
+    const bi = bi0, nb = ni(k, bi0);
     const f0 = L[0][0], S = L[L.length - 1][1] - f0 + 1, pre = T.pre && T.pre[k] ? focusFmt(T.pre[k]) : "", rules = plain ? [] : counterRules(focusRole(pre));
     out.push({ key: k, bi, pre, segs: L.map(([from, to, t, ok], i) => {
-      const seg = { a: bi * B + Math.round((from - f0) * B / S) + 1, b: bi * B + Math.round((to - f0 + 1) * B / S), t: focusFmt(t), ok: ok ? focusFmt(ok, "ok") : "", key: `${n}:${k}:${i}` };
+      const seg = { a: nb * B + Math.round((from - f0) * B / S) + 1, b: nb * B + Math.round((to - f0 + 1) * B / S), t: focusFmt(t), ok: ok ? focusFmt(ok, "ok") : "", key: `${n}:${k}:${i}` };
       if (FOCUS_FREE.test(t) && ri < reps.length) { const r = reps[ri++]; Object.assign(seg, { plan: seg.t, t: r.t, ok: "", rep: repText(r) }); }
       else if (FOCUS_COMP.test(t) && rules.length) seg.ex = counterRuleText(rules[(n + ci++) % rules.length]);
       return seg;
     }) });
   });
-  if (T.b4) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: keys.length * B + 1, b: null, t: BINGO_SEG, bingo: true, plan: focusFmt(T.b4), key: `${n}:b4:0` }] });
+  if (T.b4) out.push({ key: "b4", bi: keys.length, pre: "", segs: [{ a: live.length * B + 1, b: null, t: BINGO_SEG, bingo: true, plan: focusFmt(T.b4), key: `${n}:b4:0` }] });
   return out;
 }
 // ---------- Ein Trainingstag über mehrere Spieltage ----------
@@ -12414,7 +12498,9 @@ function blockSeq(items, keys, B, n, drop) {
 }
 // Matches, die für die Blöcke 1 bis idx+1 zählen (pro Block höchstens B): ohne eigene Wahl genau die Anzahl Matches, wie bisher
 const blockSeqDone = (S, idx, B) => S.cnt.slice(0, idx + 1).reduce((a, c) => a + Math.min(c, B), 0);
-const blockKeysOf = n => n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k)) : [];
+const blockKeysOf = n => n >= 1 && n <= PLAN_N ? PLAN.days[n - 1].steps.map(s => s.key).filter(k => /^b[1-3]$/.test(k) && !brSkipped(n, k)) : [];
+// Blöcke eines Tagesplans (focusPlan), die heute zählen: ohne Block 4+ und ohne verschobene
+const focusLive = (n, plan) => plan.filter(x => x.key !== "b4" && !brSkipped(n, x.key));
 function focusDay() {
   if (!planStarted()) return { n: 0, since: 0, list: [], prevN: 0, prev: "" };
   const d = today(), L = planLive(), man = planDayManual(d), n = man ? planDayOf(d) : planOpenAfter(d);
@@ -12434,17 +12520,17 @@ function focusNow(force) {
   const plan = focusPlan(n);
   if (!plan.length) return null;
   if (force === undefined) force = qnForce;
-  const B = blockMatches(), st = dayGet(n).steps || {}, blocks = plan.filter(x => x.key !== "b4"), keys = blocks.map(x => x.key);
+  const B = blockMatches(), st = dayGet(n).steps || {}, blocks = focusLive(n, plan), keys = blocks.map(x => x.key);
   const items = fd.list.concat(qnCounted(fd.since).sort((a, b) => (a.ts || 0) - (b.ts || 0)));
   const S = blockSeq(items, keys, B, n), real = items.length + 1;
   const biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
   const want = force ? (force === "b4" ? blocks.length : keys.indexOf(force)) : -1;
   const bi = want >= 0 ? want : Math.max(S.next, biT), pos = (S.cnt[Math.min(bi, S.nb)] || 0) + 1;
   const k = want < 0 && bi > S.next ? bi * B + 1 : bi < blocks.length ? bi * B + Math.min(pos, B) : blocks.length * B + pos;
-  const blk = plan.find(x => x.bi === bi) || (bi >= blocks.length ? plan.find(x => x.key === "b4") : null);
+  const blk = bi < blocks.length ? blocks[bi] : plan.find(x => x.key === "b4") || null;
   if (!blk) return { n, k, real, done: true, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
   const i = Math.max(0, blk.segs.findIndex(s => k >= s.a && (s.b === null || k <= s.b))), seg = blk.segs[i] || blk.segs[blk.segs.length - 1];
-  const flat = plan.flatMap(x => x.segs.map(s => Object.assign({ blk: x }, s))), at = flat.findIndex(s => s.key === seg.key), next = at >= 0 ? flat[at + 1] || null : null;
+  const flat = plan.filter(x => !brSkipped(n, x.key)).flatMap(x => x.segs.map(s => Object.assign({ blk: x }, s))), at = flat.findIndex(s => s.key === seg.key), next = at >= 0 ? flat[at + 1] || null : null;
   return { n, k, real, B, blk, seg, next, first: k === seg.a, forced: want >= 0, extra: want >= 0 && pos > B && bi < blocks.length, plan, prevN: fd.prevN, prev: fd.prev, list: fd.list, since: fd.since };
 }
 const focusBlockLabel = key => key === "b4" ? "Block 4+" : "Block " + key[1];
@@ -12493,7 +12579,7 @@ const nmTime = t => new Date(t).toLocaleTimeString("de-CH", { hour: "2-digit", m
 // Nach «zählt nicht»: Blöcke, die die App selbst abgehakt hat (st.auto) und für die jetzt Matches fehlen, wieder öffnen. Selbst gesetzte Häkchen bleiben.
 function planRecheckBlocks() {
   const n = focusDay().n; if (!n || n > PLAN_N) return;
-  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]), B = blockMatches(), S = blockSeq(planItemsToday(n), keys, B, n);
+  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]).filter(k => !brSkipped(n, k)), B = blockMatches(), S = blockSeq(planItemsToday(n), keys, B, n);
   keys.forEach((k, i) => { if (st.auto && st.auto[k] && st.steps[k] === true && blockSeqDone(S, i, B) < B * (i + 1)) { delete st.steps[k]; delete st.auto[k]; } });
 }
 function nmPrepHtml(f) {
@@ -12578,7 +12664,7 @@ function matchFocusSeg(m) {
   if (!w || !w.n || w.n > PLAN_N) return null;
   const list = planWinList(w.n, w, m.date), k = list.findIndex(x => x.id === m.id) + 1;
   if (k < 1) return null;
-  const plan = focusPlan(w.n, true), B = blockMatches(), blocks = plan.filter(x => x.key !== "b4"), e = blockSeq(list, blocks.map(x => x.key), B, w.n).out[k - 1], bi = e.bi;
+  const plan = focusPlan(w.n, true), B = blockMatches(), blocks = focusLive(w.n, plan), e = blockSeq(list, blocks.map(x => x.key), B, w.n).out[k - 1], bi = e.bi;
   const blk = bi < blocks.length ? blocks[bi] : plan.find(x => x.key === "b4");
   if (!blk) return null;
   const kk = bi < blocks.length ? bi * B + Math.min(e.pos, B) : blocks.length * B + e.pos;   // Abschnitt nach der Stelle im Block (ein Zusatz-Match bleibt im letzten)
@@ -12976,7 +13062,8 @@ const planMatchesToday = n => { const f = focusDay(); return f.n === n ? f.list 
 const planItemsToday = n => { const f = focusDay(); return (f.n === n ? f.list.concat(qnCounted(f.since)) : state.matches.filter(m => m.date === today())).slice().sort((a, b) => matchTime(a) - matchTime(b)); };
 function autoStepEval(n, s, carryIdx) {
   if (!planStarted() || !(n >= 1 && n <= PLAN_N) || n !== planDay()) return null;
-  const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
+  const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d).filter(k => !brSkipped(n, k));
+  if (!(carryIdx >= 0) && BLOCK_KEYS.includes(s.key) && brSkipped(n, s.key)) return autoRes(0, 1, "Match", "Matches", "auf später verschoben");
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
     const B = blockMatches(), all = planItemsToday(n), since = focusDay().prev;
@@ -18799,6 +18886,7 @@ function vidBind(el) {
 }
 
 function render() {
+  if (platApplied !== platform()) platApply();
   applyPoolToPlan();
   if (qnAssignAll()) saveCore();
   ({ today: renderToday, dashboard: renderDashboard, lessons: renderLessons, log: renderLog, analysis: renderAnalysis, team: renderTeam,
