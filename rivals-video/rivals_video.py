@@ -111,11 +111,9 @@ class App:
                                 break
                             store.save_series(key, ser)
                         store.apply_detect(key, ser)
-                        if not ser["t"]:
-                            rec["status"], rec["error"] = "fehler", "Das Video liess sich nicht lesen."
                     except Exception as e:   # ein kaputtes Video hält die anderen nicht auf
-                        rec["status"], rec["error"] = "fehler", str(e)[:300]
-                        traceback.print_exc()
+                        store.failed(key, str(e))
+                        print(f"Fehler bei {rec['name']}: {e}", flush=True)
                     store.save()
                     self.work.update(key="", name="", p=0.0)
                 store.save()
@@ -134,7 +132,7 @@ class App:
                 open_n = sum(1 for e in v.get("events", []) if not isinstance(e.get("ok"), bool))
                 vids.append({"id": v.get("id"), "name": v["name"], "folder": v.get("folder"), "status": v.get("status"),
                              "error": v.get("error", ""), "start": v.get("start", 0), "dur": v.get("dur", 0),
-                             "done": v.get("done", 0), "open": open_n, "events": len(v.get("events", [])), "analyzed": v.get("analyzed", ""),
+                             "done": v.get("done", 0), "open": open_n, "copying": v.get("copying", 0), "events": len(v.get("events", [])), "analyzed": v.get("analyzed", ""),
                              "marks": len(v.get("marks", []))})
             vids.sort(key=lambda x: (bool(x["done"]), -(x["start"] or 0)))
             thr, lead, rep = rc.learned(store.data["learn"])
@@ -297,6 +295,9 @@ def make_handler(app: App, port: int):
                 key = st.finish(key)
             elif path == "/api/reopen":
                 st.reopen(key)
+            elif path == "/api/retry":
+                st.retry(key)
+                app.wake.set()
             elif path == "/api/redetect":
                 ser = st.series(key)
                 if ser:

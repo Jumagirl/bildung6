@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 FPS = 4                      # Bilder pro Sekunde für die Messung (Browser-Version: 1)
 W, H = 480, 270              # Messbild (Bereiche sind relativ, das Seitenverhältnis spielt kaum eine Rolle)
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}
@@ -52,6 +52,8 @@ DEAD_GAP_S = 3.0             # Lücken bis so lange gehören zur selben Zeit bis
 AFTER_S = 1.5                # nach dem Wiedereinstieg so lange nichts werten
 ULT_READY_S = 1.5            # Ult-Feld muss so lange golden sein
 KILL_REFRACT_S = 1.0         # zwei Kills frühestens so weit auseinander
+STABLE_S = 8.0               # eine Datei gilt als fertig kopiert, wenn sie sich so lange nicht ändert
+RETRY_S = [60, 300, 1800]    # nach einem Fehler: so viele Sekunden bis zum nächsten Versuch
 
 DEATH_CAUSES = ["Position", "Fluchtweg/Cooldown", "Gegnerische Ult", "Zu gierig", "Vom Team getrennt", "Sonstiges"]
 KINDS = {"death": "Tod", "kill": "Kill", "ult": "Meine Ult", "eult": "Gegner-Ult", "win": "Fight gewonnen",
@@ -88,7 +90,15 @@ def iter_frames(path: Path, fps: int = FPS, stop: threading.Event | None = None)
     """Liefert (Zeit, Bild HxWx3 uint8). ffmpeg dekodiert und verkleinert."""
     cmd = [ffmpeg_exe(), "-v", "error", "-i", str(path), "-vf", f"fps={fps},scale={W}:{H}",
            "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **_popen_kwargs())
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **_popen_kwargs())
+    errs: list[str] = []
+
+    def drain():
+        for line in iter(proc.stderr.readline, b""):
+            errs.append(line.decode("utf-8", "replace").strip())
+            del errs[:-8]
+    threading.Thread(target=drain, daemon=True).start()
+    iter_frames.last_errors = errs
     n, i = W * H * 3, 0
     try:
         while True:
@@ -140,7 +150,15 @@ def measure(path: Path, progress=None, stop: threading.Event | None = None) -> d
         if progress and dur and t - last >= 2:
             last = t
             progress(min(0.99, t / dur))
-    if not ser["dur"] and ser["t"]:
+    if stop is not None and stop.is_set():
+        return ser
+    errs = [e for e in getattr(iter_frames, "last_errors", []) if e]
+    if not ser["t"]:
+        raise RuntimeError("Das Video liess sich nicht lesen." + (" ffmpeg: " + " | ".join(errs[-3:]) if errs else ""))
+    if dur and ser["t"][-1] < dur - 5:
+        raise RuntimeError(f"Nur {ser['t'][-1]:.0f} von {dur:.0f} Sekunden gelesen. Die Datei ist vielleicht noch nicht fertig kopiert oder beschädigt."
+                           + (" ffmpeg: " + " | ".join(errs[-3:]) if errs else ""))
+    if not ser["dur"]:
         ser["dur"] = ser["t"][-1]
     return ser
 
@@ -283,6 +301,7 @@ class Store:
             except Exception:
                 pass
         self.data = self._load()
+        self.seen: dict[str, tuple] = {}   # Pfad → (Grösse, Änderungszeit, seit wann so)
 
     def _load(self) -> dict:
         p = self.base / DATA_NAME
@@ -354,11 +373,57 @@ class Store:
                 rec["folder"] = sub
                 rec["id"] = vid_id(key)
                 seen.add(key)
+                now = time.time()
+                st = p.stat()
+                sig = (st.st_size, st.st_mtime)
+                prev = self.seen.get(str(p))
+                since = prev[2] if prev and prev[:2] == sig else now
+                self.seen[str(p)] = (sig[0], sig[1], since)
+                stable = now - since >= STABLE_S
+                if rec.get("status") == "fehler" and now >= rec.get("retryAt", 0) and rec.get("tries", 0) < len(RETRY_S):
+                    rec["status"] = "wartet"
                 if rec.get("status") in ("wartet", None) and sub == SUB_NEW:
-                    todo.append(key)
-            for k, v in V.items():
+                    if stable:
+                        todo.append(key)
+                    else:
+                        rec["copying"] = 1
+                elif rec.get("copying"):
+                    rec.pop("copying", None)
+            for k in list(V):
+                v = V[k]
                 v["missing"] = k not in seen
+                # halbe Kopien (andere Grösse, nie beantwortet) verschwinden
+                if v["missing"] and not v.get("done") and not v.get("marks") and not any(isinstance(e.get("ok"), bool) for e in v.get("events", [])):
+                    c = self.cache / (vid_id(k) + ".json")
+                    if c.exists():
+                        c.unlink()
+                    del V[k]
             return todo
+
+    def failed(self, key: str, msg: str):
+        with self.lock:
+            rec = self.data["videos"].get(key)
+            if not rec:
+                return
+            rec["tries"] = rec.get("tries", 0) + 1
+            rec["status"], rec["error"] = "fehler", msg[:400]
+            if rec["tries"] <= len(RETRY_S):
+                rec["retryAt"] = time.time() + RETRY_S[rec["tries"] - 1]
+            c = self.cache / (vid_id(key) + ".json")
+            if c.exists():
+                c.unlink()
+
+    def retry(self, key: str):
+        with self.lock:
+            rec = self.data["videos"][key]
+            for f in ("error", "tries", "retryAt"):
+                rec.pop(f, None)
+            rec["status"] = "wartet"
+            c = self.cache / (vid_id(key) + ".json")
+            if c.exists():
+                c.unlink()
+            self.seen.clear()
+            self.save()
 
     def by_id(self, vid: str):
         with self.lock:
@@ -396,6 +461,8 @@ class Store:
             if not rec.get("start") and rec.get("mtime") and rec["dur"]:
                 rec["start"] = int(rec["mtime"] - rec["dur"] * 1000)   # Ende der Aufnahme minus Länge
             rec["status"] = "fertig"
+            for f in ("error", "tries", "retryAt"):
+                rec.pop(f, None)
             rec["analyzed"] = datetime.now().isoformat(timespec="seconds")
             rec["learnedWith"] = {"thr": thr, "lead": lead}
 
@@ -511,21 +578,36 @@ class Store:
 
 # ---------------------------------------------------------------- Selbsttest (ohne private Bilder)
 def selftest(tmp: Path) -> int:
-    """Erzeugt ein Testvideo mit gelbem Feld oben links (3–7 s) und prüft, dass genau ein Tod gefunden wird."""
+    """Erzeugt Testvideos mit gelbem Feld oben links (3–7 s) und prüft, dass genau ein Tod gefunden wird.
+    Geprüft werden MP4 (H.264) und WebM (VP9, wie die PS5), wenn möglich auch VP9 mit 10 Bit (HDR-Aufnahmen)."""
     tmp.mkdir(parents=True, exist_ok=True)
-    vid = tmp / "selbsttest.mp4"
-    cmd = [ffmpeg_exe(), "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=0x101828:s=1280x720:d=10:r=30",
-           "-vf", "drawbox=x=10:y=20:w=110:h=70:color=0xF5D232@1:t=fill:enable='between(t,3,7)'",
-           "-pix_fmt", "yuv420p", str(vid)]
-    subprocess.run(cmd, check=True, **_popen_kwargs())
-    ser = measure(vid)
-    evs = detect(ser)
-    deaths = [e for e in evs if e["k"] == "death"]
-    ok = len(deaths) == 1 and 1.5 <= deaths[0]["t"] <= 3.0 and abs(ser["dur"] - 10) < 0.6
-    print(f"Selbsttest: {len(ser['t'])} Bilder, Länge {ser['dur']:.1f} s, Funde {evs}")
-    print("Selbsttest OK" if ok else "Selbsttest FEHLER")
-    return 0 if ok else 1
-
+    src = "color=c=0x101828:s=1280x720:d=10:r=30"
+    box = "drawbox=x=10:y=20:w=110:h=70:color=0xF5D232@1:t=fill:enable='between(t,3,7)'"
+    cases = [("MP4 (H.264)", "selbsttest.mp4", ["-pix_fmt", "yuv420p"], True),
+             ("WebM (VP9)", "selbsttest.webm", ["-c:v", "libvpx-vp9", "-b:v", "1M", "-deadline", "realtime", "-cpu-used", "8", "-pix_fmt", "yuv420p"], True),
+             ("WebM (VP9, 10 Bit)", "selbsttest10.webm", ["-c:v", "libvpx-vp9", "-b:v", "1M", "-deadline", "realtime", "-cpu-used", "8", "-pix_fmt", "yuv420p10le"], False)]
+    result = 0
+    for label, name, enc, must in cases:
+        vid = tmp / name
+        r = subprocess.run([ffmpeg_exe(), "-v", "error", "-y", "-f", "lavfi", "-i", src, "-vf", box, *enc, str(vid)],
+                           capture_output=True, text=True, errors="replace", **_popen_kwargs())
+        if r.returncode != 0 or not vid.exists():
+            print(f"Selbsttest {label}: Testvideo liess sich nicht erzeugen ({r.stderr.strip()[-200:]}), übersprungen")
+            if must and label.startswith("MP4"):
+                result = 1
+            continue
+        try:
+            ser = measure(vid)
+            deaths = [e for e in detect(ser) if e["k"] == "death"]
+            ok = len(deaths) == 1 and 1.5 <= deaths[0]["t"] <= 3.0 and abs(ser["dur"] - 10) < 0.6
+            print(f"Selbsttest {label}: {len(ser['t'])} Bilder, Länge {ser['dur']:.1f} s, Tod bei {[d['t'] for d in deaths]} → {'OK' if ok else 'FEHLER'}")
+        except Exception as e:
+            ok = False
+            print(f"Selbsttest {label}: FEHLER {e}")
+        if not ok and must:
+            result = 1
+    print("Selbsttest OK" if result == 0 else "Selbsttest FEHLER")
+    return result
 
 if __name__ == "__main__":
     sys.exit(selftest(Path(sys.argv[1] if len(sys.argv) > 1 else "selbsttest")))
