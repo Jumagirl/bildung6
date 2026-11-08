@@ -413,10 +413,16 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .btgroup + .btgroup { margin-top: 10px; }
 .bootdots.tiers i { width: 22px; }
 /* Schnellnotiz */
-.qnfab { position: fixed; right: 18px; bottom: 22px; z-index: 40; display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: inherit; font-weight: 700; font-size: .9rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); cursor: pointer; }
+.qnfabs { position: fixed; right: 18px; bottom: 22px; z-index: 40; display: flex; align-items: center; gap: 8px; }
+.qnfab { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: inherit; font-weight: 700; font-size: .9rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); cursor: pointer; }
 .qnfab svg.i { width: 18px; height: 18px; color: #fff; }
 .qnfab:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 2px; }
-@media (max-width: 900px) { .qnfab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); right: 14px; padding: 10px 14px; } }
+.qnfab.alt { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.qnfab.alt svg.i { color: var(--good-text); }
+@media (max-width: 900px) { .qnfabs { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); right: 14px; } .qnfab { padding: 10px 14px; } }
+.qnquick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
+.ptrow .pttime { font-variant-numeric: tabular-nums; min-width: 3.2em; color: var(--muted); }
+.ptrow.wait .sp b { color: var(--warn); }
 .qnsheet { width: min(560px, 100%); }
 .qnhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .qnhead h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
@@ -5805,10 +5811,10 @@ function renderToday() {
       a: `${fx.length && !ok ? `<button class="btn small" type="button" data-fxok="1">Passt so</button> ` : ""}<button class="btn small ${fx.length ? "ghost" : ""}" type="button" data-fxgo="1">${ok ? "Ansehen" : "Ändern"}</button>` }); }
   if (!g) prep.push({ done: false, t: "Wochenziel setzen", s: "Einmal pro Woche: ein Ziel gibt dem Training Richtung · im Reiter «Woche»", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
   // 2) Spielen
-  const withN = tm.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().length;
+  const withN = tm.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().filter(q => !q.played).length, pend = qnToday().length;
   if (inPlan && !trainedToday) { const st = dayGet(cur).steps || {}, bd = ["b1", "b2", "b3"].every(k => st[k] || !PLAN.days[cur - 1].steps.some(x => x.key === k));
-    play.push({ done: bd, t: `Block 1 bis 3 spielen`, s: `${tm.length} von ${3 * B} Matches heute · die Aufgaben stehen im Trainingstag bei den Blöcken`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Zu den Blöcken</button>` }); }
-  else if (!tm.length) play.push({ done: false, t: "Spielen und festhalten", s: "Spiel deine Matches. Nach jedem Match: kurze Notiz.", a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
+    play.push({ done: bd, t: `Block 1 bis 3 spielen`, s: `${tm.length + pend} von ${3 * B} Matches heute${pend ? ` (${pend} noch ohne Abgleich)` : ""} · die Aufgaben stehen im Trainingstag bei den Blöcken`, a: `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}">Zu den Blöcken</button>` }); }
+  else if (!tm.length && !pend) play.push({ done: false, t: "Spielen und festhalten", s: "Spiel deine Matches. Nach jedem Match: kurze Notiz oder «Gespielt».", a: `<button class="btn small ghost" type="button" data-go="log">Match loggen</button>` });
   play.push({ done: tm.length > 0 && withN >= tm.length, t: "Nach jedem Match: Notiz", s: `${tm.length ? `${withN} von ${plural(tm.length, "Match", "Matches")} mit Notiz` : "Noch keine Matches vom Abgleich"}${waiting ? ` · ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""} · im Match mit ✓ und ✗ mitzählen, danach bewerten`,
     a: `<button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button>` });
   // 3) Auswerten
@@ -5874,7 +5880,7 @@ function renderToday() {
   const moreSub = [funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
   funCheck();
-  el.innerHTML = hero + focus + list + standCardHtml() + newsCard + first + formHudHtml() + moreFold;
+  el.innerHTML = hero + focus + playedTodayHtml() + list + standCardHtml() + newsCard + first + formHudHtml() + moreFold;
 }
 // ---------- Dein Stand: Wissensstand und Rang ----------
 // Wunsch der Nutzerin: ein Balken, wie gut du gerade bist, nicht nur nach erledigten Trainingstagen. Vier Teile, jeder 0 bis 100 %:
@@ -7441,7 +7447,7 @@ document.addEventListener("change", e => { if (e.target.closest && e.target.clos
 // ---------- Schnellnotiz nach dem Match ----------
 // Nach jedem Match tippst du in der Ladezeit eine kurze Notiz: Ults, Todesursachen (grob nach Gruppe oder genauer), Mini-Ziel, Solo oder Stack, Voice,
 // den Zusatz des Tages und einen Satz. Held, Ergebnis und Tode holt der Abgleich selbst, so musst du am Tagesende nicht jedes Match nachtragen.
-// Zuordnung über die Uhrzeit: Die Notiz gehört zum letzten Match des Tages, das vor ihr begann (höchstens 45 Minuten davor). Sicher ist das erst,
+// Zuordnung über die Uhrzeit: Die Notiz gehört zum letzten Match des Tages, das vor ihr zu Ende war (m.ts ist das Matchende, höchstens 45 Minuten davor). Sicher ist das erst,
 // wenn der Abgleich auch ein späteres Match kennt oder der Tag vorbei ist; bis dahin wartet die Notiz unter «Offen», wo du sie auch selbst zuordnen kannst.
 // Todesursachen in der Notiz: ein Tipp auf eine Gruppe zählt einen Tod grob (die fünf Gruppen des Plans plus «Sonstiges»). Aufgeklappt stehen darunter
 // die einzelnen Ursachen jeder Gruppe für eine Rolle (Hauptliste und «Weitere Ursachen»); auch dort zählt jeder Tipp einen Tod. Die Zahl an der Gruppe
@@ -7558,9 +7564,16 @@ function qnMatchFor(q) {
   return m && q.ts - m.ts <= 45 * 60e3 ? m : null;
 }
 const qnSure = q => q.date < today() || state.matches.some(x => x.date === q.date && x.ts > q.ts + 60e3);
+// Kurz nach dem Match eingetragen: Die Zeit vom Abgleich (m.ts) liegt am Ende des Matches. Das zeigen die Daten von drei Spielern
+// (08.11.2026): Gelesen als Beginn würden sich Matches überlappen, gelesen als Ende nie; zwischen zwei Enden liegen Dauer des zweiten Matches
+// plus mindestens 2 Minuten. Ein Eintrag bis QN_NEAR_MIN Minuten nach diesem Ende gehört deshalb sicher zu diesem Match: Das nächste Match
+// kann so schnell nicht vorbei sein. Er wird gleich zugeordnet, ohne auf ein späteres Match zu warten (sonst zählte er doppelt).
+// Nur für Matches vom Abgleich: Von Hand eingetragene haben die Zeit des Speicherns, nicht das Matchende.
+const QN_NEAR_MIN = 5;
+const qnNearMatch = q => state.matches.filter(m => m.date === q.date && m.ts && m.source === "rivalsdata" && (q.ts || 0) >= m.ts - 60e3 && (q.ts || 0) <= m.ts + QN_NEAR_MIN * 60e3).sort((a, b) => b.ts - a.ts)[0] || null;
 function qnApply(q, m) {
-  if (q.ults !== null && (m.ults === null || m.ults === undefined)) m.ults = q.ults;
-  if (q.ultHit !== null && (m.ultHit === null || m.ultHit === undefined)) m.ultHit = Math.min(q.ultHit, m.ults ?? q.ultHit);
+  if (q.ults !== null && q.ults !== undefined && (m.ults === null || m.ults === undefined)) m.ults = q.ults;
+  if (q.ultHit !== null && q.ultHit !== undefined && (m.ultHit === null || m.ultHit === undefined)) m.ultHit = Math.min(q.ultHit, m.ults ?? q.ultHit);
   if (deathTotal(q.deaths)) { m.deathCauses = Object.assign({}, m.deathCauses); Object.entries(q.deaths).forEach(([c, n]) => { m.deathCauses[c] = (m.deathCauses[c] || 0) + n; }); }
   if (deathTotal(q.ultDeaths)) { m.ultDeaths = Object.assign({}, m.ultDeaths); Object.entries(q.ultDeaths).forEach(([h, n]) => { m.ultDeaths[h] = (m.ultDeaths[h] || 0) + n; }); ultTrim(m.ultDeaths, ultDeathN(m.deathCauses)); }
   if (q.mini || q.stack || q.voice || q.extra) m.qn = Object.assign({}, m.qn, { mini: q.mini, stack: q.stack, voice: q.voice, extra: q.extra });
@@ -7576,18 +7589,19 @@ function qnApply(q, m) {
     fxMark(m, items);
   }
   if (q.tally) { const T = Object.assign({}, (m.qn || {}).tally); Object.entries(q.tally).forEach(([k, t]) => { const o = T[k] || { ok: 0, no: 0 }; T[k] = { ok: o.ok + (t.ok || 0), no: o.no + (t.no || 0) }; }); m.qn = Object.assign({}, m.qn, { tally: T }); }
-  m.qn = Object.assign({}, m.qn, { noted: q.ts || Date.now() });
+  if (q.played) m.played = m.played || q.ts || Date.now();   // «Match gespielt» ohne Notiz: zählt nicht als Notiz
+  else m.qn = Object.assign({}, m.qn, { noted: q.ts || Date.now() });
   q.match = m.id;
 }
 // Ordnet sichere Notizen zu und nimmt sie aus der Warteliste. Gibt true zurück, wenn sich etwas geändert hat.
 function qnAssignAll() {
   if (!state.qnotes || !state.qnotes.length) return false;
   let ch = false;
-  state.qnotes.forEach(q => { if (q.match) return; const m = qnMatchFor(q); if (m && qnSure(q)) { qnApply(q, m); ch = true; } });
+  state.qnotes.forEach(q => { if (q.match) return; const m = qnNearMatch(q) || (qnSure(q) ? qnMatchFor(q) : null); if (m) { qnApply(q, m); ch = true; } });
   if (ch) state.qnotes = state.qnotes.filter(q => !q.match);
   return ch;
 }
-const qnSummary = q => [(QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
+const qnSummary = q => [q.played ? "Gespielt, ohne Notiz" : "", (QN_PURPOSE_NAME[qnPurpose(q)] || "") + (qnPurpose(q) === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : ""), q.ults !== null ? `Ults ${q.ults}${q.ultHit !== null ? " / " + q.ultHit : ""}` : "", ...Object.entries(q.deaths || {}).map(([c, n]) => `${c} ${n}×`), ...Object.entries(q.ultDeaths || {}).map(([h, n]) => `Ult von ${h} ${n}×`), q.lad && q.lad.v ? `Stufe ${q.lad.s}: ${{ ja: "Ja", teils: "Teilweise", nein: "Nein" }[q.lad.v]}` : "", ...Object.entries(q.fx || {}).map(([k, v]) => `${((q.fxT || {})[k] || {}).tag || "Fokus"}: ${fxLabel(k, v)}${(q.tally || {})[k] && (q.tally[k].ok || q.tally[k].no) ? ` (✓${q.tally[k].ok} ✗${q.tally[k].no})` : ""}`), q.mini ? `Mini-Ziel ${q.mini}` : "", q.stack === "stack" ? "Stack" : q.stack === "solo" ? "Solo" : "", q.voice ? `Voice ${q.voice}` : "", q.extra, q.text].filter(Boolean).join(" · ") || "leer";
 // Notiz nach Lernstand: Welche Felder gehören zu dem, was du gerade lernst? Aus «Dein Fokus» (gewählte Punkte und Aufgabe des Blocks)
 // und dem Thema des Tages. Findet die App nichts, zeigt die Notiz alles wie bisher.
 const QN_PRIO = [["ult", /\bUlts?\b|\bUlt-|Ultimate/i], ["death", /\bTod\b|\bTode\b|Todesursach|stirbst|sterben|überleb|\bPosition|Deckung|Rückzug/i], ["stack", /\bVoice\b|Kommunikation|\bCalls?\b/i]];
@@ -7621,6 +7635,7 @@ function qnSheetHtml0() {
   const filled = !!(d.stack || d.voice || d.ults !== null || d.ultHit !== null || deathTotal(d.deaths) > 0 || deathTotal(d.ultDeaths) > 0 || (d.extra && !prio.includes("extra")) || d.text);
   return `<div class="qnhead"><div><h2 id="qnTitle">${icon("edit")}Notiz zum Match</h2><span class="small muted">20 Sekunden in der Ladezeit. Alles ist freiwillig.</span></div><button class="btn ghost small" type="button" data-qnclose aria-label="Schliessen">✕</button></div>
     <p class="small muted" style="margin:0 0 10px">Öffne sie ruhig schon im Match (zum Beispiel beim Respawn) und zähl mit. Held, Ergebnis und Tode holt der Abgleich, die App ordnet die Notiz über die Uhrzeit dem Match zu.</p>
+    ${qnHasContent(d) ? "" : `<div class="qnquick small"><span>Keine Lust oder Energie für eine Notiz?</span><button type="button" class="btn small ghost" data-qnplayed>${icon("check")}Nur «gespielt» eintragen</button></div>`}
     ${qnFxHtml(d)}
     ${qnBingoHtml(d)}
     ${prio.length || focus ? `<p class="small qnprio">${icon("target")}<span>${prio.length ? `Zuerst das, was du gerade lernst: <b>${prio.map(k => QN_PRIO_LABEL[k]).join(", ")}</b>.` : "Heute zählt vor allem «Dein Fokus»."} Alles andere ist freiwillig${more ? " und steht unten unter «Mehr eintragen»" : ""}. Tode und Ults kannst du auch später im Review nachtragen.</span></p>` : ""}
@@ -7629,7 +7644,7 @@ function qnSheetHtml0() {
     ${qnBlkHtml(d)}
     ${more ? `<details class="qnmore"${filled ? " open" : ""}><summary><b class="small">Mehr eintragen</b> <span class="small muted">freiwillig: ${["stack", "ult", "death", "extra"].filter(k => !prio.includes(k) && (k !== "extra" || extra)).map(k => QN_PRIO_LABEL[k]).concat("ein Satz").join(", ")}</span></summary>${rest}
       <label class="small qnallt"><input type="checkbox" data-qnall> Immer alles offen zeigen</label></details>` : rest + (prio.length || focus ? `<label class="small qnallt"><input type="checkbox" data-qnall checked> Immer alles offen zeigen</label>` : "")}
-    <div class="row mt"><button class="btn" type="button" data-qnsave>${icon("check")}Notiz speichern</button><button class="btn ghost" type="button" data-qnclose>Abbrechen</button><span class="small muted">Heute ${plural(qnToday().length, "Notiz", "Notizen")} offen</span></div>`;
+    <div class="row mt"><button class="btn" type="button" data-qnsave>${icon("check")}Notiz speichern</button><button class="btn ghost" type="button" data-qnclose>Abbrechen</button><span class="small muted">Heute ${plural(qnToday().filter(q => !q.played).length, "Notiz", "Notizen")} offen</span></div>`;
 }
 let qnOpener = null;
 function qnOpen() {
@@ -7652,7 +7667,7 @@ function qnOpen() {
 // Punkt am Knopf «Notiz», solange eine Notiz angefangen ist (zum Beispiel Striche aus dem laufenden Match)
 function qnFabState() {
   const b = document.getElementById("qnFab"), d = qnDraft; if (!b) return;
-  const has = !!d && (Object.values(d.tally || {}).some(t => t.ok || t.no) || Object.keys(d.fx || {}).length > 0 || deathTotal(d.deaths) > 0 || !!d.text || d.ults !== null || !!(d.lad && (d.lad.ok || d.lad.no || d.lad.v)) || !!(d.bingo && d.bingo.hit.length));
+  const has = qnHasContent(d);
   b.classList.toggle("has", has); b.setAttribute("aria-label", has ? "Notiz zum Match (angefangen)" : "Notiz zum Match");
 }
 function qnClose() {
@@ -7689,24 +7704,33 @@ function qnClick(e) {
     qnRedraw(`[data-qnprep="${v}"]`); }
   else if (b.dataset.qnmis) { d.mission = d.mission === b.dataset.qnmis ? "" : b.dataset.qnmis; if (!d.mission) delete d.mission; qnRedraw(`[data-qnmis="${b.dataset.qnmis}"]`); }
   else if (b.dataset.qnfx) { const k = b.dataset.qnfx; d.fx = d.fx || {}; if (d.fx[k] === b.dataset.v) delete d.fx[k]; else d.fx[k] = b.dataset.v; qnRedraw(`[data-qnfx="${k.replace(/"/g, '\\"')}"][data-v="${b.dataset.v}"]`); }
-  else if (b.hasAttribute("data-qnsave")) { qnForce = d.prep ? "" : d.blk || ""; try { qnSaveDraft(d); } finally { qnForce = ""; } }
+  else if (b.hasAttribute("data-qnsave") || b.hasAttribute("data-qnplayed")) { qnForce = d.prep ? "" : d.blk || ""; try { qnSaveDraft(d); } finally { qnForce = ""; } }
 }
+// Hat die Notiz nichts Eigenes (nur Zweck oder Block), wird sie ein Eintrag «Match gespielt». Ein «gespielt»-Eintrag zum selben Match geht in der
+// Notiz auf: über «Doch eine Notiz dazu» (d.fromPlayed) oder wenn die Notiz kurz danach kommt (QN_MERGE_MS, kürzer als jedes Match).
+const QN_MERGE_MS = 4 * 60e3;
 function qnSaveDraft(d) {
   {
-    const ts = Date.now();
+    const now = Date.now(), played = !qnHasContent(d);
+    const pl = d.fromPlayed ? state.qnotes.find(x => x.id === d.fromPlayed && !x.match) : state.qnotes.filter(x => x.played && !x.match && x.date === today() && now - (x.ts || 0) < QN_MERGE_MS).pop();
+    if (pl) state.qnotes = state.qnotes.filter(x => x !== pl);
+    const ts = d.fromTs || (pl && pl.ts) || now;
     const fxIt = fxChosen(today()).filter(it => !d.prep || it.src !== "step");
     if (d.prep) Object.keys(d.fx || {}).forEach(k => { if (k.startsWith("step:")) delete d.fx[k]; });
     fxIt.forEach(it => { if (!(d.fx || {})[it.key]) { const r = fxTallyRating(it, qnTal(d, it.key)); if (r) { d.fx = d.fx || {}; d.fx[it.key] = r; } } });
-    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog; delete keep.lad;
+    const keep = JSON.parse(JSON.stringify(d)); delete keep.dlog; delete keep.lad; delete keep.fromPlayed; delete keep.fromTs;
+    if (played) { ["deaths", "ultDeaths", "fx", "tally", "mini", "stack", "voice", "extra", "text", "bingo"].forEach(k => delete keep[k]); keep.played = 1; }
     { const L = qnLadFor(d), st = fxIt.find(x => x.src === "step"), v = st && (d.fx || {})[st.key];   // Bewertung der Aufgabe zählt für die Stufe (nur im Training)
       if (L && v) keep.lad = { id: L.id, s: L.s, v }; }
     { const f = focusNow();   // Bingo nur im Spass-Block; ohne eigene Bewertung zählt es für die Aufgabe (3 = Ja, 1–2 = Teilweise)
       if (!(f && f.seg && f.seg.bingo) || !keep.bingo || keep.bingo.k !== f.k) delete keep.bingo;
       else { const st = fxIt.find(x => x.src === "step"), h = keep.bingo.hit.length; if (st && !(keep.fx || {})[st.key] && h) { keep.fx = Object.assign({}, keep.fx, { [st.key]: h >= 3 ? "ja" : "teils" }); }
       } }
-    state.qnotes.push(Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {}));
-    qnForce = ""; qnDraft = null; qnAssignAll(); if (d.prep) planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
-    toast("Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
+    const q = Object.assign({ id: newId(), ts, date: today() }, keep, fxIt.length && !played ? { fxKeys: fxIt.map(x => x.key), fxT: fxInfoOf(fxIt) } : {});
+    state.qnotes.push(q);
+    qnForce = ""; qnDraft = null; qnAssignAll(); planRecheckBlocks(); save(); qnClose(); render(); qnFabState();
+    if (played && !d.fromPlayed && !pl) qpOpen(q);
+    else toast(played ? "Als «gespielt» eingetragen. Die App ordnet es dem Match zu, sobald es vom Abgleich da ist." : "Notiz gespeichert. Die App ordnet sie dem Match zu, sobald es vom Abgleich da ist.");
   }
 }
 document.addEventListener("click", e => { if (e.target.closest("[data-qnopen]")) qnOpen(); });
@@ -7718,8 +7742,8 @@ function renderQnOpen() {
   el.hidden = !list.length;
   if (!list.length) return;
   const t = ts => new Date(ts).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
-  el.innerHTML = `<div class="card-head"><h2>${icon("edit")}Notizen ohne Match</h2><span class="badge">${list.length}</span></div>
-    <p class="lead" style="margin:0 0 8px">Die App ordnet eine Notiz selbst zu, sobald der Abgleich das Match und ein späteres kennt (oder der Tag vorbei ist). Du kannst sie auch jetzt schon zuordnen.</p>
+  el.innerHTML = `<div class="card-head"><h2>${icon("edit")}Wartet auf den Abgleich</h2><span class="badge">${list.length}</span></div>
+    <p class="lead" style="margin:0 0 8px">Einträge mit «Match gespielt» und Notizen, deren Match noch nicht vom Abgleich da ist. Die App ordnet sie selbst zu: wenn das Match da ist und du den Eintrag kurz nach seinem Ende gemacht hast, sonst sobald auch ein späteres Match da ist (oder der Tag vorbei ist). Du kannst sie auch jetzt schon zuordnen.</p>
     ${list.map(q => { const sug = qnMatchFor(q), day = state.matches.filter(m => m.date === q.date).slice().reverse();
       return `<div class="orow qnrowo"><span class="sp small"><b>${fmtDate(q.date)}, ${t(q.ts)}</b> · ${esc(qnSummary(q))}<br><span class="muted">${sug ? `Vorschlag: ${esc(sug.hero)}, ${sug.result === "W" ? "Sieg" : "Niederlage"}, ${t(sug.ts)}` : "Das Match ist noch nicht vom Abgleich da."}</span></span>
         ${day.length ? `<select data-qnsel="${q.id}" aria-label="Match für diese Notiz">${day.map(m => `<option value="${m.id}" ${sug && sug.id === m.id ? "selected" : ""}>${m.ts ? t(m.ts) + " · " : ""}${esc(m.hero)} · ${m.result === "W" ? "Sieg" : "Niederlage"} · ${m.k}/${m.d}/${m.a}</option>`).join("")}</select>
@@ -7729,14 +7753,151 @@ function renderQnOpen() {
 $("#qnOpen").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.qnassign) { const q = state.qnotes.find(x => x.id === b.dataset.qnassign), sel = $(`#qnOpen [data-qnsel="${b.dataset.qnassign}"]`), m = sel && state.matches.find(x => x.id === sel.value); if (q && m) { qnApply(q, m); state.qnotes = state.qnotes.filter(x => !x.match); save(); render(); toast(`Notiz dem Match mit ${m.hero} zugeordnet`); } }
-  else if (b.dataset.qndel) { askConfirm("Diese Notiz löschen?", "Löschen", true).then(ok => { if (!ok) return; state.qnotes = state.qnotes.filter(x => x.id !== b.dataset.qndel); save(); render(); }); }
+  else if (b.dataset.qndel) { const q = state.qnotes.find(x => x.id === b.dataset.qndel); askConfirm(q && q.played ? "Diesen Eintrag löschen? Das Match zählt dann erst wieder, wenn es vom Abgleich da ist." : "Diese Notiz löschen?", "Löschen", true).then(ok => { if (!ok) return; state.qnotes = state.qnotes.filter(x => x.id !== b.dataset.qndel); planRecheckBlocks(); save(); render(); }); }
 });
-// Knopf «Notiz» unten rechts, auf allen Seiten
+// ---------- «Match gespielt»: ein Tipp, ohne Notiz ----------
+// Wunsch der Nutzerin (08.11.2026): Nach einem Match nur kurz «gespielt» sagen, wenn Lust, Energie oder Zeit für eine Notiz fehlen oder sie
+// vergessen ging. Der Abgleich bringt das Match erst Stunden später; bis dahin soll die App trotzdem wissen, dass es gespielt ist.
+// Der Eintrag (q.played) liegt wie eine Notiz in state.qnotes, zählt sofort für die Blöcke (auch fürs automatische Abhaken) und steht in
+// «Heute gespielt». Kommt das Match vom Abgleich, ordnet die App ihn selbst zu (qnAssignAll); dort setzt er nur den Zweck und m.played,
+// keine Notiz. Mit Content in der Notiz (Striche, Tode, Bewertung …) ist es eine Notiz; ohne etwas Eigenes wird eine Notiz zu «gespielt».
+function qnHasContent(d) {
+  return !!d && (Object.values(d.tally || {}).some(t => t && (t.ok || t.no)) || Object.keys(d.fx || {}).length > 0 || deathTotal(d.deaths) > 0 || deathTotal(d.ultDeaths) > 0
+    || !!String(d.text || "").trim() || !!String(d.extra || "").trim() || !!d.mini || !!d.stack || !!d.voice
+    || (d.ults !== null && d.ults !== undefined) || (d.ultHit !== null && d.ultHit !== undefined)
+    || !!(d.lad && (d.lad.ok || d.lad.no || d.lad.v)) || !!(d.bingo && (d.bingo.hit || []).length));
+}
+// Zweimal kurz hintereinander? Kein Match ist so kurz: Die App fragt nach, statt still doppelt zu zählen.
+const QN_AGAIN_MS = 2 * 60e3;
+function qnLastTs() {
+  const t = today();
+  return Math.max(0, ...state.qnotes.filter(q => q.date === t).map(q => q.ts || 0), ...state.matches.filter(m => m.date === t).map(m => Math.max(m.played || 0, (m.qn || {}).noted || 0)));
+}
+function qnPlayedTap() {
+  if (qnHasContent(qnDraft)) { qnOpen(); toast("Du hast für dieses Match schon etwas notiert. Speichere die Notiz, dann zählt das Match."); return; }
+  const now = Date.now(), ago = now - qnLastTs();
+  const go = () => {
+    const q = { id: newId(), ts: Date.now(), date: today(), played: 1, ults: null, ultHit: null };
+    state.qnotes.push(q); qnAssignAll(); save(); render(); qnFabState();
+    qpOpen(q);
+  };
+  if (ago < QN_AGAIN_MS) askConfirm(`Du hast ${ago < 60e3 ? "gerade eben" : "vor einer Minute"} schon ein Match eingetragen. Noch ein weiteres Match eintragen?`, "Ja, noch ein Match").then(ok => { if (ok) go(); });
+  else go();
+}
+// Zweck wie in der Notiz: "0" Training (Block), "1" Vorbereitung oder Lektion, "mission", "none" (freies Spiel)
+const qnPurposeKey = x => { const p = qnPurpose(x); return p === "prep" ? "1" : p || "0"; };
+function qnSetPurpose(d, v) {
+  d.prep = v !== "0";
+  if (d.prep) d.purpose = v === "1" ? "prep" : v; else delete d.purpose;
+  if (v === "mission") { const open = qnMisOpen(); if (!qnMisOf(d.mission) && open.length === 1) d.mission = open[0].id; } else delete d.mission;
+}
+// Ist der Eintrag schon zugeordnet, gilt der Zweck fürs Match selbst (wie «Letztes Match nicht mitzählen»: m.stepPick)
+const qnMatchPurposeKey = m => m.stepPick === "prep" ? "1" : m.stepPick === "mission" || m.stepPick === "none" ? m.stepPick : "0";
+function qnSetMatchPurpose(m, v) {
+  if (v === "0") { if (planSkip(m)) delete m.stepPick; delete m.mission; return; }
+  m.stepPick = v === "1" ? "prep" : v;
+  if (v === "mission") { const open = qnMisOpen(); if (!qnMisOf(m.mission) && open.length === 1) m.mission = open[0].id; } else delete m.mission;
+}
+// In welchem Block zählt das Match?
+function qpBlockText(q, m) {
+  const fd = focusDay(); if (!fd.n || fd.n > PLAN_N) return "";
+  const keys = blockKeysOf(fd.n); if (!keys.length) return "";
+  const B = blockMatches(), S = blockSeq(planItemsToday(fd.n), keys, B, fd.n), hit = S.out.find(o => o.x === q || (m && o.x === m));
+  if (!hit) return "";
+  return hit.key === "b4" ? "Zählt als Zusatz-Match nach den Blöcken." : `Zählt für ${focusBlockLabel(hit.key)}, Match ${hit.pos} von ${B}.`;
+}
+// Bestätigung nach dem Tipp: Zweck ändern, doch eine Notiz schreiben oder rückgängig machen
+let qpRef = null, qpOpener = null;
+function qpHtml() {
+  const q = qpRef; if (!q) return "";
+  const m = q.match ? state.matches.find(x => x.id === q.match) : null, fd = focusDay(), inPlan = fd.n >= 1 && fd.n <= PLAN_N;
+  const cur = m ? qnMatchPurposeKey(m) : qnPurposeKey(q), n = state.matches.filter(x => x.date === today()).length + qnToday().length;
+  const hint = cur === "0" ? `<span class="small muted">${esc(qpBlockText(q, m))}</span>` : cur === "mission" ? qnMissionHtml(m || q) : `<span class="small muted">${esc(QN_PURPOSE_HINT[cur === "1" ? "prep" : cur] || "")}</span>`;
+  return `<div class="qnhead"><div><h2 id="qpTitle">${icon("check")}Match eingetragen</h2><span class="small muted">${nmTime(q.ts)} · heute ${plural(n, "Match", "Matches")}</span></div><button class="btn ghost small" type="button" data-qpclose aria-label="Schliessen">✕</button></div>
+    <p class="small" style="margin:0 0 10px">${m ? `Das Match ist schon vom Abgleich da: <b>${esc(m.hero)}</b>, ${m.result === "W" ? "Sieg" : "Niederlage"}${m.ts ? `, ${nmTime(m.ts)}` : ""}. Der Eintrag gehört jetzt dazu.` : "Das Match zählt ab sofort. Held, Ergebnis und Werte holt der Abgleich später. Die App ordnet den Eintrag dann selbst zu."}</p>
+    ${inPlan ? `<div class="qnrow"><b class="small">Wofür war das Match?</b><div class="chips">${QN_PURPOSE.map(([k, l]) => `<button type="button" class="chip ${k === cur ? "on" : ""}" data-qppurp="${k}" aria-pressed="${k === cur}">${l}</button>`).join("")}</div>${hint}</div>` : ""}
+    <div class="row mt"><button class="btn" type="button" data-qpclose>Fertig</button><button class="btn ghost" type="button" data-qpnote>${icon("edit")}Doch eine Notiz dazu</button>${m ? "" : `<button class="btn ghost" type="button" data-qpundo>Rückgängig</button>`}</div>`;
+}
+function qpOpen(q) {
+  qpRef = q;
+  let bd = document.getElementById("qpSheet");
+  if (!bd) {
+    bd = document.createElement("div"); bd.id = "qpSheet"; bd.className = "confirm-backdrop msbd"; bd.hidden = true;
+    bd.innerHTML = `<div class="msheet qnsheet" role="dialog" aria-modal="true" aria-labelledby="qpTitle"></div>`;
+    document.body.appendChild(bd);
+    bd.addEventListener("click", qpClick);
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !bd.hidden) qpClose(); });
+  }
+  qpOpener = document.activeElement;
+  bd.firstElementChild.innerHTML = qpHtml();
+  bd.hidden = false;
+  const f = bd.querySelector(".row [data-qpclose]"); if (f) f.focus();
+}
+function qpRedraw(focusSel) {
+  const bd = document.getElementById("qpSheet"); if (!bd || bd.hidden) return;
+  bd.firstElementChild.innerHTML = qpHtml();
+  const f = focusSel && bd.querySelector(focusSel); if (f) f.focus();
+}
+function qpClose() {
+  const bd = document.getElementById("qpSheet"); if (bd) bd.hidden = true;
+  if (qpOpener && qpOpener.focus && document.body.contains(qpOpener)) qpOpener.focus();
+}
+function qpClick(e) {
+  const bd = e.currentTarget, q = qpRef;
+  if (e.target === bd || e.target.closest("[data-qpclose]")) { qpClose(); return; }
+  const b = e.target.closest("button"); if (!b || !q) return;
+  const m = q.match ? state.matches.find(x => x.id === q.match) : null;
+  if (b.dataset.qppurp) { const v = b.dataset.qppurp; if (m) qnSetMatchPurpose(m, v); else qnSetPurpose(q, v); planRecheckBlocks(); save(); render(); qpRedraw(`[data-qppurp="${v}"]`); }
+  else if (b.dataset.qnmis) { const t = m || q; if (t.mission === b.dataset.qnmis) delete t.mission; else t.mission = b.dataset.qnmis; save(); render(); qpRedraw(`[data-qnmis="${b.dataset.qnmis}"]`); }
+  else if (b.hasAttribute("data-qpundo")) { state.qnotes = state.qnotes.filter(x => x !== q); qpRef = null; planRecheckBlocks(); save(); qpClose(); render(); qnFabState(); toast("Eintrag entfernt. Das Match zählt nicht mehr."); }
+  else if (b.hasAttribute("data-qpnote")) { qpClose(); qnFromPlayed(q, m); }
+}
+// «Doch eine Notiz dazu»: Die Notiz übernimmt Zeit und Zweck des Eintrags und ersetzt ihn beim Speichern
+function qnFromPlayed(q, m) {
+  const d = Object.assign(qnBlank(), qnHasContent(qnDraft) ? qnDraft : {}, { fromPlayed: q.id, fromTs: q.ts });
+  const v = m ? qnMatchPurposeKey(m) : qnPurposeKey(q);
+  if (v !== "0") qnSetPurpose(d, v); else { delete d.prep; delete d.purpose; }
+  const mis = (m || q).mission; if (mis) d.mission = mis;
+  if (!m && q.blk) d.blk = q.blk;
+  qnDraft = d; qnOpen();
+}
+// ---------- Heute gespielt ----------
+// Alle Matches von heute auf einen Blick: was der Abgleich schon geholt hat und was noch wartet («gespielt» oder Notiz), neueste oben.
+function playedRowHtml(r) {
+  if (r.q) {
+    const q = r.q, inPlan = focusDay().n >= 1 && focusDay().n <= PLAN_N, p = qnPurpose(q);
+    const pu = p ? (QN_PURPOSE_NAME[p] || "") + (p === "mission" && qnMisOf(q.mission) ? ` (${qnMisOf(q.mission).hero})` : "") : inPlan ? "Training" : "";
+    return `<div class="orow ptrow wait"><span class="pttime">${nmTime(q.ts || 0)}</span><span class="sp small"><b>${q.played ? "Gespielt" : "Notiz"}</b> · wartet auf den Abgleich${pu ? ` · ${esc(pu)}` : ""}</span>${q.played ? `<button class="btn ghost small" type="button" data-qpedit="${q.id}">Ändern</button>` : ""}</div>`;
+  }
+  const m = r.m, noted = (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn;
+  return `<div class="orow ptrow"><span class="pttime">${m.ts ? nmTime(m.ts) : "–"}</span>${resultPill(m.result)}${heroChip(m.hero)}<span class="sp small muted">${m.k ?? "–"}/${m.d ?? "–"}/${m.a ?? "–"}${noted ? " · Notiz ✓" : m.played ? " · von dir als gespielt eingetragen" : ""}${planSkip(m) ? ` · ${esc(QN_PURPOSE_NAME[m.stepPick] || "")}` : ""}</span></div>`;
+}
+function playedTodayHtml() {
+  const t = today(), ms = state.matches.filter(m => m.date === t), qs = qnToday(), fd = focusDay(), inPlan = fd.n >= 1 && fd.n <= PLAN_N;
+  if (!ms.length && !qs.length && !inPlan) return "";
+  const rows = qs.map(q => ({ t: q.ts || 0, q })).concat(ms.map(m => ({ t: matchTime(m), m }))).sort((a, b) => b.t - a.t);
+  const at = state.sync ? Date.parse(state.sync.at || "") : NaN;
+  const atTxt = isFinite(at) ? ` · Abgleich zuletzt ${new Date(at).toISOString().slice(0, 10) === t ? nmTime(at) : esc(fmtDT(at))}` : "";
+  const sub = rows.length ? `${ms.length} vom Abgleich${qs.length ? `, ${qs.length} ${qs.length === 1 ? "wartet" : "warten"} noch` : ""}${atTxt}` : `Noch kein Match heute${atTxt}`;
+  const rest = rows.slice(5);
+  return `<div class="card ptcard"><div class="card-head"><h2>${icon("check")}Heute gespielt</h2><span class="badge">${plural(rows.length, "Match", "Matches")}</span></div>
+    <p class="small muted" style="margin:0 0 4px">${sub}</p>
+    ${rows.slice(0, 5).map(playedRowHtml).join("")}${rest.length ? `<details><summary class="small">${plural(rest.length, "weiteres Match", "weitere Matches")}</summary>${rest.map(playedRowHtml).join("")}</details>` : ""}
+    <div class="row mt"><button class="btn small" type="button" data-qplayed>${icon("check")}Match gespielt</button><button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button></div>
+    ${qs.length ? "" : `<p class="small muted" style="margin:6px 0 0">Keine Notiz gemacht? Ein Tipp auf «Match gespielt» reicht. Das Match zählt sofort für deine Blöcke. Held, Ergebnis und Werte holt der Abgleich später, die App ordnet den Eintrag dann selbst zu.</p>`}</div>`;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest) return;
+  if (e.target.closest("[data-qplayed]")) { qnPlayedTap(); return; }
+  const ed = e.target.closest("[data-qpedit]");
+  if (ed) { const q = state.qnotes.find(x => x.id === ed.dataset.qpedit); if (q) qpOpen(q); }
+});
+// Knöpfe «Gespielt» und «Notiz» unten rechts, auf allen Seiten
 (() => {
-  const b = document.createElement("button");
-  b.type = "button"; b.className = "qnfab"; b.id = "qnFab"; b.setAttribute("data-qnopen", ""); b.setAttribute("aria-label", "Notiz zum Match");
-  b.innerHTML = `${icon("edit")}<span>Notiz</span>`;
-  document.body.appendChild(b);
+  const w = document.createElement("div");
+  w.className = "qnfabs";
+  w.innerHTML = `<button type="button" class="qnfab alt" id="qpFab" data-qplayed aria-label="Match gespielt: ohne Notiz eintragen" title="Match gespielt, ohne Notiz">${icon("check")}<span>Gespielt</span></button><button type="button" class="qnfab" id="qnFab" data-qnopen aria-label="Notiz zum Match">${icon("edit")}<span>Notiz</span></button>`;
+  document.body.appendChild(w);
 })();
 // Im Trainingsplan: Stand der Notizen von heute
 // Eine Zeile unten in «Eine Sache pro Match»: Notiz nach jedem Match, mit Stand von heute
@@ -7745,7 +7906,7 @@ function qnPlanLine() {
   return `<div class="qnline small"><span><b>Nach jedem Match:</b> Notiz${ms.length ? ` · heute ${withN} von ${ms.length}` : ""}</span><button type="button" class="btn small ghost" data-qnopen>${icon("edit")}Notiz</button></div>`;
 }
 function qnPlanHtml() {
-  const ms = state.matches.filter(m => m.date === today()), withN = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().length;
+  const ms = state.matches.filter(m => m.date === today()), withN = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().filter(q => !q.played).length;
   return `<div class="qnplan"><span class="small"><b>Nach jedem Match:</b> Notiz in der Ladezeit (Knopf «Notiz» unten rechts). Heute ${ms.length ? `${withN} von ${plural(ms.length, "Match", "Matches")} mit Notiz` : "noch keine Matches vom Abgleich"}${waiting ? `, ${plural(waiting, "Notiz wartet", "Notizen warten")} auf ihr Match` : ""}.</span><button type="button" class="btn small" data-qnopen>${icon("edit")}Notiz</button></div>`;
 }
 function renderLog() {
@@ -12211,7 +12372,9 @@ function focusDay() {
   return { n, since: Math.max(w.since || 0, (n && dayGet(n).from) || 0), list, prevN: old.length, prev: old.length ? old[0].date : "" };
 }
 // Wie viele Matches schon gespielt sind: Matches des Plantags (Abgleich oder von Hand), dazu Notizen von heute, die noch auf ihr Match warten
-const focusPlayed = f => f.list.length + qnToday().filter(q => !q.prep && (!f.since || (q.ts || 0) > f.since)).length;
+// Wartende Einträge von heute (Notiz oder «gespielt»), die für die Blöcke zählen
+const qnCounted = since => qnToday().filter(q => !q.prep && (!since || (q.ts || 0) > since));
+const focusPlayed = f => f.list.length + qnCounted(f.since).length;
 // Die eine Sache fürs nächste Match (nur heute, an einem Plantag)
 // force: Block, den du in der Notiz gewählt hast («b1» … «b4»); ohne Angabe gilt die offene Notiz (qnForce), null = nur die Zählung der App
 let qnForce = "";
@@ -12222,7 +12385,7 @@ function focusNow(force) {
   if (!plan.length) return null;
   if (force === undefined) force = qnForce;
   const B = blockMatches(), st = dayGet(n).steps || {}, blocks = plan.filter(x => x.key !== "b4"), keys = blocks.map(x => x.key);
-  const items = fd.list.concat(qnToday().filter(q => !q.prep && (!fd.since || (q.ts || 0) > fd.since)).sort((a, b) => (a.ts || 0) - (b.ts || 0)));
+  const items = fd.list.concat(qnCounted(fd.since).sort((a, b) => (a.ts || 0) - (b.ts || 0)));
   const S = blockSeq(items, keys, B, n), real = items.length + 1;
   const biTick = blocks.findIndex(x => !st[x.key]), biT = biTick < 0 ? blocks.length : biTick;
   const want = force ? (force === "b4" ? blocks.length : keys.indexOf(force)) : -1;
@@ -12272,14 +12435,14 @@ function nmCardHtml() {
 // die nächsten Matches rücken nach. In der Notiz und im Review lässt sich das auch direkt angeben.
 function nmLastCounted(f) {
   const ms = f.list.map(m => ({ kind: "m", id: m.id, t: matchTime(m), hero: m.hero }));
-  const qs = qnToday().filter(q => !q.prep && (!f.since || (q.ts || 0) > f.since)).map(q => ({ kind: "q", id: q.id, t: q.ts || 0, hero: "" }));
+  const qs = qnCounted(f.since).map(q => ({ kind: "q", id: q.id, t: q.ts || 0, hero: "" }));
   return ms.concat(qs).sort((a, b) => b.t - a.t)[0] || null;
 }
 const nmTime = t => new Date(t).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
 // Nach «zählt nicht»: Blöcke, die die App selbst abgehakt hat (st.auto) und für die jetzt Matches fehlen, wieder öffnen. Selbst gesetzte Häkchen bleiben.
 function planRecheckBlocks() {
   const n = focusDay().n; if (!n || n > PLAN_N) return;
-  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]), B = blockMatches(), S = blockSeq(planMatchesToday(n).slice().sort((a, b) => matchTime(a) - matchTime(b)), keys, B, n);
+  const st = dayEnsure(n), keys = blockStepKeys(PLAN.days[n - 1]), B = blockMatches(), S = blockSeq(planItemsToday(n), keys, B, n);
   keys.forEach((k, i) => { if (st.auto && st.auto[k] && st.steps[k] === true && blockSeqDone(S, i, B) < B * (i + 1)) { delete st.steps[k]; delete st.auto[k]; } });
 }
 function nmPrepHtml(f) {
@@ -12758,12 +12921,14 @@ function stepFieldKeys(n, s) {
 }
 // Matches, die zum laufenden Plantag n gehören (siehe «Ein Trainingstag über mehrere Spieltage»: ab dem letzten Abschluss, höchstens zwei Spieltage)
 const planMatchesToday = n => { const f = focusDay(); return f.n === n ? f.list : state.matches.filter(m => m.date === today()); };
+// Dazu die wartenden Einträge (Notiz oder «Match gespielt»): Die Blöcke haken sich ab, ohne auf den Abgleich zu warten. Nach Zeit sortiert.
+const planItemsToday = n => { const f = focusDay(); return (f.n === n ? f.list.concat(qnCounted(f.since)) : state.matches.filter(m => m.date === today())).slice().sort((a, b) => matchTime(a) - matchTime(b)); };
 function autoStepEval(n, s, carryIdx) {
   if (!planStarted() || !(n >= 1 && n <= PLAN_N) || n !== planDay()) return null;
   const d = PLAN.days[n - 1], st = dayGet(n), own = blockStepKeys(d);
   const idx = carryIdx >= 0 ? own.length + carryIdx : own.indexOf(s.key);
   if (idx >= 0) {
-    const B = blockMatches(), all = planMatchesToday(n).slice().sort((a, b) => matchTime(a) - matchTime(b)), since = focusDay().prev;
+    const B = blockMatches(), all = planItemsToday(n), since = focusDay().prev;
     const ms = idx < own.length ? blockSeqDone(blockSeq(all, own, B, n), idx, B) : all.length;   // selbst gewählte Blöcke zählen dort (ein Zusatz-Match füllt keinen anderen Block)
     const r = autoRes(ms, B * (idx + 1), "Match", "Matches", ms >= B * (idx + 1) ? "" : `${ms} von ${B * (idx + 1)} Matches ${since ? `seit dem ${fmtDate(since)}` : "heute"}`), lock = carryIdx >= 0 ? "" : rvLock(n, s);
     if (lock && r.done) { r.done = false; r.wait = lock; }
@@ -12773,7 +12938,7 @@ function autoStepEval(n, s, carryIdx) {
   // Aufschreiben: dazu zählen die Notizen nach dem Match (für mindestens 80 % der Matches von heute)
   const msToday = planMatchesToday(n);
   if (s.key === "note" && msToday.length && scaleMatchRefs(s.t).split("\n").some(x => QN_LINE.test(x.trim()))) {
-    const ms = msToday, noted = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length + qnToday().length, ok = noted >= Math.ceil(ms.length * 0.8);
+    const ms = msToday, noted = ms.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length + qnToday().filter(q => !q.played).length, ok = noted >= Math.ceil(ms.length * 0.8);
     const have = keys.filter(k => (f[k] || "").trim()).length + (ok ? 1 : 0), need = keys.length + 1;
     const r = autoRes(have, need, "Eintrag", "Einträge", have >= need ? "" : `${ok ? "Notizen nach den Matches ✓" : `Notizen: ${Math.min(noted, ms.length)} von ${ms.length} Matches`}${keys.length ? ` · Tagesende: ${have - (ok ? 1 : 0)} von ${keys.length}` : ""}`);
     return r;
@@ -14202,7 +14367,7 @@ function wkMissionHtml(mis) {
   if (mis.status === "open") {
     return `<div class="mis"><div class="misr"><b>${esc(mis.hero)}</b>: ${esc(wkMissionText(mis))}</div>
       <div class="track"><span style="width:${Math.min(1, p.have / mis.n) * 100}%"></span></div>
-      <div class="small muted">${p.have} von ${mis.n} Matches${p.have ? ` · bisher ${esc(wkValueText(mis, p.value))}` : ""}${left ? ` · noch ${plural(left, "Match", "Matches")} mit ${esc(mis.hero)}` : ""}</div>
+      <div class="small muted">${p.have} von ${mis.n} Matches${p.have ? ` · bisher ${esc(wkValueText(mis, p.value))}` : ""}${left ? ` · noch ${plural(left, "Match", "Matches")} mit ${esc(mis.hero)}` : ""}${(() => { const w = state.qnotes.filter(q => q.mission === mis.id && !q.match).length; return w ? ` · ${plural(w, "Match wartet", "Matches warten")} auf den Abgleich` : ""; })()}</div>
       <button type="button" class="linkbtn small" data-wk="drop" data-id="${mis.id}">Mission abbrechen</button></div>`;
   }
   return `<div class="mis ${mis.status}"><div class="misr">${mis.status === "done" ? "✓" : "–"} <b>${esc(mis.hero)}</b>: ${esc(wkMissionText(mis))}</div>
