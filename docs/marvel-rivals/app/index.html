@@ -18497,6 +18497,20 @@ const VID_KINDS = {
   win: { l: "Fight gewonnen", key: "w" }, loss: { l: "Fight verloren", key: "v" }, good: { l: "Gut gemacht", key: "b" }, note: { l: "Notiz", key: "n" }
 };
 const VID_ULT = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
+// Todesursachen wie in der Notiz: die sechs Gruppen und die genauen Ursachen pro Rolle. Das PC-Programm nutzt dieselben Wörter
+// (rv_data.json, erzeugt aus dieser Datei), deshalb übernimmt der Abgleich nur Ursachen, die hier vorkommen.
+const vidCauseList = role => [...new Set((ROLES.includes(role) ? [role] : ROLES).flatMap(r => (DEATH_BY_ROLE[r] || []).concat(DEATH_MORE_ROLE[r] || [])).concat(DEATH_MORE).map(o => o[0]))];
+let vidCauseAll = null;
+const vidCauseOk = c => { if (!vidCauseAll) vidCauseAll = new Set(QN_CATS.concat(vidCauseList(""))); return vidCauseAll.has(c); };
+const vidCausesIn = (role, grp) => vidCauseList(role).filter(l => l !== grp && deathCat(l) === grp);
+// «Wessen Ult?» bei einem Tod durch eine gegnerische Ult oder bei einer Gegner-Ult: Gegner des Matches (oder deine häufigsten
+// Ult-Gegner), dazu alle Helden mit Ult in der Auswahl. Wie im PC-Programm freiwillig.
+function vidUltPickHtml(mk) {
+  const m = state.matches.find(x => x.id === mk.mid), cands = ultCands(m ? m.enemies : [], mk.h && ultOf(mk.h) ? { [mk.h]: 1 } : {}).slice(0, 8), rest = ultHeroes().filter(h => !cands.includes(h));
+  return `<div class="small" style="margin-top:6px"><b>Wessen Ult?</b> <span class="muted">freiwillig${m && (m.enemies || []).length ? ", zuerst die Gegner dieses Matches" : ""}</span></div>
+    <div class="chips">${cands.map(h => `<button type="button" class="chip${mk.h === h ? " on" : ""}" data-vidset="h" data-v="${esc(h)}" title="${esc(ultOf(h).n)}">${esc(h)}</button>`).join("")}
+    ${rest.length ? `<select data-vidhero aria-label="Anderer Held, dessen Ult es war" style="width:auto;max-width:100%"><option value="">${cands.length ? "Anderer Held …" : "Held wählen …"}</option>${rest.map(h => `<option value="${esc(h)}">${esc(h)}: ${esc(ultOf(h).n)}</option>`).join("")}</select>` : ""}</div>`;
+}
 const vidUi = { file: null, url: "", key: "", mid: "", pend: "", err: "", bound: false, folder: null, folderName: "", pcInfo: null };
 const vidStore = () => (state.vids = state.vids && typeof state.vids === "object" ? state.vids : {});
 const vidKey = f => f.name + "|" + f.size;
@@ -18521,9 +18535,9 @@ const vidMatchLabel = m => { const tt = m.ts ? new Date(m.ts).toLocaleTimeString
 // Alle Markierungen zu einem Match (aus allen Aufnahmen)
 const vidMarksFor = mid => Object.values(vidStore()).flatMap(r => (r.marks || []).filter(x => x.mid === mid));
 function vidSum(marks) {
-  const d = marks.filter(x => x.k === "death"), u = marks.filter(x => x.k === "ult"), causes = {};
-  d.forEach(x => { if (x.c) causes[x.c] = (causes[x.c] || 0) + 1; });
-  return { deaths: d.length, causes, ults: u.length, hit: u.reduce((a, x) => a + (x.v === "ja" ? 1 : x.v === "teils" ? 0.5 : 0), 0), rated: u.filter(x => x.v).length,
+  const d = marks.filter(x => x.k === "death"), u = marks.filter(x => x.k === "ult"), causes = {}, ud = {};
+  d.forEach(x => { if (x.c) causes[x.c] = (causes[x.c] || 0) + 1; if (x.c && x.h && deathCat(x.c) === ULT_CAT && ultOf(x.h)) ud[x.h] = (ud[x.h] || 0) + 1; });
+  return { deaths: d.length, causes, ud, ults: u.length, hit: u.reduce((a, x) => a + (x.v === "ja" ? 1 : x.v === "teils" ? 0.5 : 0), 0), rated: u.filter(x => x.v).length,
     win: marks.filter(x => x.k === "win").length, loss: marks.filter(x => x.k === "loss").length, kills: marks.filter(x => x.k === "kill").length, n: marks.length };
 }
 const vidSumText = s => [s.deaths && `${s.deaths} ${s.deaths === 1 ? "Tod" : "Tode"}`, s.kills && `${s.kills} ${s.kills === 1 ? "Kill" : "Kills"}`, s.ults && `${s.ults} ${s.ults === 1 ? "Ult" : "Ults"}`, (s.win || s.loss) && `Fights ${s.win}:${s.loss}`].filter(Boolean).join(", ");
@@ -18571,16 +18585,19 @@ const vidMark = id => { const r = vidRec(); return r ? r.marks.find(x => x.id ==
 function vidPendHtml() {
   const mk = vidMark(vidUi.pend); if (!mk) return "";
   const at = `<span class="small muted">bei ${vidFmt(mk.t)}</span>`;
-  if (mk.k === "death") return `<div class="vidpend"><b class="small">Tod ${at}: woran lag es?</b><div class="chips">${QN_CATS.map(c => `<button type="button" class="chip${mk.c === c ? " on" : ""}" data-vidset="c" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>`;
+  if (mk.k === "death") { const grp = mk.c ? deathCat(mk.c) : "", m = state.matches.find(x => x.id === mk.mid), role = m ? heroRole(m.hero) : "", det = grp ? vidCausesIn(role, grp) : [];
+    return `<div class="vidpend"><b class="small">Tod ${at}: woran lag es?</b> <span class="small muted">Ein Tipp auf die Gruppe reicht.</span><div class="chips">${QN_CATS.map(c => `<button type="button" class="chip${grp === c ? " on" : ""}" data-vidset="c" data-v="${esc(c)}">${esc(c)}${grp === c && mk.c !== c ? " ✓" : ""}</button>`).join("")}</div>
+      ${det.length ? `<div class="small muted" style="margin-top:6px">Genauer, freiwillig${ROLES.includes(role) ? ` (${esc(role)})` : ""}:</div><div class="chips">${det.map(c => `<button type="button" class="chip${mk.c === c ? " on" : ""}" data-vidset="c" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
+      ${grp === ULT_CAT ? vidUltPickHtml(mk) : ""}
+      ${grp ? `<div class="row" style="margin-top:6px"><button type="button" class="btn small" data-vidpenddone="1">Fertig</button></div>` : ""}</div>`; }
   if (mk.k === "ult") return `<div class="vidpend"><b class="small">Deine Ult ${at}: Wirkung?</b><div class="chips">${VID_ULT.map(([v, l]) => `<button type="button" class="chip${mk.v === v ? " on" : ""}" data-vidset="v" data-v="${v}">${l}</button>`).join("")}</div></div>`;
-  if (mk.k === "eult") { const m = state.matches.find(x => x.id === mk.mid), en = ((m && m.enemies) || []).filter(h => ultOf(h));
-    return en.length ? `<div class="vidpend"><b class="small">Gegner-Ult ${at}: von wem?</b><div class="chips">${en.map(h => `<button type="button" class="chip${mk.h === h ? " on" : ""}" data-vidset="h" data-v="${esc(h)}">${esc(h)}</button>`).join("")}</div></div>` : ""; }
+  if (mk.k === "eult") return `<div class="vidpend"><b class="small">Gegner-Ult ${at}</b>${vidUltPickHtml(mk)}</div>`;
   if (mk.k === "note") return `<div class="vidpend"><label class="small"><b>Notiz ${at}</b><input type="text" id="vidNote" data-vidnote="${esc(mk.id)}" value="${esc(mk.n || "")}" placeholder="z. B. hier zu weit vorne geheilt"></label></div>`;
   return "";
 }
 function vidMarkLabel(mk) {
   const k = VID_KINDS[mk.k] || { l: mk.k }, ul = VID_ULT.find(x => x[0] === mk.v);
-  return `<b>${esc(k.l)}</b>${mk.pc ? ' <span class="badge" title="aus dem PC-Programm">PC</span>' : ""}${mk.c ? " · " + esc(mk.c) : ""}${ul && mk.k === "ult" ? " · " + esc(ul[1]) : ""}${mk.h ? " · " + esc(mk.h) : ""}${mk.n ? ` · <span class="muted">${esc(mk.n)}</span>` : ""}`;
+  return `<b>${esc(k.l)}</b>${mk.pc ? ' <span class="badge" title="aus dem PC-Programm">PC</span>' : ""}${mk.c ? " · " + esc(mk.c) : ""}${ul && mk.k === "ult" ? " · " + esc(ul[1]) : ""}${mk.h ? " · Ult von " + esc(mk.h) : ""}${mk.n ? ` · <span class="muted">${esc(mk.n)}</span>` : ""}`;
 }
 // Teile, die sich beim Markieren ändern; der Player selbst bleibt stehen (sonst springt das Video zurück)
 function vidParts() {
@@ -18597,7 +18614,7 @@ function vidParts() {
     <p class="small muted" style="margin:6px 0 0">Tasten am PC: Leertaste Pause, ← und → 5 Sekunden, Buchstaben wie auf den Knöpfen. Markiert wird immer die aktuelle Stelle im Video.</p>
     <h3 class="vidh">Markierungen${cur ? ` zu diesem Match: ${here.length}` : ""}${other ? ` <span class="small muted">(dazu ${other} weitere Matches in dieser Aufnahme)</span>` : ""}</h3>
     ${marks.length ? `<ol class="vidlist">${marks.map(x => `<li class="${x.mid === vidUi.mid ? "" : "oth"}${x.id === vidUi.pend ? " pend" : ""}"><button type="button" class="linkbtn" data-vidjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span>${vidMarkLabel(x)}${x.mid && x.mid !== vidUi.mid ? ` <span class="small muted">(anderes Match)</span>` : ""}</span><button type="button" class="linkbtn small" data-videdit="${esc(x.id)}" aria-label="Ändern">ändern</button><button type="button" class="linkbtn small" data-viddel="${esc(x.id)}" aria-label="Löschen">✕</button></li>`).join("")}</ol>` : `<p class="small muted">Noch keine Markierungen. Spiel das Video ab und tipp bei einem Tod auf «Tod» (oder Taste T).</p>`}
-    ${cur && here.length ? `<div class="vidsum"><b class="small">Ins Match übernehmen</b><span class="small">${esc(vidSumText(s) || "nur Notizen")}${s.deaths && Object.keys(s.causes).length ? ` · Ursachen: ${esc(Object.entries(s.causes).map(([c, n]) => `${c} ${n}×`).join(", "))}` : ""}</span>
+    ${cur && here.length ? `<div class="vidsum"><b class="small">Ins Match übernehmen</b><span class="small">${esc(vidSumText(s) || "nur Notizen")}${s.deaths && Object.keys(s.causes).length ? ` · Ursachen: ${esc(Object.entries(s.causes).map(([c, n]) => `${c} ${n}×`).join(", "))}` : ""}${Object.keys(s.ud).length ? ` · Ult von: ${esc(Object.entries(s.ud).map(([h, n]) => `${h} ${n}×`).join(", "))}` : ""}</span>
       <div class="row" style="gap:6px">${s.deaths ? `<button type="button" class="btn small" data-vidtake="death">Todesursachen übernehmen</button>` : ""}${s.ults ? `<button type="button" class="btn small" data-vidtake="ult">Ults übernehmen</button>` : ""}<button type="button" class="btn ghost small" data-rv-go="${esc(cur.id)}">Zum Review dieses Matches</button></div></div>` : ""}`;
   box.insertAdjacentHTML("beforeend", vidDoneHtml(rec));
   vidScanDraw();   // Trefferquote und «übersehen» hängen an deinen Markierungen
@@ -18612,7 +18629,10 @@ async function vidTake(what) {
     if (!n) { toast("Wähl zuerst bei den Toden eine Ursache."); return; }
     if (deathTotal(m.deathCauses) > 0 && !(await askConfirm(`Das Match hat schon ${deathTotal(m.deathCauses)} Todesursachen. Durch die ${n} aus dem Video ersetzen?`, "Ersetzen"))) return;
     m.deathCauses = Object.assign({}, s.causes);
-    toast(`${n} Todesursachen ins Match übernommen.`);
+    const nU = deathTotal(s.ud);
+    if (nU) m.ultDeaths = ultTrim(Object.assign({}, s.ud), ultDeathN(m.deathCauses));
+    else if (m.ultDeaths) ultTrim(m.ultDeaths, ultDeathN(m.deathCauses));
+    toast(`${n} Todesursachen ins Match übernommen${nU ? `, dazu ${nU}× wessen Ult` : ""}.`);
   } else {
     if (m.ults !== null && m.ults !== undefined && !(await askConfirm(`Das Match hat schon ${m.ults} Ults eingetragen. Durch ${s.ults} aus dem Video ersetzen?`, "Ersetzen"))) return;
     m.ults = s.ults; m.ultHit = s.rated ? s.hit : null;
@@ -18853,9 +18873,9 @@ function vidImportPc(d) {
     (Array.isArray(v.marks) ? v.marks : []).forEach(m => {
       if (!m || !VID_KINDS[m.k] || !isFinite(+m.t)) return;
       const id = "pc-" + String(m.id || "").slice(0, 20), mk = { id, t: Math.round(+m.t * 10) / 10, k: m.k, mid: keep[id] || vidPcMid(rec, m.t), pc: 1 };
-      if (m.c && QN_CATS.includes(m.c)) mk.c = m.c;
+      if (m.c && vidCauseOk(String(m.c))) mk.c = String(m.c);
       if (m.v && VID_ULT.some(x => x[0] === m.v)) mk.v = m.v;
-      if (m.h) mk.h = String(m.h).slice(0, 40);
+      if (m.h && PROF[String(m.h)]) mk.h = String(m.h);
       if (m.n) mk.n = String(m.n).slice(0, 300);
       rec.marks.push(mk); res.marks++;
     });
@@ -18867,6 +18887,7 @@ function vidImportPc(d) {
         const sm = vidSum(vidMarksFor(mid)), nC = Object.values(sm.causes).reduce((a, b) => a + b, 0);
         if (nC && !deathTotal(m.deathCauses)) { m.deathCauses = Object.assign({}, sm.causes); res.took++; }
         if (sm.ults && (m.ults === null || m.ults === undefined)) { m.ults = sm.ults; m.ultHit = sm.rated ? sm.hit : null; res.took++; }
+        if (Object.keys(sm.ud).length && !deathTotal(m.ultDeaths)) { const ud = ultTrim(Object.assign({}, sm.ud), ultDeathN(m.deathCauses)); if (deathTotal(ud)) { m.ultDeaths = ud; res.took++; } }
       });
       if (!rec.doneMid) rec.doneMid = (rec.marks.find(m => m.mid) || {}).mid || "";
     }
@@ -18918,6 +18939,7 @@ function vidBind(el) {
       vidFolderDraw();
     }
     if (e.target.id === "vidMatch") { vidUi.mid = e.target.value; vidUi.pend = ""; vidParts(); }
+    if (e.target.matches && e.target.matches("[data-vidhero]") && e.target.value) { const mk = vidMark(vidUi.pend); if (mk && ultOf(e.target.value)) { mk.h = e.target.value; save(); vidUi.pend = ""; vidParts(); } }
   });
   el.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("[data-vidnm]")) e.target.select(); });
   el.addEventListener("input", e => { const i = e.target.closest("[data-vidnote]"); if (!i) return; const mk = vidMark(i.dataset.vidnote); if (mk) { mk.n = i.value; save(); } });
@@ -18928,7 +18950,10 @@ function vidBind(el) {
     const b = e.target.closest("button"); if (!b) return;
     const v = $("#vidEl");
     if (b.dataset.vidadd) vidAdd(b.dataset.vidadd);
-    else if (b.dataset.vidset) { const mk = vidMark(vidUi.pend); if (mk) { mk[b.dataset.vidset] = mk[b.dataset.vidset] === b.dataset.v ? "" : b.dataset.v; if (!mk[b.dataset.vidset]) delete mk[b.dataset.vidset]; save(); vidUi.pend = ""; vidParts(); } }
+    else if (b.dataset.vidset) { const mk = vidMark(vidUi.pend), k = b.dataset.vidset; if (mk) { mk[k] = mk[k] === b.dataset.v ? "" : b.dataset.v; if (!mk[k]) delete mk[k];
+      if (k === "c" && mk.k === "death" && mk.h && (!mk.c || deathCat(mk.c) !== ULT_CAT)) delete mk.h;
+      save(); if (k !== "c" || !mk.c) vidUi.pend = ""; vidParts(); } }
+    else if (b.dataset.vidpenddone) { vidUi.pend = ""; vidParts(); }
     else if (b.dataset.vidjump && v) { const mk = vidMark(b.dataset.vidjump); if (mk) { v.currentTime = Math.max(0, mk.t - 5); v.play().catch(() => {}); } }
     else if (b.dataset.videdit) { vidUi.pend = vidUi.pend === b.dataset.videdit ? "" : b.dataset.videdit; vidParts(); }
     else if (b.dataset.viddel) { const r = vidRec(); if (r) { r.marks = r.marks.filter(x => x.id !== b.dataset.viddel); if (vidUi.pend === b.dataset.viddel) vidUi.pend = ""; save(); vidParts(); } }

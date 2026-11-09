@@ -92,7 +92,7 @@ const KEYS = { death: "t", kill: "k", ult: "u", eult: "g", win: "w", loss: "v", 
 const ULT_V = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
 const EV_L = { death: "Tod", kill: "Kill", ult: "Deine Ult", fight: "Fight" };
 const RES_L = { win: "gewonnen", loss: "verloren", none: "kein Fight" };
-let S = null, sel = "", V = null, pend = "", review = null, sig = "", META = null, diag = null, detOpen = false;
+let S = null, sel = "", V = null, pend = "", review = null, sig = "", META = null, diag = null, detOpen = false, diagOpen = false;
 const pct = x => (Math.round((+x || 0) * 1000) / 10).toLocaleString("de-CH") + " %";
 
 function statusBadge(v) {
@@ -195,8 +195,8 @@ function renderParts() {
       : segs.length ? `<div class="row"><button class="primary" data-act="review">Kurz-Review starten</button><span class="small muted">${segs.length} Stücke, zusammen ${fmt(segs.reduce((a, g) => a + g.e - g.s, 0))} statt ${fmt(V.dur)}</span></div>` : ""}
     <h2>Funde des Programms${open ? ` <span class="badge run">${open} offen</span>` : ""}</h2>
     ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small" style="margin:0"><b>Nichts gefunden.</b> Darunter siehst du, was das Programm gemessen hat. Markier deine Tode selbst (Taste T): Liegen sie alle unter der Schwelle, senkt das Programm sie und findet die nächsten.</p>${diagHtml()}`)
-      + (fts.length ? `<h2 style="margin-top:6px">Fights <span class="small muted">(Versuch: Stellen mit viel Bewegung in der Kill-Anzeige. Antworte, dann lernt das Programm, gewonnene von verlorenen zu unterscheiden.)</span></h2><ul class="items">${fts.map(fightRow).join("")}</ul>` : "")
-      + (evs.length ? `<details class="small"><summary>Diagnose: Was misst das Programm?</summary>${diagHtml()}</details>` : "")
+      + (fts.length ? `<h2 style="margin-top:6px">Fights <span class="small muted">(Versuch: Stellen, an denen deine Kills, Tode oder Ults dicht beieinander liegen. Antworte, dann lernt das Programm aus den Farben in der Kill-Anzeige, gewonnene von verlorenen zu unterscheiden.)</span></h2><ul class="items">${fts.map(fightRow).join("")}</ul>` : "")
+      + (evs.length ? `<details class="small" data-diag${diagOpen || diag ? " open" : ""}><summary>Diagnose: Was misst das Programm?</summary>${diagHtml()}</details>` : "")
       : V.status === "fehler" ? `<p class="small" style="color:var(--bad);margin:0">${esc(V.error || "Fehler beim Auswerten")}</p><div class="row"><button data-act="retry">Nochmal versuchen</button><span class="small muted">Das Programm versucht es auch von selbst noch einmal.</span></div>` : `<p class="small muted" style="margin:0">Wird ausgewertet …</p>`}
     <h2>Deine Markierungen</h2>
     ${marks.length ? `<ul class="items">${marks.map(m => `<li class="${m.id === pend ? "open" : ""}"><button class="link" data-jump="${m.t - (m.k === "death" ? 10 : 3)}">▶ ${fmt(m.t)}</button><span>${markLabel(m)}</span><span class="acts"><button class="link" data-edit="${m.id}">${m.id === pend ? "fertig" : "ändern"}</button><button class="link" data-del="${m.id}" aria-label="Löschen">✕</button></span>${markSub(m)}</li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine. «Stimmt» bei einem Fund macht daraus eine Markierung.</p>`}
@@ -240,7 +240,7 @@ function addMark(k) {
 document.addEventListener("click", async e => {
   const b = e.target.closest("button, li[data-sel]"); if (!b) return;
   const v = $("#vid"), d = b.dataset;
-  if (d.sel) { sel = d.sel; review = null; pend = ""; sig = ""; diag = null; renderList(); await loadVideo(); return; }
+  if (d.sel) { sel = d.sel; review = null; pend = ""; sig = ""; diag = null; diagOpen = false; renderList(); await loadVideo(); return; }
   if (d.act === "open") post("/api/folder/open", { sub: d.sub || "" });
   else if (d.act === "choose") post("/api/folder/choose").then(() => { sel = ""; V = null; poll(); });
   else if (d.act === "setFolder") post("/api/folder/set", { folder: $("#folderIn").value }).then(() => { sel = ""; V = null; poll(); });
@@ -266,7 +266,7 @@ document.addEventListener("click", async e => {
   else if (d.rate && v) v.playbackRate = +d.rate;
 });
 document.addEventListener("change", e => { const hs = e.target.closest("select[data-hero]"); if (hs && V && hs.value) { post("/api/mark/update", { id: V.id, mid: hs.dataset.hero, fields: { h: hs.value } }).then(r => { V = r; poll(); renderParts(); }); return; } });
-document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches("details[data-det]")) detOpen = e.target.open; }, true);
+document.addEventListener("toggle", e => { if (!e.target.matches) return; if (e.target.matches("details[data-det]")) detOpen = e.target.open; if (e.target.matches("details[data-diag]")) diagOpen = e.target.open; }, true);   // offen lassen, wenn neu gezeichnet wird
 document.addEventListener("change", e => { const i = e.target.closest("input[data-note]"); if (i && V) post("/api/mark/update", { id: V.id, mid: i.dataset.note, fields: { n: i.value } }).then(r => { V = r; }); });
 document.addEventListener("keydown", e => {
   const t = e.target; if (e.ctrlKey || e.metaKey || e.altKey || (t && t.matches("input, textarea, select"))) { if (t && t.matches("input[data-note]") && e.key === "Enter") { t.blur(); pend = ""; renderParts(); } return; }
