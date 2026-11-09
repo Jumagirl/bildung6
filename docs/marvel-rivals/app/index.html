@@ -18869,6 +18869,7 @@ function vidPcMidNear(rec, t) {
 function vidImportPc(d) {
   if (!d || d.format !== "rivals-video" || !d.videos || typeof d.videos !== "object") return null;
   const V = vidStore(), res = { recs: 0, marks: 0, done: 0, took: 0 };
+  if (d.quality && typeof d.quality === "object") state.vidQ = Object.assign({ at: Date.now() }, plainJson(d.quality));   // vor den Aufnahmen: entscheidet über automatische Werte
   Object.values(d.videos).forEach(v => {
     if (!v || typeof v !== "object" || !v.name || !(v.size > 0)) return;
     const key = v.name + "|" + v.size;
@@ -18923,7 +18924,6 @@ function vidImportPc(d) {
     res.took += vidAutoStats(rec);
     rec.at = Date.now(); res.recs++;
   });
-  if (d.quality && typeof d.quality === "object") state.vidQ = Object.assign({ at: Date.now() }, plainJson(d.quality));
   vidUi.pcInfo = { at: Date.now(), updated: d.updated || "", ...res };
   save();
   return res;
@@ -19106,7 +19106,9 @@ function vidLocalMatches(recs) {
   })));
   return Object.values(out).filter(o => o.m && (o.hl && !o.hlUp || o.full && !o.fullUp)).sort((a, b) => matchTime(b.m) - matchTime(a.m)).slice(0, 20);
 }
-function vidCloudDraw() { const el = $("#vidCloud"); if (el) el.innerHTML = vidCloudHtml(); }
+// Die Karte erscheint erst, wenn es etwas zu zeigen gibt: Videos in der Cloud oder Stücke im gewählten Ordner
+const vidCloudShow = () => !!(vidUi.cloudFiles && vidUi.cloudFiles.size) || vidCloudMatches().length > 0;
+function vidCloudDraw() { const el = $("#vidCloud"); if (el) { el.hidden = !vidCloudShow(); el.innerHTML = vidCloudHtml(); } }
 // Abspielen aus der Cloud: Stücke der Reihe nach; Zeiten in der App sind immer Zeiten in der Aufnahme (vidNow, vidSeek)
 function vidCloudOpen(mid, kind) {
   const o = vidCloudMatches().find(x => x.mid === mid); if (!o) return;
@@ -19169,7 +19171,7 @@ function renderVideo(fresh) {
   const rec = vidRec();
   if (!vidUi.bound) vidBind(el);
   if (!fresh && rec && $("#vidEl") && $("#vidEl").dataset.key === vidUi.key) { vidParts(); return; }
-  el.innerHTML = `<div class="card" id="vidCloud">${vidCloudHtml()}</div><div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
+  el.innerHTML = `<div class="card" id="vidCloud"${vidCloudShow() ? "" : " hidden"}>${vidCloudHtml()}</div><div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
       <p class="small" style="margin:0 0 8px">Wähl eine Aufnahme von deinem PC (MP4). Das Video bleibt auf deinem PC: Die App lädt nichts hoch und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
       <label class="vidfile"><input type="file" id="vidFile" accept="video/*,.mp4,.mov,.webm,.mkv"><span>${icon("upload")}Video auswählen oder hierher ziehen</span></label>
       ${vidDirOk ? `<label class="vidfile vidfolder"><input type="file" id="vidDir" webkitdirectory multiple><span>${icon("list")}Ganzen Ordner wählen</span></label>
