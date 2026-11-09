@@ -1,0 +1,389 @@
+{
+ "made": "2026-11-09",
+ "groups": [
+  "Position",
+  "Fluchtweg/Cooldown",
+  "Gegnerische Ult",
+  "Zu gierig",
+  "Vom Team getrennt",
+  "Sonstiges"
+ ],
+ "ultGroup": "Gegnerische Ult",
+ "roles": {
+  "Vanguard": [
+   {
+    "group": "Position",
+    "causes": [
+     "Von mehreren Gegnern fokussiert, nicht zurückgezogen",
+     "Von hinten oder ungesehen erwischt",
+     "Von Kontrolle erwischt (Betäubung, Ziehen, Wegstossen)",
+     "Von der Map gestossen oder abgestürzt"
+    ]
+   },
+   {
+    "group": "Fluchtweg/Cooldown",
+    "causes": [
+     "Schutz (Schild) zu früh weg oder falsch genutzt",
+     "Fluchtfähigkeit nicht bereit oder nicht genutzt"
+    ]
+   },
+   {
+    "group": "Gegnerische Ult",
+    "causes": [
+     "Gegner-Ult getroffen"
+    ]
+   },
+   {
+    "group": "Zu gierig",
+    "causes": [
+     "Zu weit vorgelaufen",
+     "Verlorenen Fight nicht verlassen"
+    ]
+   },
+   {
+    "group": "Vom Team getrennt",
+    "causes": [
+     "Ohne Support oder Team vorne",
+     "Ohne Heilung (Supports tot oder weit weg)",
+     "Einzeln vom Spawn zurückgelaufen"
+    ]
+   },
+   {
+    "group": "Sonstiges",
+    "causes": [
+     "Gegen einen Counter-Helden kaum eine Chance",
+     "Aus dem Objective gedrängt",
+     "Falscher Held gegen dieses Team, zu spät gewechselt",
+     "Bewusst geopfert (Punkt, Overtime, Team gerettet)",
+     "Lag oder Verbindungsproblem"
+    ]
+   }
+  ],
+  "Duelist": [
+   {
+    "group": "Position",
+    "causes": [
+     "Von Diver oder Flanker erwischt",
+     "Keine Deckung genutzt",
+     "Von hinten oder ungesehen erwischt",
+     "Von Kontrolle erwischt (Betäubung, Ziehen, Wegstossen)",
+     "Von der Map gestossen oder abgestürzt"
+    ]
+   },
+   {
+    "group": "Fluchtweg/Cooldown",
+    "causes": [
+     "Fluchtfähigkeit nicht bereit oder nicht genutzt"
+    ]
+   },
+   {
+    "group": "Gegnerische Ult",
+    "causes": [
+     "Gegner-Ult getroffen"
+    ]
+   },
+   {
+    "group": "Zu gierig",
+    "causes": [
+     "Zu weit vorne",
+     "Auf ein falsches Ziel gestürmt",
+     "Verlorenen Fight nicht verlassen"
+    ]
+   },
+   {
+    "group": "Vom Team getrennt",
+    "causes": [
+     "Allein geflankt",
+     "Ohne Team reingegangen",
+     "Ohne Heilung (Supports tot oder weit weg)",
+     "Einzeln vom Spawn zurückgelaufen"
+    ]
+   },
+   {
+    "group": "Sonstiges",
+    "causes": [
+     "Duell verloren (Zielen oder Timing)",
+     "Falscher Held gegen dieses Team, zu spät gewechselt",
+     "Bewusst geopfert (Punkt, Overtime, Team gerettet)",
+     "Lag oder Verbindungsproblem"
+    ]
+   }
+  ],
+  "Strategist": [
+   {
+    "group": "Position",
+    "causes": [
+     "Von Diver oder Flanker erwischt",
+     "Ohne Deckung gestanden",
+     "Aus der Distanz getroffen (Poke, Scharfschütze)",
+     "Im Duell verloren statt zum Team zu gehen",
+     "Von hinten oder ungesehen erwischt",
+     "Von Kontrolle erwischt (Betäubung, Ziehen, Wegstossen)",
+     "Von der Map gestossen oder abgestürzt"
+    ]
+   },
+   {
+    "group": "Fluchtweg/Cooldown",
+    "causes": [
+     "Fluchtfähigkeit nicht bereit oder nicht genutzt"
+    ]
+   },
+   {
+    "group": "Gegnerische Ult",
+    "causes": [
+     "Gegner-Ult getroffen"
+    ]
+   },
+   {
+    "group": "Zu gierig",
+    "causes": [
+     "Zu weit vorne beim Heilen",
+     "Mit wenig Leben weiter gekämpft",
+     "Verlorenen Fight nicht verlassen"
+    ]
+   },
+   {
+    "group": "Vom Team getrennt",
+    "causes": [
+     "Allein gestanden, Team zu weit weg",
+     "Tank weg oder zu weit vorne, ohne Schutz",
+     "Einzeln vom Spawn zurückgelaufen"
+    ]
+   },
+   {
+    "group": "Sonstiges",
+    "causes": [
+     "Falscher Held gegen dieses Team, zu spät gewechselt",
+     "Bewusst geopfert (Punkt, Overtime, Team gerettet)",
+     "Lag oder Verbindungsproblem"
+    ]
+   }
+  ]
+ },
+ "heroes": [
+  {
+   "name": "Adam Warlock",
+   "role": "Strategist"
+  },
+  {
+   "name": "Angela",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Black Cat",
+   "role": "Duelist"
+  },
+  {
+   "name": "Black Panther",
+   "role": "Duelist"
+  },
+  {
+   "name": "Black Widow",
+   "role": "Duelist"
+  },
+  {
+   "name": "Blade",
+   "role": "Duelist"
+  },
+  {
+   "name": "Captain America",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Cloak & Dagger",
+   "role": "Strategist"
+  },
+  {
+   "name": "Cyclops",
+   "role": "Duelist"
+  },
+  {
+   "name": "Daredevil",
+   "role": "Duelist"
+  },
+  {
+   "name": "Deadpool (Duelist)",
+   "role": "Duelist"
+  },
+  {
+   "name": "Deadpool (Strategist)",
+   "role": "Strategist"
+  },
+  {
+   "name": "Deadpool (Vanguard)",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Devil Dinosaur",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Doctor Strange",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Elsa Bloodstone",
+   "role": "Duelist"
+  },
+  {
+   "name": "Emma Frost",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Gambit",
+   "role": "Strategist"
+  },
+  {
+   "name": "Gorr",
+   "role": "Duelist"
+  },
+  {
+   "name": "Groot",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Hawkeye",
+   "role": "Duelist"
+  },
+  {
+   "name": "Hela",
+   "role": "Duelist"
+  },
+  {
+   "name": "Hulk",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Human Torch",
+   "role": "Duelist"
+  },
+  {
+   "name": "Invisible Woman",
+   "role": "Strategist"
+  },
+  {
+   "name": "Iron Fist",
+   "role": "Duelist"
+  },
+  {
+   "name": "Iron Man",
+   "role": "Duelist"
+  },
+  {
+   "name": "Jeff the Land Shark",
+   "role": "Strategist"
+  },
+  {
+   "name": "Jubilee",
+   "role": "Strategist"
+  },
+  {
+   "name": "Loki",
+   "role": "Strategist"
+  },
+  {
+   "name": "Luna Snow",
+   "role": "Strategist"
+  },
+  {
+   "name": "Magik",
+   "role": "Duelist"
+  },
+  {
+   "name": "Magneto",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Mantis",
+   "role": "Strategist"
+  },
+  {
+   "name": "Mister Fantastic",
+   "role": "Duelist"
+  },
+  {
+   "name": "Moon Knight",
+   "role": "Duelist"
+  },
+  {
+   "name": "Namor",
+   "role": "Duelist"
+  },
+  {
+   "name": "Peni Parker",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Phoenix",
+   "role": "Duelist"
+  },
+  {
+   "name": "Psylocke",
+   "role": "Duelist"
+  },
+  {
+   "name": "Rocket Raccoon",
+   "role": "Strategist"
+  },
+  {
+   "name": "Rogue",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Scarlet Witch",
+   "role": "Duelist"
+  },
+  {
+   "name": "Spider-Man",
+   "role": "Duelist"
+  },
+  {
+   "name": "Squirrel Girl",
+   "role": "Duelist"
+  },
+  {
+   "name": "Star-Lord",
+   "role": "Duelist"
+  },
+  {
+   "name": "Storm",
+   "role": "Duelist"
+  },
+  {
+   "name": "The Hood",
+   "role": "Vanguard"
+  },
+  {
+   "name": "The Punisher",
+   "role": "Duelist"
+  },
+  {
+   "name": "The Thing",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Thor",
+   "role": "Vanguard"
+  },
+  {
+   "name": "Ultron",
+   "role": "Strategist"
+  },
+  {
+   "name": "Venom",
+   "role": "Vanguard"
+  },
+  {
+   "name": "White Fox",
+   "role": "Strategist"
+  },
+  {
+   "name": "Winter Soldier",
+   "role": "Duelist"
+  },
+  {
+   "name": "Wolverine",
+   "role": "Duelist"
+  }
+ ]
+}

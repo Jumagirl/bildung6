@@ -24,7 +24,9 @@ import shutil
 import statistics
 import subprocess
 import sys
+import struct
 import threading
+import zlib
 import time
 import uuid
 from datetime import datetime
@@ -32,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "0.1.3"
+VERSION = "0.2.0"
 FPS = 4                      # Bilder pro Sekunde für die Messung (Browser-Version: 1)
 W, H = 480, 270              # Messbild (Bereiche sind relativ, das Seitenverhältnis spielt kaum eine Rolle)
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}
@@ -52,10 +54,39 @@ DEAD_GAP_S = 3.0             # Lücken bis so lange gehören zur selben Zeit bis
 AFTER_S = 1.5                # nach dem Wiedereinstieg so lange nichts werten
 ULT_READY_S = 1.5            # Ult-Feld muss so lange golden sein
 KILL_REFRACT_S = 1.0         # zwei Kills frühestens so weit auseinander
+SER_V = 2                    # Version der Messreihe: ältere werden neu gemessen (0.2.0: HDR umgerechnet, Kill-Feed-Farben)
+NPL = 203                    # HDR: so viele Nits gelten als Weiss (Bezugsweiss nach ITU-R BT.2408); normale Farben bleiben so fast gleich
+FIGHT_GAP_S = 8.0            # Ereignisse bis so weit auseinander gehören zum selben Fight
 STABLE_S = 8.0               # eine Datei gilt als fertig kopiert, wenn sie sich so lange nicht ändert
 RETRY_S = [60, 300, 1800]    # nach einem Fehler: so viele Sekunden bis zum nächsten Versuch
 
 DEATH_CAUSES = ["Position", "Fluchtweg/Cooldown", "Gegnerische Ult", "Zu gierig", "Vom Team getrennt", "Sonstiges"]
+
+
+def _load_data() -> dict:
+    """Genaue Todesursachen pro Rolle und Helden: aus Rivals Coach erzeugt (tools/make_rv_data.js), damit beide dieselben Wörter nutzen."""
+    for base in (getattr(sys, "_MEIPASS", None), Path(__file__).resolve().parent):
+        f = Path(base or ".") / "rv_data.json"
+        if base and f.exists():
+            try:
+                return json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    return {"groups": DEATH_CAUSES, "ultGroup": "Gegnerische Ult", "roles": {}, "heroes": []}
+
+
+RV_DATA = _load_data()
+
+
+def cause_group(label: str) -> str:
+    """Gruppe einer Ursache (die Gruppe selbst oder eine genaue Ursache darin)."""
+    if label in RV_DATA["groups"]:
+        return label
+    for gs in RV_DATA.get("roles", {}).values():
+        for g in gs:
+            if label in g["causes"]:
+                return g["group"]
+    return ""
 KINDS = {"death": "Tod", "kill": "Kill", "ult": "Meine Ult", "eult": "Gegner-Ult", "win": "Fight gewonnen",
          "loss": "Fight verloren", "good": "Gut gemacht", "note": "Notiz"}
 
@@ -78,18 +109,81 @@ def _popen_kwargs() -> dict:
     return {}
 
 
-def probe_duration(path: Path) -> float:
-    """Länge in Sekunden aus der Ausgabe von «ffmpeg -i»."""
+def probe(path: Path) -> dict:
+    """Länge und Farbraum aus der Ausgabe von «ffmpeg -i». trc: "pq" (HDR10, so nimmt die PS5 mit HDR auf), "hlg" oder ""."""
     p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-i", str(path)], capture_output=True, text=True,
                        errors="replace", **_popen_kwargs())
     m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", p.stderr)
-    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else 0.0
+    dur = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else 0.0
+    vs = next((ln for ln in p.stderr.splitlines() if "Video:" in ln), "")
+    trc = "pq" if "smpte2084" in vs else "hlg" if "arib-std-b67" in vs else ""
+    return {"dur": dur, "trc": trc, "bt2020": "bt2020" in vs, "stream": vs.strip()[:200]}
 
 
-def iter_frames(path: Path, fps: int = FPS, stop: threading.Event | None = None):
-    """Liefert (Zeit, Bild HxWx3 uint8). ffmpeg dekodiert und verkleinert."""
-    cmd = [ffmpeg_exe(), "-v", "error", "-i", str(path), "-vf", f"fps={fps},scale={W}:{H}",
-           "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
+def probe_duration(path: Path) -> float:
+    return probe(path)["dur"]
+
+
+_FILTERS: dict[str, bool] = {}
+
+
+def has_filter(name: str) -> bool:
+    """Kann das mitgelieferte ffmpeg diesen Filter? (zscale/tonemap für HDR fehlen in manchen Builds)"""
+    if not _FILTERS:
+        p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-filters"], capture_output=True, text=True, errors="replace", **_popen_kwargs())
+        for ln in p.stdout.splitlines():
+            parts = ln.split()
+            if len(parts) >= 2:
+                _FILTERS[parts[1]] = True
+        _FILTERS["_"] = True
+    return bool(_FILTERS.get(name))
+
+
+def color_mode(info: dict) -> str:
+    """"sdr" normal, "zscale" HDR mit ffmpeg umrechnen, "lut" HDR (PQ) selbst umrechnen, "hlg" HLG ohne passende Filter (ungenau)."""
+    if not info.get("trc"):
+        return "sdr"
+    if has_filter("zscale") and has_filter("tonemap"):
+        return "zscale"
+    return "lut" if info["trc"] == "pq" else "hlg"
+
+
+def _vf(info: dict, fps: int | None) -> tuple[str, str]:
+    """Filterkette und Pixelformat. HDR wird auf normale Farben gebracht, damit Gelb wieder Gelb ist:
+    linear mit NPL Nits als Weiss, Primärfarben BT.709, sanft gekappt (mobius), dann BT.709. Normale Videos bleiben wie bisher."""
+    mode = color_mode(info)
+    pre = f"fps={fps}," if fps else ""
+    if mode == "zscale":
+        tin = "smpte2084" if info["trc"] == "pq" else "arib-std-b67"
+        return (pre + f"zscale=w={W}:h={H}:tin={tin}:min=bt2020nc:pin=bt2020:rin=tv:t=linear:npl={NPL},format=gbrpf32le,"
+                "zscale=p=bt709,tonemap=tonemap=mobius:desat=0,zscale=t=bt709:m=bt709:r=pc,format=rgb24"), "rgb24"
+    if mode == "lut":
+        return pre + f"scale={W}:{H}:in_color_matrix=bt2020:in_range=tv:out_range=full", "rgb48le"
+    return pre + f"scale={W}:{H}", "rgb24"
+
+
+# PQ selbst umrechnen (wenn ffmpeg kein zscale hat): PQ → Nits → linear (NPL = 1) → BT.2020 nach BT.709 → sanft kappen → BT.709
+_M1, _M2, _C1, _C2, _C3 = 2610 / 16384, 2523 / 4096 * 128, 3424 / 4096, 2413 / 4096 * 32, 2392 / 4096 * 32
+_P2020_709 = np.array([[1.6605, -0.5876, -0.0728], [-0.1246, 1.1329, -0.0083], [-0.0182, -0.1006, 1.1187]], dtype=np.float32)
+
+
+def pq_to_sdr(a16: np.ndarray) -> np.ndarray:
+    e = np.clip(a16.astype(np.float32) / 65535.0, 0, 1)
+    ep = np.power(e, 1 / _M2)
+    lin = np.power(np.maximum(ep - _C1, 0) / (_C2 - _C3 * ep), 1 / _M1) * (10000.0 / NPL)
+    lin = np.clip(lin @ _P2020_709.T, 0, None)
+    j = 0.8   # bis hier unverändert, darüber sanft gegen 1 (wie mobius)
+    lin = np.where(lin <= j, lin, j + (1 - j) * (lin - j) / ((lin - j) + (1 - j)))
+    v = np.where(lin < 0.018, 4.5 * lin, 1.099 * np.power(lin, 0.45) - 0.099)
+    return np.clip(v * 255 + 0.5, 0, 255).astype(np.uint8)
+
+
+def iter_frames(path: Path, fps: int = FPS, stop: threading.Event | None = None, info: dict | None = None):
+    """Liefert (Zeit, Bild HxWx3 uint8). ffmpeg dekodiert, verkleinert und rechnet HDR auf normale Farben um."""
+    info = info if info is not None else probe(path)
+    vf, pix = _vf(info, fps)
+    cmd = [ffmpeg_exe(), "-v", "error", "-i", str(path), "-vf", vf,
+           "-f", "rawvideo", "-pix_fmt", pix, "-"]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **_popen_kwargs())
     errs: list[str] = []
 
@@ -99,7 +193,8 @@ def iter_frames(path: Path, fps: int = FPS, stop: threading.Event | None = None)
             del errs[:-8]
     threading.Thread(target=drain, daemon=True).start()
     iter_frames.last_errors = errs
-    n, i = W * H * 3, 0
+    wide = pix == "rgb48le"
+    n, i = W * H * 3 * (2 if wide else 1), 0
     try:
         while True:
             if stop is not None and stop.is_set():
@@ -107,7 +202,7 @@ def iter_frames(path: Path, fps: int = FPS, stop: threading.Event | None = None)
             buf = proc.stdout.read(n)
             if len(buf) < n:
                 break
-            yield i / fps, np.frombuffer(buf, np.uint8).reshape(H, W, 3)
+            yield i / fps, (pq_to_sdr(np.frombuffer(buf, "<u2").reshape(H, W, 3)) if wide else np.frombuffer(buf, np.uint8).reshape(H, W, 3))
             i += 1
     finally:
         try:
@@ -139,14 +234,42 @@ def features(a: np.ndarray) -> tuple[float, float, float]:
     return round(cnt, 4), round(feed, 4), round(ug, 4)
 
 
+def feed_colors(a: np.ndarray, prev: np.ndarray | None) -> tuple[float, float, float, np.ndarray]:
+    """Kill-Feed (für Fights): Anteil rötlicher und bläulicher Pixel und wie stark sich der Bereich seit dem letzten Bild geändert hat
+    (eine neue Zeile). Welche Farbe zu welchem Team gehört, steht nirgends fest: Das lernt das Programm aus deinen Antworten."""
+    c = _crop(a, REGIONS["feed"])
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    fr = float(((r > 150) & (r - g > 60) & (r - b > 50)).mean())
+    fb = float(((b > 140) & (b - r > 50) & (b - g > 0)).mean())
+    fa = float(np.abs(c - prev).mean() / 255.0) if prev is not None and prev.shape == c.shape else 0.0
+    return round(fr, 4), round(fb, 4), round(fa, 4), c
+
+
+def series_summary(ser: dict, thr: dict | None = None) -> dict:
+    """Kurzfassung für die Diagnose: höchster Wert und wie oft die Schwelle erreicht wird."""
+    T = dict(DEFAULT_THR, **(thr or {}))
+    out = {}
+    for k, tk in (("cnt", "dead"), ("feed", "kill"), ("ug", "ultOn")):
+        v = ser.get(k) or []
+        if v:
+            srt = sorted(v)
+            out[k] = {"max": round(srt[-1], 4), "p99": round(srt[int(len(srt) * 0.99) - 1 if len(srt) > 1 else 0], 4),
+                      "over": round(sum(1 for x in v if x > T[tk]) / len(v), 4), "thr": T[tk]}
+    return out
+
+
 def measure(path: Path, progress=None, stop: threading.Event | None = None) -> dict:
-    """Messreihe eines Videos: {fps, t: [...], cnt: [...], feed: [...], ug: [...]}."""
-    dur = probe_duration(path)
-    ser = {"fps": FPS, "dur": dur, "t": [], "cnt": [], "feed": [], "ug": []}
-    last = 0.0
-    for t, frame in iter_frames(path, stop=stop):
+    """Messreihe eines Videos: {v, fps, dur, hdr, tm, t: [...], cnt, feed, ug, fr, fb, fa}."""
+    info = probe(path)
+    dur = info["dur"]
+    ser = {"v": SER_V, "fps": FPS, "dur": dur, "hdr": info["trc"], "tm": color_mode(info),
+           "t": [], "cnt": [], "feed": [], "ug": [], "fr": [], "fb": [], "fa": []}
+    last, prev = 0.0, None
+    for t, frame in iter_frames(path, stop=stop, info=info):
         cnt, feed, ug = features(frame)
+        fr, fb, fa, prev = feed_colors(frame, prev)
         ser["t"].append(round(t, 2)); ser["cnt"].append(cnt); ser["feed"].append(feed); ser["ug"].append(ug)
+        ser["fr"].append(fr); ser["fb"].append(fb); ser["fa"].append(fa)
         if progress and dur and t - last >= 2:
             last = t
             progress(min(0.99, t / dur))
@@ -160,7 +283,45 @@ def measure(path: Path, progress=None, stop: threading.Event | None = None) -> d
                            + (" ffmpeg: " + " | ".join(errs[-3:]) if errs else ""))
     if not ser["dur"]:
         ser["dur"] = ser["t"][-1]
+    ser["sum"] = series_summary(ser)
     return ser
+
+
+def grab_frame(path: Path, t: float) -> tuple[np.ndarray, dict]:
+    """Ein Bild an der Stelle t, so wie das Programm es misst (gleiche Umrechnung)."""
+    info = probe(path)
+    vf, pix = _vf(info, None)
+    cmd = [ffmpeg_exe(), "-v", "error", "-ss", f"{max(0.0, float(t)):.2f}", "-i", str(path), "-frames:v", "1", "-vf", vf,
+           "-f", "rawvideo", "-pix_fmt", pix, "-"]
+    r = subprocess.run(cmd, capture_output=True, **_popen_kwargs())
+    n = W * H * 3 * (2 if pix == "rgb48le" else 1)
+    if len(r.stdout) < n:
+        raise RuntimeError("Das Bild liess sich nicht lesen. " + r.stderr.decode("utf-8", "replace").strip()[-200:])
+    buf = r.stdout[:n]
+    a = pq_to_sdr(np.frombuffer(buf, "<u2").reshape(H, W, 3)) if pix == "rgb48le" else np.frombuffer(buf, np.uint8).reshape(H, W, 3)
+    return a, {"trc": info["trc"], "tm": color_mode(info)}
+
+
+def png_bytes(a: np.ndarray) -> bytes:
+    """Kleiner PNG-Schreiber (ohne Zusatzpakete)."""
+    h, w = a.shape[:2]
+    raw = b"".join(b"\x00" + a[y].astype(np.uint8).tobytes() for y in range(h))
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b"")
+
+
+def diag_image(a: np.ndarray) -> np.ndarray:
+    """Bild mit den drei Messbereichen als Rahmen: gelb (Respawn-Zahl), weiss (Kill-Anzeige), gold (Ult-Feld)."""
+    out = a.copy()
+    cols = {"cnt": (255, 230, 0), "feed": (255, 255, 255), "ult": (255, 160, 0)}
+    h, w = out.shape[:2]
+    for k, (x0, y0, x1, y1) in REGIONS.items():
+        X0, Y0, X1, Y1 = int(x0 * w), int(y0 * h), min(w - 1, int(x1 * w)), min(h - 1, int(y1 * h))
+        c = cols[k]
+        out[Y0:Y0 + 2, X0:X1] = c; out[Y1 - 1:Y1 + 1, X0:X1] = c; out[Y0:Y1, X0:X0 + 2] = c; out[Y0:Y1, X1 - 1:X1 + 1] = c
+    return out
 
 
 # ---------------------------------------------------------------- Erkennen
@@ -204,6 +365,58 @@ def detect(ser: dict, thr: dict | None = None, lead: float | None = None) -> lis
                 out.append({"t": round(t, 2), "k": "ult", "f": f})
             ready = 0.0
     return out
+
+
+# ---------------------------------------------------------------- Fights (Versuch)
+def fights(ser: dict, events: list[dict]) -> list[dict]:
+    """Fight-Vorschläge: mindestens zwei deiner Ereignisse (Kill, Tod, deine Ult) höchstens FIGHT_GAP_S Sekunden auseinander.
+    Die Bildänderung im Kill-Feed-Bereich (fa) taugt dafür nicht: Der Bereich liegt über der Spielwelt, die sich mit der Kamera ständig bewegt.
+    score: Anteil bläulicher minus rötlicher Pixel im Kill-Feed während des Fights (−1 bis 1). Ob und wie das mit «gewonnen» zusammenhängt,
+    lernt das Programm erst aus deinen Antworten (learned_fights). Fights ohne eigenen Kill, Tod oder Ult findet es nicht (Versuch)."""
+    if not ser.get("fr"):
+        return []
+    ts = ser["t"]
+    pts = sorted(e["t"] for e in events if e["k"] in ("death", "kill", "ult"))
+    groups: list[list[float]] = []
+    for t in pts:
+        if groups and t - groups[-1][-1] <= FIGHT_GAP_S:
+            groups[-1].append(t)
+        else:
+            groups.append([t])
+    out = []
+    for g in groups:
+        if len(g) < 2:
+            continue
+        s0, s1 = max(0.0, g[0] - 3), g[-1] + 3
+        idx = [i for i, t in enumerate(ts) if s0 <= t <= s1]
+        R, B = sum(ser["fr"][i] for i in idx), sum(ser["fb"][i] for i in idx)
+        out.append({"t": round(s0, 2), "e": round(s1, 2), "n": len(g), "score": round((B - R) / (B + R), 3) if B + R > 0 else 0.0})
+    return out
+
+
+def learned_fights(ex: list[dict]) -> dict:
+    """Aus deinen Antworten (gewonnen/verloren mit score) eine Regel: ab mindestens 3 von beiden, wenn sie sich klar trennen."""
+    W = [e["s"] for e in ex if e.get("res") == "win" and isinstance(e.get("s"), (int, float))]
+    L = [e["s"] for e in ex if e.get("res") == "loss" and isinstance(e.get("s"), (int, float))]
+    r = {"gewonnen": len(W), "verloren": len(L), "gelernt": False}
+    if len(W) >= 3 and len(L) >= 3:
+        mw, ml = statistics.median(W), statistics.median(L)
+        if abs(mw - ml) >= 0.15:
+            thr, d = (mw + ml) / 2, 1 if mw > ml else -1
+            hit = sum(1 for x in W if d * (x - thr) > 0) + sum(1 for x in L if d * (x - thr) <= 0)
+            acc = hit / (len(W) + len(L))
+            r.update(treffer=round(acc, 2))
+            if acc >= 0.7:
+                r.update(gelernt=True, thr=round(thr, 3), dir=d)
+        else:
+            r["hinweis"] = "Gewonnene und verlorene Fights sehen im Kill-Feed noch gleich aus."
+    return r
+
+
+def fight_pred(score: float, fl: dict) -> str:
+    if not fl.get("gelernt"):
+        return ""
+    return "win" if fl["dir"] * (score - fl["thr"]) > 0 else "loss"
 
 
 # ---------------------------------------------------------------- Dateiname → Aufnahmezeit
@@ -255,6 +468,11 @@ def learned(learn: dict) -> tuple[dict, float, dict]:
                 r.update(schwelle=thr[tk], angepasst=True)
             else:
                 r["hinweis"] = "Richtige und falsche Funde überschneiden sich, die Schwelle bleibt."
+        elif len(pos) >= 3 and not neg and max(pos) < thr[tk]:
+            # deine markierten Stellen liegen alle unter der Schwelle (zum Beispiel andere Farben im Video): senken, mit Untergrenze gegen Rauschen
+            floor = {"dead": 0.01, "kill": 0.004, "ultOn": 0.004}[tk]
+            thr[tk] = round(max(floor, min(pos) * 0.8), 4)
+            r.update(schwelle=thr[tk], angepasst=True, hinweis="Gesenkt: Deine markierten Stellen lagen alle unter der Schwelle.")
         elif len(pos) >= 3 and min(pos) > thr[tk] * 3:
             # nur richtige Funde, alle weit über der Schwelle: vorsichtig anheben gegen Fehlalarme
             thr[tk] = round(min(pos) / 2, 4)
@@ -268,6 +486,7 @@ def learned(learn: dict) -> tuple[dict, float, dict]:
     if len(corr) >= 2:
         lead = round(max(-1.0, min(6.0, statistics.median(corr))), 2)
     rep["tod_zeit"] = {"korrekturen": len(corr), "sekunden_vor_der_zahl": lead}
+    rep["fight"] = learned_fights(learn.get("fights", []))
     return thr, lead, rep
 
 
@@ -319,6 +538,8 @@ class Store:
         d.setdefault("learn", {"examples": {}, "corrections": []})
         d["learn"].setdefault("examples", {})
         d["learn"].setdefault("corrections", [])
+        d["learn"].setdefault("fights", [])
+        d.setdefault("prefs", {})
         for k, v in list(d["videos"].items()):
             if not isinstance(v, dict):
                 del d["videos"][k]
@@ -441,6 +662,22 @@ class Store:
                 return None
         return None
 
+    def upgrade_series(self) -> int:
+        """Videos in «Neu», deren Messreihe älter ist (vor 0.2.0: ohne HDR-Umrechnung), neu messen. Antworten und Markierungen bleiben."""
+        n = 0
+        with self.lock:
+            for k, v in self.data["videos"].items():
+                if v.get("done") or v.get("folder") != SUB_NEW or v.get("status") != "fertig":
+                    continue
+                ser = self.series(k)
+                if ser is not None and ser.get("v") != SER_V:
+                    (self.cache / (vid_id(k) + ".json")).unlink(missing_ok=True)
+                    v["status"] = "wartet"
+                    n += 1
+            if n:
+                self.save()
+        return n
+
     def save_series(self, key: str, ser: dict):
         (self.cache / (vid_id(key) + ".json")).write_text(json.dumps(ser, separators=(",", ":")), encoding="utf-8")
 
@@ -451,6 +688,11 @@ class Store:
             thr, lead, _ = learned(self.data["learn"])
             old = rec.get("events", [])
             evs = []
+            fl = learned_fights(self.data["learn"].get("fights", []))
+            for g in fights(ser, detect(ser, thr, lead)):
+                o = next((x for x in old if x["k"] == "fight" and abs(x["t"] - g["t"]) <= 4), None)
+                evs.append({"id": o["id"] if o else new_id(), "t": g["t"], "e": g["e"], "k": "fight", "n": g["n"], "score": g["score"],
+                            "pred": fight_pred(g["score"], fl), "res": o.get("res", "") if o else "", "ok": o.get("ok") if o else None, "mk": o.get("mk", "") if o else ""})
             for e in detect(ser, thr, lead):
                 o = next((x for x in old if x["k"] == e["k"] and abs(x["t"] - e["t"]) <= 2.0 and isinstance(x.get("ok"), bool)), None)
                 evs.append({"id": o["id"] if o else new_id(), "t": e["t"], "k": e["k"], "f": e["f"], "raw": e.get("raw", e["t"]),
@@ -465,6 +707,7 @@ class Store:
                 rec.pop(f, None)
             rec["analyzed"] = datetime.now().isoformat(timespec="seconds")
             rec["learnedWith"] = {"thr": thr, "lead": lead}
+            rec["diag"] = {"hdr": ser.get("hdr", ""), "tm": ser.get("tm", ""), "sum": series_summary(ser, thr)}
 
     # Antworten
     def _example(self, kind: str, f: dict, ok: bool):
@@ -479,6 +722,8 @@ class Store:
         with self.lock:
             rec = self.data["videos"][key]
             e = next(x for x in rec["events"] if x["id"] == eid)
+            if e["k"] == "fight":
+                raise ValueError("Fights mit gewonnen/verloren beantworten")
             prev = e.get("ok")
             e["ok"] = ok
             if ok is True and prev is not True:
@@ -495,11 +740,46 @@ class Store:
             self.save()
             return rec
 
+    def fight_answer(self, key: str, eid: str, res: str) -> dict:
+        """Fight-Vorschlag beantworten: «win», «loss» oder «none» (kein Fight). Gewonnen/verloren wird als Markierung übernommen
+        (zählt im Coach als Fight) und ist ein Beispiel zum Lernen."""
+        with self.lock:
+            rec = self.data["videos"][key]
+            e = next(x for x in rec["events"] if x["id"] == eid and x["k"] == "fight")
+            if e.get("mk"):
+                rec["marks"] = [m for m in rec["marks"] if not (m["id"] == e["mk"] and m.get("auto"))]
+                e["mk"] = ""
+            e["res"] = res if res in ("win", "loss", "none") else ""
+            e["ok"] = None if not e["res"] else e["res"] != "none"
+            if e["res"] in ("win", "loss"):
+                mk = {"id": new_id(), "t": e["t"], "k": e["res"], "auto": 1}
+                rec["marks"].append(mk)
+                e["mk"] = mk["id"]
+            fl = [x for x in self.data["learn"]["fights"] if x.get("e") != eid]
+            if e["res"] in ("win", "loss"):
+                fl.append({"e": eid, "s": e.get("score", 0.0), "res": e["res"]})
+            self.data["learn"]["fights"] = fl[-200:]
+            self.save()
+            return rec
+
+    def set_pref(self, k: str, v: str):
+        with self.lock:
+            prefs = self.data.setdefault("prefs", {})
+            if k == "role" and v in RV_DATA.get("roles", {}):
+                prefs["role"] = v
+            self.save()
+
     def add_mark(self, key: str, t: float, kind: str) -> dict:
         with self.lock:
             rec = self.data["videos"][key]
             mk = {"id": new_id(), "t": round(float(t), 2), "k": kind}
             rec["marks"].append(mk)
+            # «Fight gewonnen/verloren» von Hand in einem vorgeschlagenen Fight: gilt als Antwort und Beispiel
+            if kind in ("win", "loss"):
+                e = next((x for x in rec["events"] if x["k"] == "fight" and x["t"] - 2 <= mk["t"] <= x.get("e", x["t"]) + 2 and not x.get("res")), None)
+                if e is not None:
+                    e.update(res=kind, ok=True, mk=mk["id"])
+                    self.data["learn"]["fights"] = [x for x in self.data["learn"]["fights"] if x.get("e") != e["id"]] + [{"e": e["id"], "s": e.get("score", 0.0), "res": kind}]
             # übersehen? Messwert an dieser Stelle als richtiges Beispiel lernen
             ser = self.series(key)
             if ser and kind in ("death", "kill", "ult") and not any(e["k"] == kind and abs(e["t"] - mk["t"]) <= 4 for e in rec["events"]):
@@ -522,6 +802,11 @@ class Store:
                         mk[f] = str(fields[f])[:300]
                     else:
                         mk.pop(f, None)
+            if fields.get("h"):
+                prefs = self.data.setdefault("prefs", {})
+                prefs["recentUlt"] = ([str(fields["h"])[:40]] + [x for x in prefs.get("recentUlt", []) if x != fields["h"]])[:8]
+            if "c" in fields and cause_group(mk.get("c", "")) != RV_DATA.get("ultGroup") and mk.get("k") == "death":
+                mk.pop("h", None)   # Ult-Held gehört nur zu einem Tod durch eine Ult
             if "t" in fields:
                 nt = round(float(fields["t"]), 2)
                 e = next((x for x in rec["events"] if x.get("mk") == mid and x["k"] == "death"), None)
@@ -609,7 +894,7 @@ class Store:
 # ---------------------------------------------------------------- Selbsttest (ohne private Bilder)
 def selftest(tmp: Path) -> int:
     """Erzeugt Testvideos mit gelbem Feld oben links (3–7 s) und prüft, dass genau ein Tod gefunden wird.
-    Geprüft werden MP4 (H.264) und WebM (VP9, wie die PS5), wenn möglich auch VP9 mit 10 Bit (HDR-Aufnahmen)."""
+    Geprüft werden MP4 (H.264) und WebM (VP9, wie die PS5), wenn möglich auch VP9 mit 10 Bit, und eine HDR-Aufnahme (PQ, wie die PS5 mit HDR)."""
     tmp.mkdir(parents=True, exist_ok=True)
     src = "color=c=0x101828:s=1280x720:d=10:r=30"
     box = "drawbox=x=10:y=20:w=110:h=70:color=0xF5D232@1:t=fill:enable='between(t,3,7)'"
@@ -636,8 +921,71 @@ def selftest(tmp: Path) -> int:
             print(f"Selbsttest {label}: FEHLER {e}")
         if not ok and must:
             result = 1
+    nh = len(RV_DATA.get("heroes", []))
+    print(f"Ursachen und Helden aus Rivals Coach: {len(RV_DATA.get('roles', {}))} Rollen, {nh} Helden → {'OK' if nh else 'FEHLER (rv_data.json fehlt)'}")
+    if not nh:
+        result = 1
+    hdr = _selftest_hdr(tmp)
+    if hdr:
+        result = 1
     print("Selbsttest OK" if result == 0 else "Selbsttest FEHLER")
     return result
+
+
+def _sdr_to_pq(rgb8: tuple[int, int, int]) -> np.ndarray:
+    """Umkehrung von pq_to_sdr für eine Farbe (ohne Knie, Farben im Test liegen darunter): so sähe sie in einer HDR-Aufnahme aus."""
+    v = np.array(rgb8, dtype=np.float64) / 255
+    lin = np.where(v < 0.081, v / 4.5, np.power((v + 0.099) / 1.099, 1 / 0.45))
+    lin2020 = np.clip(np.linalg.inv(_P2020_709.astype(np.float64)) @ lin, 0, None) * (NPL / 10000.0)
+    yp = np.power(lin2020, _M1)
+    e = np.power((_C1 + _C2 * yp) / (1 + _C3 * yp), _M2)
+    return np.clip(e * 65535 + 0.5, 0, 65535).astype("<u2")
+
+
+def _selftest_hdr(tmp: Path) -> int:
+    """HDR10-Testvideo (PQ, BT.2020, 10 Bit) aus numpy, damit es auch ohne zscale entsteht. Geprüft wird der Weg, den
+    dieses ffmpeg nimmt, und zusätzlich immer die eigene Umrechnung (lut), weil sie der Ersatz ist, wenn zscale fehlt."""
+    print(f"HDR-Umrechnung mit ffmpeg (zscale und tonemap): {'ja' if has_filter('zscale') and has_filter('tonemap') else 'nein, eigene Umrechnung'}")
+    w, h, fps, dur = 640, 360, 10, 10
+    bg = np.empty((h, w, 3), dtype="<u2"); bg[:] = _sdr_to_pq((0x10, 0x18, 0x28))
+    box = bg.copy(); box[10:45, 5:60] = _sdr_to_pq((0xF5, 0xD2, 0x32))
+    vid = tmp / "selbsttest-hdr.mkv"
+    cmd = [ffmpeg_exe(), "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb48le", "-s", f"{w}x{h}", "-r", str(fps), "-i", "-",
+           "-vf", "scale=out_color_matrix=bt2020:out_range=tv,format=yuv420p10le", "-c:v", "ffv1",
+           "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-color_range", "tv", str(vid)]
+    try:
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, **_popen_kwargs())
+        for i in range(fps * dur):
+            p.stdin.write((box if 3 <= i / fps < 7 else bg).tobytes())
+        p.stdin.close()
+        err = p.stderr.read().decode("utf-8", "replace"); p.wait()
+    except Exception as e:
+        err, p = str(e), None
+    if p is None or p.returncode != 0 or not vid.exists():
+        print(f"Selbsttest HDR: Testvideo liess sich nicht erzeugen ({err.strip()[-200:]}), übersprungen")
+        return 0
+    info = probe(vid)
+    modes = [color_mode(info)]
+    if modes[0] != "lut":
+        modes.append("lut")
+    bad = 0
+    saved = dict(_FILTERS)
+    for mode in modes:
+        try:
+            if mode == "lut" and color_mode(info) != "lut":
+                _FILTERS.clear(); _FILTERS.update({"_": True})   # zscale vorübergehend «ausblenden»
+            ser = measure(vid)
+            deaths = [e for e in detect(ser) if e["k"] == "death"]
+            ok = info["trc"] == "pq" and len(deaths) == 1 and 1.5 <= deaths[0]["t"] <= 3.0
+            print(f"Selbsttest HDR (PQ, {mode}): erkannt als {info['trc'] or 'normal'}, Tod bei {[d['t'] for d in deaths]}, "
+                  f"stärkster Wert {max(ser['cnt']):.2f} → {'OK' if ok else 'FEHLER'}")
+        except Exception as e:
+            ok = False
+            print(f"Selbsttest HDR ({mode}): FEHLER {e}")
+        finally:
+            _FILTERS.clear(); _FILTERS.update(saved)
+        bad |= 0 if ok else 1
+    return bad
 
 if __name__ == "__main__":
     sys.exit(selftest(Path(sys.argv[1] if len(sys.argv) > 1 else "selbsttest")))

@@ -10,6 +10,7 @@ Aufruf:  RivalsVideo.exe                (normal)
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import mimetypes
 import os
@@ -78,6 +79,9 @@ class App:
         with self.lock:
             self.store = rc.Store(Path(folder))
             self.folder = Path(folder)
+            n = self.store.upgrade_series()   # 0.2.0: ältere Messungen (ohne HDR-Umrechnung) neu
+            if n:
+                print(f"{n} Video(s) werden mit der neuen Erkennung (HDR) neu ausgewertet. Deine Antworten bleiben.", flush=True)
             cfg = load_config(); cfg["folder"] = str(self.folder); save_config(cfg)
         self.wake.set()
 
@@ -139,13 +143,13 @@ class App:
             thr, lead, rep = rc.learned(store.data["learn"])
             return {"app": APP, "version": rc.VERSION, "folder": str(self.folder), "videos": vids,
                     "work": dict(self.work), "learn": {"thr": thr, "lead": lead, "report": rep},
-                    "kinds": rc.KINDS, "causes": rc.DEATH_CAUSES, "dataFile": rc.DATA_NAME}
+                    "kinds": rc.KINDS, "causes": rc.DEATH_CAUSES, "dataFile": rc.DATA_NAME, "prefs": store.data.get("prefs", {})}
 
     def video(self, vid: str) -> dict | None:
         k, v = self.store.by_id(vid)
         if not v:
             return None
-        out = {x: v.get(x) for x in ("id", "name", "folder", "status", "error", "start", "dur", "done", "events", "marks", "moveTo")}
+        out = {x: v.get(x) for x in ("id", "name", "folder", "status", "error", "start", "dur", "done", "events", "marks", "moveTo", "diag")}
         out["doneName"] = rc.done_name(v)
         return out
 
@@ -192,12 +196,30 @@ def make_handler(app: App, port: int):
                 return self._deny(why="token")
             if u.path == "/api/state":
                 return self._json(app.state())
+            if u.path == "/api/meta":
+                return self._json(rc.RV_DATA)
+            if u.path.startswith("/api/frame/"):
+                return self._json(self._frame(u.path.rsplit("/", 1)[-1], float((q.get("t") or ["0"])[0] or 0)))
             if u.path.startswith("/api/video/"):
                 v = app.video(u.path.rsplit("/", 1)[-1])
                 return self._json(v) if v else self._deny(404, "unbekannt")
             if u.path.startswith("/media/"):
                 return self._media(u.path.rsplit("/", 1)[-1])
             return self._deny(404, "unbekannt")
+
+        def _frame(self, vid: str, t: float) -> dict:
+            """Diagnose: das Bild an der Stelle t so, wie das Programm es misst, mit den Messbereichen und den Werten."""
+            k, v = app.store.by_id(vid)
+            if not v:
+                return {"error": "unbekannt"}
+            try:
+                a, info = rc.grab_frame(app.store.base / v["path"], t)
+            except Exception as e:
+                return {"error": str(e)[:300]}
+            cnt, feed, ug = rc.features(a)
+            thr, lead, _ = rc.learned(app.store.data["learn"])
+            img = "data:image/png;base64," + base64.b64encode(rc.png_bytes(rc.diag_image(a))).decode("ascii")
+            return {"t": t, "img": img, "f": {"cnt": cnt, "feed": feed, "ug": ug}, "thr": thr, **info}
 
         def _media(self, vid: str):
             k, v = app.store.by_id(vid)
@@ -274,6 +296,9 @@ def make_handler(app: App, port: int):
                 if os.name == "nt":
                     os.startfile(str(target))   # noqa: S606 (nur der eigene Ordner)
                 return {"ok": True}
+            if path == "/api/pref":
+                st.set_pref(str(b.get("k", "")), str(b.get("v", "")))
+                return {"ok": True, "prefs": st.data.get("prefs", {})}
             if path == "/api/reanalyze":
                 app.redo_all = True
                 app.wake.set()
@@ -284,6 +309,8 @@ def make_handler(app: App, port: int):
             if path == "/api/answer":
                 ok = b.get("ok")
                 st.answer(key, str(b["eid"]), ok if isinstance(ok, bool) else None)
+            elif path == "/api/fight":
+                st.fight_answer(key, str(b["eid"]), str(b.get("res", "")))
             elif path == "/api/mark/add":
                 if b.get("k") not in rc.KINDS:
                     raise ValueError("Art unbekannt")

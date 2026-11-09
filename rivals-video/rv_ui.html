@@ -49,6 +49,11 @@ video { width: 100%; max-height: 62vh; background: #000; border-radius: 10px; di
 .prog span { display: block; height: 100%; background: var(--accent); }
 input[type=text] { font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; min-width: 0; flex: 1 1 260px; }
 table { border-collapse: collapse; width: 100%; font-size: .88rem; } td, th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.diag { display: grid; gap: 6px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; }
+.diag img { width: 100%; max-width: 480px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--border); }
+.diag .lo { color: var(--bad); } .diag .hi { color: var(--good); }
+select { font: inherit; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 4px 6px; }
+.items li.fight { outline: 1px dashed var(--team); }
 .empty { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; }
 </style>
 </head>
@@ -85,8 +90,10 @@ const get = p => fetch(p + (p.includes("?") ? "&" : "?") + "token=" + encodeURIC
 const post = (p, b) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(b || {}) }).then(r => r.json()).then(check).then(j => { if (j && j.error) { alert(j.code === "token" ? "Die Seite ist veraltet. Bitte mit F5 neu laden." : j.error); throw new Error(j.error); } return j; });
 const KEYS = { death: "t", kill: "k", ult: "u", eult: "g", win: "w", loss: "v", good: "b", note: "n" };
 const ULT_V = [["ja", "mit Wirkung"], ["teils", "teilweise"], ["nein", "ohne Wirkung"]];
-const EV_L = { death: "Tod", kill: "Kill", ult: "Deine Ult" };
-let S = null, sel = "", V = null, pend = "", review = null, sig = "";
+const EV_L = { death: "Tod", kill: "Kill", ult: "Deine Ult", fight: "Fight" };
+const RES_L = { win: "gewonnen", loss: "verloren", none: "kein Fight" };
+let S = null, sel = "", V = null, pend = "", review = null, sig = "", META = null, diag = null, detOpen = false;
+const pct = x => (Math.round((+x || 0) * 1000) / 10).toLocaleString("de-CH") + " %";
 
 function statusBadge(v) {
   if (v.done) return '<span class="badge ok">✓ ausgewertet</span>';
@@ -115,41 +122,81 @@ function renderLearn() {
   $("#learnCard").innerHTML = `<h2>Was das Programm gelernt hat</h2>
     <table><tr><th></th><th>stimmt</th><th>falsch</th><th>Schwelle</th></tr>${row("death", "Tod")}${row("kill", "Kill")}${row("ult", "Ult")}</table>
     <p class="small" style="margin:0">Tod: <b>${String(S.learn.lead).replace(".", ",")} s</b> vor der gelben Zahl ${r.tod_zeit.korrekturen >= 2 ? `(aus ${r.tod_zeit.korrekturen} Korrekturen von dir)` : "(Startwert, noch zu wenig Korrekturen)"}.</p>
+    ${r.fight ? `<p class="small" style="margin:0">Fights (Versuch): ${r.fight.gewonnen} gewonnen, ${r.fight.verloren} verloren beantwortet. ${r.fight.gelernt ? `Das Programm schätzt den Ausgang jetzt selbst (trifft bei deinen Antworten ${Math.round(r.fight.treffer * 100)} %).` : r.fight.hinweis ? esc(r.fight.hinweis) : "Ab je 3 Antworten versucht es, den Ausgang selbst zu erkennen."}</p>` : ""}
     <p class="small muted" style="margin:0">Je mehr du mit «Stimmt», «Stimmt nicht» und «Tod ist hier» antwortest, desto genauer wird es. Danach kannst du alle Videos neu auswerten lassen; deine Antworten bleiben.</p>
     <div class="row"><button data-act="reall">Alle Videos mit neuem Wissen neu auswerten</button></div>`;
 }
 function segments() {
   if (!V) return [];
   const pts = [];
-  V.events.filter(e => e.ok !== false).forEach(e => pts.push({ t: e.t, k: e.k }));
+  V.events.filter(e => e.ok !== false && e.k !== "fight").forEach(e => pts.push({ t: e.t, k: e.k }));
+  V.events.filter(e => e.k === "fight" && e.ok !== false).forEach(e => pts.push({ t: e.t, k: "fight", e: e.e }));
   V.marks.filter(m => !V.events.some(e => e.mk === m.id)).forEach(m => pts.push({ t: m.t, k: m.k }));
   const win = { death: [10, 2], kill: [4, 2], ult: [2, 6] };
-  const segs = pts.map(p => { const w = win[p.k] || [5, 3]; return { s: Math.max(0, p.t - w[0]), e: p.t + w[1], l: [EV_L[p.k] || S.kinds[p.k] || p.k] }; }).sort((a, b) => a.s - b.s);
+  const segs = pts.map(p => { const w = win[p.k] || [5, 3]; return p.k === "fight" ? { s: p.t, e: p.e, l: ["Fight"] } : { s: Math.max(0, p.t - w[0]), e: p.t + w[1], l: [EV_L[p.k] || S.kinds[p.k] || p.k] }; }).sort((a, b) => a.s - b.s);
   const out = [];
   segs.forEach(g => { const last = out[out.length - 1]; if (last && g.s <= last.e + 1) { last.e = Math.max(last.e, g.e); last.l.push(...g.l); } else out.push({ ...g, l: [...g.l] }); });
   return out;
 }
 function markLabel(m) {
   const u = ULT_V.find(x => x[0] === m.v);
-  return `<b>${esc(S.kinds[m.k] || m.k)}</b>${m.c ? " · " + esc(m.c) : ""}${u && m.k === "ult" ? " · " + u[1] : ""}${m.n ? ` · <span class="muted">${esc(m.n)}</span>` : ""}${m.missed ? ' <span class="badge">übersehen</span>' : ""}`;
+  return `<b>${esc(S.kinds[m.k] || m.k)}</b>${m.c ? " · " + esc(m.c) : ""}${m.h ? " · Ult von " + esc(m.h) : ""}${u && m.k === "ult" ? " · " + u[1] : ""}${m.n ? ` · <span class="muted">${esc(m.n)}</span>` : ""}${m.missed ? ' <span class="badge">übersehen</span>' : ""}`;
 }
 function markSub(m) {
   if (m.id !== pend) return "";
-  if (m.k === "death") return `<div class="sub"><span class="small">Woran lag es?</span><div class="row">${S.causes.map(c => `<button class="chip${m.c === c ? " on" : ""}" data-set="c" data-v="${esc(c)}" data-mid="${m.id}">${esc(c)}</button>`).join("")}</div>
-    <div class="row small"><button data-here="${m.id}">Tod ist hier (aktuelle Stelle im Video)</button><span class="muted">Spul genau an deinen Tod und tipp darauf. Daraus lernt das Programm die richtige Zeit.</span></div></div>`;
+  if (m.k === "death") { const G = META ? META.groups : S.causes, grp = causeGroup(m.c), role = (S.prefs || {}).role || "Strategist", R = META && META.roles[role] ? META.roles[role] : [];
+    const det = R.filter(g => g.causes.length && (!grp || g.group === grp));
+    return `<div class="sub"><span class="small">Woran lag es? Ein Tipp auf die Gruppe reicht, genauer geht es darunter.</span><div class="row">${G.map(c => `<button class="chip${grp === c ? " on" : ""}" data-set="c" data-v="${esc(c)}" data-mid="${m.id}">${esc(c)}${grp === c && m.c !== c ? " ✓" : ""}</button>`).join("")}</div>
+    ${META ? `<details class="small" ${detOpen || (m.c && m.c !== grp) ? "open" : ""} data-det><summary>Genauer: was genau?${m.c && m.c !== grp ? ` (${esc(m.c)})` : ""}</summary>
+      <div class="row" style="margin:4px 0"><span class="muted">Rolle:</span>${Object.keys(META.roles).map(r => `<button class="chip${r === role ? " on" : ""}" data-role="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+      ${det.map(g => `<div><b>${esc(g.group)}</b><div class="row">${g.causes.map(c => `<button class="chip${m.c === c ? " on" : ""}" data-set="c" data-v="${esc(c)}" data-mid="${m.id}">${esc(c)}</button>`).join("")}</div></div>`).join("")}</details>` : ""}
+    ${META && grp === META.ultGroup ? heroPick(m) : ""}
+    <div class="row small"><button data-here="${m.id}">Tod ist hier (aktuelle Stelle im Video)</button><span class="muted">Spul genau an deinen Tod und tipp darauf. Daraus lernt das Programm die richtige Zeit.</span></div></div>`; }
+  if (m.k === "eult") return META ? `<div class="sub">${heroPick(m)}</div>` : "";
   if (m.k === "ult") return `<div class="sub"><span class="small">Wirkung deiner Ult?</span><div class="row">${ULT_V.map(([v, l]) => `<button class="chip${m.v === v ? " on" : ""}" data-set="v" data-v="${v}" data-mid="${m.id}">${l}</button>`).join("")}</div></div>`;
   return `<div class="sub"><input type="text" data-note="${m.id}" value="${esc(m.n || "")}" placeholder="Notiz, z. B. hier zu weit vorne geheilt"></div>`;
 }
+function causeGroup(c) {
+  if (!c) return "";
+  if (!META) return c;
+  if (META.groups.includes(c)) return c;
+  for (const gs of Object.values(META.roles)) { const g = gs.find(x => x.causes.includes(c)); if (g) return g.group; }
+  return "";
+}
+// Wessen Ult? Zuletzt gewählte zuerst, alle Helden in der Auswahl (das Gegnerteam kennt nur der Abgleich in Rivals Coach)
+function heroPick(m) {
+  const recent = ((S.prefs || {}).recentUlt || []).filter(h => META.heroes.some(x => x.name === h)).slice(0, 6);
+  const roles = [...new Set(META.heroes.map(h => h.role))];
+  return `<div class="row small"><span>Wessen Ult?</span>${recent.map(h => `<button class="chip${m.h === h ? " on" : ""}" data-set="h" data-v="${esc(h)}" data-mid="${m.id}">${esc(h)}</button>`).join("")}
+    <select data-hero="${m.id}" aria-label="Held, dessen Ult es war"><option value="">${m.h && !recent.includes(m.h) ? esc(m.h) : "Anderer Held …"}</option>${roles.map(r => `<optgroup label="${esc(r)}">${META.heroes.filter(h => h.role === r).map(h => `<option value="${esc(h.name)}"${m.h === h.name ? " selected" : ""}>${esc(h.name)}</option>`).join("")}</optgroup>`).join("")}</select></div>`;
+}
+// Diagnose: Was misst das Programm? Bei «Nichts gefunden» sofort sichtbar
+function diagHtml() {
+  const d = V.diag || {}, sm = d.sum || {}, row = (k, l) => { const x = sm[k]; return x ? `<li>${l}: höchstens <b class="${x.max >= x.thr ? "hi" : "lo"}">${pct(x.max)}</b> (Schwelle ${pct(x.thr)})${x.over ? `, an ${pct(x.over)} der Stellen darüber` : ""}</li>` : ""; };
+  const tm = { zscale: "HDR-Aufnahme, auf normale Farben umgerechnet (ffmpeg)", lut: "HDR-Aufnahme, auf normale Farben umgerechnet (eigene Umrechnung)", hlg: "HDR-Aufnahme (HLG), nur ungefähr umgerechnet", sdr: "normale Farben (kein HDR)" }[d.tm] || "";
+  const f = diag && diag.f, th = diag && diag.thr;
+  return `<div class="diag small">${tm ? `<div>Farben: ${esc(tm)}.</div>` : ""}${Object.keys(sm).length ? `<ul style="margin:0;padding-left:18px">${row("cnt", "Gelbe Respawn-Zahl oben links")}${row("feed", "Helle Zeile in der Kill-Anzeige")}${row("ug", "Goldenes Ult-Feld")}</ul>` : ""}
+    <div class="row"><button data-act="diag">Was sieht das Programm hier?</button><span class="muted">Zeigt das Bild an der aktuellen Stelle mit den drei Messbereichen und den Werten. Halt das Video zum Beispiel bei der gelben Zahl an.</span></div>
+    ${diag ? (diag.error ? `<span style="color:var(--bad)">${esc(diag.error)}</span>` : `<img src="${diag.img}" alt="Bild bei ${fmt(diag.t)} mit Messbereichen"><div>Bei ${fmt(diag.t)}: Gelb oben links <b class="${f.cnt > th.dead ? "hi" : "lo"}">${pct(f.cnt)}</b> (Schwelle ${pct(th.dead)}) · Kill-Anzeige <b class="${f.feed > th.kill ? "hi" : "lo"}">${pct(f.feed)}</b> (${pct(th.kill)}) · Ult-Feld <b class="${f.ug > th.ultOn ? "hi" : "lo"}">${pct(f.ug)}</b> (${pct(th.ultOn)})</div>
+      <div class="muted">Gelber Rahmen: Respawn-Zahl. Weisser Rahmen: Kill-Anzeige. Oranger Rahmen: Ult-Feld. Liegen die Rahmen nicht auf den Anzeigen, schick ein Bildschirmfoto davon an Claude.</div>`) : ""}</div>`;
+}
+function fightRow(e) {
+  const pr = e.pred && !e.res ? ` · Schätzung: <b>${RES_L[e.pred]}</b>` : "";
+  return `<li class="fight ${e.res ? "" : "open"} ${e.res === "none" ? "no" : ""}"><button class="link" data-jump="${e.t}">▶ ${fmt(e.t)}–${fmt(e.e)}</button><span><b>Fight</b>${e.res ? " · " + esc(RES_L[e.res]) : "?"}${pr}</span>
+    <span class="acts">${e.res ? `<button class="link" data-fight="${e.id}" data-res="">ändern</button>` : `<button class="ok" data-fight="${e.id}" data-res="win">Gewonnen</button><button class="bad" data-fight="${e.id}" data-res="loss">Verloren</button><button data-fight="${e.id}" data-res="none">Kein Fight</button>`}</span></li>`;
+}
 function renderParts() {
   const box = $("#parts"); if (!box || !V) return;
-  const evs = V.events.slice().sort((a, b) => a.t - b.t), marks = V.marks.slice().sort((a, b) => a.t - b.t), open = evs.filter(e => typeof e.ok !== "boolean").length, segs = segments();
+  const evs = V.events.filter(e => e.k !== "fight").sort((a, b) => a.t - b.t), fts = V.events.filter(e => e.k === "fight").sort((a, b) => a.t - b.t), marks = V.marks.slice().sort((a, b) => a.t - b.t), open = evs.filter(e => typeof e.ok !== "boolean").length + fts.filter(e => !e.res).length, segs = segments();
   box.innerHTML = `
     <div class="row">${Object.entries(KEYS).map(([k, key]) => `<button data-add="${k}" class="${k === "death" || k === "loss" ? "bad" : k === "kill" || k === "win" || k === "good" ? "ok" : ""}">${esc(S.kinds[k])}<kbd>${key.toUpperCase()}</kbd></button>`).join("")}</div>
     <p class="small muted" style="margin:0">Tasten: Leertaste Pause, ← → 5 Sekunden, Buchstaben wie auf den Knöpfen.</p>
     ${review ? `<div class="rev row"><b>Kurz-Review: Stück ${review.i + 1} von ${review.segs.length}</b><span class="small">${esc(review.segs[review.i].l.join(", "))} · ${fmt(review.segs[review.i].s)}–${fmt(review.segs[review.i].e)}</span><button data-rv="-1">Zurück</button><button data-rv="1">Weiter</button><button data-rv="0">Beenden</button></div>`
       : segs.length ? `<div class="row"><button class="primary" data-act="review">Kurz-Review starten</button><span class="small muted">${segs.length} Stücke, zusammen ${fmt(segs.reduce((a, g) => a + g.e - g.s, 0))} statt ${fmt(V.dur)}</span></div>` : ""}
     <h2>Funde des Programms${open ? ` <span class="badge run">${open} offen</span>` : ""}</h2>
-    ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Nichts gefunden.</p>`)
+    ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small" style="margin:0"><b>Nichts gefunden.</b> Darunter siehst du, was das Programm gemessen hat. Markier deine Tode selbst (Taste T): Liegen sie alle unter der Schwelle, senkt das Programm sie und findet die nächsten.</p>${diagHtml()}`)
+      + (fts.length ? `<h2 style="margin-top:6px">Fights <span class="small muted">(Versuch: Stellen mit viel Bewegung in der Kill-Anzeige. Antworte, dann lernt das Programm, gewonnene von verlorenen zu unterscheiden.)</span></h2><ul class="items">${fts.map(fightRow).join("")}</ul>` : "")
+      + (evs.length ? `<details class="small"><summary>Diagnose: Was misst das Programm?</summary>${diagHtml()}</details>` : "")
       : V.status === "fehler" ? `<p class="small" style="color:var(--bad);margin:0">${esc(V.error || "Fehler beim Auswerten")}</p><div class="row"><button data-act="retry">Nochmal versuchen</button><span class="small muted">Das Programm versucht es auch von selbst noch einmal.</span></div>` : `<p class="small muted" style="margin:0">Wird ausgewertet …</p>`}
     <h2>Deine Markierungen</h2>
     ${marks.length ? `<ul class="items">${marks.map(m => `<li class="${m.id === pend ? "open" : ""}"><button class="link" data-jump="${m.t - (m.k === "death" ? 10 : 3)}">▶ ${fmt(m.t)}</button><span>${markLabel(m)}</span><span class="acts"><button class="link" data-edit="${m.id}">${m.id === pend ? "fertig" : "ändern"}</button><button class="link" data-del="${m.id}" aria-label="Löschen">✕</button></span>${markSub(m)}</li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine. «Stimmt» bei einem Fund macht daraus eine Markierung.</p>`}
@@ -193,7 +240,7 @@ function addMark(k) {
 document.addEventListener("click", async e => {
   const b = e.target.closest("button, li[data-sel]"); if (!b) return;
   const v = $("#vid"), d = b.dataset;
-  if (d.sel) { sel = d.sel; review = null; pend = ""; sig = ""; renderList(); await loadVideo(); return; }
+  if (d.sel) { sel = d.sel; review = null; pend = ""; sig = ""; diag = null; renderList(); await loadVideo(); return; }
   if (d.act === "open") post("/api/folder/open", { sub: d.sub || "" });
   else if (d.act === "choose") post("/api/folder/choose").then(() => { sel = ""; V = null; poll(); });
   else if (d.act === "setFolder") post("/api/folder/set", { folder: $("#folderIn").value }).then(() => { sel = ""; V = null; poll(); });
@@ -205,16 +252,21 @@ document.addEventListener("click", async e => {
     V = await post("/api/finish", { id: V.id }); sel = V.id; sig = ""; renderMain(); poll(); }
   else if (d.act === "retry") { V = await post("/api/retry", { id: V.id }); sig = ""; renderParts(); poll(); }
   else if (d.act === "reopen") { V = await post("/api/reopen", { id: V.id }); renderParts(); poll(); }
+  else if (d.act === "diag") { const t = v ? v.currentTime : 0; diag = { t, loading: 1 }; diag = await get(`/api/frame/${V.id}?t=${t.toFixed(2)}`).catch(err => ({ error: err.message, t })); renderParts(); }
+  else if (d.fight !== undefined) { V = await post("/api/fight", { id: V.id, eid: d.fight, res: d.res }); renderParts(); poll(); }
+  else if (d.role) { await post("/api/pref", { k: "role", v: d.role }); S.prefs = Object.assign({}, S.prefs, { role: d.role }); detOpen = true; renderParts(); }
   else if (d.ans) { V = await post("/api/answer", { id: V.id, eid: d.ans, ok: d.v === "null" ? null : d.v === "true" }); const e = V.events.find(x => x.id === d.ans); if (e && e.ok === true && e.mk && (e.k === "death" || e.k === "ult")) pend = e.mk; renderParts(); poll(); }
   else if (d.add) addMark(d.add);
   else if (d.jump !== undefined && v) { v.currentTime = Math.max(0, +d.jump); v.play().catch(() => {}); }
   else if (d.edit) { pend = pend === d.edit ? "" : d.edit; renderParts(); }
   else if (d.del) { await post("/api/mark/delete", { id: V.id, mid: d.del }); if (pend === d.del) pend = ""; await loadVideo(); poll(); }
-  else if (d.set) { const m = V.marks.find(x => x.id === d.mid); const val = m && m[d.set] === d.v ? "" : d.v; V = await post("/api/mark/update", { id: V.id, mid: d.mid, fields: { [d.set]: val } }); if (d.set !== "c") pend = ""; renderParts(); }
+  else if (d.set) { const m = V.marks.find(x => x.id === d.mid); const val = m && m[d.set] === d.v ? "" : d.v; V = await post("/api/mark/update", { id: V.id, mid: d.mid, fields: { [d.set]: val } }); if (d.set === "v") pend = ""; renderParts(); }   // Ursache und Ult-Held: offen lassen, damit «genauer» und «Wessen Ult?» gehen
   else if (d.here && v) { V = await post("/api/mark/update", { id: V.id, mid: d.here, fields: { t: v.currentTime } }); renderParts(); poll(); }
   else if (d.step && v) v.currentTime = Math.max(0, v.currentTime + +d.step);
   else if (d.rate && v) v.playbackRate = +d.rate;
 });
+document.addEventListener("change", e => { const hs = e.target.closest("select[data-hero]"); if (hs && V && hs.value) { post("/api/mark/update", { id: V.id, mid: hs.dataset.hero, fields: { h: hs.value } }).then(r => { V = r; poll(); renderParts(); }); return; } });
+document.addEventListener("toggle", e => { if (e.target.matches && e.target.matches("details[data-det]")) detOpen = e.target.open; }, true);
 document.addEventListener("change", e => { const i = e.target.closest("input[data-note]"); if (i && V) post("/api/mark/update", { id: V.id, mid: i.dataset.note, fields: { n: i.value } }).then(r => { V = r; }); });
 document.addEventListener("keydown", e => {
   const t = e.target; if (e.ctrlKey || e.metaKey || e.altKey || (t && t.matches("input, textarea, select"))) { if (t && t.matches("input[data-note]") && e.key === "Enter") { t.blur(); pend = ""; renderParts(); } return; }
@@ -223,6 +275,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime + (e.key === "ArrowLeft" ? -5 : 5)); return; }
   const k = Object.keys(KEYS).find(x => KEYS[x] === e.key.toLowerCase()); if (k) { e.preventDefault(); addMark(k); }
 });
+get("/api/meta").then(m => { META = m; if (V) renderParts(); }).catch(() => {});
 poll(); setInterval(poll, 2000);
 </script>
 </body>
