@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 FPS = 4                      # Bilder pro Sekunde für die Messung (Browser-Version: 1)
 W, H = 480, 270              # Messbild (Bereiche sind relativ, das Seitenverhältnis spielt kaum eine Rolle)
 VIDEO_EXT = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}
@@ -413,6 +413,45 @@ def learned_fights(ex: list[dict]) -> dict:
     return r
 
 
+def ult_score(ser: dict, t: float, events: list[dict]) -> float:
+    """Ult-Wirkung (Versuch): Wie ändert sich der Kill-Feed nach deiner Ult (bläulich minus rötlich, 8 s danach gegen 8 s davor),
+    dazu deine Kills in den 10 s danach. Die Wirkung selbst (Heilung, Rettung) sieht das Programm nicht; ob der Wert dazu passt,
+    zeigt erst der Vergleich mit deinen Bewertungen (learned_ulteff)."""
+    if not ser.get("fr"):
+        return 0.0
+    ts = ser["t"]
+    def bal(a, b):
+        idx = [i for i, x in enumerate(ts) if a <= x < b]
+        return sum(ser["fb"][i] - ser["fr"][i] for i in idx) / len(idx) if idx else 0.0
+    kills = sum(1 for e in events if e["k"] == "kill" and t < e["t"] <= t + 10)
+    return round(bal(t, t + 8) - bal(t - 8, t) + 0.1 * min(kills, 3), 4)
+
+
+def learned_ulteff(ex: list[dict]) -> dict:
+    """Aus deinen Bewertungen «mit Wirkung» und «ohne Wirkung» eine Regel: ab je 4, wenn sie sich klar trennen und mindestens 70 % stimmen."""
+    J = [e["s"] for e in ex if e.get("v") == "ja" and isinstance(e.get("s"), (int, float))]
+    N = [e["s"] for e in ex if e.get("v") == "nein" and isinstance(e.get("s"), (int, float))]
+    r = {"mit": len(J), "ohne": len(N), "gelernt": False}
+    if len(J) >= 4 and len(N) >= 4:
+        mj, mn = statistics.median(J), statistics.median(N)
+        if abs(mj - mn) >= 0.02:
+            thr, d = (mj + mn) / 2, 1 if mj > mn else -1
+            hit = sum(1 for x in J if d * (x - thr) > 0) + sum(1 for x in N if d * (x - thr) <= 0)
+            acc = hit / (len(J) + len(N))
+            r.update(treffer=round(acc, 2))
+            if acc >= 0.7:
+                r.update(gelernt=True, thr=round(thr, 4), dir=d)
+        else:
+            r["hinweis"] = "Ults mit und ohne Wirkung sehen im Kill-Feed noch gleich aus."
+    return r
+
+
+def ulteff_pred(score: float, ul: dict) -> str:
+    if not ul.get("gelernt"):
+        return ""
+    return "ja" if ul["dir"] * (score - ul["thr"]) > 0 else "nein"
+
+
 def fight_pred(score: float, fl: dict) -> str:
     if not fl.get("gelernt"):
         return ""
@@ -448,6 +487,218 @@ def done_name(rec: dict) -> str:
         core = base
     core = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', " ", core).strip()
     return f"Ausgewertet {core}{ext}"
+
+
+# ---------------------------------------------------------------- Für die Cloud (0.3.0)
+# Kleine Dateien für Rivals Coach: Die App nimmt höchstens 20 MiB pro Datei. Das Programm macht deshalb Stücke:
+# Highlights (die Stellen aus dem Kurz-Review) und das ganze Video. H.264 in MP4, 960 Pixel breit, ohne Ton
+# (im Ton können Stimmen von Teammates sein), HDR wie beim Messen auf normale Farben umgerechnet.
+CLOUD_DIR = "Für die Cloud"
+CLOUD_V = 1
+CLOUD_W, CLOUD_FPS = 960, 30
+CLOUD_MAX = 19 * 1024 * 1024        # darüber wird ein Stück mit weniger Datenrate neu gemacht
+CLOUD_TARGET = 17 * 1024 * 1024     # so gross soll ein Stück im Mittel höchstens werden
+HL_KBPS, FULL_KBPS = 1200, 900      # Datenrate Bild (kbit/s): Highlights etwas schärfer
+
+
+def piece_seconds(kbps: int) -> int:
+    """Länge eines Stücks, damit es bei dieser Datenrate unter CLOUD_TARGET bleibt (1200 kbit/s: 118 s, 900 kbit/s: 158 s)."""
+    return int(CLOUD_TARGET * 8 / (kbps * 1000))
+
+
+_ENCODERS: dict[str, bool] = {}
+
+
+def has_encoder(name: str) -> bool:
+    if not _ENCODERS:
+        p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-encoders"], capture_output=True, text=True, errors="replace", **_popen_kwargs())
+        for ln in p.stdout.splitlines():
+            parts = ln.split()
+            if len(parts) >= 2:
+                _ENCODERS[parts[1]] = True
+        _ENCODERS["_"] = True
+    return bool(_ENCODERS.get(name))
+
+
+def cloud_codec() -> str:
+    """H.264 spielt jeder Browser ab, auch am Handy. Ohne H.264-Encoder gibt es keine Cloud-Dateien."""
+    for c in ("libx264", "libopenh264"):
+        if has_encoder(c):
+            return c
+    return ""
+
+
+def _enc_args(codec: str, kbps: int) -> list[str]:
+    a = ["-c:v", codec, "-b:v", f"{kbps}k", "-maxrate", f"{int(kbps * 1.25)}k", "-bufsize", f"{kbps * 2}k"]
+    if codec == "libx264":
+        a += ["-preset", "veryfast", "-profile:v", "high"]
+    return a + ["-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart"]
+
+
+def _size_of(info: dict) -> tuple[int, int]:
+    m = re.search(r"\b(\d{3,5})x(\d{3,5})\b", info.get("stream", ""))
+    return (int(m.group(1)), int(m.group(2))) if m else (1920, 1080)
+
+
+def _cube(path: Path):
+    """3D-LUT für ffmpeg (lut3d) aus pq_to_sdr: nötig, wenn dem ffmpeg zscale fehlt."""
+    n = 33
+    g = np.linspace(0, 1, n)
+    bb, gg, rr = np.meshgrid(g, g, g, indexing="ij")   # Rot ändert sich am schnellsten
+    rgb = np.stack([rr, gg, bb], axis=-1).reshape(-1, 3)
+    out = pq_to_sdr((rgb * 65535 + 0.5).astype(np.uint16)).astype(np.float32) / 255
+    lines = [f"LUT_3D_SIZE {n}"] + [f"{r:.5f} {g_:.5f} {b:.5f}" for r, g_, b in out]
+    path.write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
+def cloud_vf(info: dict) -> tuple[str, bool]:
+    """Filterkette für die Cloud-Stücke: (Filter, braucht die LUT-Datei im Arbeitsordner). Nach der HDR-Umrechnung die Kennzeichnung
+    auf normale Farben (BT.709) setzen, sonst behandeln Browser das Stück weiter als HDR und die Farben stimmen nicht."""
+    w, h = _size_of(info)
+    oh = max(2, int(round(CLOUD_W * h / w / 2)) * 2)
+    mode = color_mode(info)
+    if mode == "zscale":
+        tin = "smpte2084" if info["trc"] == "pq" else "arib-std-b67"
+        return (f"zscale=w={CLOUD_W}:h={oh}:tin={tin}:min=bt2020nc:pin=bt2020:rin=tv:t=linear:npl={NPL},format=gbrpf32le,"
+                f"zscale=p=bt709,tonemap=tonemap=mobius:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=bt709,fps={CLOUD_FPS}"), False
+    if mode == "lut":
+        return (f"scale={CLOUD_W}:{oh}:in_color_matrix=bt2020:in_range=tv:out_range=full,format=rgb48le,lut3d=file=pq2sdr.cube,"
+                f"scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=bt709,fps={CLOUD_FPS}"), True
+    return f"scale={CLOUD_W}:{oh},format=yuv420p,fps={CLOUD_FPS}", False
+
+
+def _ffrun(args: list[str], total: float, progress=None, stop: threading.Event | None = None, cwd: Path | None = None):
+    """ffmpeg mit Fortschritt (0 bis 1). Bricht ab, wenn stop gesetzt ist."""
+    cmd = [ffmpeg_exe(), "-v", "error", "-y", "-nostats", "-progress", "pipe:1"] + args
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(cwd) if cwd else None, **_popen_kwargs())
+    err: list[str] = []
+    threading.Thread(target=lambda: err.extend(x.decode("utf-8", "replace") for x in p.stderr), daemon=True).start()
+    for ln in iter(p.stdout.readline, b""):
+        if stop is not None and stop.is_set():
+            p.kill()
+            p.wait()
+            raise InterruptedError("abgebrochen")
+        s = ln.decode("ascii", "replace").strip()
+        if progress and s.startswith("out_time_us=") and total > 0:
+            try:
+                progress(min(1.0, int(s.split("=")[1]) / 1e6 / total))
+            except ValueError:
+                pass
+    p.wait()
+    if p.returncode != 0:
+        raise RuntimeError("ffmpeg: " + "".join(err).strip()[-300:])
+
+
+def highlight_segments(rec: dict) -> list[dict]:
+    """Die Stellen aus dem Kurz-Review (wie segments() in der Oberfläche): Tod mit 10 s davor, Kill, deine Ult, Fights, eigene Markierungen.
+    Funde mit «Stimmt nicht» fallen weg. Überlappende Stellen werden zusammengefasst."""
+    dur = float(rec.get("dur") or 0)
+    win = {"death": (10, 2), "kill": (4, 2), "ult": (2, 6)}
+    raw = []
+    evs = rec.get("events", [])
+    for e in evs:
+        if e.get("ok") is False:
+            continue
+        if e["k"] == "fight":
+            raw.append((e["t"], e.get("e", e["t"] + 5)))
+        else:
+            a, b = win.get(e["k"], (5, 3))
+            raw.append((e["t"] - a, e["t"] + b))
+    linked = {e.get("mk") for e in evs if e.get("mk")}
+    for m in rec.get("marks", []):
+        if m["id"] in linked:
+            continue
+        a, b = win.get(m["k"], (5, 3))
+        raw.append((m["t"] - a, m["t"] + b))
+    out: list[dict] = []
+    for s, e in sorted((max(0.0, s), min(dur, e) if dur else e) for s, e in raw):
+        if e - s < 0.5:
+            continue
+        if out and s <= out[-1]["e"] + 1:
+            out[-1]["e"] = max(out[-1]["e"], e)
+        else:
+            out.append({"s": s, "e": e})
+    return [{"s": round(x["s"], 2), "e": round(x["e"], 2)} for x in out]
+
+
+def group_pieces(segs: list[dict], max_s: float) -> list[list[dict]]:
+    """Stellen der Reihe nach in Stücke packen, jedes höchstens max_s Sekunden. Eine zu lange Stelle wird geteilt."""
+    parts = []
+    for g in segs:
+        s = g["s"]
+        while g["e"] - s > max_s:
+            parts.append({"s": s, "e": s + max_s})
+            s += max_s
+        parts.append({"s": s, "e": g["e"]})
+    groups: list[list[dict]] = []
+    cur: list[dict] = []
+    tot = 0.0
+    for p in parts:
+        d = p["e"] - p["s"]
+        if cur and tot + d > max_s:
+            groups.append(cur)
+            cur, tot = [], 0.0
+        cur.append(p)
+        tot += d
+    if cur:
+        groups.append(cur)
+    return groups
+
+
+def build_highlights(src: Path, info: dict, segs: list[dict], out_dir: Path, codec: str, progress=None, stop=None) -> list[dict]:
+    """Highlights als Stücke hl-01.mp4, … Jedes Stück hat eine Karte: welche Stelle im Video (s bis e) ab welcher Sekunde im Stück (at) läuft."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    vf, need_cube = cloud_vf(info)
+    if need_cube and not (out_dir.parent / "pq2sdr.cube").exists():
+        _cube(out_dir.parent / "pq2sdr.cube")
+    groups = group_pieces(segs, piece_seconds(HL_KBPS))
+    total = sum(p["e"] - p["s"] for g in groups for p in g) or 1.0
+    done, pieces = 0.0, []
+    for i, g in enumerate(groups, 1):
+        f = f"hl-{i:02d}.mp4"
+        dst = out_dir / f
+        d = sum(p["e"] - p["s"] for p in g)
+        kbps = HL_KBPS
+        for _ in range(3):
+            args = []
+            for p in g:
+                args += ["-ss", f"{p['s']:.2f}", "-t", f"{p['e'] - p['s']:.2f}", "-i", str(src)]
+            chain = "".join(f"[{k}:v]" for k in range(len(g))) + f"concat=n={len(g)}:v=1:a=0,{vf}[out]"
+            args += ["-filter_complex", chain, "-map", "[out]"] + _enc_args(codec, kbps) + [str(dst)]
+            _ffrun(args, d, (lambda x, base=done: progress((base + x * d) / total)) if progress else None, stop, cwd=out_dir.parent)
+            if dst.stat().st_size <= CLOUD_MAX:
+                break
+            kbps = int(kbps * 0.7)
+        at, segmap = 0.0, []
+        for p in g:
+            segmap.append({"s": p["s"], "e": p["e"], "at": round(at, 2)})
+            at += p["e"] - p["s"]
+        pieces.append({"f": f, "size": dst.stat().st_size, "d": round(at, 2), "segs": segmap})
+        done += d
+    return pieces
+
+
+def build_full(src: Path, info: dict, dur: float, out_dir: Path, codec: str, progress=None, stop=None) -> list[dict]:
+    """Das ganze Video in Stücken ganz-01.mp4, … zu je piece_seconds(FULL_KBPS) Sekunden (ein Durchgang, Schnitt genau an den Grenzen)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    vf, need_cube = cloud_vf(info)
+    if need_cube and not (out_dir.parent / "pq2sdr.cube").exists():
+        _cube(out_dir.parent / "pq2sdr.cube")
+    P = piece_seconds(FULL_KBPS)
+    for old in out_dir.glob("ganz-*.mp4"):
+        old.unlink()
+    args = ["-i", str(src), "-vf", vf] + _enc_args(codec, FULL_KBPS)[:-2] + [
+        "-force_key_frames", f"expr:gte(t,n_forced*{P})", "-f", "segment", "-segment_time", str(P), "-segment_start_number", "1",
+        "-reset_timestamps", "1", "-segment_format", "mp4", "-segment_format_options", "movflags=+faststart", str(out_dir / "ganz-%02d.mp4")]
+    _ffrun(args, dur, progress, stop, cwd=out_dir.parent)
+    pieces = []
+    for i, dst in enumerate(sorted(out_dir.glob("ganz-*.mp4"))):
+        s, e = i * P, (min((i + 1) * P, dur) if dur else (i + 1) * P)
+        if dst.stat().st_size > CLOUD_MAX:   # selten: sehr unruhige Stelle, dann mit weniger Datenrate neu
+            _ffrun(["-ss", f"{s:.2f}", "-t", f"{e - s:.2f}", "-i", str(src), "-vf", vf] + _enc_args(codec, int(FULL_KBPS * 0.6)) + [str(dst)],
+                   e - s, None, stop, cwd=out_dir.parent)
+        pieces.append({"f": dst.name, "size": dst.stat().st_size, "s": round(s, 2), "e": round(e, 2)})
+    return pieces
 
 
 # ---------------------------------------------------------------- Lernen
@@ -487,6 +738,7 @@ def learned(learn: dict) -> tuple[dict, float, dict]:
         lead = round(max(-1.0, min(6.0, statistics.median(corr))), 2)
     rep["tod_zeit"] = {"korrekturen": len(corr), "sekunden_vor_der_zahl": lead}
     rep["fight"] = learned_fights(learn.get("fights", []))
+    rep["ultEff"] = learned_ulteff(learn.get("ults", []))
     return thr, lead, rep
 
 
@@ -539,12 +791,14 @@ class Store:
         d["learn"].setdefault("examples", {})
         d["learn"].setdefault("corrections", [])
         d["learn"].setdefault("fights", [])
+        d["learn"].setdefault("ults", [])
         d.setdefault("prefs", {})
         for k, v in list(d["videos"].items()):
             if not isinstance(v, dict):
                 del d["videos"][k]
                 continue
             v.setdefault("events", []); v.setdefault("marks", [])
+            v.setdefault("cid", new_id())   # bleibt beim Umbenennen gleich: Ordner in «Für die Cloud»
             if v.get("status") == "läuft":
                 v["status"] = "wartet"
         return d
@@ -553,6 +807,11 @@ class Store:
         with self.lock:
             self.data["updated"] = datetime.now().isoformat(timespec="seconds")
             self.data["program"] = VERSION
+            # Für Rivals Coach: Wie oft lag das Programm bei deinen Antworten richtig? Erst dann zählen ungeprüfte Funde in der Statistik.
+            _, _, rep = learned(self.data["learn"])
+            self.data["quality"] = {k: {"stimmt": rep[k]["stimmt"], "falsch": rep[k]["falsch"]} for k in ("death", "kill", "ult")}
+            self.data["quality"]["fight"] = rep["fight"]
+            self.data["quality"]["ultEff"] = rep["ultEff"]
             p = self.base / DATA_NAME
             tmp = p.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.data, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -586,7 +845,7 @@ class Store:
                         if oc.exists() and not nc.exists():
                             os.replace(oc, nc)
                     else:
-                        V[key] = {"name": p.name, "size": size, "start": name_time(p.name), "dur": 0,
+                        V[key] = {"name": p.name, "size": size, "start": name_time(p.name), "dur": 0, "cid": new_id(),
                                   "mtime": int(p.stat().st_mtime * 1000), "status": "wartet", "events": [], "marks": [],
                                   "added": datetime.now().isoformat(timespec="seconds")}
                 rec = V[key]
@@ -693,10 +952,16 @@ class Store:
                 o = next((x for x in old if x["k"] == "fight" and abs(x["t"] - g["t"]) <= 4), None)
                 evs.append({"id": o["id"] if o else new_id(), "t": g["t"], "e": g["e"], "k": "fight", "n": g["n"], "score": g["score"],
                             "pred": fight_pred(g["score"], fl), "res": o.get("res", "") if o else "", "ok": o.get("ok") if o else None, "mk": o.get("mk", "") if o else ""})
-            for e in detect(ser, thr, lead):
+            ul = learned_ulteff(self.data["learn"].get("ults", []))
+            found = detect(ser, thr, lead)
+            for e in found:
                 o = next((x for x in old if x["k"] == e["k"] and abs(x["t"] - e["t"]) <= 2.0 and isinstance(x.get("ok"), bool)), None)
-                evs.append({"id": o["id"] if o else new_id(), "t": e["t"], "k": e["k"], "f": e["f"], "raw": e.get("raw", e["t"]),
-                            "ok": o["ok"] if o else None, "mk": o.get("mk", "") if o else ""})
+                ne = {"id": o["id"] if o else new_id(), "t": e["t"], "k": e["k"], "f": e["f"], "raw": e.get("raw", e["t"]),
+                      "ok": o["ok"] if o else None, "mk": o.get("mk", "") if o else ""}
+                if e["k"] == "ult":
+                    ne["us"] = ult_score(ser, e["t"], found)
+                    ne["est"] = ulteff_pred(ne["us"], ul)
+                evs.append(ne)
             # bestätigte Funde, die jetzt nicht mehr gefunden werden, bleiben als Markierung erhalten (mk)
             rec["events"] = evs
             rec["dur"] = round(ser.get("dur") or 0, 1)
@@ -767,6 +1032,8 @@ class Store:
             prefs = self.data.setdefault("prefs", {})
             if k == "role" and v in RV_DATA.get("roles", {}):
                 prefs["role"] = v
+            if k == "cloudFull":
+                prefs["cloudFull"] = v in ("1", "true", True)
             self.save()
 
     def add_mark(self, key: str, t: float, kind: str) -> dict:
@@ -805,6 +1072,13 @@ class Store:
             if fields.get("h"):
                 prefs = self.data.setdefault("prefs", {})
                 prefs["recentUlt"] = ([str(fields["h"])[:40]] + [x for x in prefs.get("recentUlt", []) if x != fields["h"]])[:8]
+            if "v" in fields and mk.get("k") == "ult":
+                e = next((x for x in rec["events"] if x.get("mk") == mid and x["k"] == "ult" and "us" in x), None)
+                if e is not None:
+                    ul = [x for x in self.data["learn"]["ults"] if x.get("e") != e["id"]]
+                    if mk.get("v") in ("ja", "nein"):
+                        ul.append({"e": e["id"], "s": e["us"], "v": mk["v"]})
+                    self.data["learn"]["ults"] = ul[-200:]
             if "c" in fields and cause_group(mk.get("c", "")) != RV_DATA.get("ultGroup") and mk.get("k") == "death":
                 mk.pop("h", None)   # Ult-Held gehört nur zu einem Tod durch eine Ult
             if "t" in fields:
@@ -884,6 +1158,70 @@ class Store:
         for k in keys:
             self.try_move(k)
 
+    # Für die Cloud
+    def cloud_next(self) -> tuple[str, str] | None:
+        """Nächste Arbeit für die Cloud: (Schlüssel, "hl" oder "full"). Neueste Aufnahmen zuerst, Highlights vor ganzen Videos."""
+        if not cloud_codec():
+            return None
+        full_on = self.data.get("prefs", {}).get("cloudFull", True)
+        now = time.time()
+        with self.lock:
+            cands = []
+            for k, v in self.data["videos"].items():
+                if v.get("missing") or v.get("status") != "fertig" or not (self.base / v.get("path", "")).exists():
+                    continue
+                c = v.get("cloud") or {}
+                if c.get("errAt") and now - c["errAt"] < 3600 or c.get("tries", 0) >= 3:
+                    continue
+                d = self.base / CLOUD_DIR / v["cid"]
+                hl = c.get("hl") or {}
+                if hl.get("sig") != f"{v.get('analyzed')}|{CLOUD_V}" or not all((d / p["f"]).exists() for p in hl.get("pieces", [])):
+                    cands.append((0, -(v.get("start") or 0), k, "hl"))
+                elif full_on:
+                    fu = c.get("full") or {}
+                    if fu.get("sig") != f"{v.get('size')}|{CLOUD_V}" or not all((d / p["f"]).exists() for p in fu.get("pieces", [])):
+                        cands.append((1, -(v.get("start") or 0), k, "full"))
+            cands.sort()
+            return (cands[0][2], cands[0][3]) if cands else None
+
+    def build_cloud(self, key: str, what: str, progress=None, stop=None):
+        with self.lock:
+            v = self.data["videos"][key]
+            cid, src, dur = v["cid"], self.base / v["path"], float(v.get("dur") or 0)
+            segs = highlight_segments(v)
+            sig = f"{v.get('analyzed')}|{CLOUD_V}" if what == "hl" else f"{v.get('size')}|{CLOUD_V}"
+        out = self.base / CLOUD_DIR / cid
+        codec = cloud_codec()
+        info = probe(src)
+        try:
+            if what == "hl":
+                for old in out.glob("hl-*.mp4"):
+                    old.unlink()
+                pieces = build_highlights(src, info, segs, out, codec, progress, stop) if segs else []
+                part = {"sig": sig, "at": datetime.now().isoformat(timespec="seconds"), "pieces": pieces}
+            else:
+                pieces = build_full(src, info, dur, out, codec, progress, stop)
+                part = {"sig": sig, "at": datetime.now().isoformat(timespec="seconds"), "piece": piece_seconds(FULL_KBPS), "pieces": pieces}
+        except InterruptedError:
+            return
+        except Exception as e:
+            with self.lock:
+                k2, v2 = next(((k, x) for k, x in self.data["videos"].items() if x.get("cid") == cid), (None, None))
+                if v2 is not None:
+                    c = v2.setdefault("cloud", {})
+                    c.update(err=str(e)[:300], errAt=time.time(), tries=c.get("tries", 0) + 1)
+                    self.save()
+            raise
+        with self.lock:
+            k2, v2 = next(((k, x) for k, x in self.data["videos"].items() if x.get("cid") == cid), (None, None))
+            if v2 is None:
+                return
+            c = v2.setdefault("cloud", {})
+            c.update({"v": CLOUD_V, "dir": f"{CLOUD_DIR}/{cid}", what: part})
+            for f in ("err", "errAt", "tries"):
+                c.pop(f, None)
+            self.save()
+
     def reopen(self, key: str):
         with self.lock:
             self.data["videos"][key].pop("done", None)
@@ -928,6 +1266,24 @@ def selftest(tmp: Path) -> int:
     hdr = _selftest_hdr(tmp)
     if hdr:
         result = 1
+    # Cloud-Stücke: H.264 muss gehen, sonst kann Rivals Coach die Videos nicht abspielen
+    codec = cloud_codec()
+    mp4 = tmp / "selbsttest.mp4"
+    if not codec:
+        print("Cloud-Stücke: kein H.264-Encoder im ffmpeg → FEHLER")
+        result = 1
+    elif mp4.exists():
+        try:
+            info = probe(mp4)
+            pieces = build_highlights(mp4, info, [{"s": 2.0, "e": 5.0}, {"s": 7.5, "e": 9.0}], tmp / "cloud" / "test", codec)
+            p0 = probe(tmp / "cloud" / "test" / pieces[0]["f"])
+            ok = len(pieces) == 1 and abs(p0["dur"] - 4.5) < 0.3 and "h264" in p0["stream"] and pieces[0]["segs"][1]["at"] == 3.0
+            print(f"Cloud-Stücke ({codec}): {pieces[0]['size']} Bytes, {p0['dur']:.1f} s → {'OK' if ok else 'FEHLER'}")
+        except Exception as e:
+            ok = False
+            print(f"Cloud-Stücke: FEHLER {e}")
+        if not ok:
+            result = 1
     print("Selbsttest OK" if result == 0 else "Selbsttest FEHLER")
     return result
 

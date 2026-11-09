@@ -122,6 +122,19 @@ class App:
                     store.save()
                     self.work.update(key="", name="", p=0.0)
                 store.save()
+                # Danach, wenn nichts mehr auszuwerten ist: Stücke für die Cloud (eins pro Runde, damit neue Videos vorgehen)
+                if not todo and not self.stop.is_set() and store is self.store:
+                    nxt = store.cloud_next()
+                    if nxt:
+                        key, what = nxt
+                        rec = store.data["videos"][key]
+                        self.work.update(key=key, name=rec["name"], p=0.0, msg="Highlights für die Cloud" if what == "hl" else "Ganzes Video für die Cloud")
+                        try:
+                            store.build_cloud(key, what, progress=lambda p: self.work.update(p=p), stop=self.stop)
+                        except Exception as e:
+                            print(f"Cloud-Stücke für {rec['name']}: {e}", flush=True)
+                        self.work.update(key="", name="", p=0.0, msg="")
+                        self.wake.set()
             except Exception:
                 traceback.print_exc()
             self.wake.wait(5)
@@ -138,7 +151,7 @@ class App:
                 vids.append({"id": v.get("id"), "name": v["name"], "folder": v.get("folder"), "status": v.get("status"),
                              "error": v.get("error", ""), "start": v.get("start", 0), "dur": v.get("dur", 0),
                              "done": v.get("done", 0), "open": open_n, "copying": v.get("copying", 0), "events": len(v.get("events", [])), "analyzed": v.get("analyzed", ""),
-                             "marks": len(v.get("marks", []))})
+                             "marks": len(v.get("marks", [])), "cloud": cloud_sum(v)})
             vids.sort(key=lambda x: (bool(x["done"]), -(x["start"] or 0)))
             thr, lead, rep = rc.learned(store.data["learn"])
             return {"app": APP, "version": rc.VERSION, "folder": str(self.folder), "videos": vids,
@@ -150,8 +163,20 @@ class App:
         if not v:
             return None
         out = {x: v.get(x) for x in ("id", "name", "folder", "status", "error", "start", "dur", "done", "events", "marks", "moveTo", "diag")}
+        out["cloud"] = cloud_sum(v)
         out["doneName"] = rc.done_name(v)
         return out
+
+
+def cloud_sum(v: dict) -> dict:
+    """Kurzfassung für die Oberfläche: Stücke und Grösse der Highlights und des ganzen Videos."""
+    c = v.get("cloud") or {}
+    out = {"err": c.get("err", "")}
+    for part in ("hl", "full"):
+        x = c.get(part)
+        if x:
+            out[part] = {"n": len(x.get("pieces", [])), "mb": round(sum(p["size"] for p in x.get("pieces", [])) / 2**20, 1)}
+    return out
 
 
 def make_handler(app: App, port: int):

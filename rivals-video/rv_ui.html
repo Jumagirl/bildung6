@@ -104,7 +104,7 @@ function statusBadge(v) {
 }
 function renderTop() {
   const w = S.work;
-  $("#work").innerHTML = w.key ? `Wertet aus: <b>${esc(w.name)}</b> ${Math.round((w.p || 0) * 100)} %` : `Version ${esc(S.version)} · bereit`;
+  $("#work").innerHTML = w.key ? `${w.msg ? esc(w.msg) + ":" : "Wertet aus:"} <b>${esc(w.name)}</b> ${Math.round((w.p || 0) * 100)} %` : `Version ${esc(S.version)} · bereit`;
   $("#dataFile").textContent = S.dataFile;
   $("#folderCard").innerHTML = `<h2>Ordner</h2><div class="small" style="overflow-wrap:anywhere">${esc(S.folder)}</div>
     <p class="small muted" style="margin:0">Neue Videos vom USB-Stick in <b>Neu</b> kopieren. Das Programm wertet sie von selbst aus. Abgeschlossene kommen nach <b>Ausgewertet</b>.</p>
@@ -123,6 +123,7 @@ function renderLearn() {
     <table><tr><th></th><th>stimmt</th><th>falsch</th><th>Schwelle</th></tr>${row("death", "Tod")}${row("kill", "Kill")}${row("ult", "Ult")}</table>
     <p class="small" style="margin:0">Tod: <b>${String(S.learn.lead).replace(".", ",")} s</b> vor der gelben Zahl ${r.tod_zeit.korrekturen >= 2 ? `(aus ${r.tod_zeit.korrekturen} Korrekturen von dir)` : "(Startwert, noch zu wenig Korrekturen)"}.</p>
     ${r.fight ? `<p class="small" style="margin:0">Fights (Versuch): ${r.fight.gewonnen} gewonnen, ${r.fight.verloren} verloren beantwortet. ${r.fight.gelernt ? `Das Programm schätzt den Ausgang jetzt selbst (trifft bei deinen Antworten ${Math.round(r.fight.treffer * 100)} %).` : r.fight.hinweis ? esc(r.fight.hinweis) : "Ab je 3 Antworten versucht es, den Ausgang selbst zu erkennen."}</p>` : ""}
+    ${r.ultEff ? `<p class="small" style="margin:0">Ult-Wirkung (Versuch): ${r.ultEff.mit} mit, ${r.ultEff.ohne} ohne Wirkung bewertet. ${r.ultEff.gelernt ? `Das Programm schätzt die Wirkung jetzt selbst (trifft bei deinen Bewertungen ${Math.round(r.ultEff.treffer * 100)} %).` : r.ultEff.hinweis ? esc(r.ultEff.hinweis) : "Ab je 4 Bewertungen «mit» und «ohne Wirkung» prüft es, ob es die Wirkung selbst erkennen kann. Als Support heilst und rettest du oft mit der Ult; das sieht es in der Kill-Anzeige nicht, deshalb klappt es vielleicht nicht."}</p>` : ""}
     <p class="small muted" style="margin:0">Je mehr du mit «Stimmt», «Stimmt nicht» und «Tod ist hier» antwortest, desto genauer wird es. Danach kannst du alle Videos neu auswerten lassen; deine Antworten bleiben.</p>
     <div class="row"><button data-act="reall">Alle Videos mit neuem Wissen neu auswerten</button></div>`;
 }
@@ -180,6 +181,16 @@ function diagHtml() {
     ${diag ? (diag.error ? `<span style="color:var(--bad)">${esc(diag.error)}</span>` : `<img src="${diag.img}" alt="Bild bei ${fmt(diag.t)} mit Messbereichen"><div>Bei ${fmt(diag.t)}: Gelb oben links <b class="${f.cnt > th.dead ? "hi" : "lo"}">${pct(f.cnt)}</b> (Schwelle ${pct(th.dead)}) · Kill-Anzeige <b class="${f.feed > th.kill ? "hi" : "lo"}">${pct(f.feed)}</b> (${pct(th.kill)}) · Ult-Feld <b class="${f.ug > th.ultOn ? "hi" : "lo"}">${pct(f.ug)}</b> (${pct(th.ultOn)})</div>
       <div class="muted">Gelber Rahmen: Respawn-Zahl. Weisser Rahmen: Kill-Anzeige. Oranger Rahmen: Ult-Feld. Liegen die Rahmen nicht auf den Anzeigen, schick ein Bildschirmfoto davon an Claude.</div>`) : ""}</div>`;
 }
+// Für die Cloud: was das Programm für Rivals Coach vorbereitet hat (Highlights, ganzes Video in Stücken unter 20 MiB)
+function cloudHtml() {
+  const c = V.cloud || {}, full = (S.prefs || {}).cloudFull !== false, part = (x, l) => x ? `${l}: ${x.n} ${x.n === 1 ? "Stück" : "Stücke"}, ${String(x.mb).replace(".", ",")} MB` : "";
+  const busy = S.work.key && S.work.name === V.name && S.work.msg ? `${esc(S.work.msg)} … ${Math.round((S.work.p || 0) * 100)} %` : "";
+  const txt = [part(c.hl, "Highlights"), part(c.full, "Ganzes Video")].filter(Boolean).join(" · ");
+  return `<div class="card small" style="background:var(--surface-2);gap:4px"><b>Für Rivals Coach in der Cloud</b>
+    <span>${busy || txt || (V.status === "fertig" ? "Wird vorbereitet, sobald alle Videos ausgewertet sind." : "Nach der Auswertung.")}${c.err ? ` <span style="color:var(--bad)">Fehler: ${esc(c.err)}</span>` : ""}</span>
+    <span class="muted">Ordner «Für die Cloud». Ohne Ton, kleiner als das Original. Rivals Coach lädt beim «Ganzen Ordner wählen» die Highlights deiner wichtigen Matches hoch, das ganze Match nur auf Knopfdruck.</span>
+    <label class="row" style="gap:6px"><input type="checkbox" data-cloudfull ${full ? "checked" : ""}> Ganzes Video auch vorbereiten (braucht etwa 400 MB Platz pro Stunde Video)</label></div>`;
+}
 function fightRow(e) {
   const pr = e.pred && !e.res ? ` · Schätzung: <b>${RES_L[e.pred]}</b>` : "";
   return `<li class="fight ${e.res ? "" : "open"} ${e.res === "none" ? "no" : ""}"><button class="link" data-jump="${e.t}">▶ ${fmt(e.t)}–${fmt(e.e)}</button><span><b>Fight</b>${e.res ? " · " + esc(RES_L[e.res]) : "?"}${pr}</span>
@@ -194,12 +205,13 @@ function renderParts() {
     ${review ? `<div class="rev row"><b>Kurz-Review: Stück ${review.i + 1} von ${review.segs.length}</b><span class="small">${esc(review.segs[review.i].l.join(", "))} · ${fmt(review.segs[review.i].s)}–${fmt(review.segs[review.i].e)}</span><button data-rv="-1">Zurück</button><button data-rv="1">Weiter</button><button data-rv="0">Beenden</button></div>`
       : segs.length ? `<div class="row"><button class="primary" data-act="review">Kurz-Review starten</button><span class="small muted">${segs.length} Stücke, zusammen ${fmt(segs.reduce((a, g) => a + g.e - g.s, 0))} statt ${fmt(V.dur)}</span></div>` : ""}
     <h2>Funde des Programms${open ? ` <span class="badge run">${open} offen</span>` : ""}</h2>
-    ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small" style="margin:0"><b>Nichts gefunden.</b> Darunter siehst du, was das Programm gemessen hat. Markier deine Tode selbst (Taste T): Liegen sie alle unter der Schwelle, senkt das Programm sie und findet die nächsten.</p>${diagHtml()}`)
+    ${V.status === "fertig" ? (evs.length ? `<ul class="items">${evs.map(e => `<li class="${typeof e.ok !== "boolean" ? "open" : e.ok === false ? "no" : ""}"><button class="link" data-jump="${e.t - (e.k === "death" ? 10 : 3)}">▶ ${fmt(e.t)}</button><span><b>${EV_L[e.k]}</b>${e.ok === true ? " ✓" : e.ok === false ? " · stimmt nicht" : "?"}${e.k === "ult" && e.est ? ` <span class="muted">· Schätzung: ${e.est === "ja" ? "mit" : "ohne"} Wirkung</span>` : ""}</span><span class="acts">${typeof e.ok === "boolean" ? `<button class="link" data-ans="${e.id}" data-v="null">ändern</button>` : `<button class="ok" data-ans="${e.id}" data-v="true">Stimmt</button><button data-ans="${e.id}" data-v="false">Stimmt nicht</button>`}</span></li>`).join("")}</ul>` : `<p class="small" style="margin:0"><b>Nichts gefunden.</b> Darunter siehst du, was das Programm gemessen hat. Markier deine Tode selbst (Taste T): Liegen sie alle unter der Schwelle, senkt das Programm sie und findet die nächsten.</p>${diagHtml()}`)
       + (fts.length ? `<h2 style="margin-top:6px">Fights <span class="small muted">(Versuch: Stellen, an denen deine Kills, Tode oder Ults dicht beieinander liegen. Antworte, dann lernt das Programm aus den Farben in der Kill-Anzeige, gewonnene von verlorenen zu unterscheiden.)</span></h2><ul class="items">${fts.map(fightRow).join("")}</ul>` : "")
       + (evs.length ? `<details class="small" data-diag${diagOpen || diag ? " open" : ""}><summary>Diagnose: Was misst das Programm?</summary>${diagHtml()}</details>` : "")
       : V.status === "fehler" ? `<p class="small" style="color:var(--bad);margin:0">${esc(V.error || "Fehler beim Auswerten")}</p><div class="row"><button data-act="retry">Nochmal versuchen</button><span class="small muted">Das Programm versucht es auch von selbst noch einmal.</span></div>` : `<p class="small muted" style="margin:0">Wird ausgewertet …</p>`}
     <h2>Deine Markierungen</h2>
     ${marks.length ? `<ul class="items">${marks.map(m => `<li class="${m.id === pend ? "open" : ""}"><button class="link" data-jump="${m.t - (m.k === "death" ? 10 : 3)}">▶ ${fmt(m.t)}</button><span>${markLabel(m)}</span><span class="acts"><button class="link" data-edit="${m.id}">${m.id === pend ? "fertig" : "ändern"}</button><button class="link" data-del="${m.id}" aria-label="Löschen">✕</button></span>${markSub(m)}</li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine. «Stimmt» bei einem Fund macht daraus eine Markierung.</p>`}
+    ${cloudHtml()}
     <div class="card" style="background:var(--surface-2)">${V.done ? `<b>✓ Abgeschlossen</b>${V.moveTo ? `<span class="small">Die Datei war noch geöffnet. Das Programm verschiebt sie in den nächsten Sekunden nach «Ausgewertet»; du musst nichts tun.</span>` : ""}${V.moveTo ? "" : `<span class="small">Die Datei liegt in «Ausgewertet» als <b>${esc(V.name)}</b>.</span>`}<div class="row"><button data-act="reopen">Wieder öffnen</button><button data-act="open" data-sub="Ausgewertet">Ordner «Ausgewertet» öffnen</button></div>`
       : `<div class="row"><button class="primary" data-act="finish">✓ Auswertung abschliessen</button><span class="small muted">Verschiebt das Video nach «Ausgewertet» und nennt es «${esc(V.doneName)}».</span></div>`}</div>`;
 }
@@ -228,7 +240,7 @@ async function poll() {
   try {
     S = await get("/api/state");
     renderTop(); renderList(); renderLearn();
-    const cur = S.videos.find(v => v.id === sel), s2 = cur ? [cur.status, cur.events, cur.marks, cur.open, cur.done, cur.analyzed, cur.error].join("|") : "";
+    const cur = S.videos.find(v => v.id === sel), s2 = cur ? [cur.status, cur.events, cur.marks, cur.open, cur.done, cur.analyzed, cur.error, JSON.stringify(cur.cloud || {}), S.work.name === cur.name ? S.work.msg + Math.round((S.work.p || 0) * 10) : ""].join("|") : "";
     if (sel && !cur) { sel = ""; V = null; renderMain(); }
     else if (s2 !== sig && !document.activeElement.matches("input[data-note]")) { sig = s2; await loadVideo(); }
   } catch (e) { if (e.message !== "neu laden") $("#work").textContent = /Failed|NetworkError|fetch/i.test(e.message) ? "Keine Verbindung zum Programm. Läuft das Fenster «Rivals Video» noch?" : "Fehler: " + e.message + " (Seite mit F5 neu laden)"; }
@@ -267,6 +279,7 @@ document.addEventListener("click", async e => {
 });
 document.addEventListener("change", e => { const hs = e.target.closest("select[data-hero]"); if (hs && V && hs.value) { post("/api/mark/update", { id: V.id, mid: hs.dataset.hero, fields: { h: hs.value } }).then(r => { V = r; poll(); renderParts(); }); return; } });
 document.addEventListener("toggle", e => { if (!e.target.matches) return; if (e.target.matches("details[data-det]")) detOpen = e.target.open; if (e.target.matches("details[data-diag]")) diagOpen = e.target.open; }, true);   // offen lassen, wenn neu gezeichnet wird
+document.addEventListener("change", e => { if (e.target.matches && e.target.matches("input[data-cloudfull]")) { post("/api/pref", { k: "cloudFull", v: e.target.checked ? "1" : "0" }).then(r => { S.prefs = r.prefs; poll(); }); } });
 document.addEventListener("change", e => { const i = e.target.closest("input[data-note]"); if (i && V) post("/api/mark/update", { id: V.id, mid: i.dataset.note, fields: { n: i.value } }).then(r => { V = r; }); });
 document.addEventListener("keydown", e => {
   const t = e.target; if (e.ctrlKey || e.metaKey || e.altKey || (t && t.matches("input, textarea, select"))) { if (t && t.matches("input[data-note]") && e.key === "Enter") { t.blur(); pend = ""; renderParts(); } return; }
