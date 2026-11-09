@@ -942,6 +942,8 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .fig svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .fig figcaption { padding: 2px 16px 14px; font-size: .84rem; color: var(--muted); line-height: 1.45; }
 .nmcard { border-left: 4px solid var(--accent); }
+.nmrec { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 8px; padding: 8px 10px; border: 1px dashed var(--accent); border-radius: 10px; }
+.nmrec svg.i { flex: none; color: var(--accent-strong); }
 .nmlbl { font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2px 0 2px; }
 .nmfocus { font-size: 1.12rem; font-weight: 700; line-height: 1.4; margin: 0 0 6px; text-wrap: pretty; }
 .nmpre { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
@@ -12545,7 +12547,7 @@ function nmCardHtml() {
     const items = fxChosen(today()), bg = nmBackgroundHtml(f, true);
     if (!items.length && !bg) return "";
     return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><button class="linkbtn small" type="button" data-fxgo="1">Auswahl ändern</button></div>
-    ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>${nmContHtml(f)}${nmPrepHtml(f)}` : ""}
+    ${f && f.done ? `<p class="small muted" style="margin:0 0 6px">Alle Blöcke von heute sind gespielt. Weiter geht es mit dem Abschluss im Trainingstag.</p>${vidRecRemindHtml()}${nmContHtml(f)}${nmPrepHtml(f)}` : ""}
     ${items.length ? `<div class="nmlbl">Achte nur auf ${items.length === 1 ? "eins" : "diese Punkte"}</div><ul class="wl" style="margin:0">${items.map(x => `<li><span class="badge">${esc(x.tag)}</span> ${esc(x.t)} ${fxDots(x)}</li>`).join("")}</ul>`
       : `<p class="small muted" style="margin:0">Heute gibt es keine Plan-Aufgabe fürs Match. Wähl dir eine Sache aus.</p>`}
     ${hcPoolRowHtml("Hero-Karte vor dem Match")}${hcFoeRowHtml("Gegner-Karten: deine Problem-Gegner", 4)}
@@ -12554,6 +12556,7 @@ function nmCardHtml() {
   const bg = nmBackgroundHtml(f);
   const { seg, blk, next, k } = f, ev = seg.practice && f.n === planDay() ? practiceEval(seg.practice, blk.bi) : null;
   return `<div class="card nmcard"><div class="card-head"><h2>${icon("target")}Dein nächstes Match</h2><span class="badge">Match ${f.real || k} ${f.prevN ? `von Tag ${f.n}` : "heute"} · ${focusBlockLabel(blk.key)}</span></div>
+    ${f.real > 1 && f.seg === blk.segs[0] && f.k === f.seg.a ? vidRecRemindHtml() : ""}
     ${nmContHtml(f)}
     ${brNowHtml(f)}
     ${blk.pre && f.first ? `<p class="small nmpre"><b>Vorher:</b> ${linkify(esc(blk.pre), new Set())}</p>` : ""}
@@ -18543,10 +18546,12 @@ function vidSum(marks) {
 const vidSumText = s => [s.deaths && `${s.deaths} ${s.deaths === 1 ? "Tod" : "Tode"}`, s.kills && `${s.kills} ${s.kills === 1 ? "Kill" : "Kills"}`, s.ults && `${s.ults} ${s.ults === 1 ? "Ult" : "Ults"}`, (s.win || s.loss) && `Fights ${s.win}:${s.loss}`].filter(Boolean).join(", ");
 // Review: Hinweis auf Markierungen und Weg ins Video-Review
 function vidRvHtml(m) {
-  const mk = vidMarksFor(m.id), s = vidSum(mk);
-  return `<p class="small rvvid">${icon("play")}${mk.length ? `<span><b>Video-Markierungen:</b> ${s.n} (${esc(vidSumText(s) || "Notizen")})</span>` : `<span class="muted">Hast du das Match aufgenommen? Im Video-Review markierst du Tode, Ults und Fights mit der Zeit.</span>`} <button type="button" class="linkbtn small" data-vidopen="${esc(m.id)}">${mk.length ? "Im Video-Review öffnen" : "Video dazu ansehen"}</button></p>`;
+  const mk = vidMarksFor(m.id), s = vidSum(mk), cl = vidCloudMatches().find(o => o.mid === m.id), au = vidAutoHtml(m);
+  return `${au || cl ? `<p class="small rvvid">${icon("play")}${au}${cl ? ` <button type="button" class="linkbtn small" data-vidcloudgo="${esc(m.id)}" data-kind="${cl.hl.length ? "hl" : "full"}">${cl.hl.length ? "Highlights aus der Cloud ansehen" : "Video aus der Cloud ansehen"}</button>` : ""}</p>` : ""}<p class="small rvvid">${icon("play")}${mk.length ? `<span><b>Video-Markierungen:</b> ${s.n} (${esc(vidSumText(s) || "Notizen")})</span>` : `<span class="muted">Hast du das Match aufgenommen? Im Video-Review markierst du Tode, Ults und Fights mit der Zeit.</span>`} <button type="button" class="linkbtn small" data-vidopen="${esc(m.id)}">${mk.length ? "Im Video-Review öffnen" : "Video dazu ansehen"}</button></p>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-vidopen]"); if (!b) return; vidUi.mid = b.dataset.vidopen; showTab("video"); window.scrollTo({ top: 0 }); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-vidcloudgo]"); if (!b) return; showTab("video"); vidCloudOpen(b.dataset.vidcloudgo, b.dataset.kind); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-recremind]"); if (!b) return; state.settings.recRemind = false; save(); render(); toast("Erinnerung aus. Im Video-Review kannst du sie wieder einschalten."); });
 
 function vidOpenFile(f) {
   if (!f) return;
@@ -18559,6 +18564,7 @@ function vidOpenFile(f) {
     const old = Object.keys(V).find(k => V[k] && V[k].size === f.size);
     if (old) { V[vidUi.key] = V[old]; delete V[old]; (V[vidUi.key].names = V[vidUi.key].names || []).push(V[vidUi.key].name); V[vidUi.key].name = f.name; vidUi.mid = V[vidUi.key].doneMid || ""; }
   }
+  vidUi.cloud = null;
   const rec = V[vidUi.key] || (V[vidUi.key] = { name: f.name, size: f.size, start: vidNameTime(f.name), dur: 0, at: Date.now(), marks: [] });
   rec.at = Date.now();
   if (!vidUi.mid) { const last = rec.marks.length ? rec.marks[rec.marks.length - 1].mid : ""; vidUi.mid = last || ""; }
@@ -18567,14 +18573,16 @@ function vidOpenFile(f) {
 }
 function vidLoaded(v) {
   const rec = vidRec(); if (!rec) return;
+  if (vidUi.cloud) { vidParts(); return; }   // ein Stück aus der Cloud: Länge und Zeiten gehören zur ganzen Aufnahme
   rec.dur = Math.round(v.duration || 0);
   if (!rec.start && vidUi.file && vidUi.file.lastModified && rec.dur) rec.start = vidUi.file.lastModified - rec.dur * 1000;   // Ende der Aufnahme minus Länge
+  vidFixStart(rec);
   if (!vidUi.mid) { const c = vidCands(rec.start, rec.dur); if (c[0] && c[0].inside) vidUi.mid = c[0].m.id; }
   save(); vidParts();
 }
 function vidAdd(k) {
   const v = $("#vidEl"), rec = vidRec(); if (!v || !rec) return;
-  const mk = { id: newId(), t: Math.round(v.currentTime * 10) / 10, k, mid: vidUi.mid || "" };
+  const t = Math.round(vidNow() * 10) / 10, mk = { id: newId(), t, k, mid: (vidUi.cloud ? vidMatchAt(rec, t) : "") || vidUi.mid || "" };
   rec.marks.push(mk); rec.at = Date.now(); save();
   vidUi.pend = ["death", "ult", "eult", "note"].includes(k) ? mk.id : "";
   if (k === "note") v.pause();
@@ -18634,8 +18642,8 @@ async function vidTake(what) {
     else if (m.ultDeaths) ultTrim(m.ultDeaths, ultDeathN(m.deathCauses));
     toast(`${n} Todesursachen ins Match übernommen${nU ? `, dazu ${nU}× wessen Ult` : ""}.`);
   } else {
-    if (m.ults !== null && m.ults !== undefined && !(await askConfirm(`Das Match hat schon ${m.ults} Ults eingetragen. Durch ${s.ults} aus dem Video ersetzen?`, "Ersetzen"))) return;
-    m.ults = s.ults; m.ultHit = s.rated ? s.hit : null;
+    if (m.ults !== null && m.ults !== undefined && m.ults !== m.ultsAuto && !(await askConfirm(`Das Match hat schon ${m.ults} Ults eingetragen. Durch ${s.ults} aus dem Video ersetzen?`, "Ersetzen"))) return;
+    m.ults = s.ults; m.ultHit = s.rated ? s.hit : null; delete m.ultsAuto; delete m.ultHitAuto;
     toast(`${s.ults} Ults ins Match übernommen${s.rated ? `, ${numDe(s.hit)} mit Wirkung` : ""}.`);
   }
   save(); vidParts();
@@ -18745,12 +18753,14 @@ function vidScanStats() {
 function vidScanHtml(rec) {
   if (!rec) return "";
   if (vidScanUi.run) { const p = Math.round(vidScanUi.p * 100); return `<p class="small" style="margin:0">Die App spult das Video durch: <b>${p} %</b>. Du kannst währenddessen weiter schauen.</p><div class="vidprog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><span style="width:${p}%"></span></div><button type="button" class="btn ghost small" data-vidscan="stop">Abbrechen</button>`; }
-  const sc = rec.scan, res = sc && Array.isArray(sc.res) ? sc.res.slice().sort((a, b) => a.t - b.t) : null, st = vidScanStats();
+  const sc = rec.scan, pcs = !!(sc && sc.v === "pc"), res0 = sc && Array.isArray(sc.res) ? sc.res.slice().sort((a, b) => a.t - b.t) : null, st = vidScanStats();
+  const res = res0 && vidUi.cloud ? res0.filter(x => vidMatchAt(rec, x.t) === vidUi.mid) : res0;
   const statTxt = Object.entries(VID_SCAN_K).map(([k, l]) => { const x = st[k]; return x.ok + x.no ? `${l} ${x.ok} von ${x.ok + x.no} richtig${x.miss ? `, ${x.miss} übersehen` : ""}` : x.miss ? `${l}: ${x.miss} übersehen` : ""; }).filter(Boolean).join(" · ");
   const open = res ? res.filter(x => x.ok === null || x.ok === undefined).length : 0;
   return `<p class="small" style="margin:0">Versuch: Die App spult das Video auf deinem PC durch und sucht drei Dinge: <b>deine Tode</b> (oben links startet die gelbe Zahl bis zum Wiedereinstieg), <b>deine Kills</b> (deine helle Zeile in der Kill-Anzeige) und <b>deine Ult</b> (das goldene Ult-Feld verschwindet). Du bestätigst jeden Fund. Nichts verlässt deinen PC.</p>
     ${vidScanUi.err ? `<p class="small bad">${esc(vidScanUi.err)}</p>` : ""}
-    <div class="row" style="gap:6px;margin:8px 0"><button type="button" class="btn small" data-vidscan="go">${res ? "Noch einmal durchsuchen" : "Video durchsuchen"}</button>${res ? `<span class="small muted">${res.length ? `${res.length} Funde${open ? `, ${open} offen` : ""}` : "Nichts gefunden"}</span>` : ""}</div>
+    ${pcs ? `<p class="small" style="margin:6px 0 0"><b>Funde vom PC-Programm.</b> Antworte mit «Stimmt» oder «Stimmt nicht». Deine Antworten zählen hier im Coach; das Programm selbst lernt nur aus Antworten, die du im Programm gibst.</p>` : ""}
+    <div class="row" style="gap:6px;margin:8px 0">${vidUi.cloud || pcs ? "" : `<button type="button" class="btn small" data-vidscan="go">${res ? "Noch einmal durchsuchen" : "Video durchsuchen"}</button>`}${res ? `<span class="small muted">${res.length ? `${res.length} Funde${open ? `, ${open} offen` : ""}` : "Nichts gefunden"}</span>` : ""}</div>
     ${res && res.length ? `<ol class="vidlist vidscanlist">${res.map(x => `<li class="${x.ok === true ? "" : x.ok === false ? "oth" : "pend"}"><button type="button" class="linkbtn" data-vidscanjump="${esc(x.id)}" title="Hierhin springen (5 Sekunden davor)">▶ ${vidFmt(x.t)}</button><span><b>${esc(VID_SCAN_K[x.k] || x.k)}</b>${x.ok === true ? " ✓" : x.ok === false ? ` <span class="muted">· stimmt nicht</span>` : "?"}</span>${typeof x.ok === "boolean" ? `<button type="button" class="linkbtn small" data-vidscanreset="${esc(x.id)}">ändern</button><span></span>` : `<button type="button" class="btn small ok" data-vidscanok="${esc(x.id)}">Stimmt</button><button type="button" class="btn ghost small" data-vidscanno="${esc(x.id)}">Stimmt nicht</button>`}</li>`).join("")}</ol>` : ""}
     ${statTxt ? `<p class="small" style="margin:8px 0 0"><b>So oft lag die App bisher richtig:</b> ${esc(statTxt)}</p>` : ""}
     <p class="small muted" style="margin:6px 0 0">Gebaut aus deinen Screenshots vom 08.11.2026. Ob es bei anderen Helden und Maps klappt, ist offen. Mit jedem «Stimmt» und «Stimmt nicht» kann Claude die Erkennung genauer einstellen. Was die App übersieht, markierst du wie bisher selbst.</p>`;
@@ -18763,7 +18773,7 @@ function vidScanConfirm(id, yes) {
   x.ok = !!yes;
   if (yes) {
     const near = rec.marks.find(m => m.k === x.k && Math.abs(m.t - x.t) <= 4 && (m.mid || "") === (vidUi.mid || ""));
-    const mk = near || { id: newId(), t: x.t, k: x.k, mid: vidUi.mid || "", auto: 1 };
+    const mk = near || { id: newId(), t: x.t, k: x.k, mid: (String(x.id).startsWith("pc-") ? vidMatchAt(rec, x.t) : "") || vidUi.mid || "", auto: 1 };
     if (!near) rec.marks.push(mk);
     x.mk = mk.id;
     vidUi.pend = (x.k === "death" && !mk.c) || (x.k === "ult" && !mk.v) ? mk.id : "";
@@ -18809,7 +18819,7 @@ async function vidDone() {
   if (m) {
     const s = vidSum(vidMarksFor(m.id)), nC = Object.values(s.causes).reduce((a, b) => a + b, 0);
     if (nC && !deathTotal(m.deathCauses)) { m.deathCauses = Object.assign({}, s.causes); took.push(`${nC} Todesursachen`); }
-    if (s.ults && (m.ults === null || m.ults === undefined)) { m.ults = s.ults; m.ultHit = s.rated ? s.hit : null; took.push(`${s.ults} Ults`); }
+    if (s.ults && (m.ults === null || m.ults === undefined || m.ults === m.ultsAuto)) { m.ults = s.ults; m.ultHit = s.rated ? s.hit : null; delete m.ultsAuto; delete m.ultHitAuto; took.push(`${s.ults} Ults`); }
   }
   rec.done = Date.now(); rec.doneMid = vidUi.mid || ""; rec.at = Date.now(); vidUi.pend = "";
   save(); vidParts(); vidRecentDraw();
@@ -18848,7 +18858,8 @@ function vidFolderDraw() { const el = $("#vidFolder"); if (el) el.innerHTML = vi
 // Zuordnung zum Match: Matches, die in die Aufnahme fallen (vidCands), pro Markierung das zeitlich nächste. Ohne passendes Match bleibt
 // das Feld leer, dann wählst du das Match im Video-Review selbst.
 const PC_DATA = "rivals-video-daten.json";
-function vidPcMid(rec, t) {
+const vidPcMid = (rec, t) => vidMatchAt(rec, t);
+function vidPcMidNear(rec, t) {
   const inside = vidCands(rec.start, rec.dur).filter(c => c.inside).map(c => c.m);
   if (!inside.length) return "";
   if (inside.length === 1 || !rec.start) return inside[0].id;
@@ -18865,13 +18876,31 @@ function vidImportPc(d) {
     if (!rec) { const old = Object.keys(V).find(k => V[k] && V[k].size === v.size); if (old) { rec = V[key] = V[old]; delete V[old]; rec.name = v.name; } }
     if (!rec) rec = V[key] = { name: v.name, size: v.size, start: 0, dur: 0, at: Date.now(), marks: [] };
     if (!Array.isArray(rec.marks)) rec.marks = [];
-    if (+v.start > 0) rec.start = +v.start;
+    if (+v.start > 0 && +v.start !== rec.startRaw) { rec.startRaw = +v.start; rec.start = +v.start; }
     if (+v.dur > 0) rec.dur = Math.round(+v.dur);
+    vidFixStart(rec);
     rec.pc = 1;
+    if (v.cid) rec.pcCid = String(v.cid);
+    const cl = v.cloud && typeof v.cloud === "object" && v.cloud.dir ? v.cloud : null;
+    rec.cloudSrc = cl ? { dir: String(cl.dir), hl: ((cl.hl || {}).pieces || []).filter(x => x && x.f && Array.isArray(x.segs)), full: ((cl.full || {}).pieces || []).filter(x => x && x.f && isFinite(+x.s)) } : null;
+    const evs = (Array.isArray(v.events) ? v.events : []).filter(e => e && e.id && isFinite(+e.t));
+    rec.pcEv = evs.map(e => ({ id: String(e.id), t: +e.t, k: e.k, ok: typeof e.ok === "boolean" ? e.ok : null, e: +e.e || 0, res: e.res || "", pred: e.pred || "", est: e.est || "" }));
+    // Offene Funde des Programms: hier mit «Stimmt» oder «Stimmt nicht» beantworten (auch am Handy). Deine Antworten hier zählen im Coach;
+    // das Programm selbst lernt nur aus Antworten im Programm. Eine eigene Suche der App in dieser Aufnahme bleibt stehen.
+    const own = rec.scan && rec.scan.v !== "pc" && Array.isArray(rec.scan.res) && rec.scan.res.some(x => typeof x.ok === "boolean");
+    const before = {}; ((rec.scan && rec.scan.v === "pc" && rec.scan.res) || []).forEach(x => { before[x.id] = x; });
+    const skip = new Set();
+    if (!own) {
+      rec.scan = { v: "pc", at: Date.now(), res: evs.filter(e => VID_SCAN_K[e.k]).map(e => {
+        const b = before["pc-" + e.id], x = { id: "pc-" + e.id, t: +e.t, k: e.k, f: e.f || null, ok: b ? b.ok : null, mk: b ? b.mk || "" : "" };
+        if (b && b.ok === true && e.mk) skip.add(String(e.mk));   // hier schon bestätigt: die Markierung der App gilt, die des Programms nicht doppelt
+        return x;
+      }).filter(x => typeof x.ok === "boolean" || !evs.find(e => "pc-" + e.id === x.id && typeof e.ok === "boolean")) };
+    }
     const keep = {}; rec.marks.filter(m => String(m.id).startsWith("pc-")).forEach(m => { keep[m.id] = m.mid; });
     rec.marks = rec.marks.filter(m => !String(m.id).startsWith("pc-"));
     (Array.isArray(v.marks) ? v.marks : []).forEach(m => {
-      if (!m || !VID_KINDS[m.k] || !isFinite(+m.t)) return;
+      if (!m || !VID_KINDS[m.k] || !isFinite(+m.t) || skip.has(String(m.id))) return;
       const id = "pc-" + String(m.id || "").slice(0, 20), mk = { id, t: Math.round(+m.t * 10) / 10, k: m.k, mid: keep[id] || vidPcMid(rec, m.t), pc: 1 };
       if (m.c && vidCauseOk(String(m.c))) mk.c = String(m.c);
       if (m.v && VID_ULT.some(x => x[0] === m.v)) mk.v = m.v;
@@ -18886,23 +18915,261 @@ function vidImportPc(d) {
         const m = state.matches.find(x => x.id === mid); if (!m) return;
         const sm = vidSum(vidMarksFor(mid)), nC = Object.values(sm.causes).reduce((a, b) => a + b, 0);
         if (nC && !deathTotal(m.deathCauses)) { m.deathCauses = Object.assign({}, sm.causes); res.took++; }
-        if (sm.ults && (m.ults === null || m.ults === undefined)) { m.ults = sm.ults; m.ultHit = sm.rated ? sm.hit : null; res.took++; }
+        if (sm.ults && (m.ults === null || m.ults === undefined || m.ults === m.ultsAuto)) { m.ults = sm.ults; m.ultHit = sm.rated ? sm.hit : null; delete m.ultsAuto; delete m.ultHitAuto; res.took++; }
         if (Object.keys(sm.ud).length && !deathTotal(m.ultDeaths)) { const ud = ultTrim(Object.assign({}, sm.ud), ultDeathN(m.deathCauses)); if (deathTotal(ud)) { m.ultDeaths = ud; res.took++; } }
       });
       if (!rec.doneMid) rec.doneMid = (rec.marks.find(m => m.mid) || {}).mid || "";
     }
+    res.took += vidAutoStats(rec);
     rec.at = Date.now(); res.recs++;
   });
+  if (d.quality && typeof d.quality === "object") state.vidQ = Object.assign({ at: Date.now() }, plainJson(d.quality));
   vidUi.pcInfo = { at: Date.now(), updated: d.updated || "", ...res };
   save();
   return res;
 }
+// ---------- Block-Aufnahmen, Cloud und Statistik aus dem PC-Programm (Version 89) ----------
+// Eine Aufnahme kann einen ganzen Block mit mehreren Matches enthalten. Der Abgleich liefert pro Match das Ende (ts) und die Dauer
+// (dur, Minuten); daraus entsteht die Spanne des Matches. Jede Stelle der Aufnahme gehört zu dem Match, dessen Spanne sie enthält.
+const vidSpan = m => { const e = m && m.ts; return e ? (m.dur > 0 ? [e - m.dur * 60e3, e] : [e, e]) : null; };
+function vidMatchAt(rec, t) {
+  if (!rec || !rec.start) return "";
+  const at = rec.start + (+t || 0) * 1000;
+  const hit = state.matches.find(m => { const s = m.hero && m.dur > 0 && vidSpan(m); return s && at >= s[0] - 30e3 && at <= s[1] + 30e3; });
+  return hit ? hit.id : vidPcMidNear(rec, t);
+}
+// Steht im Dateinamen der Start oder das Speichern der Aufnahme? Bei «Letzte Spielszenen speichern» ist es vermutlich das Speichern.
+// Die App nimmt die Lesart, bei der mehr Matchzeit in die Aufnahme fällt (nur mit Matchdauer aus dem Abgleich, sonst bleibt der Start).
+function vidFixStart(rec) {
+  if (!rec || !(rec.dur > 0)) return;
+  if (!rec.startRaw) rec.startRaw = rec.start || 0;
+  const raw = rec.startRaw; if (!raw) return;
+  const cover = st => state.matches.reduce((a, m) => { const s = m.dur > 0 && vidSpan(m); return s ? a + Math.max(0, Math.min(s[1], st + rec.dur * 1000) - Math.max(s[0], st)) : a; }, 0);
+  const a = cover(raw), b = cover(raw - rec.dur * 1000);
+  rec.start = b > a * 1.5 && b > 60e3 ? raw - rec.dur * 1000 : raw;
+  rec.startEnd = rec.start !== raw ? 1 : 0;
+}
+// Ganz in der Aufnahme? Nur dann zählen automatische Werte für das Match (sonst fehlt ein Teil).
+const vidCovers = (rec, m) => { const s = m.dur > 0 && vidSpan(m); return !!(s && rec.start && rec.dur > 0 && rec.start <= s[0] + 30e3 && rec.start + rec.dur * 1000 >= s[1] - 30e3); };
+// Wie zuverlässig ist das Programm? Erst ab 10 Antworten und 90 % richtig zählen ungeprüfte Funde (Faustregel der App, keine Messung).
+const VID_Q_MIN = 10, VID_Q_OK = 0.9;
+const vidQ = () => state.vidQ || {};
+function vidReliable(k) { const x = vidQ()[k]; const n = x ? (x.stimmt || 0) + (x.falsch || 0) : 0; return n >= VID_Q_MIN && x.stimmt / n >= VID_Q_OK; }
+const vidQText = k => { const x = vidQ()[k]; const n = x ? (x.stimmt || 0) + (x.falsch || 0) : 0; return n ? `${x.stimmt} von ${n} richtig` : "noch keine Antworten"; };
+// Automatische Werte pro Match aus einer Aufnahme: Ults (wenn die Ult-Erkennung zuverlässig ist), Ult-Wirkung (deine Bewertung, sonst
+// die gelernte Schätzung des Programms) und Fights (deine Antwort, sonst die gelernte Schätzung). Was du selbst eingetragen hast, bleibt.
+function vidAutoStats(rec) {
+  const ev = rec.pcEv || [], took = { n: 0 };
+  state.matches.forEach(m => {
+    if (!vidCovers(rec, m)) return;
+    const s = vidSpan(m), t0 = (s[0] - rec.start) / 1000, t1 = (s[1] - rec.start) / 1000, inM = t => t >= t0 - 30 && t <= t1 + 30;
+    const marks = (rec.marks || []).filter(x => inM(x.t));
+    if (vidReliable("ult")) {
+      const ults = [];
+      ev.filter(e => e.k === "ult" && e.ok !== false && inM(e.t)).forEach(e => ults.push({ t: e.t, v: (marks.find(x => x.k === "ult" && Math.abs(x.t - e.t) <= 4) || {}).v || "", est: e.est || "" }));
+      marks.filter(x => x.k === "ult" && !ults.some(u => Math.abs(u.t - x.t) <= 4)).forEach(x => ults.push({ t: x.t, v: x.v || "", est: "" }));
+      if (m.ults === null || m.ults === undefined || m.ults === m.ultsAuto) { if (m.ults !== ults.length) took.n++; m.ults = ults.length; m.ultsAuto = ults.length; }
+      const val = u => u.v === "ja" ? 1 : u.v === "teils" ? 0.5 : u.v === "nein" ? 0 : u.est === "ja" ? 1 : u.est === "nein" ? 0 : null;
+      const vals = ults.map(val), hit = ults.length && vals.every(x => x !== null) ? vals.reduce((a, b) => a + b, 0) : null;
+      if (m.ultHit === null || m.ultHit === undefined || m.ultHit === m.ultHitAuto) { m.ultHit = hit; m.ultHitAuto = hit; m.ultHitEst = ults.some(u => !u.v && u.est) ? 1 : 0; }
+    }
+    const fl = (vidQ().fight || {}).gelernt;
+    const fs = ev.filter(e => e.k === "fight" && inM(e.t)).map(e => e.res && e.res !== "none" ? e.res : !e.res && fl ? e.pred : "").filter(Boolean);
+    if (fs.length) m.vidFights = { w: fs.filter(x => x === "win").length, l: fs.filter(x => x === "loss").length, est: ev.some(e => e.k === "fight" && inM(e.t) && !e.res && e.pred && fl) ? 1 : 0 };
+  });
+  return took.n;
+}
+function vidAutoHtml(m) {
+  const parts = [];
+  if (m.ultsAuto !== undefined && m.ults === m.ultsAuto) parts.push(`${plural(m.ults, "Ult", "Ults")}${m.ultHitAuto !== undefined && m.ultHit === m.ultHitAuto && m.ultHit !== null ? `, davon ${numDe(m.ultHit)} mit Wirkung${m.ultHitEst ? " (zum Teil geschätzt)" : ""}` : ""}`);
+  if (m.vidFights) parts.push(`Fights ${m.vidFights.w}:${m.vidFights.l}${m.vidFights.est ? " (zum Teil geschätzt)" : ""}`);
+  return parts.length ? `<span class="small muted">Automatisch aus dem Video: ${esc(parts.join(" · "))}</span>` : "";
+}
+
+// Cloud: Das PC-Programm legt kleine Stücke in «Für die Cloud/<Nummer>/» (Highlights hl-…, ganzes Video ganz-…, je unter 20 MiB).
+// Wählst du den Ordner, lädt die App die Highlights deiner wichtigen Matches in deine private App hoch (assets), das ganze Match nur auf
+// Knopfdruck. Die Kennungen stehen in rec.up und kommen mit deinen Daten auf jedes Gerät; am Handy spielt die App die Stücke ab.
+const VidCloud = { assets: undefined, busy: false, msg: "", usage: null };
+async function vidAssets() {
+  if (VidCloud.assets === undefined) { try { VidCloud.assets = IN_VIEWER && window.claude && window.claude.use ? await window.claude.use("assets") : null; } catch (e) { VidCloud.assets = null; } }
+  return VidCloud.assets;
+}
+const vidNfc = s => String(s || "").normalize("NFC");
+const vidCloudFile = (rec, f) => { const c = rec.cloudSrc; return c && vidUi.cloudFiles ? vidUi.cloudFiles.get(vidNfc(c.dir + "/" + f)) || null : null; };
+// Wichtige Matches: vom Review vorgeschlagen oder schon reviewt (letzte 7 Tage), oder von dir gewählt
+function vidImportant() {
+  const ids = new Set(), from = addDays(today(), -6);
+  Object.entries(rvState().pins || {}).forEach(([d, p]) => { if (d >= from) (p.ids || []).forEach(id => ids.add(id)); });
+  state.matches.forEach(m => { if ((m.review && m.review.on && m.review.on >= from) || m.vidWant) ids.add(m.id); });
+  return ids;
+}
+// Stücke einer Aufnahme, die zu einem Match gehören: Highlights über die Mitte jeder Stelle, ganzes Video alle 10 Sekunden geprüft
+function vidPiecesFor(rec, mid, kind) {
+  const c = rec.cloudSrc; if (!c) return [];
+  if (kind === "hl") return (c.hl || []).filter(p => p.segs.some(g => vidMatchAt(rec, (g.s + g.e) / 2) === mid));
+  return (c.full || []).filter(p => { for (let t = p.s; t <= p.e; t += 10) if (vidMatchAt(rec, t) === mid) return true; return false; });
+}
+const vidUp = rec => rec.up || (rec.up = {});
+function vidCloudMatches() {
+  const out = {};
+  Object.entries(vidStore()).forEach(([key, rec]) => Object.entries((rec && rec.up) || {}).forEach(([f, u]) => (u.mids || []).forEach(mid => {
+    const o = out[mid] || (out[mid] = { mid, hl: [], full: [] }); o[u.kind === "full" ? "full" : "hl"].push(Object.assign({ key, f }, u));
+  })));
+  return Object.values(out).map(o => Object.assign(o, { m: state.matches.find(x => x.id === o.mid) })).filter(o => o.m).sort((a, b) => matchTime(b.m) - matchTime(a.m));
+}
+async function vidCloudUpload(jobs) {
+  const assets = await vidAssets();
+  if (!assets) { VidCloud.msg = "Hochladen geht nur in deiner privaten App in Claude (nicht in der Freundesversion, nicht ausserhalb von Claude)."; vidCloudDraw(); return 0; }
+  if (VidCloud.busy) return 0;
+  VidCloud.busy = true; let n = 0;
+  try {
+    for (let i = 0; i < jobs.length; i++) {
+      const { rec, p, kind, mids } = jobs[i], file = vidCloudFile(rec, p.f);
+      if (!file) continue;
+      VidCloud.msg = `Lädt hoch: ${i + 1} von ${jobs.length} (${Math.round(file.size / 2 ** 20)} MB) …`; vidCloudDraw();
+      try {
+        const r = await assets.upload(file, { type: "video/mp4" });
+        vidUp(rec)[p.f] = Object.assign({ id: r.id, size: r.sizeBytes, at: Date.now(), kind, mids }, kind === "hl" ? { segs: p.segs, d: p.d } : { s: p.s, e: p.e });
+        n++; save();
+      } catch (e) {
+        const c = e && e.code;
+        VidCloud.msg = c === "quota_or_state" ? "Der Speicher der App ist voll. Lösch unten alte Videos aus der Cloud." : c === "too_large" ? "Ein Stück ist grösser als 20 MiB. Sag Claude Bescheid." : `Hochladen ging nicht (${esc(c || (e && e.message) || "Fehler")}).`;
+        break;
+      }
+    }
+    if (n) VidCloud.msg = `${plural(n, "Stück", "Stücke")} hochgeladen.`;
+  } finally { VidCloud.busy = false; }
+  try { const L = await assets.list(); VidCloud.usage = L.usage; } catch (e) { /* Anzeige ohne Speicherstand */ }
+  vidCloudDraw();
+  return n;
+}
+// Nach der Ordnerwahl: Highlights aller wichtigen Matches, die noch nicht oben sind
+function vidCloudAuto() {
+  const imp = vidImportant(), jobs = [];
+  Object.values(vidStore()).forEach(rec => {
+    if (!rec || !rec.cloudSrc) return;
+    (rec.cloudSrc.hl || []).forEach(p => {
+      if (vidUp(rec)[p.f] || !vidCloudFile(rec, p.f)) return;
+      const mids = [...new Set(p.segs.map(g => vidMatchAt(rec, (g.s + g.e) / 2)).filter(Boolean))];
+      if (mids.some(id => imp.has(id))) jobs.push({ rec, p, kind: "hl", mids });
+    });
+  });
+  return jobs.length ? vidCloudUpload(jobs) : Promise.resolve(0);
+}
+function vidCloudFor(mid, kind) {
+  const m = state.matches.find(x => x.id === mid), jobs = [];
+  if (m && kind === "hl") m.vidWant = 1;
+  Object.values(vidStore()).forEach(rec => { if (!rec || !rec.cloudSrc) return; vidPiecesFor(rec, mid, kind).forEach(p => { if (!vidUp(rec)[p.f] && vidCloudFile(rec, p.f)) jobs.push({ rec, p, kind, mids: [mid] }); }); });
+  if (!jobs.length) { toast(vidUi.cloudFiles ? "Dafür liegen keine Stücke im Ordner. Läuft das PC-Programm noch?" : "Wähl zuerst oben «Ganzen Ordner wählen» mit dem Ordner des PC-Programms."); return; }
+  vidCloudUpload(jobs);
+}
+async function vidCloudDelete(mid) {
+  const m = state.matches.find(x => x.id === mid);
+  if (!(await askConfirm(`Video von ${m ? vidMatchLabel(m) : "diesem Match"} aus der Cloud löschen? Auf dem PC bleibt alles.`, "Löschen"))) return;
+  const assets = await vidAssets(); if (!assets) { toast("Löschen geht nur in deiner privaten App in Claude."); return; }
+  let n = 0;
+  for (const rec of Object.values(vidStore())) {
+    for (const [f, u] of Object.entries((rec && rec.up) || {})) {
+      if (!(u.mids || []).includes(mid)) continue;
+      const rest = u.mids.filter(x => x !== mid);
+      if (rest.length) { u.mids = rest; continue; }
+      try { await assets.delete(u.id); } catch (e) { /* schon weg */ }
+      delete rec.up[f]; n++;
+    }
+  }
+  if (m) delete m.vidWant;
+  if (vidUi.cloud && vidUi.cloud.mid === mid) vidCloudClose();
+  save(); toast(`${plural(n, "Stück", "Stücke")} gelöscht.`);
+  try { VidCloud.usage = (await assets.list()).usage; } catch (e) { /* ohne Anzeige */ }
+  vidCloudDraw();
+}
+function vidCloudHtml() {
+  const L = vidCloudMatches(), u = VidCloud.usage, mb = x => numDe(Math.round(x / 2 ** 20));
+  const local = vidUi.cloudFiles ? Object.values(vidStore()).filter(r => r && r.cloudSrc) : [];
+  const want = local.length ? vidLocalMatches(local) : [];
+  return `<div class="card-head"><h2>${icon("play")}Videos in der Cloud</h2>${u ? `<span class="small muted">belegt ${mb(u.bytes)} MB${u.maxBytes ? ` von ${mb(u.maxBytes)} MB` : ""}</span>` : ""}</div>
+    <p class="small" style="margin:0 0 6px">Zum Anschauen am Handy. Die Highlights deiner wichtigen Matches lädt die App beim «Ganzen Ordner wählen» von selbst hoch, das ganze Match auf Knopfdruck. Ohne Ton, nur in deiner privaten App.</p>
+    ${VidCloud.msg ? `<p class="small"><b>${VidCloud.msg}</b></p>` : ""}
+    ${L.length ? `<ul class="vidrlist">${L.map(o => `<li><span class="vidname">${esc(vidMatchLabel(o.m))}</span>
+      ${o.hl.length ? `<button type="button" class="btn small" data-vidcloud="${esc(o.mid)}" data-kind="hl">Highlights ansehen</button>` : ""}${o.full.length ? `<button type="button" class="btn small ghost" data-vidcloud="${esc(o.mid)}" data-kind="full">Ganzes Match</button>` : ""}
+      <button type="button" class="linkbtn small" data-vidclouddel="${esc(o.mid)}">löschen</button></li>`).join("")}</ul>` : `<p class="small muted" style="margin:0">Noch keine Videos in der Cloud.</p>`}
+    ${want.length ? `<details class="small"${L.length ? "" : " open"}><summary>Weitere Matches aus dem Ordner hochladen</summary><ul class="vidrlist">${want.map(x => `<li><span class="vidname">${esc(vidMatchLabel(x.m))}</span>
+      ${x.hl && !x.hlUp ? `<button type="button" class="btn small ghost" data-vidup="${esc(x.m.id)}" data-kind="hl">Highlights hochladen</button>` : ""}${x.full && !x.fullUp ? `<button type="button" class="btn small ghost" data-vidup="${esc(x.m.id)}" data-kind="full">Ganzes Match hochladen</button>` : ""}</li>`).join("")}</ul></details>` : ""}
+    ${platform() === "ps5" ? `<label class="inline-label small" style="margin-top:6px"><input type="checkbox" data-recremindset ${vidRecRemindOn() ? "checked" : ""}> Nach jedem Block erinnern: Aufnahme speichern</label>` : ""}`;
+}
+// Matches, für die im gewählten Ordner Stücke liegen
+function vidLocalMatches(recs) {
+  const out = {};
+  recs.forEach(rec => ["hl", "full"].forEach(kind => ((rec.cloudSrc || {})[kind] || []).forEach(p => {
+    const ts = kind === "hl" ? p.segs.map(g => (g.s + g.e) / 2) : Array.from({ length: Math.max(1, Math.ceil((p.e - p.s) / 10)) }, (_, i) => p.s + i * 10);
+    [...new Set(ts.map(t => vidMatchAt(rec, t)).filter(Boolean))].forEach(mid => { const o = out[mid] || (out[mid] = { m: state.matches.find(x => x.id === mid) }); o[kind] = 1; if (vidUp(rec)[p.f]) o[kind + "Up"] = 1; });
+  })));
+  return Object.values(out).filter(o => o.m && (o.hl && !o.hlUp || o.full && !o.fullUp)).sort((a, b) => matchTime(b.m) - matchTime(a.m)).slice(0, 20);
+}
+function vidCloudDraw() { const el = $("#vidCloud"); if (el) el.innerHTML = vidCloudHtml(); }
+// Abspielen aus der Cloud: Stücke der Reihe nach; Zeiten in der App sind immer Zeiten in der Aufnahme (vidNow, vidSeek)
+function vidCloudOpen(mid, kind) {
+  const o = vidCloudMatches().find(x => x.mid === mid); if (!o) return;
+  const list = (kind === "full" ? o.full : o.hl).slice(), key = list[0].key;
+  const pieces = list.filter(x => x.key === key).sort((a, b) => (kind === "full" ? a.s - b.s : a.segs[0].s - b.segs[0].s));
+  if (vidUi.url) { try { URL.revokeObjectURL(vidUi.url); } catch (e) { /* alt */ } }
+  vidUi.file = null; vidUi.url = ""; vidUi.key = key; vidUi.mid = mid; vidUi.pend = ""; vidUi.err = "";
+  vidUi.cloud = { mid, kind, pieces, i: 0 };
+  renderVideo(true); window.scrollTo({ top: 0 });
+}
+function vidCloudClose() { vidUi.cloud = null; vidUi.key = ""; renderVideo(true); }
+const vidBlob = p => "/_blob/" + p.id;
+const vidSrc = () => vidUi.cloud ? vidBlob(vidUi.cloud.pieces[vidUi.cloud.i]) : vidUi.url;
+function vidNow() {
+  const v = $("#vidEl"); if (!v) return 0;
+  const c = vidUi.cloud; if (!c) return v.currentTime;
+  const p = c.pieces[c.i], t = v.currentTime;
+  if (c.kind === "full") return p.s + t;
+  const g = p.segs.find(x => t >= x.at - 0.05 && t < x.at + (x.e - x.s) + 0.05) || p.segs[p.segs.length - 1];
+  return g.s + Math.max(0, t - g.at);
+}
+function vidSeek(t, play) {
+  const v = $("#vidEl"); if (!v) return;
+  t = Math.max(0, t);
+  const c = vidUi.cloud, go = () => { if (play !== false) v.play().catch(() => {}); };
+  if (!c) { v.currentTime = t; go(); return; }
+  let i = -1, loc = 0;
+  c.pieces.forEach((p, k) => {
+    if (i >= 0) return;
+    if (c.kind === "full") { if (t >= p.s && t < p.e + 0.5) { i = k; loc = t - p.s; } }
+    else { const g = p.segs.find(x => t >= x.s - 0.5 && t <= x.e + 0.5); if (g) { i = k; loc = g.at + Math.max(0, t - g.s); } }
+  });
+  if (i < 0 && c.kind === "hl") {   // nicht in den Highlights: zur nächsten Stelle danach
+    c.pieces.forEach((p, k) => p.segs.forEach(g => { if (i < 0 && g.s >= t) { i = k; loc = g.at; } }));
+    if (i < 0) return;
+    toast("Diese Stelle ist nicht in den Highlights. Die App springt zur nächsten.");
+  }
+  if (i < 0) return;
+  if (i === c.i) { v.currentTime = loc; go(); return; }
+  c.i = i; v.src = vidSrc();
+  v.addEventListener("loadedmetadata", () => { v.currentTime = loc; go(); }, { once: true });
+  vidCloudBar();
+}
+function vidCloudNext() {
+  const c = vidUi.cloud, v = $("#vidEl"); if (!c || !v || c.i + 1 >= c.pieces.length) return;
+  c.i++; v.src = vidSrc(); v.play().catch(() => {}); vidCloudBar();
+}
+function vidCloudBar() {
+  const el = $("#vidCloudBar"), c = vidUi.cloud; if (!el || !c) return;
+  el.innerHTML = `<span class="badge">${c.kind === "full" ? "Ganzes Match" : "Highlights"} aus der Cloud · Stück ${c.i + 1} von ${c.pieces.length}</span>
+    ${c.pieces.length > 1 ? `<button type="button" class="btn ghost small" data-vidpiece="-1"${c.i ? "" : " disabled"}>Stück zurück</button><button type="button" class="btn ghost small" data-vidpiece="1"${c.i + 1 < c.pieces.length ? "" : " disabled"}>Nächstes Stück</button>` : ""}
+    <button type="button" class="linkbtn small" data-vidcloudclose="1">schliessen</button>`;
+}
+// Erinnerung nach einem Block (PS5): Aufnahme speichern, damit möglichst viele Matches ausgewertet werden
+const vidRecRemindOn = () => platform() === "ps5" && (state.settings || {}).recRemind !== false;
+const vidRecRemindHtml = () => vidRecRemindOn() ? `<p class="small nmrec">${icon("play")}<span><b>Block fertig: Aufnahme speichern.</b> Create-Taste → letzte Spielszenen speichern (bis 1 Stunde). Dann landet der ganze Block im PC-Programm. <button type="button" class="linkbtn small" data-recremind="off">nicht mehr zeigen</button></span></p>` : "";
+
 function renderVideo(fresh) {
   const el = $("#videoBody"); if (!el) return;
   const rec = vidRec();
   if (!vidUi.bound) vidBind(el);
   if (!fresh && rec && $("#vidEl") && $("#vidEl").dataset.key === vidUi.key) { vidParts(); return; }
-  el.innerHTML = `<div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
+  el.innerHTML = `<div class="card" id="vidCloud">${vidCloudHtml()}</div><div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
       <p class="small" style="margin:0 0 8px">Wähl eine Aufnahme von deinem PC (MP4). Das Video bleibt auf deinem PC: Die App lädt nichts hoch und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
       <label class="vidfile"><input type="file" id="vidFile" accept="video/*,.mp4,.mov,.webm,.mkv"><span>${icon("upload")}Video auswählen oder hierher ziehen</span></label>
       ${vidDirOk ? `<label class="vidfile vidfolder"><input type="file" id="vidDir" webkitdirectory multiple><span>${icon("list")}Ganzen Ordner wählen</span></label>
@@ -18911,7 +19178,8 @@ function renderVideo(fresh) {
       <div id="vidRecent">${vidRecentHtml()}</div>
       <p class="small muted" style="margin:6px 0 0">Am besten geht MP4 (H.264), wie NVIDIA, Medal oder die Xbox Game Bar es speichern. OBS speichert oft MKV; stell dort für den Review MP4 ein.</p></div>
     ${rec ? `<div class="card vidplay"><div class="card-head"><h2 class="vidname">${esc(rec.name)}</h2><span id="vidStatus">${vidStatusHtml(rec)}</span></div>
-      <div class="vidwrap"><video id="vidEl" data-key="${esc(vidUi.key)}" src="${vidUi.url}" controls playsinline preload="metadata"></video></div>
+      ${vidUi.cloud ? `<div class="row" id="vidCloudBar" style="gap:6px;margin:0 0 6px"></div>` : ""}
+      <div class="vidwrap"><video id="vidEl" data-key="${esc(vidUi.key)}" src="${vidSrc()}" controls playsinline preload="metadata"></video></div>
       ${vidUi.err ? `<p class="small bad">${esc(vidUi.err)}</p>` : ""}
       <div class="row vidnav"><button type="button" class="btn ghost small" data-vidstep="-5">−5 s</button><button type="button" class="btn ghost small" data-vidstep="5">+5 s</button>
         <span class="small muted">Tempo</span>${[0.5, 1, 2].map(r => `<button type="button" class="btn ghost small" data-vidrate="${r}">${String(r).replace(".", ",")}×</button>`).join("")}</div>
@@ -18920,7 +19188,9 @@ function renderVideo(fresh) {
   const v = $("#vidEl");
   if (v) {
     v.addEventListener("loadedmetadata", () => vidLoaded(v));
-    v.addEventListener("error", () => { vidUi.err = "Dieses Video kann der Browser hier nicht abspielen. Am besten geht MP4 mit H.264. Klappt es auch damit nicht, ist das Abspielen in dieser Ansicht vielleicht gesperrt: Sag Claude Bescheid."; renderVideo(true); });
+    v.addEventListener("ended", () => vidCloudNext());
+    vidCloudBar();
+    v.addEventListener("error", () => { if (vidUi.cloud) { vidUi.err = "Dieses Stück aus der Cloud lässt sich nicht abspielen. Vielleicht wurde es gelöscht."; vidUi.cloud = null; renderVideo(true); return; } vidUi.err = "Dieses Video kann der Browser hier nicht abspielen. Am besten geht MP4 mit H.264. Klappt es auch damit nicht, ist das Abspielen in dieser Ansicht vielleicht gesperrt: Sag Claude Bescheid."; renderVideo(true); });
     vidParts();
   }
 }
@@ -18930,15 +19200,18 @@ function vidBind(el) {
     if (e.target.id === "vidFile" && e.target.files && e.target.files[0]) vidOpenFile(e.target.files[0]);
     if (e.target.id === "vidDir" && e.target.files) {
       const all = [...e.target.files], first = all[0] && all[0].webkitRelativePath ? all[0].webkitRelativePath.split("/")[0] : "";
-      vidUi.folder = all.filter(f => VID_EXT.test(f.name) || /^video\//.test(f.type || "")); vidUi.folderName = first;
+      const rel = f => vidNfc(String(f.webkitRelativePath || f.name).split("/").slice(1).join("/")), isCloud = f => /^Für die Cloud\//.test(rel(f)) || /(^|\/)\.rivals-video-cache\//.test(rel(f));
+      vidUi.cloudFiles = new Map(all.filter(f => /^Für die Cloud\//.test(rel(f))).map(f => [rel(f), f]));
+      vidUi.folder = all.filter(f => !isCloud(f) && (VID_EXT.test(f.name) || /^video\//.test(f.type || ""))); vidUi.folderName = first;
       try { e.target.value = ""; } catch (err) { /* derselbe Ordner soll erneut wählbar sein */ }
       const pcf = all.find(f => f.name === PC_DATA);
       if (pcf) pcf.text().then(t => { let d = null; try { d = JSON.parse(t); } catch (err) { d = null; } const r = vidImportPc(d);
         toast(r ? `Vom PC-Programm übernommen: ${r.recs} ${r.recs === 1 ? "Aufnahme" : "Aufnahmen"}, ${r.marks} Markierungen${r.took ? `, ${r.took} Werte ins Match` : ""}.` : "Die Datei des PC-Programms liess sich nicht lesen.");
-        vidFolderDraw(); vidRecentDraw(); }).catch(() => toast("Die Datei des PC-Programms liess sich nicht lesen."));
+        vidFolderDraw(); vidRecentDraw(); vidCloudDraw(); if (r) vidCloudAuto(); }).catch(() => toast("Die Datei des PC-Programms liess sich nicht lesen."));
       vidFolderDraw();
     }
     if (e.target.id === "vidMatch") { vidUi.mid = e.target.value; vidUi.pend = ""; vidParts(); }
+    if (e.target.matches && e.target.matches("[data-recremindset]")) { state.settings.recRemind = e.target.checked; save(); }
     if (e.target.matches && e.target.matches("[data-vidhero]") && e.target.value) { const mk = vidMark(vidUi.pend); if (mk && ultOf(e.target.value)) { mk.h = e.target.value; save(); vidUi.pend = ""; vidParts(); } }
   });
   el.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("[data-vidnm]")) e.target.select(); });
@@ -18954,10 +19227,10 @@ function vidBind(el) {
       if (k === "c" && mk.k === "death" && mk.h && (!mk.c || deathCat(mk.c) !== ULT_CAT)) delete mk.h;
       save(); if (k !== "c" || !mk.c) vidUi.pend = ""; vidParts(); } }
     else if (b.dataset.vidpenddone) { vidUi.pend = ""; vidParts(); }
-    else if (b.dataset.vidjump && v) { const mk = vidMark(b.dataset.vidjump); if (mk) { v.currentTime = Math.max(0, mk.t - 5); v.play().catch(() => {}); } }
+    else if (b.dataset.vidjump && v) { const mk = vidMark(b.dataset.vidjump); if (mk) vidSeek(mk.t - 5); }
     else if (b.dataset.videdit) { vidUi.pend = vidUi.pend === b.dataset.videdit ? "" : b.dataset.videdit; vidParts(); }
     else if (b.dataset.viddel) { const r = vidRec(); if (r) { r.marks = r.marks.filter(x => x.id !== b.dataset.viddel); if (vidUi.pend === b.dataset.viddel) vidUi.pend = ""; save(); vidParts(); } }
-    else if (b.dataset.vidstep && v) v.currentTime = Math.max(0, v.currentTime + +b.dataset.vidstep);
+    else if (b.dataset.vidstep && v) vidSeek(vidNow() + +b.dataset.vidstep, !v.paused);
     else if (b.dataset.vidrate && v) v.playbackRate = +b.dataset.vidrate;
     else if (b.dataset.vidtake) vidTake(b.dataset.vidtake);
     else if (b.dataset.vidpick && vidUi.folder) { const f = vidUi.folder[+b.dataset.vidpick]; if (f) { vidUi.mid = ""; vidOpenFile(f); window.scrollTo({ top: 0 }); } }
@@ -18969,14 +19242,19 @@ function vidBind(el) {
     else if (b.dataset.vidscanok) vidScanConfirm(b.dataset.vidscanok, true);
     else if (b.dataset.vidscanno) vidScanConfirm(b.dataset.vidscanno, false);
     else if (b.dataset.vidscanreset) { const x = vidScanRes(b.dataset.vidscanreset); if (x) { x.ok = null; save(); vidScanDraw(); } }
-    else if (b.dataset.vidscanjump && v) { const x = vidScanRes(b.dataset.vidscanjump); if (x) { v.currentTime = Math.max(0, x.t - 5); v.play().catch(() => {}); } }
+    else if (b.dataset.vidscanjump && v) { const x = vidScanRes(b.dataset.vidscanjump); if (x) vidSeek(x.t - 5); }
+    else if (b.dataset.vidcloud) vidCloudOpen(b.dataset.vidcloud, b.dataset.kind);
+    else if (b.dataset.vidclouddel) vidCloudDelete(b.dataset.vidclouddel);
+    else if (b.dataset.vidup) vidCloudFor(b.dataset.vidup, b.dataset.kind);
+    else if (b.dataset.vidpiece && vidUi.cloud && v) { const c = vidUi.cloud, i = c.i + +b.dataset.vidpiece; if (i >= 0 && i < c.pieces.length) { c.i = i; v.src = vidSrc(); v.play().catch(() => {}); vidCloudBar(); } }
+    else if (b.dataset.vidcloudclose) vidCloudClose();
   });
   document.addEventListener("keydown", e => {
     if (currentTab() !== "video" || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target; if (t && (t.matches("input, textarea, select") || t.isContentEditable)) return;
     const v = $("#vidEl"); if (!v) return;
     if (e.key === " ") { e.preventDefault(); if (v.paused) v.play().catch(() => {}); else v.pause(); return; }
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); v.currentTime = Math.max(0, v.currentTime + (e.key === "ArrowLeft" ? -5 : 5)); return; }
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); vidSeek(vidNow() + (e.key === "ArrowLeft" ? -5 : 5), !v.paused); return; }
     const k = Object.keys(VID_KINDS).find(x => VID_KINDS[x].key === e.key.toLowerCase());
     if (k) { e.preventDefault(); vidAdd(k); }
   });
