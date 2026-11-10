@@ -161,6 +161,9 @@ Wunsch der Nutzerin: nicht überladen, sofort klar, was zu tun ist, nicht zu vie
 - Videos: Der Ablauf steht als drei Schritte auf der Video-Seite (`vidFlowHtml`), nicht im Tagesablauf. Texte müssen ehrlich sagen, was hochgeladen wird.
 - Zählregeln des Plans (Blöcke, Abhaken) nur mit Tests ändern. Die Tests aus früheren Sitzungen gingen am 09.11.2026 verloren; vorhanden sind `t150` bis `t152`, `smoke.js`, `rv3.js` (Scratchpad).
 
+## Lernanimationen
+Code: Abschnitt «Lernanimationen» in `index.html` (`AM` Bausteine, `ANIM`, `animInner`, `animLegend`). Zwölf Themen (L2, L3, L4, L5, L6, L7, L8, L9, L14, L20, L21, L24). Regeln: Inhalt nur aus dem Lexikon-Text des Themas (`WISSEN`), keine neuen Spielfakten; pro Animation genau eine Vorhersage (`ask`, erst wählen, dann die Lösung) und eine Abschlussfrage (`quiz`, Kennung `<Thema>-A`, geht über `WQ` ins Wiederholungs-System); die richtige Antwort nicht immer an derselben Stelle; die Begründung nennt die richtige Antwort wörtlich und das Thema in Klammern. Bewegung über die Bausteine (`AM.path`, `AM.move`, `AM.shot` mit Einschlag, `AM.beam`, `AM.ring`, `AM.ping`, `AM.dim`); jeder Baustein muss bei «weniger Bewegung» (`AM.still`) den Endzustand zeigen. Neue Animation prüfen: Kontaktbogen ansehen (nichts überlappt, nichts abgeschnitten), Test `t153.js`.
+
 ## Die App selbst lernen (Einführung)
 Code: Abschnitt «Die App langsam kennenlernen» in `index.html` (`PAGE_HELP`, `renderPageHelp`, `APP_TOUR`, `tourCardHtml`, `TEAM_STEPS`, `applyTeamView`). Prinzipien: immer nur ein bis zwei Schritte zeigen (Überforderung vermeiden), Erledigtes selbst erkennen (`state.app.seen`), Hilfen von selbst zurücknehmen (Seitenhilfe klappt nach zwei Besuchen zu), Experten dürfen alles sehen («Alles zeigen»). Neue Seiten mit vielen Karten bekommen `data-tstep` oder einen Eintrag in `PAGE_HELP`. Texte erklären nur die App, keine Spielfakten. Test: `t75.js`.
 
