@@ -18297,7 +18297,7 @@ const anDive = {
     o = o || {};
     let s = AM.floor();
     s += `<rect class="d-cover" x="150" y="186" width="30" height="60" rx="7"/>` + DG.t(165, 264, "Säule", "d-txt2", "middle");
-    s += AM.tk(236, 132, "tank", 21, "Tank") + AM.tk(196, 62, "dps", 15);
+    s += AM.tk(236, 132, "tank", 21, "Tank") + (o.noDps ? "" : AM.tk(196, 62, "dps", 15));
     if (!o.noSup2) s += AM.tk(o.sup2 ? o.sup2[0] : 70, o.sup2 ? o.sup2[1] : 96, "sup", 15, "Support");
     s += AM.tk(430, 78, "foe", 15) + AM.tk(440, 150, "foe", 15);
     return s;
@@ -18337,8 +18337,8 @@ const anFight = {
 Object.assign(ANIM, {
   L3: { title: "Teamnähe", steps: [
     { t: "Zähl vor dem Fight kurz: Wie viele Mitspieler siehst du? Sind es weniger als zwei, gehst du zurück zur Gruppe.",
-      svg: () => anNear.base() + anNear.you([128, 196]) + `<circle class="d-ring-help" cx="128" cy="196" r="118"/>`
-        + AM.fade(DG.pin(248, 112, "1", "good"), 0.6) + AM.fade(DG.pin(184, 56, "2", "good"), 1.2) + AM.fade(DG.chip(16, 258, 190, "2 Mitspieler in der Nähe", "good"), 1.8) },
+      svg: () => `<circle class="d-ring-help" cx="150" cy="160" r="112"/>` + anNear.base() + anNear.you([118, 204])
+        + AM.fade(DG.pin(252, 116, "1", "good"), 0.6) + AM.fade(DG.pin(186, 60, "2", "good"), 1.2) + AM.fade(DG.chip(270, 14, 196, "2 Mitspieler in der Nähe", "good"), 1.8) },
     { t: "Jetzt du: Dein DPS flankt weit nach links, weg vom Team.",
       svg: () => anNear.base() + anNear.you([128, 196]) + AM.path([[176, 232], [120, 262], [48, 150], [70, 44]], DG.tk(0, 0, "dps", { r: 15 }) + DG.t(0, 30, "DPS", "d-txt2", "middle"), { dur: 2.4 }),
       ask: { q: "Was tust du?", opts: ["Ihm folgen und weiter heilen", "Allein nach vorne zum Punkt laufen", "Beim Tank bleiben", "Stehen bleiben, auch wenn das Team zurückgeht"], a: 2,
@@ -18352,8 +18352,8 @@ Object.assign(ANIM, {
         + AM.shot("M404 228 300 216", true) + AM.shot("M420 164 300 160", true) },
     { t: "Nach dem Respawn wartest du kurz auf andere oder läufst zum Team. Geh nicht allein in den Fight.",
       svg: () => anNear.base({ noFoes: false }) + `<rect class="d-cover" x="14" y="218" width="76" height="60" rx="10"/>` + DG.t(52, 212, "Spawn", "d-txt2", "middle")
-        + AM.path([[38, 250], [38, 250], [150, 214]], AM.you("sup", 16, true), { dur: 3, begin: 0.2 }) + AM.fade(AM.path([[66, 258], [66, 258], [180, 244]], DG.tk(0, 0, "dps", { r: 14 }), { dur: 2.2, begin: 1 }), 0.9)
-        + AM.fade(DG.chip(250, 256, 150, "zusammen zum Team", "good"), 3) }
+        + AM.path([[38, 250], [38, 250], [136, 232]], AM.you("sup", 16), { dur: 3, begin: 0.2 }) + AM.fade(AM.path([[66, 258], [66, 258], [176, 250]], DG.tk(0, 0, "dps", { r: 14 }), { dur: 2.2, begin: 1 }), 0.9)
+        + AM.fade(DG.chip(216, 14, 168, "zusammen zum Team", "good"), 3) }
   ], quiz: { id: "L3-A", l: "L3", lvl: 1, q: "Du respawnst, dein Team kämpft schon vorne. Was tust du?",
     opts: ["Sofort allein in den Fight rennen", "Allein eine Flanke suchen", "Am Spawn bleiben, bis der Fight vorbei ist", "Kurz auf andere warten oder zum Team laufen"], a: 3,
     why: "„Kurz auf andere warten oder zum Team laufen“ stimmt: Nach dem Respawn gehst du nicht allein in den Fight, weil du allein sofort das einfachste Ziel bist (L3).\nEin typischer Fehler ist, nach dem Respawn sofort allein in den nächsten Fight zu rennen." } },
@@ -18381,18 +18381,18 @@ Object.assign(ANIM, {
     { t: "Vorher: Stell dich so hin, dass ein Diver erst an deinem Tank oder anderen Mitspielern vorbeimuss. Zum Beispiel hinter einer Säule nahe beim Tank.",
       svg: () => anDive.base() + `<g transform="translate(116 214)">${AM.you("sup")}</g>` + AM.path([[400, 226], [400, 226]], anDive.diver(), {}) + AM.fade(`<path class="d-shot d-soft" d="M382 222C320 214 290 176 262 150" marker-end="url(#dArB)"/>`, 0.6) + AM.fade(DG.chip(286, 256, 178, "muss am Tank vorbei", "good"), 1.3) },
     { t: "Der Diver kommt. Nutze sofort deinen Escape oder Selbstschutz, nicht erst bei halbem Leben.",
-      svg: () => anDive.base() + AM.path([[400, 226], [300, 250], [160, 232]], anDive.diver(), { dur: 1.1, begin: 0.4 }) + AM.path([[116, 214], [116, 214], [96, 150]], AM.you("sup"), { dur: 1.9, begin: 0.4 })
+      svg: () => anDive.base() + AM.path([[400, 226], [300, 256], [112, 236]], anDive.diver(), { dur: 1.1, begin: 0.4 }) + AM.path([[116, 214], [116, 214], [96, 150]], AM.you("sup"), { dur: 1.9, begin: 0.4 })
         + AM.fade(DG.chip(286, 256, 178, "Escape: sofort", "good"), 1.5) },
     { t: "Jetzt du: Der Escape ist genutzt, der Diver ist noch an dir dran.",
-      svg: () => anDive.base() + `<g transform="translate(160 232)">${anDive.diver()}</g>` + `<g transform="translate(96 150)">${AM.you("sup")}</g>` + AM.way("M110 138 196 128", 0.5) + AM.fade(`<path class="d-way" d="M84 164 40 250" marker-end="url(#dArG)"/>`, 0.9) + AM.fade(DG.t(150, 116, "?", "d-txtb", "middle") + DG.t(46, 216, "?", "d-txtb", "middle"), 1.2),
+      svg: () => anDive.base() + `<g transform="translate(112 236)">${anDive.diver()}</g>` + `<g transform="translate(96 150)">${AM.you("sup")}</g>` + AM.way("M110 138 196 128", 0.5) + AM.fade(`<path class="d-way" d="M84 164 40 250" marker-end="url(#dArG)"/>`, 0.9) + AM.fade(DG.t(150, 116, "?", "d-txtb", "middle") + DG.t(46, 216, "?", "d-txtb", "middle"), 1.2),
       ask: { q: "Wohin läufst du?", opts: ["Weg vom Team, damit der Diver mir folgt", "Zurück zum Spawn", "Ich bleibe und kämpfe allein gegen den Diver", "Richtung Team: Dort helfen Tank und Mitspieler"], a: 3,
         why: "Danach läufst du Richtung Team, nicht weg vom Team. Dort helfen dir Tank und Mitspieler. Allein bist du für den Diver leichte Beute." } },
     { t: "Du läufst zum Team und pingst den Diver. Dein Team sieht ihn und hilft mit: Jetzt hat er das Problem.",
-      svg: () => anDive.base() + AM.move([96, 150], [186, 132], AM.you("sup"), { dur: 1 }) + AM.path([[160, 232], [160, 232], [176, 190]], anDive.diver(), { dur: 1.6, begin: 0.4 })
-        + AM.ping(206, 196, 1.2) + AM.fade(AM.shot("M230 152 190 184") + AM.shot("M196 78 180 172") + AM.bar(152, 214, 48, 8, 100, 15, null, 2), 1.8) },
+      svg: () => anDive.base() + AM.path([[96, 150], [190, 92], [298, 140]], AM.you("sup"), { dur: 1.2 }) + AM.path([[112, 236], [112, 236], [118, 204]], anDive.diver(), { dur: 1.6, begin: 0.4 })
+        + AM.ping(86, 196, 1.2) + AM.fade(AM.shot("M218 144 138 196") + AM.shot("M192 78 126 186") + AM.bar(94, 228, 48, 8, 100, 15, null, 2), 1.8) },
     { t: "Peel: Wird dein anderer Support angesprungen, schiesst du auf den Diver und heilst deinen Support. So holst du den Diver von ihm weg.",
-      svg: () => anDive.base({ sup2: [70, 96] }) + `<g transform="translate(150 150)">${AM.you("sup")}</g>` + AM.path([[400, 226], [240, 240], [104, 122]], anDive.diver(15), { dur: 1.2, begin: 0.3 })
-        + AM.fade(AM.shot("M136 142 116 128") + AM.beam("M134 140 88 106") + AM.bar(84, 146, 44, 8, 100, 20, null, 2.2), 1.7) }
+      svg: () => anDive.base({ sup2: [62, 112], noDps: true }) + `<g transform="translate(128 204)">${AM.you("sup")}</g>` + AM.path([[400, 226], [300, 90], [128, 76]], anDive.diver(15), { dur: 1.2, begin: 0.3 })
+        + AM.fade(AM.shot("M128 184 128 96") + AM.beam("M114 190 72 132") + AM.bar(152, 70, 44, 8, 100, 20, null, 2.2), 1.7) }
   ], quiz: { id: "L14-A", l: "L14", lvl: 1, q: "Dein anderer Support wird von einem Diver angesprungen. Was tust du?",
     opts: ["Nur den Support heilen", "Auf den Diver schiessen und den Support heilen", "Weglaufen, damit ich nicht auch sterbe", "Nach vorne zum Tank laufen und dort Schaden machen"], a: 1,
     why: "„Auf den Diver schiessen und den Support heilen“ stimmt: So holst du den Diver von ihm weg, und dein Support überlebt (L14).\nEin typischer Fehler ist, den Support nur zu heilen, ohne auf den Diver zu schiessen: Der Diver bleibt am Leben." } },
@@ -18419,10 +18419,10 @@ Object.assign(ANIM, {
 
   L24: { title: "Fight-Auswahl und Tempo", steps: [
     { t: "Du musst nicht jeden Fight annehmen. Kämpf, wenn ihr im Vorteil seid: Ults bereit, Team zusammen, Gegner geschwächt oder einer weniger.",
-      svg: () => AM.floor() + anFight.labels() + anFight.own(6, 76, 70, 3) + anFight.foes(5, 364, 70) + AM.fade(DG.t(96, 222, "6 Spieler · 3 Ults bereit", "d-txt2", "middle") + DG.t(384, 222, "5 Spieler · Ults gerade benutzt", "d-txt2", "middle"), 0.6)
+      svg: () => AM.floor() + anFight.labels() + anFight.own(6, 76, 70, 3) + anFight.foes(5, 364, 70) + AM.fade(DG.t(20, 222, "6 Spieler · 3 Ults bereit", "d-txt2") + DG.t(460, 222, "5 Spieler · Ults benutzt", "d-txt2", "end"), 0.6)
         + AM.fade(DG.chip(150, 248, 180, "Vorteil: kämpfen", "good"), 1.3) },
     { t: "Jetzt du: Ihr seid zu viert ohne Ult gegen sechs Gegner. Du schätzt, dass sie mehrere Ults bereit haben (ihre Ladung siehst du nicht).",
-      svg: () => AM.floor() + anFight.labels() + anFight.own(4, 76, 70, 0) + anFight.foes(6, 364, 70, { q: 3 }) + AM.fade(DG.t(96, 222, "4 Spieler · keine Ult", "d-txt2", "middle") + DG.t(384, 222, "6 Spieler · Ults? (geschätzt)", "d-txt2", "middle"), 0.6),
+      svg: () => AM.floor() + anFight.labels() + anFight.own(4, 76, 70, 0) + anFight.foes(6, 364, 70, { q: 3 }) + AM.fade(DG.t(20, 222, "4 Spieler · keine Ult", "d-txt2") + DG.t(460, 222, "6 Spieler · Ults? (geschätzt)", "d-txt2", "end"), 0.6),
       ask: { q: "Was tust du?", opts: ["Trotzdem kämpfen, vielleicht klappt es", "Zurückfallen und auf einen besseren Moment warten", "Allein reinlaufen, während das Team noch weit weg ist", "Einzeln nacheinander angreifen"], a: 1,
         why: "Fall zurück, wenn ihr im Nachteil seid: Team getrennt, Ult-Nachteil oder einer weniger. Dieser Fight ist kaum zu gewinnen, also wartet ihr." } },
     { t: "Ihr fallt zurück und wartet auf einen besseren Moment: bis das Team wieder zusammen ist und Ults bereit sind.",
