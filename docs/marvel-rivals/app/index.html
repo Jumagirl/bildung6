@@ -468,6 +468,26 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .fxlive { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; flex-basis: 100%; margin-top: 2px; }
 .fxlive .btn { min-width: 52px; justify-content: center; }
 .qnfab.has::after { content: ""; position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--surface); }
+.ptslim { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; }
+.goalstrip { border-left: 4px solid var(--gold); padding: 12px 16px; }
+.goalstrip .gshead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 4px; }
+.goalstrip .gshead b { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.goalstrip .gshead svg.i { width: 16px; height: 16px; color: var(--gold); }
+.goalstrip .gstitle { font-weight: 700; font-size: 1.05rem; line-height: 1.3; margin: 0 0 6px; overflow-wrap: anywhere; }
+.goalstrip .gsbar { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; margin: 0 0 4px; }
+.goalstrip .gsbar > span { display: block; height: 100%; background: var(--gold); border-radius: 0 4px 4px 0; }
+.goalstrip .gschip { text-align: left; white-space: normal; border-radius: 12px; }
+.goalstrip .badge.warn { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--text); }
+.daylist details.dphase > summary { list-style: none; cursor: pointer; padding: 4px 0; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; color: var(--text); font-size: inherit; font-weight: 400; margin: 0; }
+.daylist details.dphase > summary .dpht { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.daylist details.dphase > summary .badge { flex: none; }
+.daylist details.dphase > summary::-webkit-details-marker { display: none; }
+.daylist details.dphase > summary::after { content: "▸"; color: var(--muted); font-size: .8rem; flex: none; }
+.daylist details.dphase[open] > summary::after { content: "▾"; }
+.daylist details.dphase.pnow > summary b { color: var(--accent-strong); }
+.badge.run { background: var(--gold-soft); color: var(--gold); }
+.newsmore { margin-top: 8px; }
+.newsmore > summary { cursor: pointer; margin-bottom: 8px; }
 .daylist .dphase { margin: 10px 0 0; padding-top: 6px; border-top: 1px solid var(--border); }
 .daylist .dphase:first-of-type { border-top: 0; }
 .daylist .dph { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 2px; }
@@ -942,6 +962,11 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .fig svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .fig figcaption { padding: 2px 16px 14px; font-size: .84rem; color: var(--muted); line-height: 1.45; }
 .nmcard { border-left: 4px solid var(--accent); }
+.vidflow { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.vidflow li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; }
+.vidflow .vfn { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .82rem; background: var(--surface-3); color: var(--text-2); }
+.vidflow li.ok .vfn { background: var(--good); color: #fff; }
+.vidflow .vfs { display: block; margin-top: 2px; }
 .nmrec { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 8px; padding: 8px 10px; border: 1px dashed var(--accent); border-radius: 10px; }
 .nmrec svg.i { flex: none; color: var(--accent-strong); }
 .nmlbl { font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2px 0 2px; }
@@ -1041,6 +1066,16 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .anim { margin: 6px 0 10px; max-width: 640px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
 .anim-stage svg { display: block; width: 100%; height: auto; padding: 6px 8px 0; }
 .anim-cap { margin: 4px 16px 10px; font-size: .92rem; line-height: 1.5; max-width: 62ch; }
+/* Am Handy ist die Bühne nur etwa 330 Pixel breit: Beschriftungen in den Animationen etwas grösser als in den Lernbildern */
+.anim .d-txt2 { font-size: 13px; }
+.anim .d-txt { font-size: 14px; }
+.anim .fig-head > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.anim .fig-head svg.i { width: 16px; height: 16px; color: var(--accent); }
+.anim-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 16px 0; }
+.anim-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.anim-legend svg { width: 16px; height: 16px; flex: none; overflow: visible; }
+.anim-legend i { display: inline-block; width: 18px; height: 0; border-top: 3px solid var(--strategist); border-radius: 2px; }
+.anim-legend i.lg-shot { border-top: 3px dashed var(--bad); }
 .anim-ask, .anim-q { margin: 0 16px 10px; min-width: 0; }
 .anim-nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding: 2px 16px 14px; }
 .anim-dots { display: inline-flex; gap: 4px; vertical-align: middle; margin-left: 6px; }
@@ -2333,11 +2368,10 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 <!-- GOALS -->
 <section id="tab-goals" hidden>
+  <div id="goalTop"></div>
+  <div id="goalList"></div>
   <div id="weekHub"></div>
-  <div class="card hero-banner">
-    <h2>Wochenziel: Planen · Durchführen · Reflektieren</h2>
-    <p>Wie beim selbständigen Lernen: Setze dir ein konkretes Ziel, übe gezielt und schau danach, was funktioniert hat. Schreib dein Wochenziel in eigenen Worten, zum Beispiel „Weniger sterben“ oder „Besser heilen“. Die App erkennt das Thema, wählt passende Lektionen aus und stellt Aufgaben für die Woche zusammen. Auch Trainingsplan und Dashboard richten sich danach aus.</p>
-  </div>
+  <details class="fold" id="goalNewFold"><summary><span class="ft"><h2>Neues Ziel schreiben</h2><span class="fs">in eigenen Worten, die App erkennt das Thema</span></span><span class="fr"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary><div class="fbody">
   <div class="card">
     <div class="card-head"><h2 data-icon="goals">Neues Ziel</h2></div>
     <div id="goalSuggest"></div>
@@ -2348,8 +2382,10 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
       <div class="row" style="align-items:flex-end"><button class="btn" type="submit">Ziel anlegen</button></div>
       <div id="goalDetect" class="small" style="grid-column:1/-1"></div>
     </form>
+    <p class="small muted" style="margin:10px 0 0">Planen, durchführen, reflektieren: Setz dir ein konkretes Ziel, zum Beispiel «Weniger sterben» oder «Besser heilen». Die App wählt passende Lektionen und Aufgaben für die Woche; Trainingsplan und Dashboard richten sich danach.</p>
   </div>
-  <div id="goalList"></div>
+  </div></details>
+  <details class="fold" id="goalOldFold" hidden><summary><span class="ft"><h2>Frühere Ziele</h2><span class="fs" id="goalOldSub"></span></span><span class="fr"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></summary><div class="fbody" id="goalOld"></div></details>
 </section>
 
 <!-- AI -->
@@ -5821,6 +5857,8 @@ document.addEventListener("keydown", e => {
 
 // ---------- Heute ----------
 // Eine Seite für den Tag: was als Nächstes dran ist, ohne dass du suchen musst.
+const dayPhOpen = {};   // Abschnitte von «Heute zu tun», die du selbst auf- oder zugeklappt hast (gilt bis zum Neuladen)
+document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.dphase[data-dph]")) dayPhOpen[d.dataset.dph] = d.open; }, true);
 function renderToday() {
   const el = $("#todayBody");
   const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
@@ -5847,7 +5885,7 @@ function renderToday() {
   if (!focusNow()) { const fx = fxChosen(tdy), ok = !!(state.focusSel && state.focusSel.d === tdy);
     prep.push({ done: ok, t: "Fokus fürs Match festlegen", s: `${fx.length ? `Bis zu ${FX_MAX} Punkte: ${esc(fx.map(x => x.tag).join(", "))}` : "Noch nichts gewählt"} · gilt für Notiz, Match loggen und Review`,
       a: `${fx.length && !ok ? `<button class="btn small" type="button" data-fxok="1">Passt so</button> ` : ""}<button class="btn small ${fx.length ? "ghost" : ""}" type="button" data-fxgo="1">${ok ? "Ansehen" : "Ändern"}</button>` }); }
-  if (!g) prep.push({ done: false, t: "Wochenziel setzen", s: "Einmal pro Woche: ein Ziel gibt dem Training Richtung · im Reiter «Woche»", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Ziel setzen</button>` });
+  // Das Wochenziel ist kein Tagesschritt: Es steht als eigener Streifen direkt unter «Jetzt dran» (goalStripHtml)
   // 2) Spielen
   const withN = tm.filter(m => (m.notes || "").trim() || deathTotal(m.deathCauses) || m.qn).length, waiting = qnToday().filter(q => !q.played).length, pend = qnToday().length;
   if (inPlan && !trainedToday) { const st = dayGet(cur).steps || {}, bd = ["b1", "b2", "b3"].every(k => st[k] || brSkipped(cur, k) || !PLAN.days[cur - 1].steps.some(x => x.key === k));
@@ -5859,8 +5897,6 @@ function renderToday() {
   if (openR) extra.push({ done: false, t: `${plural(openR, "Match", "Matches")} von heute und gestern ohne Notiz`, s: "Kurz Fehler und Stärken eintragen · ältere stehen unter «Spielen › Matches»", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
   if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : "Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»", a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
   // 4) Extra, wenn du noch Lust hast (zählt nicht mit)
-  if (g && goalTopics(g).length) { const o = openTasks(g)[0]; if (o) extra.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: `${esc(o.kind)}: ${esc(o.text)}`, a: `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` }); }
-  else if (g) extra.push({ done: false, t: `Wochenziel: ${esc(g.title)}`, s: "Wähle ein Thema, dann passt sich das Training an.", a: `<button class="btn small ghost" type="button" data-pact="tab" data-tab="goals">Thema wählen</button>` });
   { const nx = rvExtra().length; if (nx) extra.push({ done: false, t: `${plural(nx, "weiteres Match", "weitere Matches")} zum Auswerten`, s: "Mit Notiz zuerst, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ghost" type="button" data-go="review">Review</button>` }); }
   { const { F, c } = funCur(), p = funProg(c, F); extra.push({ done: p.done, t: `Challenge der Woche: ${c.em} ${esc(c.t)}`, s: p.done ? "geschafft" : `${esc(p.txt)} · zum Spass`, a: `<button class="btn small ghost" type="button" data-funjump="1">Ansehen</button>` }); }
   const phases = [["Vorbereiten", "vor dem ersten Match: Review, Aim, Lektion", prep], ["Spielen", inPlan && !trainedToday ? `Block 1 bis 3, ${B} Matches pro Block` : "deine Matches", play], ["Auswerten", "nach dem Spielen", post], ["Wenn du noch Lust hast", "freiwillig, zählt nicht mit", extra]];
@@ -5876,13 +5912,17 @@ function renderToday() {
       : (() => { const x = todayExtra(); return x ? `<div class="nowlbl">Alles erledigt für heute 🎉 · Wenn du magst</div><h2>${x.t}</h2><p>${x.s}</p><div class="nowact">${big(x.a)}</div>`
         : `<div class="nowlbl">Heute</div><h2>Alles erledigt für heute 🎉</h2><p>Stark. Morgen geht es mit dem nächsten Schritt weiter.</p>`; })()}</div>`;
   let num = 0;
+  const nowPh = now ? phaseOf(now) : -1;
   const row = x => { const counted = items.includes(x), i = counted ? ++num : 0, isNow = x === now;
     return `<div class="todo ${x.done ? "done" : ""}${isNow ? " now" : ""}${counted ? "" : " xtra"}"><span class="tn">${x.done ? "✓" : counted ? i : "+"}</span><div class="tt">${x.t}${x.done || isNow ? "" : `<div class="ts">${x.s}</div>`}</div><div class="ta">${isNow ? `<span class="badge">jetzt</span>` : x.a || ""}</div></div>`; };
   const list = `<div class="card daylist"><div class="card-head"><h2>${icon("check")}Heute zu tun: dein Tagesablauf</h2><span class="badge">${doneN} von ${items.length}</span></div>
-    <p class="small muted" style="margin:0 0 6px">Immer in dieser Reihenfolge: vorbereiten, spielen, auswerten. Jeder Schritt sagt dir, wo du ihn machst; vieles hakt sich von selbst ab.</p>
-    ${phases.map(([t, hint, l], pi) => l.length ? `<div class="dphase ${pi < 3 && l.every(x => x.done) ? "pdone" : ""} ${pi === 3 ? "pextra" : ""}"><div class="dph"><b>${pi < 3 ? `${pi + 1} · ` : ""}${t}</b> <span class="small muted">${hint}</span>${pi < 3 && l.every(x => x.done) ? ' <span class="badge ok">✓</span>' : ""}</div>${l.map(row).join("")}</div>` : "").join("")}</div>`;
-  // Fokus fürs nächste Match: eine Sache; Grundregeln, Wochenziel und Missionen laufen eingeklappt nebenbei
-  const focus = nmCardHtml();
+    <p class="small muted" style="margin:0 0 6px">Eins nach dem anderen: Offen ist nur, was jetzt dran ist. Ein Tipp auf eine Zeile klappt sie auf.</p>
+    ${phases.map(([t, hint, l], pi) => { if (!l.length) return ""; const all = pi < 3 && l.every(x => x.done), dn = l.filter(x => x.done).length, open = pi in dayPhOpen ? dayPhOpen[pi] : pi === nowPh;
+      return `<details class="dphase ${all ? "pdone" : ""} ${pi === 3 ? "pextra" : ""}${pi === nowPh ? " pnow" : ""}" data-dph="${pi}"${open ? " open" : ""}><summary class="dph"><span class="dpht"><b>${pi < 3 ? `${pi + 1} · ` : ""}${t}</b> <span class="small muted">${hint}</span></span>${pi === 3 ? `<span class="badge">${l.length}</span>` : all ? '<span class="badge ok">✓</span>' : `<span class="badge${pi === nowPh ? " run" : ""}">${dn} von ${l.length}</span>`}</summary>${l.map(row).join("")}</details>`; }).join("")}</div>`;
+  // Fokus fürs nächste Match: eine Sache; Grundregeln, Wochenziel und Missionen laufen eingeklappt nebenbei.
+  // Solange du noch beim Vorbereiten bist und heute noch kein Match zählt, ist die Karte eingeklappt: erst das eine, dann das andere.
+  const nmH = nmCardHtml(), early = nowPh === 0 && !tm.length && !qnToday().length;
+  const focus = nmH && early ? foldHtml("today-nm", "Dein nächstes Match", `<div class="tmorebody">${nmH}</div>`, { icon: "target", sub: "kommt nach dem Vorbereiten · ein Tipp zeigt die Aufgabe schon jetzt", cls: "tmore" }) : nmH;
   // Hinweise
   const news = [];
   const missed = missedLessons();
@@ -5899,7 +5939,7 @@ function renderToday() {
   { const ti = txInsights()[0]; if (ti && ti.n >= 3) news.push(["info", `<b>Du schreibst oft über «${esc(ti.t.topic)}»</b> (${ti.n}× in 30 Tagen). Passende Lektion und Übung stehen im Review unter «Was du schreibst». <button class="btn small ghost" type="button" data-pact="tab" data-tab="review">Ansehen</button>`]); }
   if (typeof todayNews === "function") todayNews().forEach(x => news.push(x));
   { const kn = keepNews(); if (kn) news.push(kn); }
-  const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2></div>${notes(news)}</div>` : "";
+  const newsCard = news.length ? `<div class="card"><div class="card-head"><h2>${icon("zap")}Gut zu wissen</h2>${news.length > 2 ? `<span class="badge">${news.length}</span>` : ""}</div>${notes(news.slice(0, 2))}${news.length > 2 ? `<details class="newsmore"><summary class="small">${plural(news.length - 2, "weiterer Hinweis", "weitere Hinweise")}</summary>${notes(news.slice(2))}</details>` : ""}</div>` : "";
   // Erste Schritte
   const steps = [
     ["Erstes Match eintragen oder abgleichen", ms.length > 0, `<button class="btn small" type="button" data-go="log">Match loggen</button> <button class="btn small ghost" type="button" data-go="data">Abgleichen</button>`],
@@ -5914,11 +5954,11 @@ function renderToday() {
   // Wegweiser
   const guide = `<div class="card"><div class="card-head"><h2>${icon("map")}Wo finde ich was?</h2></div><div class="areagrid">${AREAS.filter(a => a.id !== "today").map(a => `<button type="button" class="areacard" data-area="${a.id}"><b>${icon(a.icon)}${a.label}</b><span class="small">${esc(a.info)}</span></button>`).join("")}</div></div>`;
   // Seltener Gebrauchtes steht eingeklappt unter «Mehr für heute» (die App merkt sich, ob es offen ist)
-  const tbH = tbTodayHtml(), tourH = tourCardHtml(), funH = funFoldHtml(), more = [funH, tbH, tourH, guide].filter(Boolean).join("");
-  const moreSub = [funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
+  const tbH = tbTodayHtml(), tourH = tourCardHtml(), funH = funFoldHtml(), standH = standCardHtml(), formH = formHudHtml(), more = [standH, formH, funH, tbH, tourH, guide].filter(Boolean).join("");
+  const moreSub = [standH && "Dein Stand", formH && "Deine Form", funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
   funCheck();
-  el.innerHTML = hero + focus + playedTodayHtml() + list + standCardHtml() + newsCard + first + formHudHtml() + moreFold;
+  el.innerHTML = hero + goalStripHtml("today") + focus + playedTodayHtml() + list + newsCard + first + moreFold;
 }
 // ---------- Dein Stand: Wissensstand und Rang ----------
 // Wunsch der Nutzerin: ein Balken, wie gut du gerade bist, nicht nur nach erledigten Trainingstagen. Vier Teile, jeder 0 bis 100 %:
@@ -7964,11 +8004,13 @@ function playedTodayHtml() {
   const atTxt = isFinite(at) ? ` · Abgleich zuletzt ${new Date(at).toISOString().slice(0, 10) === t ? nmTime(at) : esc(fmtDT(at))}` : "";
   const sub = rows.length ? `${ms.length} vom Abgleich${qs.length ? `, ${qs.length} ${qs.length === 1 ? "wartet" : "warten"} noch` : ""}${atTxt}` : `Noch kein Match heute${atTxt}`;
   const rest = rows.slice(5);
+  // Noch nichts gespielt: eine schmale Zeile statt einer ganzen Karte (der Knopf «Gespielt» steht auch unten rechts)
+  if (!rows.length) return `<div class="card ptcard ptslim"><span class="small"><b>Heute gespielt:</b> noch kein Match${atTxt}</span><button class="btn small ghost" type="button" data-qplayed>${icon("check")}Match gespielt</button></div>`;
   return `<div class="card ptcard"><div class="card-head"><h2>${icon("check")}Heute gespielt</h2><span class="badge">${plural(rows.length, "Match", "Matches")}</span></div>
     <p class="small muted" style="margin:0 0 4px">${sub}</p>
     ${rows.slice(0, 5).map(playedRowHtml).join("")}${rest.length ? `<details><summary class="small">${plural(rest.length, "weiteres Match", "weitere Matches")}</summary>${rest.map(playedRowHtml).join("")}</details>` : ""}
     <div class="row mt"><button class="btn small" type="button" data-qplayed>${icon("check")}Match gespielt</button><button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button></div>
-    ${qs.length ? "" : `<p class="small muted" style="margin:6px 0 0">Keine Notiz gemacht? Ein Tipp auf «Match gespielt» reicht. Das Match zählt sofort für deine Blöcke. Held, Ergebnis und Werte holt der Abgleich später, die App ordnet den Eintrag dann selbst zu.</p>`}</div>`;
+    ${rows.length ? "" : `<p class="small muted" style="margin:6px 0 0">Keine Notiz gemacht? Ein Tipp auf «Match gespielt» reicht. Das Match zählt sofort für deine Blöcke. Held, Ergebnis und Werte holt der Abgleich später, die App ordnet den Eintrag dann selbst zu.</p>`}</div>`;
 }
 document.addEventListener("click", e => {
   if (!e.target.closest) return;
@@ -9137,6 +9179,34 @@ function goalTrainingHtml(g) {
       <div class="chips">${[1, 2, 3].map(v => `<button type="button" class="chip ${rate === v ? "on" : ""}" data-grate="${g.id}" data-v="${v}">${AUTO_LABEL[v]}</button>`).join("")}</div></div>
     ${goalTopicChips(g, false)}</div>`;
 }
+// Wochenziel-Streifen: steht auf «Heute» direkt unter «Jetzt dran» und oben auf «Woche». Mit Ziel: Fortschritt und die nächste Aufgabe.
+// Ohne Ziel: Vorschläge aus deinen Matches, ein Tipp legt das Ziel an (Thema und Aufgaben stellt die App zusammen, alles änderbar).
+function goalStripHtml(where) {
+  const g = activeGoal(), wk = where === "week";
+  if (!g) {
+    const sg = goalSuggestions();
+    return `<div class="card goalstrip none"><div class="gshead"><b>${icon("goals")}Wochenziel</b><span class="small muted">noch keins für diese Woche</span></div>
+      ${sg.length ? `<p class="small" style="margin:0 0 6px">Ein Tipp setzt das Ziel. Die Vorschläge kommen aus deinen Matches:</p><div class="chips">${sg.map(x => `<button type="button" class="chip gschip" data-gquick="${x.t.id}"><b>${esc(x.t.title)}</b><span class="muted small"> · ${esc(x.why)}</span></button>`).join("")}</div>`
+        : `<p class="small" style="margin:0 0 6px">Ein Ziel pro Woche gibt dem Training eine Richtung.</p>`}
+      <div class="row" style="margin-top:8px"><button type="button" class="btn small ${sg.length ? "ghost" : ""}" data-gown="1">Eigenes Ziel schreiben</button></div></div>`;
+  }
+  const ts = goalTasks(g), done = ts.filter(t => taskDone(g, t.id)).length, o = openTasks(g)[0], td = today();
+  const left = g.due ? Math.round((Date.parse(g.due + "T12:00:00") - Date.parse(td + "T12:00:00")) / 864e5) : null;
+  const when = left === null ? "" : left < 0 ? "Frist vorbei" : left === 0 ? "bis heute" : left === 1 ? "noch 1 Tag" : `noch ${left} Tage`;
+  return `<div class="card goalstrip"><div class="gshead"><b>${icon("goals")}Wochenziel</b>${when ? `<span class="badge${left < 0 ? " warn" : ""}">${when}</span>` : ""}</div>
+    <div class="gstitle">${esc(g.title)}</div>
+    ${ts.length ? `<div class="gsbar" role="progressbar" aria-valuemin="0" aria-valuemax="${ts.length}" aria-valuenow="${done}" aria-label="Aufgaben zum Wochenziel"><span style="width:${Math.round(done / ts.length * 100)}%"></span></div>
+      <div class="small muted">${done} von ${plural(ts.length, "Aufgabe", "Aufgaben")} erledigt</div>` : `<div class="small muted">Noch kein Thema gewählt. Dann stellt die App Aufgaben zusammen.</div>`}
+    ${left !== null && left < 0 ? `<p class="small" style="margin:6px 0 0"><b>Die Woche ist um.</b> Schreib zwei Sätze Rückblick und setz das nächste Ziel.</p>`
+      : o ? `<p class="small gsnext" style="margin:6px 0 0"><b>Als Nächstes · ${esc(o.kind)}:</b> ${linkify(esc(o.text), new Set())}</p>` : ts.length ? `<p class="small" style="margin:6px 0 0"><b>Alle Aufgaben erledigt.</b> Markier das Ziel als erreicht und setz das nächste.</p>` : ""}
+    <div class="row" style="margin-top:8px;gap:6px">${o && !(left !== null && left < 0) ? `<button type="button" class="btn small" data-gdone="${g.id}" data-t="${esc(o.id)}">Erledigt</button>` : ""}${wk ? "" : `<button type="button" class="btn small ghost" data-pact="tab" data-tab="goals">${!ts.length ? "Thema wählen" : left !== null && left < 0 ? "Rückblick schreiben" : "Zur Woche"}</button>`}</div></div>`;
+}
+document.addEventListener("click", e => {
+  const q = e.target.closest && e.target.closest("[data-gquick]");
+  if (q) { const t = topicById(q.dataset.gquick); if (!t) return; createGoal(t.title, "", addDays(today(), 6), [t.id]); render(); toast(`Wochenziel gesetzt: ${t.title}. Ändern kannst du es unter «Woche».`); return; }
+  const o = e.target.closest && e.target.closest("[data-gown]");
+  if (o) { showTab("goals"); const d = $("#goalNewFold"); if (d) { d.open = true; d.scrollIntoView({ block: "start" }); } const f = $("#goalForm"); if (f) f.elements.title.focus(); }
+});
 // Karte im Trainingstag: Das Wochenziel gibt dem Tag einen Schwerpunkt
 function goalDayCardHtml(n) {
   const g = activeGoal();
@@ -9171,7 +9241,7 @@ function createGoal(title, metric, due, topics) {
 function prefillGoal(topicId) {
   const t = topicById(topicId), f = $("#goalForm");
   if (!t || !f) return;
-  showTab("goals"); window.scrollTo({ top: 0 });
+  showTab("goals"); { const d = $("#goalNewFold"); if (d) { d.open = true; d.scrollIntoView({ block: "start" }); } }
   f.elements.title.value = t.title; f.elements.metric.value = "";
   if (!f.elements.due.value) f.elements.due.value = addDays(today(), 6);
   renderGoalDetect(); f.elements.title.focus();
@@ -9215,8 +9285,7 @@ function weekHubHtml() {
   if (dueN) now.push(weekRow(false, `${plural(dueN, "Frage", "Fragen")} zur Wiederholung fällig`, "kurz aus dem Kopf abrufen", "zählt im Quiz von selbst", `<button class="btn small ghost" type="button" data-pact="due-start">Wiederholen</button>`));
   // Diese Woche: Wochenziel, Missionen, Bootcamp
   const g = activeGoal();
-  if (!g) week.push(weekRow(false, "Wochenziel setzen", "ein Ziel pro Woche gibt dem Training Richtung", "unten auf dieser Seite", `<button class="btn small" type="button" data-wgoal="1">Ziel setzen</button>`));
-  else goalTasks(g).forEach(t => { const dn = taskDone(g, t.id);
+  if (g) goalTasks(g).forEach(t => { const dn = taskDone(g, t.id);
     week.push(weekRow(dn, `${esc(t.kind)}: ${esc(t.text)}`, `Wochenziel «${esc(g.title)}»`, t.kind === "Match-Fokus" ? "im Match bewerten (oben als Fokus wählbar), hier abhaken, wenn es sitzt" : "hier abhaken", dn ? "" : `<button class="btn small ghost" type="button" data-gdone="${g.id}" data-t="${esc(t.id)}">Erledigt</button>`)); });
   rvState().missions.filter(x => x.status === "open").forEach(mis => { const pr = wkProgress(mis);
     week.push(weekRow(false, `Mission mit ${esc(mis.hero)}`, `${esc(wkMissionText(mis))} · ${Math.min(pr.have, mis.n)} von ${mis.n}`, "hakt sich selbst ab, aus deinen Matches", `<button class="btn small ghost" type="button" data-go="weak">Ansehen</button>`)); });
@@ -9231,7 +9300,7 @@ function weekHubHtml() {
         <p class="small" style="margin:6px 0 0"><b>Abhaken:</b> nach dem Match in der Notiz (Knopf «Notiz» unten rechts), beim Eintragen unter «Matches» oder im Review. Überall dieselben Punkte und dieselben Knöpfe.</p>
         <div class="row" style="gap:6px;margin-top:6px"><button class="btn small" type="button" data-qnopen>${icon("edit")}Notiz öffnen</button></div>
         <details class="fxdet" id="fxPickW" ${fxPickOpen.w || !fx.length ? "open" : ""}><summary class="small"><b>Worauf achtest du? Auswahl ändern</b> (${fx.length} von höchstens ${FX_MAX})</summary>${fxPickHtml("w")}</details></div>
-      <div class="whsec"><h3>Diese Woche</h3>${week.join("")}</div>
+      ${week.length ? `<div class="whsec"><h3>Diese Woche</h3>${week.join("")}</div>` : ""}
       <div class="whsec"><h3>Zum Spass: Challenge der Woche</h3>${funCardHtml(true)}</div></div>`;
 }
 document.addEventListener("click", e => {
@@ -9245,7 +9314,12 @@ function renderGoals() {
   if (f && !f.elements.due.value) f.elements.due.value = addDays(today(), 6);
   renderGoalSuggest(); renderGoalDetect();
   const open = openGoals(), closed = state.goals.filter(g => g.done).reverse(), ag = open[0];
-  $("#goalList").innerHTML = state.goals.length ? open.concat(closed).map(g => {
+  // Wochenziel zuerst: Streifen mit Fortschritt (oder Vorschläge), darunter das laufende Ziel mit allen Aufgaben. Das Formular und frühere
+  // Ziele stehen eingeklappt weiter unten, damit die Seite kurz bleibt.
+  $("#goalTop").innerHTML = goalStripHtml("week");
+  { const nf = $("#goalNewFold"); if (nf && !nf.dataset.init) { nf.dataset.init = "1"; nf.open = false; }
+    const of = $("#goalOldFold"); if (of) { of.hidden = !closed.length; $("#goalOldSub").textContent = plural(closed.length, "erreichtes Ziel", "erreichte Ziele"); } }
+  const card = g => {
     const late = !g.done && g.due && g.due < today();
     return `<div class="card">
       <div class="card-head">
@@ -9262,16 +9336,18 @@ function renderGoals() {
         <button class="btn small ${g.done ? "ghost" : ""}" type="button" data-done="${g.id}">${g.done ? "Wieder öffnen" : "Als erreicht markieren"}</button>
         <button class="btn danger small" type="button" data-rmg="${g.id}">Löschen</button>
       </div></div>`;
-  }).join("")
-    : `<div class="card">${empty("Noch keine Ziele. Starte mit einem kleinen, konkreten Ziel für diese Woche.", "goals")}</div>`;
-  $("#goalList").querySelectorAll("textarea[data-g]").forEach(t => t.addEventListener("change", () => {
+  };
+  $("#goalList").innerHTML = open.map(card).join("");
+  $("#goalOld").innerHTML = closed.map(card).join("");
+  const GL = { querySelectorAll: q => [...$("#goalList").querySelectorAll(q), ...$("#goalOld").querySelectorAll(q)] };
+  GL.querySelectorAll("textarea[data-g]").forEach(t => t.addEventListener("change", () => {
     const g = state.goals.find(x => x.id === t.dataset.g); g[t.dataset.f] = t.value; save(); toast("Gespeichert");
   }));
-  $("#goalList").querySelectorAll("[data-done]").forEach(b => b.addEventListener("click", () => {
+  GL.querySelectorAll("[data-done]").forEach(b => b.addEventListener("click", () => {
     const g = state.goals.find(x => x.id === b.dataset.done); g.done = !g.done; save(); render();
     if (g.done) toast("Ziel erreicht! 🎉");
   }));
-  $("#goalList").querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", async () => {
+  GL.querySelectorAll("[data-rmg]").forEach(b => b.addEventListener("click", async () => {
     if (!(await askConfirm("Dieses Ziel löschen?", "Löschen", true))) return;
     state.goals = state.goals.filter(x => x.id !== b.dataset.rmg); save(); render();
   }));
@@ -16312,7 +16388,7 @@ function appSeen(k, once) {
 const PAGE_HELP = {
   dashboard: ["Dashboard", ["Oben wählst du Zeitraum, Rolle, Held und Modus. Die Filter gelten für alle Karten darunter.", "Die grosse Zahl ist deine Winrate im Ausschnitt, die Pfeile vergleichen mit dem gleich langen Zeitraum davor.", "Fahr mit dem Finger über ein Diagramm, dann siehst du die genauen Werte. «Tabelle» zeigt dieselben Zahlen als Liste.", "Tipp: Tippe unter «Deine Helden» einen Helden an. Dann vergleichst du nur Matches mit diesem Helden."]],
   squad: ["Squad", ["Trag oben deine Teammates ein, genau wie im Spiel geschrieben. Die App erkennt sie in deinen abgeglichenen Matches.", "Die Karten vergleichen Matches mit und ohne Teammates: mit wem, mit welchen Helden, gegen welche Gegner und wie eure Rollen gegen die gegnerischen abschneiden.", "Im Match-Verlauf öffnet «Analyse» die Tabelle aller 12 Spieler eines Matches.", "Mit wenigen Matches schwanken die Zahlen stark. Blasse Zeilen beruhen auf weniger als 3 Matches."]],
-  today: ["Heute", ["Ganz oben steht, was jetzt dran ist: ein Schritt, ein Knopf. Mehr musst du im Moment nicht tun.", "«Heute zu tun» zeigt alle Schritte des Tages. Erledigtes hakt sich von selbst ab.", "Die Karte «Grundregeln» zeigt, was heute im Hintergrund mitlaufen soll. Du musst nicht an alles gleichzeitig denken.", "«Mehr für heute» ganz unten ist zugeklappt: Rang-Weg, App-Übungen und ein Wegweiser durch die App.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach). Seltener Benutztes steckt dort unter «Mehr»."]],
+  today: ["Heute", ["Ganz oben steht, was jetzt dran ist: ein Schritt, ein Knopf. Mehr musst du im Moment nicht tun.", "Darunter steht dein Wochenziel mit der nächsten Aufgabe. Ohne Ziel setzt ein Tipp auf einen Vorschlag eins.", "«Heute zu tun» zeigt den Tag in drei Abschnitten: vorbereiten, spielen, auswerten. Offen ist nur der Abschnitt, der jetzt dran ist. Erledigtes hakt sich von selbst ab.", "«Dein nächstes Match» zeigt die eine Sache fürs Match. Du musst nicht an alles gleichzeitig denken.", "«Mehr für heute» ganz unten ist zugeklappt: dein Stand, deine Form, Rang-Weg, App-Übungen und ein Wegweiser durch die App.", "Alles andere erreichst du über die Leiste (Lernen, Spielen, Helden, Coach). Seltener Benutztes steckt dort unter «Mehr»."]],
   plan: ["Trainingsplan", ["Wähle oben den Tag. Ein Tag hat Abschnitte: Vorbereitung, Blöcke, Abschluss. Offen ist nur der Abschnitt, der jetzt dran ist. Sobald er abgehakt ist, klappt der nächste auf.", "Die runden Knöpfe unter dem Titel springen zu jedem Abschnitt. «Alle Schritte zeigen» klappt alle auf einmal auf.", "Nach jedem Match tippst du in der Ladezeit auf «Notiz» unten rechts. Die App ordnet die Notiz dem Match zu, so ist «Aufschreiben» am Tagesende schon erledigt.", "Das Abzeichen an einem Block sagt, in welchem Modus du spielst (Ranked, ungewertet, Custom Game).", "«Heute zählt nur das» zeigt, was neu ist und was du nur kurz auffrischst. Alles andere darfst du loslassen.", "Häkchen setzt die App teilweise selbst («automatisch erkannt»). Du kannst sie trotzdem jederzeit ändern."]],
   log: ["Matches", ["Die Seite hat drei Bereiche: «Offen» (geholte Matches, zu denen noch Fehler und Stärken fehlen, und Notizen, die noch auf ihr Match warten), «Eintragen» (ein Match selbst eintragen oder bearbeiten) und «Verlauf» (alle Matches).", "Beim Eintragen sind nur Held, Ergebnis und K/D/A Pflicht. Alles andere ist freiwillig und lässt sich nachtragen.", "Weiter unten im Formular: Todesursachen, Fehler, Stärken, die Grundregel-Fragen und, wenn du ein Bootcamp begonnen hast, die Bootcamp-Aufgabe. Je mehr du einträgst, desto genauer die Auswertung."]],
   analysis: ["Auswertung", ["Oben filterst du Zeitraum, Modus und Rolle.", "Darunter stehen Schaden, Heilung und Geblockt pro 10 Minuten, deine Winrate gegen jeden Gegner-Helden, Maps und Tageszeit.", "Fang mit einer Zahl an und frag dich, was du dagegen tun kannst. Mit wenigen Matches sind die Zahlen noch unsicher."]],
@@ -16323,7 +16399,7 @@ const PAGE_HELP = {
   watch: ["Zuschauen", ["Wähle oben eine Rolle oder einen Helden. Unten steht immer eine Aufgabe nach der anderen.", "Jede Aufgabe hat drei Schritte: erst im Kopf überlegen, dann zehn bis fünfzehn Minuten gezielt zuschauen, dann kurz antworten, ob du es gesehen hast. Aufschreiben musst du nichts.", "Unter der Aufgabe stehen konkrete Guide-Videos zum gewählten Helden (Titel und Kanal geprüft, Inhalt nicht). Die Streamer-Vorschläge kommen von Liquipedia und aus Kanalbeschreibungen. Schau zuerst kurz rein, ob der Stil zu dir passt."]],
   bootcamp: ["Helden-Bootcamp", ["Oben stehen drei Rollen-Kurse mit je sieben Stationen, darunter ein Kurs pro Held in vier Stufen: Grundlagen, Fortgeschritten, Profi, Experte. Jede Stufe endet mit einem Stufentest, der die nächste öffnet.", "Unter den Stationen steht «Im Match üben»: eine kleine Aufgabe nach der anderen. Nach dem Match trägst du unter «Match loggen» ein, ob du sie umgesetzt hast.", "Darunter steht «Von einem Streamer lernen»: eine Zuschau-Aufgabe zu diesem Helden. Sie öffnet die Seite «Zuschauen». Gemeistert wird dadurch nichts, sie ist eine Ergänzung.", "Hast du eine Rolle noch nie gespielt, empfiehlt dir der Helden-Kurs, zuerst den Rollen-Kurs zu machen. Das ist eine Empfehlung, du kannst sie überspringen.", "Gemeistert ist ein Held, wenn alle vier Stufentests bestanden und alle Match-Aufgaben gemeistert sind. Messbare Aufgaben (ab Stufe 3) prüft die App selbst an deinen letzten Matches."]],
   review: ["Review", ["Reihenfolge: zuerst Matches mit Notiz, die noch nicht ausgewertet sind (am schnellsten), dann Matches, die zu deinen Schwächen passen, dann alle anderen. Die ersten davon sind deine Tagesmenge, unter «Wenn du Lust und Zeit hast» stehen die weiteren.", "Pro Match drei kleine Schritte: jedem Tod eine Ursache geben, eine Stärke wählen, einen eigenen Vorsatz schreiben. Erst dann kannst du das Match abschliessen.", "Im Trainingsplan gehört das Review zu einem Block. Der Block und der Tagesabschluss bleiben gesperrt, bis die Matches ausgewertet sind."]],
-  video: ["Video-Review", ["Wähl oben eine Aufnahme von deinem PC (MP4). Sie bleibt auf dem PC, die App merkt sich nur deine Markierungen.", "Prüf das Match darunter. Die App schlägt eins vor, wenn der Dateiname oder das Dateidatum die Aufnahmezeit verrät.", "Beim Anschauen tippst du bei jedem Tod auf «Tod» (Taste T) und wählst die Ursache. Genauso deine Ult (U), Gegner-Ults (G), gewonnene (W) und verlorene Fights (V), gute Momente (B) und Notizen (N).", "Ein Tipp auf eine Zeit in der Liste springt fünf Sekunden davor ins Video. Unten übernimmst du Todesursachen und Ults ins Match; im Review steht beim Match, was du markiert hast.", "Neu als Versuch: «Video durchsuchen» schlägt dir Tode, Kills und Ults vor. Du sagst bei jedem Fund «Stimmt» oder «Stimmt nicht».", "Bist du fertig, tippst du auf «Auswertung abschliessen». Oben in «Deine Aufnahmen» siehst du dann, welche Aufnahmen schon ausgewertet sind."]],
+  video: ["Video-Review", ["Oben steht der Ablauf in drei Schritten: aufnehmen, am PC den Ordner wählen, anschauen. Die Haken zeigen, wo du stehst.", "«Videos in der Cloud»: Tipp auf «Highlights ansehen». Die App spielt nur die wichtigen Stellen. Das ganze Match lädst du am PC auf Knopfdruck hoch.", "Beim Anschauen markierst du mit einem Tipp: Tod (danach die Ursache), deine Ult (Wirkung), Gegner-Ult, Fights, gute Momente und Notizen. Ein Tipp auf eine Zeit springt fünf Sekunden davor.", "Unter «Funde» stehen die Vorschläge des PC-Programms. Du sagst «Stimmt» oder «Stimmt nicht».", "Fertig? «Auswertung abschliessen» übernimmt Todesursachen und Ults ins Match, wo dort noch nichts steht."]],
   weak: ["Schwächen", ["Die App sucht pro Held auffällige Zahlen in deinen letzten Matches (Standard 30, oben einstellbar: 12, 30, 60 oder alle) und zeigt passende Lektionen und Übungen.", "Eine Mission läuft über die nächsten 3 Matches mit dem Helden. Die App prüft sie allein aus deinen Zahlen.", "Das sind Hinweise aus kleinen Stichproben, keine Urteile."]],
   quiz: ["Quiz", ["Es gibt drei Arten: Counter-Training, Wissens-Check und Helden und Karten.", "Vor jeder Antwort schätzt du, wie sicher du bist. So merkst du, wo du dich überschätzt.", "Falsche Fragen kommen morgen wieder, richtige nach 1, 2, 4, 8 … Tagen."]]
 };
@@ -18146,7 +18222,8 @@ function animInner(id) {
       <div class="anim-nav"><button type="button" class="btn ghost small" data-animgo="prev" data-id="${id}">Zurück</button><button type="button" class="btn ghost small" data-animgo="restart" data-id="${id}">Von vorne</button></div>`;
   }
   const step = A.steps[st.s], ask = step.ask, got = ask ? st.ans[st.s] : undefined, locked = ask && got === undefined;
-  return `${head}<div class="anim-stage" data-s="${st.s}"><svg viewBox="0 0 480 ${A.h || 300}" role="img" aria-label="${esc(step.t)}">${step.svg()}</svg></div>
+  const svg = step.svg();
+  return `${head}<div class="anim-stage" data-s="${st.s}"><svg viewBox="0 0 480 ${A.h || 300}" role="img" aria-label="${esc(step.t)}">${svg}</svg></div>${animLegend(svg)}
     <p class="anim-cap">${esc(step.t)}</p>
     ${ask ? `<div class="anim-ask"><p style="margin:0 0 6px"><b>${esc(ask.q)}</b> <span class="small muted">Erst wählen, dann geht es weiter.</span></p>
       <div class="qopts">${ask.opts.map((o, i) => `<button type="button" data-animask="${i}" data-id="${id}" ${got !== undefined ? "disabled" : ""} class="${got === undefined ? "" : i === ask.a ? "right" : i === got ? "wrong" : ""}">${esc(o)}</button>`).join("")}</div>
@@ -18154,6 +18231,15 @@ function animInner(id) {
     <div class="anim-nav">${st.s > 0 ? `<button type="button" class="btn ghost small" data-animgo="prev" data-id="${id}">Zurück</button>` : ""}
       <button type="button" class="btn ghost small" data-animgo="replay" data-id="${id}" title="Diesen Schritt nochmal abspielen">Nochmal</button>
       <button type="button" class="btn small" data-animgo="next" data-id="${id}" ${locked ? "disabled" : ""}>${st.s === n - 1 ? "Zur Abschlussfrage" : "Weiter"}</button></div>`;
+}
+// Legende unter dem Bild: nur, was in diesem Schritt vorkommt (aus dem gezeichneten Bild gelesen). Farben wie überall in der App:
+// Tank blau, DPS orange, Support grün, Gegner grau.
+const ANIM_LEG = [["d-tk d-sup", "sup", "Support"], ["d-tk d-tank", "tank", "Tank"], ["d-tk d-dps", "dps", "DPS"], ["d-tk d-foe", "foe", "Gegner"]];
+function animLegend(svg) {
+  const tk = ANIM_LEG.filter(([c]) => svg.includes(c)).map(([, k, l]) => `<span><svg viewBox="-12 -12 24 24" aria-hidden="true">${DG.tk(0, 0, k, { r: 10 })}</svg>${l}</span>`);
+  if (tk.length < 2) return "";
+  const ln = [svg.includes('class="d-shot') && `<span><i class="lg-shot"></i>Schüsse</span>`, svg.includes('class="d-beam') && `<span><i class="lg-beam"></i>Heilung</span>`].filter(Boolean);
+  return `<div class="anim-legend small muted">${tk.concat(ln).join("")}</div>`;
 }
 const animHtml = id => ANIM[id] ? `<div class="anim" data-anim="${id}">${animInner(id)}</div>` : "";
 // Aufklappbar mit Fortschritt (für Trainingstag und Lexikon)
@@ -19166,19 +19252,36 @@ function vidCloudBar() {
 const vidRecRemindOn = () => platform() === "ps5" && (state.settings || {}).recRemind !== false;
 const vidRecRemindHtml = () => vidRecRemindOn() ? `<p class="small nmrec">${icon("play")}<span><b>Block fertig: Aufnahme speichern.</b> Create-Taste → letzte Spielszenen speichern (bis 1 Stunde). Dann landet der ganze Block im PC-Programm. <button type="button" class="linkbtn small" data-recremind="off">nicht mehr zeigen</button></span></p>` : "";
 
+// So läuft es mit Videos: drei Schritte, drei Geräte. Die Karte zeigt, wo du stehst, und was als Nächstes dran ist.
+function vidFlowHtml() {
+  const V = Object.values(vidStore()).filter(r => r && typeof r === "object"), pc = V.filter(r => r.pc), cl = vidCloudMatches().length;
+  const open = pc.filter(r => !r.done).length, last = vidUi.pcInfo ? "eben übernommen" : pc.length ? `zuletzt am ${new Date(Math.max(...pc.map(r => r.at || 0))).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" })}` : "";
+  const st = [
+    ["Aufnehmen", platform() === "ps5" || !platform() ? "PS5: nach jedem Block die Create-Taste, «letzte Spielszenen speichern»." : "Nimm deine Matches auf, am besten einen ganzen Block in einem Video.", "", true],
+    ["Am PC", "Videos in den Ordner «Neu» von Rivals Video kopieren. Das Programm wertet aus. Dann hier unten «Ganzen Ordner wählen».", pc.length ? `${plural(pc.length, "Aufnahme", "Aufnahmen")} übernommen${open ? `, ${open} noch offen` : ""} · ${last}` : "noch nichts übernommen", pc.length > 0],
+    ["Anschauen", "Am Handy oder PC: Highlights der wichtigen Matches unter «Videos in der Cloud» oder im Review beim Match.", cl ? `${plural(cl, "Match", "Matches")} in der Cloud` : "noch keine Videos in der Cloud", cl > 0]
+  ];
+  return `<ol class="vidflow">${st.map(([t, d, stand, ok], i) => `<li class="${ok && i ? "ok" : ""}"><span class="vfn">${ok && i ? "✓" : i + 1}</span><div><b>${t}</b><span class="small"> ${d}</span>${stand ? `<span class="small muted vfs">${esc(stand)}</span>` : ""}</div></li>`).join("")}</ol>
+    <p class="small muted" style="margin:6px 0 0">Du musst nicht jedes Match anschauen: Das Programm zählt mit, und du reviewst nur die wichtigen. Ohne PC-Programm geht es auch: Wähl unten ein einzelnes Video.</p>`;
+}
 function renderVideo(fresh) {
   const el = $("#videoBody"); if (!el) return;
   const rec = vidRec();
   if (!vidUi.bound) vidBind(el);
   if (!fresh && rec && $("#vidEl") && $("#vidEl").dataset.key === vidUi.key) { vidParts(); return; }
-  el.innerHTML = `<div class="card" id="vidCloud"${vidCloudShow() ? "" : " hidden"}>${vidCloudHtml()}</div><div class="card vidpick"><div class="card-head"><h2>${icon("play")}Video wählen</h2></div>
-      <p class="small" style="margin:0 0 8px">Wähl eine Aufnahme von deinem PC (MP4). Das Video bleibt auf deinem PC: Die App lädt nichts hoch und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
+  const pickBody = `<p class="small" style="margin:0 0 8px">Ein einzelnes Video bleibt auf deinem Gerät: Die App spielt es ab und merkt sich nur deine Markierungen. Wählst du dieselbe Datei später wieder, sind sie wieder da.</p>
       <label class="vidfile"><input type="file" id="vidFile" accept="video/*,.mp4,.mov,.webm,.mkv"><span>${icon("upload")}Video auswählen oder hierher ziehen</span></label>
       ${vidDirOk ? `<label class="vidfile vidfolder"><input type="file" id="vidDir" webkitdirectory multiple><span>${icon("list")}Ganzen Ordner wählen</span></label>
-      <p class="small muted" style="margin:4px 0 0">Wähl zum Beispiel deinen Ordner «Rivals Aufnahmen». Die App zeigt dann alle Videos darin mit «neu», «noch offen» oder «ausgewertet». Der Browser fragt dabei, ob er die Dateien «hochladen» soll: Die App lädt trotzdem nichts hoch, sie liest nur Namen und Grösse.</p>` : ""}
+      <p class="small muted" style="margin:4px 0 0">Wähl den Ordner «Rivals Videos» des PC-Programms (oder deinen eigenen Ordner mit Aufnahmen). Die App zeigt alle Videos darin mit «neu», «noch offen» oder «ausgewertet». Der Browser fragt dabei, ob er die Dateien «hochladen» soll. Hochgeladen werden nur die kleinen Stücke aus «Für die Cloud», und nur für deine wichtigen Matches, in deine private App. Deine Original-Videos bleiben auf dem PC.</p>` : ""}
       <div id="vidFolder">${vidFolderHtml()}</div>
       <div id="vidRecent">${vidRecentHtml()}</div>
-      <p class="small muted" style="margin:6px 0 0">Am besten geht MP4 (H.264), wie NVIDIA, Medal oder die Xbox Game Bar es speichern. OBS speichert oft MKV; stell dort für den Review MP4 ein.</p></div>
+      <p class="small muted" style="margin:6px 0 0">Am besten geht MP4 (H.264). Aufnahmen der PS5 (WebM) spielt der Browser meist auch ab.</p>`;
+  // Am Handy (keine Ordnerwahl) steht die Dateiwahl eingeklappt unten: Dort schaust du vor allem die Videos aus der Cloud.
+  const phone = !vidDirOk || (window.matchMedia && matchMedia("(max-width: 700px)").matches);
+  const pick = phone && !vidUi.file ? foldHtml("vid-pick", "Video von diesem Gerät wählen", pickBody, { icon: "upload", sub: "einzelne Datei oder ganzer Ordner (am PC)" }) : `<div class="card vidpick"><div class="card-head"><h2>${icon("upload")}Video oder Ordner wählen</h2></div>${pickBody}</div>`;
+  el.innerHTML = `<div class="card vidflowcard"><div class="card-head"><h2>${icon("play")}So läuft es mit deinen Videos</h2></div>${vidFlowHtml()}</div>
+    <div class="card" id="vidCloud"${vidCloudShow() ? "" : " hidden"}>${vidCloudHtml()}</div>
+    ${phone ? "" : pick}
     ${rec ? `<div class="card vidplay"><div class="card-head"><h2 class="vidname">${esc(rec.name)}</h2><span id="vidStatus">${vidStatusHtml(rec)}</span></div>
       ${vidUi.cloud ? `<div class="row" id="vidCloudBar" style="gap:6px;margin:0 0 6px"></div>` : ""}
       <div class="vidwrap"><video id="vidEl" data-key="${esc(vidUi.key)}" src="${vidSrc()}" controls playsinline preload="metadata"></video></div>
@@ -19186,7 +19289,8 @@ function renderVideo(fresh) {
       <div class="row vidnav"><button type="button" class="btn ghost small" data-vidstep="-5">−5 s</button><button type="button" class="btn ghost small" data-vidstep="5">+5 s</button>
         <span class="small muted">Tempo</span>${[0.5, 1, 2].map(r => `<button type="button" class="btn ghost small" data-vidrate="${r}">${String(r).replace(".", ",")}×</button>`).join("")}</div>
       <div id="vidParts"></div></div>` : ""}
-    <div class="card"><div class="card-head"><h2>${icon("ai")}Schritt 2: automatisch erkennen</h2><span class="badge">Versuch</span></div>${rec ? `<div id="vidScan">${vidScanHtml(rec)}</div>` : `<p class="small" style="margin:0">Wähl oben ein Video. Dann kann die App es durchsuchen und dir deine Tode, Kills und Ults vorschlagen. Du bestätigst jeden Fund.</p>`}</div>`;
+    ${phone ? pick : ""}
+    <div class="card"${rec ? "" : " hidden"}><div class="card-head"><h2>${icon("ai")}Funde: automatisch erkannt</h2><span class="badge">Versuch</span></div>${rec ? `<div id="vidScan">${vidScanHtml(rec)}</div>` : `<p class="small" style="margin:0">Wähl oben ein Video. Dann kann die App es durchsuchen und dir deine Tode, Kills und Ults vorschlagen. Du bestätigst jeden Fund.</p>`}</div>`;
   const v = $("#vidEl");
   if (v) {
     v.addEventListener("loadedmetadata", () => vidLoaded(v));
