@@ -153,6 +153,14 @@ Regeln: Pro Stufe drei Prüfungen nach denselben Regeln wie die Eternity-Meilens
 ## Todesursachen
 Hauptliste pro Rolle (`DEATH_BY_ROLE`), dazu «Weitere Ursachen» (`DEATH_MORE`, `DEATH_MORE_ROLE`, eingeklappt, `deathGridHtml`). Jede neue Ursache bekommt eine Gruppe in `DEATH_CAT` und, wenn sinnvoll, eine Fehler-Marke mit Übung in `DRILLS`. Ursachen in `DEATH_NEUTRAL` (bewusst geopfert, Lag, Sonstiges) werden nie zur Mission. Test: `t109.js`.
 
+## Übersichtlichkeit (Version 89)
+Wunsch der Nutzerin: nicht überladen, sofort klar, was zu tun ist, nicht zu viel Training auf einmal. Regeln für neue Karten und Seiten:
+- «Heute»: oben genau ein Schritt («Jetzt dran»), darunter das Wochenziel als Streifen (`goalStripHtml`), dann die eine Sache fürs Match. «Heute zu tun» zeigt drei Abschnitte, offen ist nur der aktuelle (`details.dphase`, `dayPhOpen`). Neues kommt nicht als weitere Karte auf «Heute», sondern in einen Abschnitt oder unter «Mehr für heute».
+- Kein neuer Tagesschritt ohne Not: Wöchentliches (Wochenziel) und Freiwilliges (Videos, Challenge) sind keine Tagesschritte.
+- Wochenziel sichtbar halten: Streifen auf «Heute» und oben auf «Woche»; ein Tipp auf einen Vorschlag legt ein Ziel an (`data-gquick`).
+- Videos: Der Ablauf steht als drei Schritte auf der Video-Seite (`vidFlowHtml`), nicht im Tagesablauf. Texte müssen ehrlich sagen, was hochgeladen wird.
+- Zählregeln des Plans (Blöcke, Abhaken) nur mit Tests ändern. Die Tests aus früheren Sitzungen gingen am 09.11.2026 verloren; vorhanden sind `t150` bis `t152`, `smoke.js`, `rv3.js` (Scratchpad).
+
 ## Die App selbst lernen (Einführung)
 Code: Abschnitt «Die App langsam kennenlernen» in `index.html` (`PAGE_HELP`, `renderPageHelp`, `APP_TOUR`, `tourCardHtml`, `TEAM_STEPS`, `applyTeamView`). Prinzipien: immer nur ein bis zwei Schritte zeigen (Überforderung vermeiden), Erledigtes selbst erkennen (`state.app.seen`), Hilfen von selbst zurücknehmen (Seitenhilfe klappt nach zwei Besuchen zu), Experten dürfen alles sehen («Alles zeigen»). Neue Seiten mit vielen Karten bekommen `data-tstep` oder einen Eintrag in `PAGE_HELP`. Texte erklären nur die App, keine Spielfakten. Test: `t75.js`.
 
