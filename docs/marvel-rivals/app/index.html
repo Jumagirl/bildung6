@@ -497,6 +497,10 @@ details.fade[open] > summary { display: block; margin-bottom: 4px; }
 .pbd > summary { cursor: pointer; }
 .pbgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 12px; margin: 8px 0 4px; }
 .pbgrid label { display: grid; gap: 3px; min-width: 0; }
+.pbgrid > div { min-width: 0; }
+.fillchips { margin-top: 5px; display: grid; gap: 4px; min-width: 0; }
+.fillchips .chips { gap: 5px; }
+.fillchips .chip { white-space: normal; text-align: left; border-radius: 12px; font-size: .78rem; padding: 4px 10px; max-width: 100%; overflow-wrap: anywhere; }
 .pbgrid input, .pbgrid textarea, .fxwhy input { width: 100%; }
 .fxwhy { display: grid; gap: 3px; flex-basis: 100%; margin-top: 4px; }
 .pbsum { margin: 0 0 10px; }
@@ -7466,12 +7470,33 @@ document.addEventListener("click", e => {
 // Beim Spielen notierst du kurz (Notiz), im Review schaust du genauer hin: Zu jedem Problem aus «Was lief schief?» (dasselbe Feld m.mistakes wie
 // im Match-Log) hältst du fest, wann es war (Zeit im Replay), was passiert ist, warum (Ursache) und was du nächstes Mal machst (Wenn-dann).
 // Gespeichert in m.probs = {Problem: {at, what, why, fix}}. Warum-Fragen und Wenn-dann-Pläne stammen aus dem Lerndesign; die Inhalte schreibst du selbst.
+// ---------- Antwort-Chips: antippen statt tippen ----------
+// Wunsch der Nutzerin: mehr anklickbare Antworten. Ein Tipp auf einen Chip schreibt seinen Text ins Feld daneben (data-fillbox umschliesst
+// Feld und Chips). «ersetzen» (Standard) setzt den Text, «add» hängt ihn an. Danach lässt sich der Text frei anpassen. Das Feld meldet die
+// Änderung wie beim Tippen (input, change), deshalb speichern die vorhandenen Stellen von selbst. Bewusst NICHT bei Fragen, bei denen du
+// etwas aus dem Kopf holen sollst (Bootcamp-Stationen, Rückblick «Erklär es einem Freund»): Dort ist das eigene Formulieren die Übung.
+const fillChipsHtml = (list, mode, hint) => { const l = [...new Set(list.map(t => String(t || "").trim()).filter(Boolean))]; return l.length ? `<div class="fillchips">${hint ? `<span class="small muted">${hint}</span>` : ""}<div class="chips">${l.map(t => `<button type="button" class="chip" data-fill="${esc(t)}"${mode === "add" ? ' data-fillmode="add"' : ""}>${esc(t)}</button>`).join("")}</div></div>` : ""; };
+document.addEventListener("click", e => {
+  const c = e.target.closest && e.target.closest("[data-fill]"); if (!c) return;
+  const box = c.closest("[data-fillbox]"), f = box && box.querySelector("input[type=text], textarea"); if (!f) return;
+  e.preventDefault();
+  const t = c.dataset.fill, cur = f.value.trim(), max = f.maxLength > 0 ? f.maxLength : 2000;
+  let v = t;
+  if (c.dataset.fillmode === "add" && cur) v = cur.includes(t) ? cur.replace(t, "").replace(/^[;,\s]+|[;,\s]+$/g, "").replace(/;\s*;/g, ";") : cur.replace(/[.;,]\s*$/, "") + "; " + t;
+  else if (cur === t) v = "";
+  f.value = v.slice(0, max);
+  f.dispatchEvent(new Event("input", { bubbles: true })); f.dispatchEvent(new Event("change", { bubbles: true }));
+  box.querySelectorAll("[data-fill]").forEach(x => x.classList.toggle("on", f.value.includes(x.dataset.fill)));
+});
+const PB_WHY = ["Schlechte Position", "Info gefehlt (nicht gesehen oder gehört)", "Zu gierig", "Fluchtfähigkeit nicht bereit", "Vom Team getrennt", "Zu spät reagiert"];
+const FX_WHY_NO = ["Nicht daran gedacht", "Zu hektisch im Fight", "Die Situation kam nicht vor", "Zu spät bemerkt", "Anderes war wichtiger", "Ich wusste nicht genau, wie"];
+const FX_WHY_YES = ["Vor jedem Fight bewusst daran gedacht", "Nach einem Fehler korrigiert", "Lief schon von allein", "Mit dem Team abgesprochen"];
 const PB_FIELDS = [["at", "Wann im Replay", "z. B. 04:12", "input"], ["what", "Was ist passiert?", "Kurz beschreiben, was du im Replay siehst", "area"], ["why", "Warum?", "Was war die Ursache? Position, Info gefehlt, zu gierig …", "area"], ["fix", "Nächstes Mal", "Wenn …, dann …", "input"]];
 const pbHas = p => !!p && PB_FIELDS.some(([k]) => String(p[k] || "").trim());
 function pbEditorHtml(labels, probs, attr, openSet) {
   return labels.map(l => { const p = probs[l] || {}, has = pbHas(p);
     return `<details class="pbd" ${has || (openSet && openSet.has(l)) ? "open" : ""}><summary><b>${esc(l)}</b> <span class="small muted">${has ? "festgehalten ✓" : "genauer festhalten"}</span></summary>
-      <div class="pbgrid">${PB_FIELDS.map(([k, lab, ph, kind]) => `<label class="small">${lab}${kind === "area" ? `<textarea rows="2" ${attr(l, k)} placeholder="${esc(ph)}">${esc(p[k] || "")}</textarea>` : `<input type="text" ${attr(l, k)} value="${esc(p[k] || "")}" placeholder="${esc(ph)}" maxlength="${k === "at" ? 20 : 200}">`}</label>`).join("")}</div></details>`; }).join("");
+      <div class="pbgrid">${PB_FIELDS.map(([k, lab, ph, kind]) => `<div data-fillbox><label class="small">${lab}${kind === "area" ? `<textarea rows="2" ${attr(l, k)} placeholder="${esc(ph)}">${esc(p[k] || "")}</textarea>` : `<input type="text" ${attr(l, k)} value="${esc(p[k] || "")}" placeholder="${esc(ph)}" maxlength="${k === "at" ? 20 : 200}">`}</label>${k === "why" ? fillChipsHtml(PB_WHY, "add") : k === "fix" ? fillChipsHtml([DRILLS[l]].concat(fqStarters(today()).filter(t => t !== "Wenn …, dann …").slice(0, 2)).map(t => String(t || "").slice(0, 200))) : ""}</div>`).join("")}</div></details>`; }).join("");
 }
 // Match loggen: unter «Was lief schief?» zu jedem gewählten Problem
 const probOpen = new Set();
@@ -14112,8 +14137,8 @@ function rvMatchHtml(x, open, L) {
     ${preset ? `<div class="note info" style="margin:0"><span class="ni" aria-hidden="true">i</span><div>Zu diesem Match stehen schon Angaben da. Prüf sie im Replay und schliess das Match dann ab.</div></div>` : ""}
     ${rvNoteHtml(m)}${vidRvHtml(m)}${rvCounterHint(m)}${rvRulesHtml(m)}
     ${fxIt.length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>${stepIt ? "Deine Aufgabe in diesem Match" : "Dein Fokus"} <span class="small muted">${stepIt ? "Hast du sie umgesetzt, und wie? Was nicht klappt, kommt in den nächsten Tagen wieder." : "freiwillig, dieselben Punkte wie in der Notiz"}</span></h4>${fxRowsHtml(fxIt, fxVals(m, fxIt), (it, v) => `data-rv="fx" data-id="${m.id}" data-k="${esc(it.key)}" data-v="${esc(v)}"`,
-      (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<label class="small fxwhy">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>`
-        : fxMissed(cur) ? `<label class="small fxwhy">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>` : "")}</div>` : ""}
+      (it, cur) => it.src === "step" && cur && !fxMissed(cur) ? `<div class="fxwhy" data-fillbox><label class="small">Wie hast du es umgesetzt? Woran siehst du es im Replay?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Zum Beispiel: vor jedem Fight zuerst nach Deckung geschaut" maxlength="200"></label>${fillChipsHtml(FX_WHY_YES, "add")}</div>`
+        : fxMissed(cur) ? `<div class="fxwhy" data-fillbox><label class="small">Warum hat es ${String(cur) === "teils" || String(cur) === "2" ? "nicht ganz" : "nicht"} geklappt?<input type="text" data-rvfxwhy="${m.id}" data-k="${esc(it.key)}" value="${esc(((m.qn || {}).fxWhy || {})[it.key] || "")}" placeholder="Was hat dich abgehalten? Was hast du im Replay gesehen?" maxlength="200"></label>${fillChipsHtml(FX_WHY_NO, "add")}</div>` : "")}</div>` : ""}
     ${rvPickHtml(m, fxIt)}
     ${(m.enemies || []).length ? `<div class="rvs"><h4><span class="rvn">${num()}</span>Wer hat dir am meisten Probleme gemacht? <span class="small muted">freiwillig, für Konter-Tipps und den Überblick über deine schwierigsten Gegner</span></h4>
       <div class="chips">${m.enemies.map(h => `<button type="button" class="chip ${m.nemesis === h ? "on" : ""}" data-rv="nem" data-id="${m.id}" data-h="${esc(h)}" aria-pressed="${m.nemesis === h}">${av(h, "sm")} ${esc(h)}</button>`).join("")}</div>${rvNemHint(m)}</div>` : ""}
@@ -14128,10 +14153,10 @@ function rvMatchHtml(x, open, L) {
     ${rvProbStepHtml(m, num())}
     <div class="rvs"><h4><span class="rvn">${num()}</span>Was lief gut? <span class="small muted">mindestens eins</span></h4>
       <div class="chips">${GOODS.map(g => `<button type="button" class="chip ${(m.goods || []).includes(g) ? "on" : ""}" data-rv="good" data-id="${m.id}" data-g="${esc(g)}" aria-pressed="${(m.goods || []).includes(g)}">${esc(g)}</button>`).join("")}</div></div>
-    <div class="rvs"><h4><span class="rvn">${num()}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
+    <div class="rvs" data-fillbox><h4><span class="rvn">${num()}</span>Dein Vorsatz <span class="small muted">ein Satz, mindestens vier Wörter</span></h4>
       <input type="text" class="pfield" data-rv-next="${m.id}" value="${esc(m.next || "")}" placeholder="Wenn …, dann …" aria-label="Vorsatz für das nächste Match" maxlength="200">
       <p class="small muted" style="margin:4px 0 0">Beispiel: «Wenn ein Diver auf mich springt, dann nutze ich sofort meine Fluchtfähigkeit.» Jedes Match braucht seinen eigenen Satz.</p>
-      ${(() => { const own = Object.entries(m.probs || {}).filter(([l]) => (m.mistakes || []).includes(l)).map(([, p]) => String(p.fix || "").trim()).filter(Boolean), ideas = [...new Set([...own, ...fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …")])]; return ideas.length ? `<details class="small" style="margin-top:4px" ${own.length ? "open" : ""}><summary>Ideen aus ${own.length ? "deinen Problem-Notizen und " : ""}deinem Lernstand</summary><ul class="wl" style="margin:4px 0 0">${ideas.map(t => `<li>${esc(t)}</li>`).join("")}</ul><p class="muted" style="margin:4px 0 0">Formuliere daraus deinen eigenen Satz für genau dieses Match.</p></details>` : ""; })()}</div>
+      ${(() => { const own = Object.entries(m.probs || {}).filter(([l]) => (m.mistakes || []).includes(l)).map(([, p]) => String(p.fix || "").trim()).filter(Boolean), ideas = [...new Set([...own, ...fqStarters(m.date || today()).filter(t => t !== "Wenn …, dann …")])]; return ideas.length ? fillChipsHtml(ideas.map(t => t.slice(0, 200)), "", `Ideen aus ${own.length ? "deinen Problem-Notizen und " : ""}deinem Lernstand. Ein Tipp übernimmt den Satz, danach kannst du ihn an dieses Match anpassen:`) : ""; })()}</div>
     <div class="rvfoot rvs" data-foot="${m.id}">${rvFootHtml(m, L)}</div></div></div>`;
 }
 // Reihenfolge fürs Review (Wunsch der Nutzerin): zuerst ältere Matches (früheres Datum, deren Replay bald verschwindet), auch wenn ein neues
@@ -15006,11 +15031,13 @@ function nugAfter(n, s, d) {
 }
 function reflectionHtml(n) {
   const r = dayGet(n).refl || {}, ds = deathStats(dayMatches(n).ms), top = ds.causes && ds.causes[0];
-  const f = (key, label, ph) => `<label class="mt">${label}<textarea class="pfield" rows="2" data-nf="${n}|refl|${key}" placeholder="${ph}">${esc(r[key] || "")}</textarea></label>`;
+  const f = (key, label, ph, chips) => `<div data-fillbox><label class="mt">${label}<textarea class="pfield" rows="2" data-nf="${n}|refl|${key}" placeholder="${ph}">${esc(r[key] || "")}</textarea></label>${chips || ""}</div>`;
+  const nextIdeas = [...new Set(dayMatches(n).ms.map(m => String(m.next || "").trim()).filter(t => rvWords(t) >= 4).concat(fqStarters(today()).filter(t => t !== "Wenn …, dann …")))].slice(0, 5);
   return foldHtml(`refl-${n}`, "Rückblick in drei Fragen", `<p class="lead" style="margin:0">Zwei Minuten, in eigenen Worten. Wer sich selbst etwas erklärt, behält es besser als jemand, der nur liest.</p>
     ${f("err", `<b>1. Fehler verstehen.</b> ${top ? `Heute bist du am häufigsten durch „${esc(top[0])}“ gestorben (${top[1]}×). Was hättest du in so einer Lage stattdessen getan?` : "Welcher Tod heute war am vermeidbarsten? Was hättest du stattdessen getan?"}`, "Meine Antwort …")}
     ${f("teach", "<b>2. Erklär es einem Freund.</b> Was war heute die wichtigste Idee? Ein Satz, ohne Fachwörter.", "Heute habe ich gelernt, dass …")}
-    ${f("next", "<b>3. Dein Wenn-dann-Satz für morgen.</b> Eine Situation, ein Verhalten.", "Wenn …, dann …")}`,
+    ${f("next", "<b>3. Dein Wenn-dann-Satz für morgen.</b> Eine Situation, ein Verhalten.", "Wenn …, dann …", fillChipsHtml(nextIdeas, "", "Aus deinen Vorsätzen von heute und deinem Lernstand, zum Antippen:"))}
+    <p class="small muted" style="margin:6px 0 0">Bei Frage 1 und 2 gibt es bewusst nichts zum Antippen: Das eigene Formulieren ist dort die Übung.</p>`,
     { icon: "edit", open: !dayGet(n).done, sub: "Fehler verstehen, erklären, Vorsatz" });
 }
 
