@@ -1081,6 +1081,7 @@ details.cp[open] summary::after { transform: rotate(180deg); }
 .d-cdbox-ok { fill: color-mix(in srgb, var(--good) 16%, var(--surface)); stroke: var(--good); stroke-width: 2; }
 .d-tick-g { fill: none; stroke: var(--good-text); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .d-proj { fill: var(--strategist); stroke: #fff; stroke-width: 1.5; }
+.d-proj-hit { fill: var(--duelist); stroke: #fff; stroke-width: 1.5; }
 .d-proj-miss { fill: var(--muted); stroke: #fff; stroke-width: 1.5; }
 .d-aim { fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round; }
 .d-hit { fill: none; stroke: var(--bad); stroke-width: 2; }
@@ -18657,7 +18658,7 @@ const anMap = {
   // Schema einer Karte: Hauptstrecke unten, Nebenweg oben, zwei Deckungen, eine Höhe
   base() {
     return AM.floor() + `<rect class="d-lane" x="20" y="150" width="440" height="70" rx="12"/>` + DG.t(240, 244, "Hauptstrecke", "d-txt2", "middle")
-      + `<path d="M40 150V60H420V150" fill="none" stroke="var(--grid)" stroke-width="22" stroke-linejoin="round"/>` + DG.t(240, 44, "Nebenweg", "d-txt2", "middle")
+      + `<path d="M40 150V60H420V150" fill="none" stroke="var(--surface-3)" stroke-width="22" stroke-linejoin="round" opacity=".7"/>` + DG.t(240, 44, "Nebenweg", "d-txt2", "middle")
       + `<rect class="d-cover" x="112" y="160" width="20" height="50" rx="6"/><rect class="d-cover" x="210" y="160" width="20" height="50" rx="6"/>`
       + AM.tk(330, 186, "tank", 18, "") + AM.tk(432, 186, "foe", 15);
   }
@@ -18696,10 +18697,10 @@ Object.assign(ANIM, {
   L22: { title: "Modi und Objective", steps: [
     { t: "Convoy: Ein Fahrzeug fährt eine Strecke entlang, die Fights wandern mit. Achte darauf, wohin es als Nächstes fährt, und such dir dort vorher eine Position.",
       svg: () => AM.floor() + anObj.track() + AM.move([90, 190], [250, 190], anObj.car(), { dur: 2.6 }) + `<rect class="d-cover" x="330" y="120" width="24" height="54" rx="6"/>` + AM.pulse(342, 147, 36)
-        + AM.path([[70, 130], [200, 110], [316, 150]], AM.you("sup", 16, true), { dur: 2.2 }) + AM.tk(432, 150, "foe", 15) + AM.tk(440, 232, "foe", 15) },
+        + AM.path([[70, 130], [200, 110], [300, 150]], AM.you("sup", 16), { dur: 2.2 }) + AM.tk(432, 150, "foe", 15) + AM.tk(440, 232, "foe", 15) },
     { t: "Domination: Ein Punkt muss gehalten werden. Kommt dein Team nach dem Respawn einzeln zurück, trifft es einzeln auf die Gegner.",
       svg: () => AM.floor() + anObj.zone(280, 150, 70) + AM.tk(320, 130, "foe", 15) + AM.tk(322, 176, "foe", 15) + AM.tk(280, 196, "foe", 15)
-        + [0, 1, 2].map(i => AM.dim(AM.path([[40, 150], [40, 150], [228, 150]], DG.tk(0, 0, ["tank", "dps", "sup"][i], { r: 14 }), { dur: 1 + i * 0.9, begin: 0.3 }), 1.5 + i * 0.9, 0.25)).join("") + AM.fade(AM.cross(228, 150, 10) + DG.lab(228, 184, "einzeln", "middle"), 3.6) },
+        + [0, 1, 2].map(i => AM.dim(AM.path([[40, 150], [40, 150], [188, 150]], DG.tk(0, 0, ["tank", "dps", "sup"][i], { r: 14 }), { dur: 1 + i * 0.9, begin: 0.3 }), 1.5 + i * 0.9, 0.25)).join("") + AM.fade(AM.cross(188, 150, 10) + DG.lab(150, 190, "einzeln", "middle"), 3.6) },
     { t: "Convergence: Zuerst wird ein Punkt erobert, danach das Fahrzeug begleitet. Erst Punkt-Fights, dann wandernde Fights.",
       svg: () => AM.floor() + AM.dim(anObj.zone(130, 130, 60), 1.6, 0.35) + AM.fade(DG.pin(130, 130, "1", "good"), 0.4) + anObj.track() + AM.fade(DG.pin(250, 240, "2", "good"), 1.8)
         + AM.fade(AM.move([150, 190], [330, 190], anObj.car(), { dur: 2, begin: 2 }), 1.8) },
@@ -18723,7 +18724,7 @@ Object.assign(ANIM, {
     { t: "Finde zwei Fluchtrouten: Wege, auf denen du dich zurückziehst, wenn dich ein Gegner anspringt. Im Fight hast du keine Zeit, erst einen Weg zu suchen.",
       svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.way("M180 186H60", 0.5) + AM.way("M190 172 60 100", 1.2) + AM.fade(DG.lab(70, 206, "Route 1") + DG.lab(70, 92, "Route 2"), 1.6) },
     { t: "Jetzt du: Du schaust nach vorne auf die Hauptstrecke. Ein Gegner fehlt dort.",
-      svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.fade(DG.t(432, 130, "wo ist der zweite?", "d-txt2", "middle"), 0.6),
+      svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.fade(DG.t(458, 136, "wo ist der zweite?", "d-txt2", "end"), 0.6),
       ask: { q: "Wohin schaust du noch?", opts: ["Nur weiter nach vorne", "Auf die Lebensbalken, sonst nirgends", "Auf den Boden vor mir", "Auf die Wege neben der Hauptstrecke: Von dort kommen Flanker"], a: 3,
         why: "Erkenne die Flankenrouten der Gegner: Schau dir die Wege neben der Hauptstrecke an. Sonst siehst du die Gegner erst, wenn sie schon bei dir sind." } },
     { t: "Der Flanker kommt über den Nebenweg von der Seite. Wer den Weg kennt, sieht ihn früh und kann pingen.",
@@ -18753,7 +18754,7 @@ Object.assign(ANIM, {
         why: "Verbrauch deine Cooldowns nicht alle gleichzeitig. Setz sie nacheinander ein. Sonst sind alle Fähigkeiten gleichzeitig weg, und du wartest ohne Hilfe auf den Cooldown." } },
     { t: "Nacheinander eingesetzt ist immer etwas bereit. Kommt der Diver, hast du den Escape noch.",
       svg: () => anTrade.lanes("Fähigkeit 1", "Fähigkeit 2", "Escape") + anTrade.head(0.4, 10) + anTrade.block(0.8, 2.6, 0, "Einsatz", "d-ult-ok", 0.4) + anTrade.ghost(2.8, 6, 0, "Cooldown", 0.9)
-        + anTrade.block(4, 5.8, 1, "Einsatz", "d-ult-ok", 1.4) + anTrade.ghost(6, 9.2, 1, "Cooldown", 1.9) + anTrade.ghost(0.8, 8, 2, "aufgehoben", 0.4) + anTrade.block(8.2, 10.4, 2, "Diver: Escape ✓", "d-ult-ok", 2.8) }
+        + anTrade.block(4, 5.8, 1, "Einsatz", "d-ult-ok", 1.4) + anTrade.ghost(6, 9.2, 1, "Cooldown", 1.9) + anTrade.ghost(0.8, 7.2, 2, "aufgehoben", 0.4) + anTrade.block(7.4, 11.6, 2, "Diver: Escape ✓", "d-ult-ok", 2.8) }
   ], quiz: { id: "L26-A", l: "L26", lvl: 1, q: "Dein Escape ist noch im Cooldown. Gehst du nach vorne?",
     opts: ["Ja, vorne heile ich besser", "Ja, der Cooldown ist ja gleich vorbei", "Egal, ich bleibe einfach stehen", "Nein: Kommt ein Gegner, habe ich keinen Ausweg"], a: 3,
     why: "„Nein: Kommt ein Gegner, habe ich keinen Ausweg“ stimmt: Ohne Escape gehst du nicht nach vorne (L26).\nEin typischer Fehler ist, alle Fähigkeiten am Anfang des Fights rauszufeuern: Kommt später ein Diver, ist der Escape im Cooldown." } },
@@ -18791,8 +18792,8 @@ Object.assign(ANIM, {
       svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Die Ults deines Teams", "d-txt") + AM.charge(44, 52, 300, 100, 100) + AM.charge(44, 96, 300, 60, 100, 0.4) + AM.charge(44, 140, 300, 75, 100, 0.4)
         + [0, 1, 2].map(i => AM.fade(DG.t(360, 63 + i * 44, "bereit ✓", "d-txt2"), 1.8)).join("") + AM.say(120, 196, 240, "Jetzt: ein Fight, drei Ults", 2.3) },
     { t: "Nimm Fights nur an, wenn ihr vollständig seid: Alle leben, und die Ults sind bereit. Mit fehlenden Mitspielern wird der Rückstand nur grösser.",
-      svg: () => AM.floor() + anFight.labels() + anFight.own(4, 76, 70, 3) + AM.fade(AM.path([[20, 250], [76, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.4, begin: 0.8 }), 0.6) + AM.fade(AM.path([[20, 250], [116, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.8, begin: 0.8 }), 0.6)
-        + anFight.foes(6, 364, 70) + AM.fade(DG.chip(140, 248, 200, "vollständig: jetzt", "good"), 2.8) },
+      svg: () => DG.floor(6, 6, 468, 250) + anFight.labels() + anFight.own(4, 76, 70, 3) + AM.fade(AM.path([[20, 236], [76, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.4, begin: 0.8 }), 0.6) + AM.fade(AM.path([[20, 236], [116, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.8, begin: 0.8 }), 0.6)
+        + anFight.foes(6, 364, 70) + AM.fade(DG.chip(140, 214, 200, "vollständig: jetzt", "good"), 2.8) },
     { t: "Bleib ruhig. Frust macht dich hektisch, und du spielst schlechter. Bleib bei deinem Plan: warten, sammeln, dann ein Fight.",
       svg: () => anTrade.lanes("Plan", "Ults", "Team") + anTrade.head(0.4, 11) + anTrade.ghost(0.6, 4, 0, "warten", 0.4) + anTrade.ghost(4.2, 7.6, 0, "sammeln", 1.2) + anTrade.block(7.8, 11.2, 0, "ein Fight ✓", "d-ult-ok", 2.2)
         + AM.charge(46, 112, 250, 20, 100, 0.5) + anTrade.ghost(0.6, 7.6, 2, "alle leben, zusammen", 1.6) }
@@ -18801,6 +18802,152 @@ Object.assign(ANIM, {
     why: "„Nein: Mit fehlenden Mitspielern wird der Rückstand nur grösser“ stimmt: Nimm Fights nur an, wenn ihr vollständig seid (L28).\nEin typischer Fehler ist, in jeden Fight zu rennen, um sofort aufzuholen: Ihr verliert einen Fight nach dem anderen und habt nie Ults." } }
 });
 WQ.push(...["L1", "L22", "L23", "L26", "L27", "L28"].map(id => ANIM[id].quiz));
+
+// Stapel 4: Tank (L31 bis L33) und DPS (L34 bis L36)
+const anFront = {
+  // dein Team hinten links, Gegner rechts; du bist der Tank
+  team: (o) => AM.tk(110, 110, "sup", 15, (o || {}).lab === false ? "" : "Support") + AM.tk(96, 200, "sup", 15) + AM.tk(160, 60, "dps", 15),
+  foes: () => AM.tk(400, 150, "foe", 20, "Tank") + AM.tk(440, 80, "foe", 14) + AM.tk(444, 220, "foe", 14),
+  me: (r) => AM.you("tank", r || 22)
+};
+const anDd = {
+  // du bist DPS; Gegner mit Rollen beschriftet
+  foes: (o) => { o = o || {}; return AM.tk(330, 150, "foe", 20, "Tank") + (o.noDps ? "" : AM.tk(400, 76, "foe", 15, "DPS")) + (o.noSup ? "" : AM.tk(432, 200, "foe", 15, "Support")); },
+  me: () => AM.you("dps", 17)
+};
+
+Object.assign(ANIM, {
+  L31: { title: "Tank: Frontline und Schutz", steps: [
+    { t: "Vorne bleiben: Steh vor deinem Team, auch wenn dein Held aus der Distanz kämpft. Hinter dir sammelt sich dein Team.",
+      svg: () => AM.floor() + anFront.team() + anFront.foes() + AM.path([[70, 150], [70, 150], [230, 150]], anFront.me(), { dur: 2 }) + AM.fade(AM.shot("M378 150 256 150") + AM.shot("M426 86 250 140", true), 2.2) },
+    { t: "Jetzt du: Gerade schiesst niemand auf euch.",
+      svg: () => AM.floor() + anFront.team() + anFront.foes() + `<g transform="translate(230 150)">${anFront.me()}</g>` + `<path d="M262 118Q290 150 262 182" fill="none" stroke="var(--vanguard)" stroke-width="6" stroke-linecap="round"/>` + DG.t(240, 250, "Dein Schild", "d-txt2") + AM.bar(320, 240, 130, 12, 100, 100, "d-charge"),
+      ask: { q: "Hältst du den Schild weiter hoch?", opts: ["Ja, immer: sicher ist sicher", "Ja, bis er leer ist", "Nein: Schutz nur, wenn Schaden kommt", "Nein, ich nutze ihn gar nicht"], a: 2,
+        why: "Halte Schild oder Schutz-Fähigkeit hoch, wenn Schüsse oder eine Ult kommen, sonst senkst du sie. Hältst du ihn die ganze Zeit hoch, ist er leer, wenn die gegnerische Ult kommt." } },
+    { t: "Schutz nur bei Schaden: hoch, wenn Schüsse oder eine Ult kommen, sonst senken. So ist er da, wenn es zählt.",
+      svg: () => anTrade.lanes("Gegner", "Dein Schild", "Dauernd hoch") + anTrade.head(0.4, 11) + anTrade.block(1.4, 3.6, 0, "Schüsse", "d-ult-foe", 0.5) + anTrade.block(7, 9.6, 0, "Ihre Ult", "d-ult-foe", 1.6)
+        + anTrade.block(1.4, 3.6, 1, "hoch", "d-ult-ok", 0.7) + anTrade.ghost(3.8, 6.8, 1, "gesenkt", 1.1) + anTrade.block(7, 9.6, 1, "hoch ✓", "d-ult-ok", 1.8)
+        + AM.dim(anTrade.block(0.6, 6.6, 2, "hoch … hoch … hoch", "d-ult-no", 0.5), 1.8, 0.5) + AM.fade(DG.t(anTrade.X(8.3), 196, "leer", "d-txtb", "middle") + AM.cross(anTrade.X(8.3), 214, 7), 2.2) },
+    { t: "Umschalten: Laden deine Schutz-Fähigkeiten oder fliehen die Gegner, machst du Schaden. Kommt wieder Druck, schützt du wieder.",
+      svg: () => AM.floor() + anFront.team() + `<g transform="translate(230 150)">${anFront.me()}</g>` + AM.move([400, 150], [440, 150], DG.tk(0, 0, "foe", { r: 20 }), { dur: 1.6 }) + AM.hp(430, 180, 80, 45, 1) + AM.shot("M254 150 404 150")
+        + AM.ring(232, 250, 10, 4) + DG.t(250, 255, "Schild lädt", "d-txt2") },
+    { t: "Gegner beschäftigen: Je mehr sie auf dich werfen, desto weniger treffen dein Team. Halte durch, solange dein Support dich heilen kann.",
+      svg: () => AM.floor() + anFront.team() + anFront.foes() + `<g transform="translate(230 150)">${anFront.me()}</g>` + AM.shot("M378 150 256 150") + AM.shot("M428 86 250 138") + AM.shot("M432 214 250 162")
+        + AM.beam("M126 116 208 142") + AM.hp(230, 200, 45, 80, 0.8, 50) }
+  ], quiz: { id: "L31-A", l: "L31", lvl: 1, q: "Dein Tank-Held kämpft aus der Distanz. Wo stehst du?",
+    opts: ["Hinter meinem Team, von dort schiesse ich ja", "Ganz hinten am Spawn", "Allein auf einer Flanke", "Trotzdem vor meinem Team"], a: 3,
+    why: "„Trotzdem vor meinem Team“ stimmt: Steh vor deinem Team, auch wenn dein Held aus der Distanz kämpft. Hinter dir sammelt sich dein Team (L31).\nEin typischer Fehler ist, hinter dem Team zu stehen: Der Schaden trifft dann deine Supports." } },
+
+  L32: { title: "Tank: Raum und Grenzen", steps: [
+    { t: "Geh Schritt für Schritt nach vorne, solange dein Support dich sieht und mitkommt.",
+      svg: () => AM.floor() + AM.path([[120, 150], [120, 150], [190, 150], [190, 150], [260, 150]], anFront.me(), { dur: 3.6 }) + AM.path([[50, 190], [50, 190], [50, 190], [120, 190], [120, 190], [190, 190]], DG.tk(0, 0, "sup", { r: 15 }) + DG.t(0, 30, "Support", "d-txt2", "middle"), { dur: 4.2 })
+        + AM.move([360, 110], [420, 110], DG.tk(0, 0, "foe", { r: 15 }), { dur: 3, begin: 0.8 }) + AM.move([370, 200], [430, 200], DG.tk(0, 0, "foe", { r: 15 }), { dur: 3, begin: 0.8 }) },
+    { t: "Jetzt du: Die Gegner weichen bis zu ihrem Spawn zurück.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="392" y="40" width="70" height="220" rx="12"/>` + DG.t(427, 34, "Spawn", "d-txt2", "middle") + `<g transform="translate(230 150)">${anFront.me()}</g>` + AM.tk(120, 190, "sup", 15, "Support")
+        + AM.move([330, 110], [420, 110], DG.tk(0, 0, "foe", { r: 15 }), { dur: 1.8 }) + AM.move([340, 200], [428, 200], DG.tk(0, 0, "foe", { r: 15 }), { dur: 1.8 }),
+      ask: { q: "Läufst du hinterher?", opts: ["Ja, bis in den Spawn", "Nein: Am Spawn kommen ständig frische Gegner", "Ja, mein Support schafft das allein", "Ja, Kills gehen vor"], a: 1,
+        why: "Läufst du bis zum gegnerischen Spawn, bist du zu weit. Dort kommen ständig frische Gegner, und du stirbst ohne Heilung." } },
+    { t: "Am Spawn kommen ständig frische Gegner. Wer allein hinläuft, stirbt ohne Heilung.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="392" y="40" width="70" height="220" rx="12"/>` + DG.t(427, 34, "Spawn", "d-txt2", "middle") + `<g transform="translate(230 150)">${anFront.me()}</g>` + AM.tk(120, 190, "sup", 15, "Support")
+        + AM.path([[230, 150], [300, 150], [366, 150]], `<g opacity=".4">${DG.tk(0, 0, "tank", { r: 20 })}</g>`, { dur: 1.6, begin: 0.5 }) + [70, 120, 180, 230].map((y, i) => AM.fade(DG.tk(424, y, "foe", { r: 14 }), 1.2 + i * 0.4)).join("")
+        + AM.fade(AM.shot("M410 120 386 142") + AM.shot("M410 180 386 158") + AM.cross(366, 150, 12) + DG.lab(330, 196, "ohne Heilung", "middle"), 2.8) },
+    { t: "Mit den Ults starten: Hat dein Team Ults bereit, wartest du auf sie und geht ihr zusammen rein. Und: Objective vor Kills.",
+      svg: () => AM.floor() + AM.charge(60, 30, 120, 70, 100, 0.4) + AM.charge(60, 54, 120, 85, 100, 0.4) + AM.fade(DG.t(190, 52, "bereit ✓", "d-txt2"), 1.7)
+        + AM.path([[150, 150], [150, 150], [270, 150]], anFront.me(), { dur: 3.4 }) + AM.path([[80, 110], [80, 110], [200, 110]], DG.tk(0, 0, "dps", { r: 15 }), { dur: 3.4 }) + AM.path([[70, 200], [70, 200], [190, 200]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 3.4 })
+        + AM.tk(410, 110, "foe", 15) + AM.tk(420, 200, "foe", 15) },
+    { t: "Mobile Tanks dürfen stören: kurz in die Gegner springen, damit sie Zeit und Fähigkeiten an dir verschwenden. Geh zurück, bevor du stirbst, und mach das nicht ständig.",
+      svg: () => AM.floor() + AM.tk(90, 190, "sup", 15, "Support") + AM.tk(410, 100, "foe", 15) + AM.tk(424, 200, "foe", 15) + AM.tk(350, 150, "foe", 17)
+        + AM.path([[180, 150], [260, 90], [330, 130], [330, 130], [260, 90], [180, 150]], anFront.me(20), { dur: 4 }) + AM.fade(AM.shot("M396 104 348 126", true) + AM.shot("M410 196 344 140", true), 1.4) + DG.t(40, 262, "Dein Leben", "d-txt2") + AM.bar(130, 252, 200, 12, 100, 45, null, 1.2) }
+  ], quiz: { id: "L32-A", l: "L32", lvl: 1, q: "Ihr haltet den Punkt, ein Gegner flieht. Was tust du als Tank?",
+    opts: ["Den Punkt halten: Objective vor Kills", "Ihm hinterherjagen", "Allein zum gegnerischen Spawn laufen", "Nie mehr nach vorne gehen"], a: 0,
+    why: "„Den Punkt halten: Objective vor Kills“ stimmt: Jagst du einzelnen Gegnern hinterher, fehlt deinem Team der Schutz. Den Druck auf einzelne Gegner machen deine DPS (L32).\nEin typischer Fehler ist, den Punkt zu verlassen, um einen fliehenden Gegner zu jagen." } },
+
+  L33: { title: "Tank: Flanker und Peel", steps: [
+    { t: "Schau zurück: Prüf zwischendurch, wo deine Supports stehen und ob jemand von der Seite kommt.",
+      svg: () => AM.floor() + anFront.team() + anFront.foes() + `<g transform="translate(250 150)">${anFront.me()}</g>` + AM.way("M226 144 132 116", 0.5) + AM.way("M228 160 118 196", 0.9)
+        + AM.fade(AM.path([[40, 262], [40, 262], [60, 240]], DG.tk(0, 0, "foe", { r: 14 }) + DG.t(34, 6, "Flanker", "d-txt2"), { dur: 2, begin: 1.4 }), 1.3) },
+    { t: "Siehst du einen Flanker, markierst du ihn mit einem Ping und sagst es deinem Team. Dann kann es sich anders hinstellen.",
+      svg: () => AM.floor() + AM.tk(160, 60, "dps", 15) + anFront.foes() + `<g transform="translate(250 150)">${anFront.me()}</g>` + DG.tk(60, 240, "foe", { r: 14 }) + AM.ping(86, 222, 0.5)
+        + AM.move([110, 110], [150, 120], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.4, begin: 1.2 }) + AM.move([96, 200], [170, 180], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.4, begin: 1.2 }) + AM.say(250, 250, 200, "„Flanker hinten links.“", 0.6) },
+    { t: "Jetzt du: Der Flanker greift deinen Support an.",
+      svg: () => AM.floor() + AM.tk(160, 60, "dps", 15) + anFront.foes() + `<g transform="translate(250 150)">${anFront.me()}</g>` + AM.tk(110, 110, "sup", 15) + AM.tk(96, 200, "sup", 15) + AM.hp(96, 224, 100, 45, 0.9)
+        + AM.path([[40, 262], [66, 222]], DG.tk(0, 0, "foe", { r: 14 }), { dur: 0.8 }) + AM.fade(AM.shot("M72 214 86 206"), 1),
+      ask: { q: "Was tust du?", opts: ["Den Flanker quer über die Karte jagen", "Kurz umdrehen und helfen, dann sofort wieder nach vorne", "Nichts, vorne ist wichtiger", "Zum Spawn zurücklaufen"], a: 1,
+        why: "Peel, ohne die Front aufzugeben: Dreh dich kurz zum Flanker und hilf, ihn wegzuholen. Danach gehst du sofort wieder nach vorne. Jagst du ihn quer über die Karte, laufen die gegnerischen Tanks durch die Lücke." } },
+    { t: "Kurz umdrehen, den Flanker wegholen, sofort wieder nach vorne. So bleibt die Front zu.",
+      svg: () => AM.floor() + AM.tk(160, 60, "dps", 15) + anFront.foes() + AM.tk(110, 110, "sup", 15) + AM.tk(96, 200, "sup", 15) + AM.hp(96, 224, 45, 80, 2.6)
+        + AM.path([[250, 150], [150, 196], [150, 196], [250, 150]], anFront.me(), { dur: 4, begin: 0.3 }) + AM.dim(AM.path([[66, 222], [66, 222], [30, 268]], DG.tk(0, 0, "foe", { r: 14 }), { dur: 2.6, begin: 0.3 }), 2.6, 0.3) + AM.fade(AM.shot("M132 204 84 220"), 1.3) },
+    { t: "Springt ein gegnerischer Duelist in deine Backline, drückst du die gegnerischen Tanks weg. Dein Team holt den Angreifer. Der Kill muss nicht deiner sein.",
+      svg: () => AM.floor() + AM.tk(110, 110, "sup", 15) + AM.tk(96, 200, "sup", 15) + AM.tk(170, 70, "dps", 15) + DG.tk(140, 160, "foe", { r: 14 }) + AM.hp(140, 182, 100, 10, 1) + AM.shot("M166 86 146 142") + AM.shot("M110 196 128 172") + AM.fade(AM.cross(140, 160, 10), 2.4)
+        + AM.move([260, 150], [320, 150], anFront.me(), { dur: 1.8 }) + AM.move([340, 150], [420, 150], DG.tk(0, 0, "foe", { r: 20 }) + DG.t(0, 36, "Tank", "d-txt2", "middle"), { dur: 1.8 }) }
+  ], quiz: { id: "L33-A", l: "L33", lvl: 1, q: "Du siehst als Tank einen Flanker von der Seite kommen. Was tust du zuerst?",
+    opts: ["Nichts sagen und weiter nach vorne schauen", "Ihn quer über die Karte jagen", "Ihn mit einem Ping markieren und ansagen", "Die Front ganz aufgeben"], a: 2,
+    why: "„Ihn mit einem Ping markieren und ansagen“ stimmt: Dann kann sich dein Team anders hinstellen (L33).\nEin typischer Fehler ist, nichts zu sagen, wenn du einen Flanker siehst: Dein Team wird überrascht." } },
+
+  L34: { title: "DPS: Zielauswahl", steps: [
+    { t: "Reihenfolge: zuerst gegnerische Supports, dann DPS, Tanks zuletzt.",
+      svg: () => AM.floor() + AM.tk(90, 110, "tank", 19) + `<g transform="translate(150 200)">${anDd.me()}</g>` + anDd.foes() + AM.fade(DG.pin(432, 156, "1", "good"), 0.5) + AM.fade(DG.pin(400, 32, "2", "good"), 1.1) + AM.fade(DG.pin(330, 106, "3", "good"), 1.7) + AM.fade(AM.shot("M168 200 414 200"), 2.2) },
+    { t: "Isolierte Ziele: Steht ein Gegner weit weg von seinem Team, greif ihn an. Danach gehst du zurück zu deinem Team.",
+      svg: () => AM.floor() + AM.tk(90, 150, "tank", 19) + anDd.foes({ noDps: true }) + AM.tk(250, 44, "foe", 15, "allein") + AM.hp(250, 86, 100, 10, 1.8)
+        + AM.path([[150, 200], [200, 110], [200, 110], [200, 110], [150, 200]], anDd.me(), { dur: 4.4 }) + AM.fade(AM.shot("M208 96 240 60"), 1.5) + AM.fade(AM.cross(250, 44, 10), 2.9) },
+    { t: "Jetzt du: Du greifst gerade an. Da springt ein gegnerischer Duelist auf deine Supports.",
+      svg: () => AM.floor() + AM.tk(90, 110, "tank", 19) + AM.tk(70, 220, "sup", 15, "Support") + AM.hp(70, 262, 100, 40, 1.2) + `<g transform="translate(240 150)">${anDd.me()}</g>` + anDd.foes({ noDps: true })
+        + AM.path([[400, 76], [240, 240], [104, 222]], DG.tk(0, 0, "foe", { r: 15 }), { dur: 1.2 }) + AM.shot("M258 150 308 150", true),
+      ask: { q: "Was tust du?", opts: ["Weiter angreifen, die Supports schaffen das", "Den gegnerischen Tank angreifen", "Umdrehen und meinen Supports helfen", "Zum Spawn laufen"], a: 2,
+        why: "Springt ein gegnerischer Duelist auf deine Supports, drehst du um und hilfst. Sonst fehlt dir nach deinem nächsten Angriff die Heilung." } },
+    { t: "Du drehst um und hilfst. Dein Support überlebt, und du hast nach deinem nächsten Angriff wieder Heilung.",
+      svg: () => AM.floor() + AM.tk(90, 110, "tank", 19) + AM.tk(70, 220, "sup", 15, "Support") + AM.hp(70, 262, 40, 85, 2.6) + anDd.foes({ noDps: true }) + DG.tk(104, 222, "foe", { r: 15 }) + AM.hp(132, 250, 100, 5, 1.4)
+        + AM.path([[240, 150], [176, 200]], anDd.me(), { dur: 1 }) + AM.fade(AM.shot("M160 206 122 218"), 1.2) + AM.fade(AM.cross(104, 222, 10), 2.6) + AM.fade(AM.beam("M84 214 158 204"), 3) },
+    { t: "Tanks zuletzt: Den Tank greifst du an, wenn seine Supports schon gefallen sind. Ohne sein Team hält er nicht lange.",
+      svg: () => AM.floor() + AM.tk(90, 110, "tank", 19) + `<g transform="translate(150 200)">${anDd.me()}</g>` + AM.tk(330, 150, "foe", 20, "Tank") + `<g opacity=".35">${DG.tk(432, 200, "foe", { r: 15 })}${DG.tk(400, 76, "foe", { r: 15 })}</g>` + AM.cross(432, 200, 10) + AM.cross(400, 76, 10)
+        + AM.shot("M168 196 308 156") + AM.shot("M110 114 308 146") + AM.hp(330, 108, 100, 15, 0.8, 50) }
+  ], quiz: { id: "L34-A", l: "L34", lvl: 1, q: "Ein Gegner steht mitten in seinem Team. Greifst du ihn allein an?",
+    opts: ["Ja, Hauptsache Schaden", "Nein: Ich nehme ein isoliertes Ziel oder das Ziel, das mein Team gerade angreift", "Ja, wenn er ein Tank ist", "Ja, und ich bleibe danach dort stehen"], a: 1,
+    why: "„Nein: Ich nehme ein isoliertes Ziel oder das Ziel, das mein Team gerade angreift“ stimmt: Ein Gegner allein ist ein gutes Ziel, und Fokusfeuer geht auf das Ziel deines Teams (L34).\nEin typischer Fehler ist, einen Gegner mitten in seinem Team anzugreifen und allein zu sterben." } },
+
+  L35: { title: "DPS: Flanken mit Plan", steps: [
+    { t: "Winkel wählen: eine Erhöhung oder ein Platz seitlich vom Hauptweg. Steh nicht mitten im Weg, auf den alle schiessen.",
+      svg: () => AM.floor() + `<rect class="d-lane" x="20" y="130" width="440" height="60" rx="12"/>` + DG.t(60, 210, "Hauptweg", "d-txt2") + AM.tk(410, 144, "foe", 15) + AM.tk(424, 178, "foe", 15) + `<rect class="d-cover" x="230" y="40" width="96" height="22" rx="7"/>` + DG.t(278, 34, "Höhe", "d-txt2", "middle")
+        + `<g opacity=".45">${DG.tk(200, 160, "dps", { r: 16 })}</g>` + AM.shot("M394 146 220 158") + AM.shot("M408 176 220 164") + AM.hp(200, 184, 100, 10, 0.6) + AM.path([[120, 240], [200, 90], [278, 84]], anDd.me(), { dur: 2.4 }) },
+    { t: "Mit dem Tank zusammen: Geh rein, wenn dein Tank vorne den Schaden nimmt und die Gegner beschäftigt.",
+      svg: () => AM.floor() + `<rect class="d-lane" x="20" y="130" width="440" height="60" rx="12"/>` + AM.tk(410, 144, "foe", 15) + AM.tk(424, 178, "foe", 15) + AM.move([90, 160], [260, 160], DG.tk(0, 0, "tank", { r: 20 }) + DG.t(0, 36, "Tank", "d-txt2", "middle"), { dur: 1.6 })
+        + AM.fade(AM.shot("M394 148 282 158") + AM.shot("M408 176 282 164"), 1.8) + AM.path([[120, 60], [120, 60], [330, 60]], anDd.me(), { dur: 3.6, begin: 0.3 }) + AM.fade(DG.chip(250, 250, 200, "Gegner schauen zum Tank", "good"), 2.2) },
+    { t: "Rein und raus: Triff ein Ziel und geh wieder raus. Bleib nicht stehen, wenn sich mehrere Gegner zu dir drehen.",
+      svg: () => AM.floor() + `<rect class="d-lane" x="20" y="130" width="440" height="60" rx="12"/>` + AM.tk(260, 160, "tank", 20) + AM.tk(410, 144, "foe", 15) + AM.hp(410, 168, 100, 15, 1.8) + AM.tk(424, 200, "foe", 15)
+        + AM.path([[200, 60], [380, 70], [380, 70], [380, 70], [200, 60]], anDd.me(), { dur: 4.4 }) + AM.fade(AM.shot("M386 86 406 128"), 1.3) + AM.fade(AM.cross(410, 144, 10), 2.9) },
+    { t: "Jetzt du: Dein Ziel flieht mit wenig Leben zu seinen Supports.",
+      svg: () => AM.floor() + AM.tk(120, 160, "tank", 20) + `<g transform="translate(260 90)">${anDd.me()}</g>` + AM.tk(430, 190, "foe", 15, "Support") + AM.tk(440, 110, "foe", 15) + AM.path([[320, 110], [380, 150], [404, 170]], DG.tk(0, 0, "foe", { r: 15 }) + DG.hp(-20, -30, 40, 15, 7), { dur: 2 }),
+      ask: { q: "Was tust du?", opts: ["Hinterher, bis zum Spawn", "Allein gegen alle weiterkämpfen", "Mitten im Hauptweg stehen bleiben", "Ihn gehen lassen"], a: 3,
+        why: "Nicht nachjagen: Flieht ein Gegner zu seinem Spawn oder zu seinen Supports, lass ihn gehen. Stehen mehrere Gegner zusammen, greifst du nicht allein an, ausser mit deiner Ult." } },
+    { t: "Du lässt ihn gehen und gehst zurück zum Team. Und nach einem Tod wartest du auf dein Team, statt allein zurückzulaufen.",
+      svg: () => AM.floor() + AM.tk(120, 160, "tank", 20) + AM.tk(430, 190, "foe", 15, "Support") + AM.tk(440, 110, "foe", 15) + DG.tk(404, 170, "foe", { r: 15 }) + AM.hp(404, 140, 15, 80, 1.6) + AM.beam("M420 186 410 178")
+        + AM.path([[260, 90], [330, 130], [372, 160]], `<g opacity=".4">${DG.tk(0, 0, "dps", { r: 16 })}</g>`, { dur: 1.6, begin: 0.5 }) + AM.fade(AM.cross(372, 160, 11), 2.3) + AM.path([[260, 90], [260, 90], [170, 110]], anDd.me(), { dur: 2.6, begin: 0.5 }) }
+  ], quiz: { id: "L35-A", l: "L35", lvl: 1, q: "Wann gehst du als Flanker rein?",
+    opts: ["Bevor mein Tank vorne ist", "Wenn mein Tank vorne den Schaden nimmt und die Gegner beschäftigt", "Wenn alle Gegner auf mich schauen", "Sofort nach dem Respawn, allein"], a: 1,
+    why: "„Wenn mein Tank vorne den Schaden nimmt und die Gegner beschäftigt“ stimmt: Dann beobachten die Gegner deinen Winkel nicht (L35).\nEin typischer Fehler ist anzugreifen, bevor der Tank vorne ist: Alle Gegner schauen auf dich." } },
+
+  L36: { title: "DPS: Treffen und Ult-Tempo", steps: [
+    { t: "Als DPS machst du den meisten Schaden deines Teams. Je öfter du triffst, desto schneller fallen Gegner.",
+      svg: () => AM.floor() + `<g transform="translate(70 150)">${anDd.me()}</g>` + AM.tk(380, 80, "foe", 16) + DG.lab(380, 44, "oft daneben", "middle") + AM.hp(380, 104, 100, 80, 0.8, 50) + AM.proj([90, 144], [410, 40], { cls: "d-proj-miss", dur: 0.8 })
+        + AM.tk(380, 220, "foe", 16) + DG.lab(380, 184, "oft getroffen", "middle") + AM.hp(380, 244, 100, 10, 0.8, 50) + AM.proj([90, 156], [372, 218], { cls: "d-proj-hit", dur: 0.8 }) + AM.hit(380, 220) },
+    { t: "Ziel bei jedem Duell bewusst auf den Kopf. Mit steigendem Rang zählen Kopftreffer mehr.",
+      svg: () => AM.floor() + `<rect x="210" y="110" width="60" height="130" rx="22" fill="#4b5063"/><circle cx="240" cy="78" r="28" fill="#4b5063" stroke="var(--surface)" stroke-width="3"/>` + DG.lab(320, 82, "Kopf") + DG.lab(320, 180, "Körper")
+        + AM.path([[240, 190], [240, 190], [240, 78]], AM.aim(), { dur: 2.4 }) + AM.fade(AM.hit(240, 78, 2.4), 2.4) },
+    { t: "Jetzt du: Deine Ult ist seit zwei Fights bereit. Du wartest auf den perfekten Moment.",
+      svg: () => DG.floor(6, 6, 468, 288) + DG.t(24, 40, "Deine Ult", "d-txt") + AM.charge(44, 54, 300, 100, 100) + DG.t(360, 65, "bereit", "d-txt2") + ["Fight 1", "Fight 2", "Fight 3"].map((t, i) => AM.fade(`<rect class="${i < 2 ? "d-ult-no" : "d-cd"}" x="${30 + i * 144}" y="120" width="130" height="34" rx="9"/>` + DG.t(95 + i * 144, 142, t + (i < 2 ? ": gewartet" : " ?"), i < 2 ? "d-white" : "d-txt2", "middle"), 0.4 + i * 0.5)).join(""),
+      ask: { q: "Was tust du mit der Ult?", opts: ["Weiter warten, bis alles perfekt ist", "Sie spätestens im übernächsten Fight nutzen, auch für einen einzelnen wichtigen Kill", "Sie gar nicht einsetzen", "Sie im Spawn zünden"], a: 1,
+        why: "Ult nicht horten: Hast du deine Ult, nutzt du sie spätestens im übernächsten Fight, auch für einen einzelnen wichtigen Kill." } },
+    { t: "Wer hortet, wartet, während die Gegner zwei Ults einsetzen. Wer sie nutzt, hat sie bald wieder.",
+      svg: () => anTrade.lanes("Gegner", "Du: horten", "Du: nutzen") + anTrade.head(0.4, 11.4) + anTrade.block(1.4, 3.4, 0, "Ult", "d-ult-foe", 0.5) + anTrade.block(7.4, 9.4, 0, "Ult", "d-ult-foe", 1.8)
+        + anTrade.ghost(0.6, 11.2, 1, "wartet auf den perfekten Moment …", 0.6) + anTrade.block(2, 4, 2, "Ult ✓", "d-ult-ok", 0.9) + anTrade.ghost(4.2, 8, 2, "lädt wieder", 1.4) + anTrade.block(8.2, 10.2, 2, "Ult ✓", "d-ult-ok", 2.2) },
+    { t: "Übe Kopftreffer gezielt im Trainingsbereich, zum Beispiel vor dem ersten Match. Prüf in den Matchdaten, ob deine Trefferquote über die Wochen steigt.",
+      svg: () => DG.floor(6, 6, 468, 288) + DG.t(24, 40, "Trefferquote über die Wochen (Beispiel)", "d-txt") + [30, 42, 50, 64].map((p, i) => `<rect class="d-fill" x="${70 + i * 96}" y="${AM.still() ? 240 - p * 2.6 : 240}" width="54" height="${AM.still() ? p * 2.6 : 0}" rx="6">${AM.still() ? "" : `<animate attributeName="height" from="0" to="${p * 2.6}" dur="1s" begin="${0.4 + i * 0.5}s" fill="freeze"/><animate attributeName="y" from="240" to="${240 - p * 2.6}" dur="1s" begin="${0.4 + i * 0.5}s" fill="freeze"/>`}</rect>` + DG.t(97 + i * 96, 262, "Woche " + (i + 1), "d-txt2", "middle")).join("") }
+  ], quiz: { id: "L36-A", l: "L36", lvl: 1, q: "Wo übst du Kopftreffer gezielt?",
+    opts: ["Nur im Match", "Gar nicht, das kommt von allein", "Nur in der Overtime", "Im Trainingsbereich, zum Beispiel vor dem ersten Match"], a: 3,
+    why: "„Im Trainingsbereich, zum Beispiel vor dem ersten Match“ stimmt: Übe dort gezielt Kopftreffer, zum Beispiel mit dem Aim-Training der App (L36).\nEin typischer Fehler ist, nie gezielt zu üben, sondern nur im Match." } }
+});
+WQ.push(...["L31", "L32", "L33", "L34", "L35", "L36"].map(id => ANIM[id].quiz));
+
 
 
 
