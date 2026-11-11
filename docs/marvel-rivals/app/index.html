@@ -18948,6 +18948,122 @@ Object.assign(ANIM, {
 });
 WQ.push(...["L31", "L32", "L33", "L34", "L35", "L36"].map(id => ANIM[id].quiz));
 
+// Stapel 5: Hero-Karte, ohne Voice, Tilt, Review-Methode, Meta, Ausdauer. Damit hat jede Lektion eine Lernanimation.
+const anList = {
+  // Liste mit Zeilen, die nacheinander erscheinen; o.cover: Zeilen erst verdeckt, dann aufgedeckt; o.hi: hervorgehobene Zeilen
+  rows(title, rows, o) {
+    o = o || {};
+    return DG.floor(6, 6, 468, 288) + `<rect class="d-lane" x="24" y="20" width="${o.w || 300}" height="${44 + rows.length * 40}" rx="12"/>` + DG.t(40, 46, title, "d-txt")
+      + rows.map((t, i) => { const y = 78 + i * 40, hi = (o.hi || []).includes(i);
+        const row = `<circle cx="46" cy="${y - 5}" r="5" fill="var(--${hi ? "gold" : "accent"})"/>` + DG.t(60, y, t, hi ? "d-txt" : "d-txt2");
+        const cov = o.cover ? AM.dim(`<rect class="d-cd" x="56" y="${y - 17}" width="${(o.w || 300) - 50}" height="24" rx="7"/>` + DG.t(70, y, "?", "d-txtb"), 0.6 + i * 0.6, 0) : "";
+        return (o.cover ? row : AM.fade(row, 0.3 + i * 0.35)) + cov; }).join("");
+  }
+};
+
+Object.assign(ANIM, {
+  L12: { title: "Hero-Karte", steps: [
+    { t: "Die Hero-Karte ist dein Steckbrief für einen Hero. Vor dem Pick liest du sie kurz: So weisst du sofort, was der Hero kann und wo er dir Probleme macht.",
+      svg: () => anList.rows("Hero-Karte", ["Stärke: wofür er gut ist", "Escape oder Selbstschutz", "Ult: defensiv oder offensiv, bestes Fenster", "Schwierige Gegner", "Partner und Team-Ups"]) + DG.tk(400, 80, "sup", { r: 30 }) },
+    { t: "Jetzt du: Du hast die Karte einmal gelesen.",
+      svg: () => anList.rows("Hero-Karte", ["Stärke: wofür er gut ist", "Escape oder Selbstschutz", "Ult: defensiv oder offensiv, bestes Fenster", "Schwierige Gegner", "Partner und Team-Ups"]) + DG.tk(400, 80, "sup", { r: 30 }) + AM.fade(DG.t(400, 150, "?", "d-txtb", "middle"), 2.2),
+      ask: { q: "Wie bleibt sie im Kopf?", opts: ["Einmal lesen reicht", "Nur die Stärken merken", "Gar nicht, im Match fällt es mir schon ein", "Ab und zu der Selbsttest: erst aus dem Kopf, dann aufdecken"], a: 3,
+        why: "Liest du die Karte einmal und nie wieder, kennst du ihre Punkte im Match doch nicht. Mach ab und zu den Selbsttest: erst aus dem Kopf, dann aufdecken." } },
+    { t: "Selbsttest: Erst überlegst du jede Zeile aus dem Kopf, dann deckst du sie auf.",
+      svg: () => anList.rows("Selbsttest", ["Stärke: wofür er gut ist", "Escape oder Selbstschutz", "Ult: defensiv oder offensiv, bestes Fenster", "Schwierige Gegner", "Partner und Team-Ups"], { cover: true }) + AM.say(336, 200, 126, "aufdecken", 3.4) },
+    { t: "Nach einem Patch prüfst du, was sich bei deinem Hero geändert hat. Und die schwierigen Gegner überspringst du nicht: Dort steht, was im Fight gegen sie hilft.",
+      svg: () => anList.rows("Hero-Karte", ["Stärke: wofür er gut ist", "Escape oder Selbstschutz", "Ult: defensiv oder offensiv, bestes Fenster", "Schwierige Gegner: Problem und was hilft", "Partner und Team-Ups"], { hi: [3] }) + AM.say(336, 40, 126, "Patch: prüfen", 2.2, "info") + AM.pulse(46, 193, 12) }
+  ], quiz: { id: "L12-A", l: "L12", lvl: 1, q: "Wozu liest du vor dem Pick die Hero-Karte?",
+    opts: ["Damit ich sofort weiss, was der Hero kann und wo er mir Probleme macht", "Um die Zeit in der Heldenwahl zu füllen", "Weil das Spiel sie verlangt", "Damit ich keinen Escape brauche"], a: 0,
+    why: "„Damit ich sofort weiss, was der Hero kann und wo er mir Probleme macht“ stimmt: Die Karte ist dein Steckbrief für den Hero (L12).\nEin typischer Fehler ist, die Karte einmal zu lesen und nie wieder." } },
+
+  L16: { title: "Spielen ohne Voice", steps: [
+    { t: "Lies den Kill-Feed: Wer ist gerade tot, auf beiden Seiten? So weisst du, wie viele von euch und von den Gegnern gerade im Fight sind.",
+      svg: () => AM.floor() + `<rect class="d-lane" x="260" y="20" width="200" height="120" rx="12"/>` + DG.t(276, 44, "Kill-Feed", "d-txt") + AM.fade(DG.tk(290, 70, "foe", { r: 10 }) + DG.t(310, 75, "besiegt", "d-txt2") + DG.tk(380, 70, "tank", { r: 10 }), 0.6) + AM.fade(DG.tk(290, 108, "dps", { r: 10 }) + DG.t(310, 113, "besiegt", "d-txt2") + DG.tk(380, 108, "foe", { r: 10 }), 1.4)
+        + `<g transform="translate(90 200)">${AM.you("sup")}</g>` + AM.fade(DG.chip(20, 30, 220, "wir 5 · sie 5", "info"), 2.2) },
+    { t: "Behalte Lebensbalken und Positionen deiner Mitspieler im Blick. So siehst du, wen du heilen musst und wo du stehen musst, auch wenn niemand etwas sagt.",
+      svg: () => AM.floor() + `<g transform="translate(90 200)">${AM.you("sup")}</g>` + AM.tk(260, 130, "tank", 20, "Tank") + AM.hp(260, 96, 90, 35, 0.5, 50) + AM.tk(200, 60, "dps", 15) + AM.hp(200, 36, 100, 90, 0.5) + AM.tk(350, 220, "dps", 15) + AM.hp(350, 196, 100, 100)
+        + AM.fade(AM.beam("M108 190 238 138"), 1.8) + AM.tk(432, 130, "foe", 15) + AM.shot("M416 130 282 130", true) },
+    { t: "Jetzt du: Im Kill-Feed siehst du, dass zwei deiner Mitspieler tot sind.",
+      svg: () => AM.floor() + `<rect class="d-lane" x="260" y="20" width="200" height="120" rx="12"/>` + DG.t(276, 44, "Kill-Feed", "d-txt") + DG.tk(290, 70, "foe", { r: 10 }) + DG.t(310, 75, "besiegt", "d-txt2") + DG.tk(380, 70, "tank", { r: 10 }) + DG.tk(290, 108, "foe", { r: 10 }) + DG.t(310, 113, "besiegt", "d-txt2") + DG.tk(380, 108, "dps", { r: 10 })
+        + `<g transform="translate(160 210)">${AM.you("sup")}</g>` + AM.tk(100, 160, "dps", 15) + AM.tk(432, 200, "foe", 15) + AM.tk(440, 250, "foe", 15) + AM.fade(DG.chip(20, 30, 220, "wir 4 · sie 6", "bad"), 0.6),
+      ask: { q: "Was tust du?", opts: ["Einen neuen Fight beginnen", "Allein weiter vorne heilen", "Keinen neuen Fight beginnen und warten, bis sie zurück sind", "Den Kill-Feed ignorieren"], a: 2,
+        why: "Faustregel: Fehlen zwei Mitspieler, beginnst du keinen neuen Fight. Warte, bis sie zurück sind, weil ihr sonst in Unterzahl kämpft." } },
+    { t: "Du wartest, bis sie zurück sind. Mit der Schnell-Nachricht «Ultimate Status» im Ping-Rad sagst du deinem Team ohne Voice, wie weit deine Ult ist.",
+      svg: () => AM.floor() + AM.move([160, 210], [110, 210], AM.you("sup"), { dur: 1.2 }) + AM.tk(60, 150, "dps", 15) + AM.fade(AM.path([[20, 40], [150, 130]], DG.tk(0, 0, "tank", { r: 18 }), { dur: 1.6, begin: 1 }), 0.9) + AM.fade(AM.path([[20, 70], [170, 180]], DG.tk(0, 0, "dps", { r: 14 }), { dur: 1.9, begin: 1 }), 0.9)
+        + AM.tk(432, 200, "foe", 15) + AM.tk(440, 250, "foe", 15) + AM.ping(140, 190, 3) + AM.say(250, 30, 210, "„Ultimate Status“", 3.1) }
+  ], quiz: { id: "L16-A", l: "L16", lvl: 1, q: "Wie sagst du deinem Team ohne Voice, wie weit deine Ult ist?",
+    opts: ["Gar nicht", "Im Fight in den Chat tippen", "Mit der Schnell-Nachricht «Ultimate Status» im Ping-Rad", "Indem ich stehen bleibe"], a: 2,
+    why: "„Mit der Schnell-Nachricht «Ultimate Status» im Ping-Rad“ stimmt: So weiss dein Team auch ohne Ansage, wie weit deine Ult ist (L16).\nEin typischer Fehler ist, den Kill-Feed nicht zu lesen und nicht zu merken, dass euer Tank schon tot ist." } },
+
+  L17: { title: "Tilt und mentale Routine", h: 262, steps: [
+    { t: "Tilt-Stopp: Bei 2 Niederlagen in Folge machst du 5 Minuten Pause: aufstehen, etwas trinken.",
+      svg: () => anTrade.lanes("Ranked", "Pause", "Danach") + anTrade.head(0.4, 9) + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.4) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 1) + anTrade.block(5.8, 8, 1, "5 Min Pause ✓", "d-ult-ok", 1.8) + anTrade.ghost(8.2, 11.4, 2, "weiterspielen", 2.6) },
+    { t: "Jetzt du: Du hast 3 Niederlagen in Folge.",
+      svg: () => anTrade.lanes("Ranked", "Pause", "Danach") + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.3) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 0.8) + anTrade.block(5.8, 8.2, 0, "Niederlage", "d-ult-foe", 1.3) + AM.fade(DG.t(anTrade.X(9.6), 60, "?", "d-txtb", "middle"), 1.9),
+      ask: { q: "Was tust du?", opts: ["Noch eins, dann hole ich es zurück", "Ranked ist für heute beendet", "Im Chat mit dem Team diskutieren", "Schneller und riskanter spielen"], a: 1,
+        why: "Bei 3 Niederlagen in Folge ist Ranked für heute beendet, weil du im Tilt mehr Rang verlierst, als du gewinnst. Spiel danach ungewertet oder schau Replays." } },
+    { t: "Ranked ist für heute beendet. Du spielst ungewertet weiter oder schaust Replays.",
+      svg: () => anTrade.lanes("Ranked", "Stopp", "Danach") + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.2) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 0.2) + anTrade.block(5.8, 8.2, 0, "Niederlage", "d-ult-foe", 0.2)
+        + AM.dim(anTrade.ghost(8.4, 11.4, 0, "noch eins …", 0.5), 1.2, 0.4) + AM.fade(AM.cross(anTrade.X(9.9), 55, 9), 1.2) + anTrade.block(8.4, 11.4, 1, "Stopp ✓", "d-ult-ok", 1.6) + anTrade.ghost(8.4, 11.4, 2, "ungewertet, Replays", 2.2) },
+    { t: "Nach einem Fehler atmest du einmal durch und fragst dich: Was ändere ich im nächsten Fight? Spielt jemand toxisch, stellst du ihn sofort stumm und antwortest nicht.",
+      svg: () => DG.floor(6, 6, 468, 250) + `<circle cx="100" cy="120" r="34" fill="color-mix(in srgb, var(--strategist) 14%, transparent)" stroke="var(--strategist)" stroke-width="3">${AM.still() ? "" : `<animate attributeName="r" values="26;48;26" dur="5s" repeatCount="indefinite"/>`}</circle>` + DG.t(100, 196, "einmal durchatmen", "d-txt2", "middle")
+        + AM.say(190, 60, 260, "Was ändere ich im nächsten Fight?", 1.2, "info") + AM.say(190, 110, 260, "„Ich bleibe näher bei meinem Tank.“", 2.4) + AM.say(190, 176, 180, "toxisch: stumm stellen", 3.4, "bad") }
+  ], quiz: { id: "L17-A", l: "L17", lvl: 1, q: "Woran erkennst du, dass du wahrscheinlich im Tilt bist?",
+    opts: ["Ich gebe dem Team die Schuld und spiele schneller und gieriger", "Ich mache nach zwei Niederlagen eine Pause", "Ich schreibe nach der Session auf, was gut lief", "Ich stelle einen toxischen Spieler stumm"], a: 0,
+    why: "„Ich gebe dem Team die Schuld und spiele schneller und gieriger“ stimmt: Das sind Warnzeichen für Tilt (L17).\nEin typischer Fehler ist der Gedanke «Noch eins, dann hol ich es zurück»: Du verlierst noch mehr Rang." } },
+
+  L18: { title: "Review-Methode", h: 262, steps: [
+    { t: "Such jeden deiner Tode im Replay und schau die 10 Sekunden davor an. Der Grund liegt meist kurz davor und nicht im Moment des Todes.",
+      svg: () => anTrade.lanes("Replay", "Anschauen", "Grund") + anTrade.head(0.6, 8.4) + AM.fade(AM.cross(anTrade.X(8.4), 55, 9) + DG.t(anTrade.X(8.4), 34, "Tod", "d-txt2", "middle"), 1.6) + anTrade.block(4.4, 8.4, 1, "10 Sekunden davor", "d-ult-ok", 2) + anTrade.ghost(4.8, 7, 2, "hier liegt er", 2.8) },
+    { t: "Ordne den Tod einer von fünf Kategorien zu.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 40, "Woran lag es?", "d-txt") + ["Position", "Fluchtweg/Cooldown", "Gegnerische Ult", "Zu gierig", "Vom Team getrennt"].map((t, i) => AM.fade(DG.chip(24 + (i % 2) * 222, 60 + Math.floor(i / 2) * 44, 208, t, "info", 30), 0.4 + i * 0.4)).join("") },
+    { t: "Jetzt du: Du hast die Kategorie gefunden.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 40, "Woran lag es?", "d-txt") + ["Position", "Fluchtweg/Cooldown", "Gegnerische Ult", "Zu gierig", "Vom Team getrennt"].map((t, i) => DG.chip(24 + (i % 2) * 222, 60 + Math.floor(i / 2) * 44, 208, t, i === 0 ? "good" : "info", 30)).join("") + AM.fade(DG.t(350, 172, "und jetzt?", "d-txt2", "middle"), 0.6),
+      ask: { q: "Welche Frage hilft dir fürs nächste Match?", opts: ["Wer aus meinem Team war schuld?", "Wie viele Kills hatte ich?", "Welches Highlight schaue ich als Nächstes?", "Was hätte ich 3 Sekunden früher tun können?"], a: 3,
+        why: "Frag dich: Was hätte ich 3 Sekunden früher tun können? Zum Beispiel früher zurückgehen oder den Escape früher nutzen. So findest du eine Handlung, die du im nächsten Match wirklich machen kannst." } },
+    { t: "Mach pro Tod einen Strich. Am Ende zählst du: Die häufigste Kategorie ist dein nächster Schwerpunkt.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Strichliste (Beispiel)", "d-txt") + [["Position", 80], ["Fluchtweg/Cooldown", 30], ["Gegnerische Ult", 45], ["Zu gierig", 20], ["Vom Team getrennt", 35]].map(([t, p], i) => DG.t(24, 68 + i * 36, t, "d-txt2") + AM.bar(190, 58 + i * 36, 250, 12, 0, p, i === 0 ? "d-charge" : "d-fill", 0.4 + i * 0.4)).join("") + AM.say(210, 226, 240, "dein nächster Schwerpunkt", 2.8) + AM.fade(`<path d="M250 224V80" stroke="var(--gold)" stroke-width="2" stroke-dasharray="3 4"/>`, 2.8) }
+  ], quiz: { id: "L18-A", l: "L18", lvl: 1, q: "Welchen Teil des Replays schaust du bei einem Tod an?",
+    opts: ["Nur den Moment des Todes", "Nur die Highlights", "Die 10 Sekunden davor", "Das Ende des Matches"], a: 2,
+    why: "„Die 10 Sekunden davor“ stimmt: Der Grund für den Tod liegt meist kurz davor und nicht im Moment des Todes (L18).\nEin typischer Fehler ist, nur Highlights anzuschauen: Deine Tode und deine Fehler siehst du dann nie." } },
+
+  L29: { title: "Meta und Patches", steps: [
+    { t: "Ein Patch kann Heroes stärker oder schwächer machen. Lies die Patchnotes, vor allem die Zeilen zu den Heroes in deinem Pool.",
+      svg: () => anList.rows("Patchnotes", ["Hero A: stärker", "Dein Hero: geändert", "Hero C: schwächer", "Dein zweiter Hero: geändert", "Hero E: stärker"], { hi: [1, 3] }) + AM.pulse(46, 113, 12) + AM.pulse(46, 193, 12) + AM.say(336, 40, 126, "dein Pool", 2.2) },
+    { t: "Jetzt du: Ein Hero steht in der Tier-Liste ganz oben. Du kennst ihn kaum.",
+      svg: () => DG.floor(6, 6, 468, 288) + DG.t(24, 40, "Tier-Liste", "d-txt") + ["S", "A", "B"].map((t, i) => `<rect class="d-lane" x="24" y="${56 + i * 50}" width="250" height="40" rx="9"/>` + DG.t(44, 82 + i * 50, t, "d-txtb", "middle") + DG.tk(84 + (i === 0 ? 0 : 40), 76 + i * 50, "foe", { r: 13 })).join("") + AM.pulse(84, 76, 20) + DG.t(110, 81, "neu für dich", "d-txt2") + DG.tk(124, 176, "sup", { r: 13 }) + DG.t(150, 181, "dein Hero", "d-txt2") + AM.fade(DG.t(370, 120, "?", "d-txtb", "middle"), 0.8),
+      ask: { q: "Was tust du?", opts: ["Sofort in Ranked zu ihm wechseln", "Bei dem Hero bleiben, mit dem ich besser bin, und den neuen erst ungewertet testen", "Nie wieder Tier-Listen lesen", "Meinen Pool wegwerfen"], a: 1,
+        why: "Nutz Tier-Listen als Orientierung, nicht als Gesetz. Deine eigenen Zahlen zählen mehr. Teste neue Heroes erst ungewertet: Ein Fehler in Ranked zählt für deinen Rang, ein Fehler ungewertet nicht." } },
+    { t: "Deine eigenen Zahlen zählen mehr als die Tier-Liste. Spielst du mit deinem Hero besser, bleibst du bei ihm.",
+      svg: () => DG.floor(6, 6, 468, 288) + DG.t(24, 46, "Deine Zahlen (Beispiel)", "d-txt") + DG.t(24, 86, "Hero oben in der Tier-Liste, kaum gespielt", "d-txt2") + AM.bar(24, 96, 420, 14, 0, 35, "d-fill", 0.5) + DG.t(24, 156, "Dein Hero", "d-txt2") + AM.bar(24, 166, 420, 14, 0, 75, "d-charge", 1.1) + AM.say(110, 216, 260, "deine Zahlen zählen mehr", 2.4) },
+    { t: "Aktualisiere deine Hero-Karten nach Patches. Neue Heroes testest du erst ungewertet, dann in Ranked.",
+      svg: () => DG.floor(6, 6, 468, 288) + `<rect class="d-lane" x="24" y="24" width="200" height="110" rx="12"/>` + DG.t(40, 50, "Hero-Karte", "d-txt") + DG.t(40, 80, "Ult: …", "d-txt2") + AM.dim(DG.t(40, 108, "alter Stand", "d-txt2"), 1, 0.25) + AM.fade(DG.t(120, 108, "nach Patch ✓", "d-txt"), 1.4)
+        + `<rect class="d-lane" x="24" y="170" width="430" height="34" rx="9"/>` + AM.fade(`<rect class="d-ult-ok" x="30" y="170" width="200" height="34" rx="9"/>` + DG.t(130, 192, "ungewertet testen ✓", "d-white", "middle"), 2) + AM.fade(`<rect class="d-cd" x="240" y="174" width="206" height="26" rx="8"/>` + DG.t(343, 192, "danach Ranked", "d-txt2", "middle"), 2.8) }
+  ], quiz: { id: "L29-A", l: "L29", lvl: 1, q: "Wo testest du einen neuen Hero zuerst?",
+    opts: ["Direkt in Ranked", "Gar nicht, ich spiele ihn einfach", "Nur in der Overtime", "Ungewertet"], a: 3,
+    why: "„Ungewertet“ stimmt: Ein Fehler in Ranked zählt für deinen Rang, ein Fehler ungewertet nicht (L29).\nEin typischer Fehler ist, einen neuen Hero direkt in Ranked zu testen und Matches zu verlieren, weil du ihn noch nicht kennst." } },
+
+  L30: { title: "Ausdauer in langen Sessions", h: 262, steps: [
+    { t: "Spiel in Blöcken von etwa einer Stunde. Danach machst du 5–10 Minuten Pause: aufstehen, etwas trinken, die Augen entspannen.",
+      svg: () => anTrade.lanes("Session", "Pause", "Konzentration") + anTrade.head(0.4, 11.4) + [0, 1, 2].map(i => anTrade.block(0.6 + i * 3.7, 3.5 + i * 3.7, 0, "Block, etwa 1 h", "d-ult-foe", 0.3 + i * 0.8) + anTrade.block(3.5 + i * 3.7, 4.2 + i * 3.7, 1, "✓", "d-ult-ok", 0.7 + i * 0.8)).join("")
+        + AM.bar(34, 180, 420, 14, 100, 70, null, 0.6) },
+    { t: "Die Konzentration sinkt über die Zeit. Leg wichtige Ranked-Matches an den Anfang der Session: Dort bist du am frischesten.",
+      svg: () => anTrade.lanes("Session", "Wichtige Ranked-Matches", "Konzentration") + anTrade.head(0.4, 11.4) + anTrade.block(0.6, 11.4, 0, "mehrere Stunden", "d-ult-no", 0.3) + anTrade.block(0.6, 4, 1, "am Anfang ✓", "d-ult-ok", 0.9)
+        + AM.dim(anTrade.ghost(8, 11.4, 1, "spät", 0.9), 1.6, 0.45) + AM.fade(AM.cross(anTrade.X(9.7), 121, 9), 1.6) + AM.bar(34, 180, 420, 14, 100, 35, null, 0.6) },
+    { t: "Jetzt du: Du spielst schon seit Stunde 5.",
+      svg: () => anTrade.lanes("Session", "Jetzt", "Konzentration") + anTrade.block(0.6, 9, 0, "Stunde 1 bis 5", "d-ult-no", 0.2) + anTrade.head(0.6, 9) + AM.fade(DG.t(anTrade.X(10.2), 126, "?", "d-txtb", "middle"), 1.8) + AM.bar(34, 180, 420, 14, 100, 30, null, 0.4),
+      ask: { q: "Was spielst du jetzt?", opts: ["Jetzt die wichtigen Ranked-Matches", "Ohne Pause einfach weiter", "Eher ungewertet, oder ich schaue Replays", "Ranked, auch wenn ich mich ärgere"], a: 2,
+        why: "Ab Stunde 4–5 spielst du eher ungewertet oder schaust Replays, weil du dann müder bist und Fehler in Ranked deinen Rang kosten." } },
+    { t: "Ab Stunde 4–5 ungewertet oder Replays. Bei 6–10 Stunden planst du eine echte Pause in der Mitte: wirklich weg vom Bildschirm.",
+      svg: () => anTrade.lanes("Session", "Echte Pause", "Spät") + anTrade.head(0.4, 11.4) + anTrade.block(0.6, 4, 0, "Ranked", "d-ult-foe", 0.3) + anTrade.block(4.2, 8.4, 1, "weg vom Bildschirm ✓", "d-ult-ok", 1.2) + anTrade.ghost(7, 11.4, 2, "ungewertet, Replays", 2) }
+  ], quiz: { id: "L30-A", l: "L30", lvl: 1, q: "Was ist eine echte Pause?",
+    opts: ["Am Bildschirm bleiben und etwas anderes schauen", "Wirklich weg vom Bildschirm gehen", "Nebenbei weiterspielen", "Ein ungewertetes Match"], a: 1,
+    why: "„Wirklich weg vom Bildschirm gehen“ stimmt: Echt heisst, du gehst wirklich weg vom Bildschirm und spielst nicht nebenbei weiter (L30).\nEin typischer Fehler ist eine «Pause» am Bildschirm: Deine Augen erholen sich nicht." } }
+});
+WQ.push(...["L12", "L16", "L17", "L18", "L29", "L30"].map(id => ANIM[id].quiz));
+
+
 
 
 
