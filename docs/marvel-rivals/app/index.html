@@ -18998,14 +18998,14 @@ Object.assign(ANIM, {
 
   L17: { title: "Tilt und mentale Routine", h: 262, steps: [
     { t: "Tilt-Stopp: Bei 2 Niederlagen in Folge machst du 5 Minuten Pause: aufstehen, etwas trinken.",
-      svg: () => anTrade.lanes("Ranked", "Pause", "Danach") + anTrade.head(0.4, 9) + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.4) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 1) + anTrade.block(5.8, 8, 1, "5 Min Pause ✓", "d-ult-ok", 1.8) + anTrade.ghost(8.2, 11.4, 2, "weiterspielen", 2.6) },
+      svg: () => anTrade.lanes("Ranked", "Pause", "Danach") + anTrade.head(0.4, 9) + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.4) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 1) + anTrade.block(5.8, 9, 1, "5 Min Pause ✓", "d-ult-ok", 1.8) + anTrade.ghost(8.6, 11.4, 2, "weiter", 2.6) },
     { t: "Jetzt du: Du hast 3 Niederlagen in Folge.",
       svg: () => anTrade.lanes("Ranked", "Pause", "Danach") + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.3) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 0.8) + anTrade.block(5.8, 8.2, 0, "Niederlage", "d-ult-foe", 1.3) + AM.fade(DG.t(anTrade.X(9.6), 60, "?", "d-txtb", "middle"), 1.9),
       ask: { q: "Was tust du?", opts: ["Noch eins, dann hole ich es zurück", "Ranked ist für heute beendet", "Im Chat mit dem Team diskutieren", "Schneller und riskanter spielen"], a: 1,
         why: "Bei 3 Niederlagen in Folge ist Ranked für heute beendet, weil du im Tilt mehr Rang verlierst, als du gewinnst. Spiel danach ungewertet oder schau Replays." } },
     { t: "Ranked ist für heute beendet. Du spielst ungewertet weiter oder schaust Replays.",
       svg: () => anTrade.lanes("Ranked", "Stopp", "Danach") + anTrade.block(0.6, 3, 0, "Niederlage", "d-ult-foe", 0.2) + anTrade.block(3.2, 5.6, 0, "Niederlage", "d-ult-foe", 0.2) + anTrade.block(5.8, 8.2, 0, "Niederlage", "d-ult-foe", 0.2)
-        + AM.dim(anTrade.ghost(8.4, 11.4, 0, "noch eins …", 0.5), 1.2, 0.4) + AM.fade(AM.cross(anTrade.X(9.9), 55, 9), 1.2) + anTrade.block(8.4, 11.4, 1, "Stopp ✓", "d-ult-ok", 1.6) + anTrade.ghost(8.4, 11.4, 2, "ungewertet, Replays", 2.2) },
+        + AM.dim(anTrade.ghost(8.4, 11.4, 0, "noch eins …", 0.5), 1.2, 0.4) + AM.fade(AM.cross(anTrade.X(9.9), 55, 9), 1.2) + anTrade.block(8.4, 11.4, 1, "Stopp ✓", "d-ult-ok", 1.6) + anTrade.ghost(6.6, 11.4, 2, "ungewertet oder Replays", 2.2) },
     { t: "Nach einem Fehler atmest du einmal durch und fragst dich: Was ändere ich im nächsten Fight? Spielt jemand toxisch, stellst du ihn sofort stumm und antwortest nicht.",
       svg: () => DG.floor(6, 6, 468, 250) + `<circle cx="100" cy="120" r="34" fill="color-mix(in srgb, var(--strategist) 14%, transparent)" stroke="var(--strategist)" stroke-width="3">${AM.still() ? "" : `<animate attributeName="r" values="26;48;26" dur="5s" repeatCount="indefinite"/>`}</circle>` + DG.t(100, 196, "einmal durchatmen", "d-txt2", "middle")
         + AM.say(190, 60, 260, "Was ändere ich im nächsten Fight?", 1.2, "info") + AM.say(190, 110, 260, "„Ich bleibe näher bei meinem Tank.“", 2.4) + AM.say(190, 176, 180, "toxisch: stumm stellen", 3.4, "bad") }
@@ -19023,7 +19023,7 @@ Object.assign(ANIM, {
       ask: { q: "Welche Frage hilft dir fürs nächste Match?", opts: ["Wer aus meinem Team war schuld?", "Wie viele Kills hatte ich?", "Welches Highlight schaue ich als Nächstes?", "Was hätte ich 3 Sekunden früher tun können?"], a: 3,
         why: "Frag dich: Was hätte ich 3 Sekunden früher tun können? Zum Beispiel früher zurückgehen oder den Escape früher nutzen. So findest du eine Handlung, die du im nächsten Match wirklich machen kannst." } },
     { t: "Mach pro Tod einen Strich. Am Ende zählst du: Die häufigste Kategorie ist dein nächster Schwerpunkt.",
-      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Strichliste (Beispiel)", "d-txt") + [["Position", 80], ["Fluchtweg/Cooldown", 30], ["Gegnerische Ult", 45], ["Zu gierig", 20], ["Vom Team getrennt", 35]].map(([t, p], i) => DG.t(24, 68 + i * 36, t, "d-txt2") + AM.bar(190, 58 + i * 36, 250, 12, 0, p, i === 0 ? "d-charge" : "d-fill", 0.4 + i * 0.4)).join("") + AM.say(210, 226, 240, "dein nächster Schwerpunkt", 2.8) + AM.fade(`<path d="M250 224V80" stroke="var(--gold)" stroke-width="2" stroke-dasharray="3 4"/>`, 2.8) }
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Strichliste (Beispiel)", "d-txt") + [["Position", 80], ["Fluchtweg/Cooldown", 30], ["Gegnerische Ult", 45], ["Zu gierig", 20], ["Vom Team getrennt", 35]].map(([t, p], i) => DG.t(24, 68 + i * 36, t, "d-txt2") + AM.bar(190, 58 + i * 36, 250, 12, 0, p, i === 0 ? "d-charge" : "d-fill", 0.4 + i * 0.4)).join("") + AM.say(210, 226, 240, "dein nächster Schwerpunkt", 2.8) }
   ], quiz: { id: "L18-A", l: "L18", lvl: 1, q: "Welchen Teil des Replays schaust du bei einem Tod an?",
     opts: ["Nur den Moment des Todes", "Nur die Highlights", "Die 10 Sekunden davor", "Das Ende des Matches"], a: 2,
     why: "„Die 10 Sekunden davor“ stimmt: Der Grund für den Tod liegt meist kurz davor und nicht im Moment des Todes (L18).\nEin typischer Fehler ist, nur Highlights anzuschauen: Deine Tode und deine Fehler siehst du dann nie." } },
