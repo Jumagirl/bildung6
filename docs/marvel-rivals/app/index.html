@@ -18536,7 +18536,7 @@ Object.assign(ANIM, {
         why: "Bei Brawl heilst du konstant und ihr nehmt Fights gemeinsam an, weil die Gegner als Gruppe nah heranwollen." } },
     { t: "Brawl: Du heilst konstant, und ihr nehmt den Fight gemeinsam an. Dein Team bleibt zusammen.",
       svg: () => AM.floor() + anComp.team() + `<g transform="translate(96 206)">${AM.you("sup")}</g>` + anComp.foes([[[250, 90]], [[290, 130]], [[250, 170]], [[296, 200]]])
-        + AM.shot("M236 96 172 108") + AM.shot("M236 166 172 120") + AM.beam("M112 194 140 132") + AM.hp(150, 150, 35, 90, 0.6) + AM.hp(96, 82, 55, 95, 1.2) + DG.chip(196, 16, 76, "Brawl", "bad", 24) }
+        + AM.shot("M236 96 172 108") + AM.shot("M236 166 172 120") + AM.beam("M112 194 140 132") + AM.hp(190, 150, 35, 90, 0.6, 34) + AM.hp(96, 82, 55, 95, 1.2) + DG.chip(196, 16, 76, "Brawl", "bad", 24) }
   ], quiz: { id: "L10-A", l: "L10", lvl: 1, q: "Die gegnerische Comp ist Poke. Was tust du?",
     opts: ["Viel Deckung suchen und nicht offen stehen", "Nah an die Gegner herangehen", "Den Escape zum Vorlaufen nutzen", "Als dritter Support wechseln"], a: 0,
     why: "„Viel Deckung suchen und nicht offen stehen“ stimmt: Bei Poke wirst du aus der Distanz sonst ständig getroffen (L10).\nEin typischer Fehler ist, wie immer zu spielen, egal was die Gegner spielen." } },
@@ -18599,7 +18599,7 @@ Object.assign(ANIM, {
       ask: { q: "Was sagst du?", opts: ["Einen langen Satz: wer wo steht und was alle tun sollen", "«Der Tank steht immer falsch.»", "«Flanker links.»", "Nichts, ich tippe es in den Chat"], a: 2,
         why: "Im Fight sagst du nur sehr kurz etwas: «Flanker links.» oder «Ult kommt.» Mehr kann dein Team im Fight nicht aufnehmen. Tippen kostet Zeit, in der du nicht heilst und nicht auf dich achtest." } },
     { t: "Kurz kommt an. Ein langer Satz ist erst fertig, wenn die Info schon zu spät ist.",
-      svg: () => anTrade.lanes("Im Fight", "Kurz", "Lang") + anTrade.block(0.4, 11.4, 0, "Fight läuft", "d-ult-foe", 0.2) + anTrade.head(0.4, 11) + anTrade.block(1, 3.4, 1, "„Flanker links.“ ✓", "d-ult-ok", 0.7)
+      svg: () => anTrade.lanes("Im Fight", "Kurz", "Lang") + anTrade.block(0.4, 11.4, 0, "Fight läuft", "d-ult-foe", 0.2) + anTrade.head(0.4, 11) + anTrade.block(1, 5.2, 1, "„Flanker links.“ ✓", "d-ult-ok", 0.7)
         + `<rect class="d-cd" x="${anTrade.X(1)}" y="174" width="${AM.still() ? 360 : 0}" height="26" rx="8">${AM.still() ? "" : `<animate attributeName="width" from="0" to="360" dur="2.4s" begin=".7s" fill="freeze"/>`}</rect>` + AM.fade(DG.t(anTrade.X(1) + 180, 192, "langer Satz … zu spät", "d-txt2", "middle"), 3.1) },
     { t: "Nach dem Fight stellst du eine kurze Frage: «Zurück oder weiter?» So sind sich alle einig. Im Fight selbst schreibst und diskutierst du nicht.",
       svg: () => anTrade.lanes("Vor dem Fight", "Im Fight", "Nach dem Fight") + anTrade.ghost(0.4, 3.6, 0, "Plan angesagt ✓", 0.2) + anTrade.ghost(4, 7.6, 1, "nur kurz ✓", 0.6) + anTrade.head(7.6, 9) + AM.say(anTrade.X(7.9), 174, 150, "„Zurück oder weiter?“", 1.4) }
@@ -18643,7 +18643,7 @@ Object.assign(ANIM, {
       svg: () => anAim.base() + AM.walk([200, 80], [236, 80], anAim.mate(), 3) + DG.lab(218, 54, "nah: wenig vorhalten", "middle") + AM.proj([92, 160], [226, 84], { dur: 0.7 })
         + AM.walk([360, 230], [430, 230], anAim.mate(), 3) + DG.lab(380, 204, "weit: mehr vorhalten", "middle") + AM.proj([92, 176], [416, 228], { dur: 1.5 }) },
     { t: "Steht ein Schild oder ein Gegner zwischen dir und deinem Ziel, kommt die Heilung vielleicht nicht an. Stell dich so, dass die Bahn frei ist.",
-      svg: () => AM.floor() + `<g transform="translate(380 150)">${anAim.mate()}</g>` + DG.tk(230, 150, "foe", { r: 20 }) + `<path d="M204 124Q250 150 204 176" fill="none" stroke="var(--vanguard)" stroke-width="5" stroke-linecap="round" opacity=".9"/>` + DG.lab(230, 196, "Schild", "middle")
+      svg: () => AM.floor() + `<g transform="translate(380 150)">${anAim.mate()}</g>` + DG.tk(230, 150, "foe", { r: 20 }) + `<path d="M204 124Q250 150 204 176" fill="none" stroke="var(--vanguard)" stroke-width="5" stroke-linecap="round" opacity=".9"/>` + DG.lab(230, 116, "Schild", "middle")
         + `<g opacity=".45">${DG.tk(70, 150, "sup", { r: 16 })}</g>` + `<g opacity=".5">${AM.proj([90, 150], [196, 150], { dur: 0.8, rep: 2, cls: "d-proj-miss" })}</g>` + AM.fade(`<g class="d-blocked"><path d="M190 142 202 158M202 142 190 158"/></g>`, 0.9)
         + AM.path([[70, 150], [70, 150], [110, 250]], AM.you("sup", 18, true), { dur: 2.6, begin: 0.3 }) + AM.fade(AM.beam("M128 244 362 160"), 2.9) }
   ], quiz: { id: "L25-A", l: "L25", lvl: 1, q: "Ein gegnerischer Tank mit Schild steht zwischen dir und deinem Mitspieler. Was tust du?",
@@ -18651,6 +18651,157 @@ Object.assign(ANIM, {
     why: "„Mich so stellen, dass die Bahn frei ist“ stimmt: Ein Schild oder ein Gegner im Weg kann deine Heilung aufhalten (L25).\nEin typischer Fehler ist, trotzdem zu heilen: Die Heilung kommt nicht an." } }
 });
 WQ.push(...["L10", "L11", "L13", "L15", "L19", "L25"].map(id => ANIM[id].quiz));
+
+// Stapel 3: Hebel, Modi, Karten, Movement, Mitspieler lesen, Comeback
+const anMap = {
+  // Schema einer Karte: Hauptstrecke unten, Nebenweg oben, zwei Deckungen, eine Höhe
+  base() {
+    return AM.floor() + `<rect class="d-lane" x="20" y="150" width="440" height="70" rx="12"/>` + DG.t(240, 244, "Hauptstrecke", "d-txt2", "middle")
+      + `<path d="M40 150V60H420V150" fill="none" stroke="var(--grid)" stroke-width="22" stroke-linejoin="round"/>` + DG.t(240, 44, "Nebenweg", "d-txt2", "middle")
+      + `<rect class="d-cover" x="112" y="160" width="20" height="50" rx="6"/><rect class="d-cover" x="210" y="160" width="20" height="50" rx="6"/>`
+      + AM.tk(330, 186, "tank", 18, "") + AM.tk(432, 186, "foe", 15);
+  }
+};
+const anObj = {
+  zone: (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="color-mix(in srgb, var(--gold) 12%, transparent)" stroke="var(--gold)" stroke-width="2" stroke-dasharray="6 5"/>` + DG.t(x, y - r - 8, "Punkt", "d-txt2", "middle"),
+  car: () => `<rect x="-22" y="-13" width="44" height="26" rx="6" fill="var(--gold)" stroke="var(--surface)" stroke-width="2"/><circle cx="-12" cy="14" r="5" fill="var(--surface-3)"/><circle cx="12" cy="14" r="5" fill="var(--surface-3)"/>`,
+  track: () => `<path d="M30 200H450" stroke="var(--grid)" stroke-width="10" stroke-linecap="round"/>`
+};
+
+Object.assign(ANIM, {
+  L1: { title: "Die fünf Hebel des Supports", steps: [
+    { t: "Hebel 1 und 2, vor dem Fight: Wo stehe ich sicher? Und ist meine Ult bereit, wofür hebe ich sie auf?",
+      svg: () => AM.floor() + `<rect class="d-cover" x="110" y="170" width="30" height="62" rx="7"/>` + AM.tk(250, 120, "tank", 20, "Tank") + AM.tk(420, 110, "foe", 15) + AM.tk(432, 200, "foe", 15)
+        + AM.path([[220, 220], [220, 220], [86, 204]], AM.you("sup"), { dur: 2 }) + AM.fade(DG.pin(86, 150, "1", "good"), 2.2)
+        + DG.t(250, 250, "Deine Ult", "d-txt2") + AM.charge(266, 260, 150, 60, 100, 0.6) + AM.fade(DG.pin(440, 256, "2", "good"), 2.6) },
+    { t: "Jetzt du, Hebel 3 im Fight: Ein Mitspieler hat volles Leben, einer hat viel verloren.",
+      svg: () => AM.floor() + `<g transform="translate(86 204)">${AM.you("sup")}</g>` + AM.tk(210, 110, "dps", 17) + AM.hp(210, 136, 100, 100, 0.3) + DG.pin(210, 66, "A") + AM.tk(300, 210, "tank", 20) + AM.hp(300, 240, 90, 30, 0.6) + DG.pin(300, 164, "B")
+        + AM.tk(430, 200, "foe", 15) + AM.shot("M414 202 324 208"),
+      ask: { q: "Wen heilst du?", opts: ["A: Er steht am nächsten", "Beide gleich viel", "B: Er hat Leben verloren", "Niemanden, ich mache nur Schaden"], a: 2,
+        why: "Heil nur Spieler, die Leben verloren haben, weil Heilung auf volle Spieler verpufft." } },
+    { t: "Du heilst den, der Leben verloren hat. Heilung auf volle Spieler verpufft.",
+      svg: () => AM.floor() + `<g transform="translate(86 204)">${AM.you("sup")}</g>` + AM.tk(210, 110, "dps", 17) + AM.hp(210, 136, 100, 100) + DG.pin(210, 66, "A", "bad") + AM.tk(300, 210, "tank", 20) + AM.hp(300, 240, 30, 85, 0.8) + DG.pin(300, 164, "B", "good")
+        + AM.tk(430, 200, "foe", 15) + AM.shot("M414 202 324 208", true) + AM.beam("M106 204 276 210") },
+    { t: "Hebel 4: Sind alle gesund, fragst du dich: Wen kann ich angreifen? So gewinnt ihr den Fight schneller.",
+      svg: () => AM.floor() + `<g transform="translate(86 204)">${AM.you("sup")}</g>` + AM.tk(210, 110, "dps", 17) + AM.hp(210, 136, 100, 100) + AM.tk(300, 210, "tank", 20) + AM.hp(300, 240, 85, 95)
+        + AM.tk(430, 130, "foe", 15) + AM.hp(430, 154, 60, 10, 0.9) + AM.shot("M226 114 412 128") + AM.shot("M104 196 412 134") + AM.fade(AM.cross(430, 130, 10), 2.3) },
+    { t: "Hebel 5, nach dem Fight: War das ein guter Fight, oder hätten wir zurückfallen sollen? Diese fünf Fragen gehst du in dieser Reihenfolge durch.",
+      svg: () => DG.floor(6, 6, 468, 288) + ["Sicher stehen", "Ult aufheben", "Richtige heilen", "Schaden, wenn alle gesund", "Fight bewerten"].map((t, i) => AM.fade(DG.pin(40, 44 + i * 50, String(i + 1), "good") + DG.t(66, 49 + i * 50, t, "d-txt"), 0.3 + i * 0.5)).join("")
+        + DG.t(300, 30, "vor dem Fight", "d-txt2") + DG.t(300, 130, "im Fight", "d-txt2") + DG.t(300, 230, "nach dem Fight", "d-txt2")
+        + `<path d="M290 40V104M290 140V204M290 240V264" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>` }
+  ], quiz: { id: "L1-A", l: "L1", lvl: 1, q: "Du hast die höchste Heilzahl im Team, aber ihr verliert das Match. Was sagt dir das?",
+    opts: ["Alles richtig gemacht, das Team war schuld", "Ich muss noch mehr heilen", "Die Heilzahl allein gewinnt nicht: Es zählen alle fünf Hebel", "Heilen lohnt sich nicht"], a: 2,
+    why: "„Die Heilzahl allein gewinnt nicht: Es zählen alle fünf Hebel“ stimmt: Als Support gewinnst du nicht mit der höchsten Heilzahl, sondern mit den fünf Hebeln (L1).\nEin typischer Fehler ist, stolz auf die höchste Heilzahl zu sein, obwohl ihr das Match verloren habt." } },
+
+  L22: { title: "Modi und Objective", steps: [
+    { t: "Convoy: Ein Fahrzeug fährt eine Strecke entlang, die Fights wandern mit. Achte darauf, wohin es als Nächstes fährt, und such dir dort vorher eine Position.",
+      svg: () => AM.floor() + anObj.track() + AM.move([90, 190], [250, 190], anObj.car(), { dur: 2.6 }) + `<rect class="d-cover" x="330" y="120" width="24" height="54" rx="6"/>` + AM.pulse(342, 147, 36)
+        + AM.path([[70, 130], [200, 110], [316, 150]], AM.you("sup", 16, true), { dur: 2.2 }) + AM.tk(432, 150, "foe", 15) + AM.tk(440, 232, "foe", 15) },
+    { t: "Domination: Ein Punkt muss gehalten werden. Kommt dein Team nach dem Respawn einzeln zurück, trifft es einzeln auf die Gegner.",
+      svg: () => AM.floor() + anObj.zone(280, 150, 70) + AM.tk(320, 130, "foe", 15) + AM.tk(322, 176, "foe", 15) + AM.tk(280, 196, "foe", 15)
+        + [0, 1, 2].map(i => AM.dim(AM.path([[40, 150], [40, 150], [228, 150]], DG.tk(0, 0, ["tank", "dps", "sup"][i], { r: 14 }), { dur: 1 + i * 0.9, begin: 0.3 }), 1.5 + i * 0.9, 0.25)).join("") + AM.fade(AM.cross(228, 150, 10) + DG.lab(228, 184, "einzeln", "middle"), 3.6) },
+    { t: "Convergence: Zuerst wird ein Punkt erobert, danach das Fahrzeug begleitet. Erst Punkt-Fights, dann wandernde Fights.",
+      svg: () => AM.floor() + AM.dim(anObj.zone(130, 130, 60), 1.6, 0.35) + AM.fade(DG.pin(130, 130, "1", "good"), 0.4) + anObj.track() + AM.fade(DG.pin(250, 240, "2", "good"), 1.8)
+        + AM.fade(AM.move([150, 190], [330, 190], anObj.car(), { dur: 2, begin: 2 }), 1.8) },
+    { t: "Jetzt du: Ihr haltet den Punkt. Ein Gegner mit wenig Leben flieht.",
+      svg: () => AM.floor() + anObj.zone(200, 150, 80) + AM.tk(236, 126, "tank", 19) + AM.tk(176, 190, "dps", 15) + `<g transform="translate(160 130)">${AM.you("sup")}</g>`
+        + AM.path([[290, 150], [370, 110], [440, 60]], DG.tk(0, 0, "foe", { r: 15 }) + DG.hp(-20, 20, 40, 15, 7), { dur: 2.2 }),
+      ask: { q: "Was tust du?", opts: ["Auf dem Punkt bleiben: Das Objective gewinnt die Runde", "Ihm hinterher, der Kill ist sicher", "Allein zum gegnerischen Spawn laufen", "Den Punkt verlassen, wir liegen ja vorne"], a: 0,
+        why: "Wer das Ziel vergisst, verliert auch mit mehr Kills. Verlässt du den Punkt, um einen Gegner mit wenig Leben zu verfolgen, stehst du allein weit weg vom Punkt." } },
+    { t: "Du bleibst auf dem Punkt. Frag dich vor jedem Fight: Lohnt er sich für das Objective? Wenn nicht, nimm ihn nicht an.",
+      svg: () => AM.floor() + anObj.zone(200, 150, 80) + AM.tk(236, 126, "tank", 19) + AM.tk(176, 190, "dps", 15) + `<g transform="translate(160 130)">${AM.you("sup")}</g>` + DG.tk(440, 60, "foe", { r: 15 })
+        + AM.path([[160, 130], [300, 110], [400, 76]], `<g opacity=".4">${DG.tk(0, 0, "sup", { r: 16 })}</g>`, { dur: 1.8, begin: 0.5 }) + AM.fade(AM.cross(400, 76, 11) + DG.lab(400, 110, "allein", "middle"), 2.5)
+        + DG.t(40, 262, "Punkt halten", "d-txt2") + AM.bar(140, 252, 300, 14, 30, 90, "d-charge", 0.6) }
+  ], quiz: { id: "L22-A", l: "L22", lvl: 1, q: "Was fragst du dich im Match vor jedem Fight?",
+    opts: ["Wie viele Kills bekomme ich?", "Lohnt sich dieser Fight für das Objective?", "Wer hat die höchste Heilzahl?", "Wie komme ich am schnellsten nach vorne?"], a: 1,
+    why: "„Lohnt sich dieser Fight für das Objective?“ stimmt: Das Ziel des Modus gewinnt die Runde, nicht die Kill-Zahl (L22).\nEin typischer Fehler ist, Kills zu jagen, während das Fahrzeug weiterfährt." } },
+
+  L23: { title: "Karten lesen", steps: [
+    { t: "Finde zwei sichere Heilpositionen: Plätze mit Deckung, von denen du dein Team siehst. Mit zwei Plätzen kannst du wechseln, wenn einer unsicher wird.",
+      svg: () => anMap.base() + AM.pulse(98, 186, 22) + AM.pulse(196, 186, 22) + AM.fade(DG.pin(98, 132, "1", "good") + DG.pin(196, 132, "2", "good"), 0.5)
+        + AM.path([[98, 186], [98, 186], [150, 200], [196, 186]], AM.you("sup", 15), { dur: 3, begin: 0.8 }) + AM.fade(AM.beam("M212 182 308 186"), 3.9) },
+    { t: "Finde zwei Fluchtrouten: Wege, auf denen du dich zurückziehst, wenn dich ein Gegner anspringt. Im Fight hast du keine Zeit, erst einen Weg zu suchen.",
+      svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.way("M180 186H60", 0.5) + AM.way("M190 172 60 100", 1.2) + AM.fade(DG.lab(70, 206, "Route 1") + DG.lab(70, 92, "Route 2"), 1.6) },
+    { t: "Jetzt du: Du schaust nach vorne auf die Hauptstrecke. Ein Gegner fehlt dort.",
+      svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.fade(DG.t(432, 130, "wo ist der zweite?", "d-txt2", "middle"), 0.6),
+      ask: { q: "Wohin schaust du noch?", opts: ["Nur weiter nach vorne", "Auf die Lebensbalken, sonst nirgends", "Auf den Boden vor mir", "Auf die Wege neben der Hauptstrecke: Von dort kommen Flanker"], a: 3,
+        why: "Erkenne die Flankenrouten der Gegner: Schau dir die Wege neben der Hauptstrecke an. Sonst siehst du die Gegner erst, wenn sie schon bei dir sind." } },
+    { t: "Der Flanker kommt über den Nebenweg von der Seite. Wer den Weg kennt, sieht ihn früh und kann pingen.",
+      svg: () => anMap.base() + `<g transform="translate(196 186)">${AM.you("sup", 15)}</g>` + AM.path([[420, 140], [420, 60], [40, 60], [40, 140]], DG.tk(0, 0, "foe", { r: 14 }) + DG.t(0, -20, "Flanker", "d-txt2", "middle"), { dur: 3.4 })
+        + AM.ping(240, 84, 1.4) + AM.fade(DG.chip(250, 256, 190, "früh gesehen, gepingt", "good"), 3.2) },
+    { t: "Merk dir die Höhen: Von dort siehst du viel, Gegner sehen dich aber auch. Schreib alles in eine Karten-Notiz, dann fehlt dir im nächsten Match nichts.",
+      svg: () => DG.floor(6, 6, 468, 288) + DG.t(24, 40, "Karten-Notiz", "d-txt") + ["2 Heilpositionen", "2 Fluchtrouten", "Flankenrouten der Gegner", "Höhen"].map((t, i) => AM.fade(DG.pin(40, 78 + i * 50, "✓", "good") + DG.t(66, 83 + i * 50, t, "d-txt"), 0.4 + i * 0.6)).join("")
+        + `<rect class="d-cover" x="320" y="70" width="110" height="26" rx="7"/>` + DG.t(375, 60, "Höhe", "d-txt2", "middle") + `<g transform="translate(375 118)">${DG.tk(0, 0, "sup", { r: 14 })}</g>`
+        + AM.fade(`<path class="d-way" d="M362 130 300 220M388 130 446 220"/>` + DG.lab(375, 240, "weite Sicht, aber sichtbar", "middle"), 2.6) }
+  ], quiz: { id: "L23-A", l: "L23", lvl: 1, q: "Warum schreibst du dir eine Karten-Notiz?",
+    opts: ["Damit ich sie vor dem nächsten Match schnell wieder lesen kann", "Weil das Spiel es verlangt", "Damit mein Team sie liest", "Weil ich mir sonst die Helden nicht merke"], a: 0,
+    why: "„Damit ich sie vor dem nächsten Match schnell wieder lesen kann“ stimmt: Eine kurze Notiz pro Karte mit Heilpositionen, Fluchtrouten, Flankenrouten und Höhen (L23).\nEin typischer Fehler ist, sich die Karte nur im Kopf zu merken: Im nächsten Match fehlt dir die Hälfte." } },
+
+  L26: { title: "Movement und Cooldowns", steps: [
+    { t: "Bleib nie länger als 2 Sekunden stehen. Auch beim Heilen läufst du weiter: Ein stehendes Ziel ist leicht zu treffen.",
+      svg: () => AM.floor() + AM.tk(420, 90, "foe", 15) + AM.tk(430, 220, "foe", 15) + AM.walk([120, 70], [200, 110], AM.you("sup", 16), 2.6) + DG.lab(160, 40, "in Bewegung", "middle") + AM.shot("M404 92 250 60", true)
+        + `<g transform="translate(160 220)" opacity=".5">${DG.tk(0, 0, "sup", { r: 16 })}</g>` + DG.lab(160, 258, "steht still", "middle") + AM.shot("M414 220 182 220") + AM.hp(160, 266, 100, 15, 0.6) },
+    { t: "Lauf unberechenbar: seitlich, kurz stehen, Richtung wechseln. Wer dein Muster kennt, trifft dich leichter. Wechsle auch zwischen Deckung und Höhe.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="80" y="190" width="26" height="56" rx="6"/>` + `<rect class="d-cover" x="210" y="40" width="96" height="22" rx="7"/>` + DG.t(258, 78, "Höhe", "d-txt2", "middle") + AM.tk(430, 150, "foe", 15)
+        + AM.path([[60, 216], [150, 160], [150, 160], [120, 110], [230, 130], [230, 130], [258, 96]], AM.you("sup", 16), { dur: 5 }) + AM.shot("M414 150 290 150", true) },
+    { t: "Entscheide vor dem Fight, welche Fähigkeit du aufhebst. Meist ist es der Escape: Ein Diver kann jederzeit kommen.",
+      svg: () => AM.floor() + `<g transform="translate(110 130)">${AM.you("sup")}</g>` + AM.cd(230, 110, "Fähigkeit 1", true) + AM.cd(310, 110, "Fähigkeit 2", true) + AM.cd(390, 110, "Escape", true)
+        + AM.fade(`<rect x="366" y="86" width="48" height="66" rx="10" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-dasharray="5 4"/>` + DG.lab(390, 176, "aufheben", "middle"), 0.8) + AM.peek([440, 240], [400, 240], DG.tk(0, 0, "foe", { r: 15 }) + DG.t(0, -22, "Diver", "d-txt2", "middle"), { rep: 3 }) },
+    { t: "Jetzt du: Der Fight beginnt, alle drei Fähigkeiten sind bereit.",
+      svg: () => AM.floor() + `<g transform="translate(110 130)">${AM.you("sup")}</g>` + AM.cd(230, 110, "Fähigkeit 1", true) + AM.cd(310, 110, "Fähigkeit 2", true) + AM.cd(390, 110, "Escape", true) + AM.tk(430, 230, "foe", 15) + AM.shot("M414 226 132 140", true),
+      ask: { q: "Wie setzt du sie ein?", opts: ["Alle sofort am Anfang", "Zuerst den Escape, um besser zu stehen", "Nacheinander, und der Escape bleibt aufgehoben", "Gar keine"], a: 2,
+        why: "Verbrauch deine Cooldowns nicht alle gleichzeitig. Setz sie nacheinander ein. Sonst sind alle Fähigkeiten gleichzeitig weg, und du wartest ohne Hilfe auf den Cooldown." } },
+    { t: "Nacheinander eingesetzt ist immer etwas bereit. Kommt der Diver, hast du den Escape noch.",
+      svg: () => anTrade.lanes("Fähigkeit 1", "Fähigkeit 2", "Escape") + anTrade.head(0.4, 10) + anTrade.block(0.8, 2.6, 0, "Einsatz", "d-ult-ok", 0.4) + anTrade.ghost(2.8, 6, 0, "Cooldown", 0.9)
+        + anTrade.block(4, 5.8, 1, "Einsatz", "d-ult-ok", 1.4) + anTrade.ghost(6, 9.2, 1, "Cooldown", 1.9) + anTrade.ghost(0.8, 8, 2, "aufgehoben", 0.4) + anTrade.block(8.2, 10.4, 2, "Diver: Escape ✓", "d-ult-ok", 2.8) }
+  ], quiz: { id: "L26-A", l: "L26", lvl: 1, q: "Dein Escape ist noch im Cooldown. Gehst du nach vorne?",
+    opts: ["Ja, vorne heile ich besser", "Ja, der Cooldown ist ja gleich vorbei", "Egal, ich bleibe einfach stehen", "Nein: Kommt ein Gegner, habe ich keinen Ausweg"], a: 3,
+    why: "„Nein: Kommt ein Gegner, habe ich keinen Ausweg“ stimmt: Ohne Escape gehst du nicht nach vorne (L26).\nEin typischer Fehler ist, alle Fähigkeiten am Anfang des Fights rauszufeuern: Kommt später ein Diver, ist der Escape im Cooldown." } },
+
+  L27: { title: "Mitspieler lesen", steps: [
+    { t: "Beobachte in den ersten zwei Fights: Wer spielt vorne, wer ist stark, wer stirbt oft? Das merkst du dir.",
+      svg: () => AM.floor() + `<g transform="translate(70 190)">${AM.you("sup")}</g>` + AM.tk(420, 110, "foe", 15) + AM.tk(432, 200, "foe", 15) + AM.move([170, 150], [320, 150], DG.tk(0, 0, "tank", { r: 20 }), { dur: 1.4 }) + AM.fade(DG.lab(320, 186, "geht als Erster rein", "middle"), 1.7)
+        + AM.dim(DG.tk(200, 70, "dps", { r: 16 }), 2.4) + AM.fade(AM.cross(200, 70, 10) + DG.lab(200, 104, "stirbt oft", "middle"), 2.4) + AM.shot("M404 108 222 74") },
+    { t: "Jetzt du: Dein Tank spielt sehr aggressiv und steht weit vorne.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="210" y="176" width="26" height="56" rx="6"/>` + `<g transform="translate(70 190)">${AM.you("sup")}</g>` + AM.tk(330, 150, "tank", 20, "Tank") + AM.hp(330, 136 - 40, 90, 40, 0.5) + AM.tk(430, 120, "foe", 15) + AM.tk(436, 190, "foe", 15)
+        + AM.shot("M414 124 352 144") + AM.shot("M420 188 352 158"),
+      ask: { q: "Wo stehst du?", opts: ["Weit hinten wie immer", "Dort, wo ich ihn gut heilen kann", "Am Spawn, bis er zurückkommt", "Noch vor dem Tank"], a: 1,
+        why: "Richte Heilung und Position nach dem stärksten oder dem gefährdetsten Mitspieler aus. Bleibst du weit hinten, ist er zu weit weg, um ihn gut zu heilen." } },
+    { t: "Du stehst dort, wo du ihn gut heilen kannst. Dort bringt deine Heilung am meisten.",
+      svg: () => AM.floor() + `<rect class="d-cover" x="210" y="176" width="26" height="56" rx="6"/>` + AM.path([[70, 190], [70, 190], [188, 204]], AM.you("sup"), { dur: 2, begin: 0.3 }) + AM.tk(330, 150, "tank", 20, "Tank") + AM.hp(330, 96, 40, 85, 2.4)
+        + AM.tk(430, 120, "foe", 15) + AM.tk(436, 190, "foe", 15) + AM.shot("M414 124 352 144", true) + AM.fade(AM.beam("M206 196 308 158"), 2.3) },
+    { t: "Gib eine kurze Ansage pro Fight, zum Beispiel: «Ich bleibe beim Tank.» Ohne Voice nutzt du Pings: Alle sehen die Markierung sofort.",
+      svg: () => AM.floor() + `<g transform="translate(150 190)">${AM.you("sup")}</g>` + AM.tk(250, 150, "tank", 20, "Tank") + AM.tk(430, 130, "foe", 15) + AM.say(40, 30, 220, "„Ich bleibe beim Tank.“", 0.4) + AM.ping(430, 100, 1.6) + AM.fade(DG.lab(404, 84, "ohne Voice: Ping", "end"), 1.7) },
+    { t: "Bleib freundlich, auch bei Fehlern. Ein Vorwurf hilft im Fight nicht. Sag «Weiter, wir machen es zusammen» und hilf im nächsten Fight.",
+      svg: () => AM.floor() + `<g transform="translate(110 200)">${AM.you("sup")}</g>` + AM.tk(250, 190, "dps", 17) + AM.hp(250, 216, 20, 80, 2.2) + AM.dim(DG.chip(40, 30, 200, "„Du spielst schlecht.“", "bad", 26), 0.9, 0.35) + AM.fade(AM.cross(140, 43, 9), 0.9)
+        + AM.say(40, 70, 290, "„Weiter, wir machen es zusammen.“", 1.3) + AM.fade(AM.beam("M130 200 228 192"), 2) }
+  ], quiz: { id: "L27-A", l: "L27", lvl: 1, q: "Dein DPS stirbt zum zweiten Mal im selben Match. Was tust du?",
+    opts: ["Schreiben, dass er schlecht spielt", "Ihn nicht mehr heilen", "Freundlich bleiben und ihm im nächsten Fight helfen", "Eine lange Ansage mitten im Fight machen"], a: 2,
+    why: "„Freundlich bleiben und ihm im nächsten Fight helfen“ stimmt: Ein Vorwurf hilft im Fight nicht, ein kurzer Hinweis schon (L27).\nEin typischer Fehler ist zu schreiben, dass er schlecht spielt, statt ihm im nächsten Fight zu helfen." } },
+
+  L28: { title: "Comeback-Spiel", h: 262, steps: [
+    { t: "Ihr liegt zurück: Überleben und Ults sammeln gehen vor Risiko. Stirb nicht für einen Kill, der den Fight nicht dreht.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Die Ults deines Teams laden", "d-txt") + [[40, 80], [20, 60], [55, 90]].map(([a, b], i) => AM.charge(44, 52 + i * 44, 300, a, b, 0.4 + i * 0.3)).join("")
+        + AM.dim(DG.chip(30, 200, 200, "Risiko für einen Kill", "bad", 26), 1.6, 0.35) + AM.fade(AM.cross(130, 213, 9), 1.6) + AM.say(250, 200, 200, "überleben, sammeln", 2) },
+    { t: "Jetzt du: Eine Ult ist bereit, zwei laden noch.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Die Ults deines Teams", "d-txt") + AM.charge(44, 52, 300, 100, 100) + DG.t(360, 63, "bereit", "d-txt2") + AM.charge(44, 96, 300, 60, 60) + AM.charge(44, 140, 300, 75, 75) + AM.fade(DG.t(400, 120, "?", "d-txtb", "middle"), 0.6),
+      ask: { q: "Was tut ihr?", opts: ["Sofort kämpfen, um aufzuholen", "Die eine Ult gleich einsetzen", "Aufgeben, das ist eh verloren", "Warten, bis mehrere Ults bereit sind, dann ein vorbereiteter Fight"], a: 3,
+        why: "Spar mehrere Ults für einen entscheidenden Fight zusammen: Statt eine Ult nach der anderen zu verbrauchen, wartet ihr, bis drei bereit sind, und setzt sie dann zusammen ein." } },
+    { t: "Ihr wartet, bis drei Ults bereit sind, und setzt sie zusammen in einem einzigen Fight ein.",
+      svg: () => DG.floor(6, 6, 468, 250) + DG.t(24, 36, "Die Ults deines Teams", "d-txt") + AM.charge(44, 52, 300, 100, 100) + AM.charge(44, 96, 300, 60, 100, 0.4) + AM.charge(44, 140, 300, 75, 100, 0.4)
+        + [0, 1, 2].map(i => AM.fade(DG.t(360, 63 + i * 44, "bereit ✓", "d-txt2"), 1.8)).join("") + AM.say(120, 196, 240, "Jetzt: ein Fight, drei Ults", 2.3) },
+    { t: "Nimm Fights nur an, wenn ihr vollständig seid: Alle leben, und die Ults sind bereit. Mit fehlenden Mitspielern wird der Rückstand nur grösser.",
+      svg: () => AM.floor() + anFight.labels() + anFight.own(4, 76, 70, 3) + AM.fade(AM.path([[20, 250], [76, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.4, begin: 0.8 }), 0.6) + AM.fade(AM.path([[20, 250], [116, 162]], DG.tk(0, 0, "sup", { r: 15 }), { dur: 1.8, begin: 0.8 }), 0.6)
+        + anFight.foes(6, 364, 70) + AM.fade(DG.chip(140, 248, 200, "vollständig: jetzt", "good"), 2.8) },
+    { t: "Bleib ruhig. Frust macht dich hektisch, und du spielst schlechter. Bleib bei deinem Plan: warten, sammeln, dann ein Fight.",
+      svg: () => anTrade.lanes("Plan", "Ults", "Team") + anTrade.head(0.4, 11) + anTrade.ghost(0.6, 4, 0, "warten", 0.4) + anTrade.ghost(4.2, 7.6, 0, "sammeln", 1.2) + anTrade.block(7.8, 11.2, 0, "ein Fight ✓", "d-ult-ok", 2.2)
+        + AM.charge(46, 112, 250, 20, 100, 0.5) + anTrade.ghost(0.6, 7.6, 2, "alle leben, zusammen", 1.6) }
+  ], quiz: { id: "L28-A", l: "L28", lvl: 1, q: "Ihr liegt zurück. Zwei Mitspieler sind noch tot, die Gegner kommen. Nimmst du den Fight an?",
+    opts: ["Ja, wir müssen sofort aufholen", "Nein: Mit fehlenden Mitspielern wird der Rückstand nur grösser", "Ja, ich hole einen Kill und sterbe dafür", "Egal, das ist eh verloren"], a: 1,
+    why: "„Nein: Mit fehlenden Mitspielern wird der Rückstand nur grösser“ stimmt: Nimm Fights nur an, wenn ihr vollständig seid (L28).\nEin typischer Fehler ist, in jeden Fight zu rennen, um sofort aufzuholen: Ihr verliert einen Fight nach dem anderen und habt nie Ults." } }
+});
+WQ.push(...["L1", "L22", "L23", "L26", "L27", "L28"].map(id => ANIM[id].quiz));
+
 
 
 
