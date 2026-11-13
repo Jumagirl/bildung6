@@ -3117,7 +3117,7 @@ const DEFAULT_HEROES = [
   { name: "Psylocke", role: "Duelist", tags: ["Dive"], tips: ["Unsichtbarkeit zum Flanken und Entkommen.", "Burst-Schaden auf Strategists.", "Ult in einer Gegnergruppe zünden."] },
   { name: "Scarlet Witch", role: "Duelist", tags: ["AntiFlyer"], tips: ["Dauerschaden über Chaos-Strahl mit Zielhilfe, kein Kopfzielen nötig.", "Mobil über Teleport/Flug.", "Ult braucht Zeit – nicht ungeschützt aufladen.", "Seit dem Rework in Season 10: Chaos Marks (Markierungen auf Gegnern) und die Fähigkeit Scarlet Hex gehören zu deinem Kit, und schon der Aufbau der Ult macht Schaden."] },
   { name: "Spider-Man", role: "Duelist", tags: ["Dive"], tips: ["Hoher Skill-Cap: Combos (Marke + Zug + Schlag) üben.", "Ständig in Bewegung bleiben, nie stehen bleiben.", "Ziel: Strategists stören und schnell raus."] },
-  { name: "Squirrel Girl", role: "Duelist", tags: ["Splash"], tips: ["Abprallende Eichhörnchen-Bomben um Ecken schiessen.", "Spam-Schaden auf Chokepoints.", "Gegner mit Falle festsetzen."] },
+  { name: "Squirrel Girl", role: "Duelist", tags: ["Splash"], tips: ["Abprallende Eichhörnchen-Bomben um Ecken schiessen.", "Spam-Schaden auf Chokepoints.", "Gegner mit Squirrel Blockade festsetzen: Seit Season 11 entsteht beim Treffer ein Eichelregen, der verlangsamt.", "Seit Season 11: Nach Mammal Bond schiesst du 5 s lang doppelt so schnell, die Eicheln fliegen gerade."] },
   { name: "Star-Lord", role: "Duelist", tags: ["Dive"], tips: ["Sehr mobil – auf Flanken Gegner überraschen.", "Hohe Feuerrate, gut gegen Supports.", "Ult für automatischen Schaden in Gruppen."] },
   { name: "Storm", role: "Duelist", tags: ["Flyer", "Poke"], tips: ["Buffs für Team (Tempo oder Schaden) aktiv wechseln.", "Fliegend Druck machen.", "Teamfights durch Buff-Timing gewinnen."] },
   { name: "The Punisher", role: "Duelist", tags: ["Hitscan", "AntiFlyer"], tips: ["Konstanter Schaden – gut für Einsteiger.", "Geschütz-Turret auf Chokepoints.", "Rauch und Seil zur Repositionierung."] },
@@ -4060,7 +4060,7 @@ const COUNTERPLAY = {
   "Psylocke": ["Sie wird unsichtbar – auf Geräusche achten und eng zusammenstehen.", "Ihre Ult trifft Gruppen: auseinandergehen.", "Kontrolleffekte direkt nach dem Auftauchen einsetzen."],
   "Scarlet Witch": ["Ihr Strahl hat Zielhilfe – Sichtlinie mit Deckung brechen statt ausweichen zu wollen.", "Ihre Ult braucht Aufladezeit: Betäuben oder Deckung suchen.", "Diver setzen sie unter Druck."],
   "Spider-Man": ["Kontrolleffekte und eng stehen (Anti-Dive wie Namor, Peni Parker, Mantis).", "Auf seine Markierung achten und markierte Verbündete schützen.", "Er hat wenig Leben: ein konzentrierter Burst reicht."],
-  "Squirrel Girl": ["Ihre Bomben prallen ab – nicht in engen Gängen stehen.", "Sie hat wenig Leben und ist im Nahkampf schwach. Mobile Helden wie Spider-Man, Black Panther oder Human Torch (Counterwatch, Oktober 2026) kommen gut an sie heran; achte auf Squirrel Blockade.", "Ihre Falle meiden und Abstand halten."],
+  "Squirrel Girl": ["Ihre Bomben prallen ab – nicht in engen Gängen stehen.", "Sie hat wenig Leben und ist im Nahkampf schwach. Mobile Helden wie Spider-Man, Black Panther oder Human Torch (Counterwatch, Oktober 2026) kommen gut an sie heran; achte auf Squirrel Blockade.", "Ihre Falle meiden und Abstand halten.", "Seit Season 11 erzeugt Squirrel Blockade beim Treffer einen Eichelregen (5 m Radius, 2 s): Lauf aus dem Kreis, er verlangsamt."],
   "Star-Lord": ["Sehr mobil – Kontrolleffekte und eng stehen.", "Seine Ult schiesst automatisch: Deckung suchen.", "Eure Strategists vor seinen Flanken schützen."],
   "Storm": ["Flyer: Hitscan und Zielhilfe treffen sie zuverlässig.", "Sie bufft ihr ganzes Team – früh fokussieren.", "Nicht ignorieren, nur weil sie wenig direkten Schaden zu machen scheint."],
   "The Punisher": ["Sein Turret kontrolliert Chokepoints – umgehen oder zerstören.", "Mit Divern bedrängen; im Nahkampf ist er verwundbarer.", "Konstantem Schaden mit Deckung ausweichen."],
@@ -4895,7 +4895,8 @@ const HERO_ALIASES = {
   "Invisible Woman": ["Invis", "Sue", "Sue Storm"], "Jeff the Land Shark": ["Jeff", "Shark", "Landshark", "Land Shark"],
   "Luna Snow": ["Luna"], "Rocket Raccoon": ["Rocket", "Racoon"], "Gambit": ["Remy"], "Devil Dinosaur": ["Dino", "Devil Dino"],
   "Deadpool (Vanguard)": ["DP", "Wade", "Wade Wilson"], "Deadpool (Duelist)": ["DP", "Wade", "Wade Wilson"], "Deadpool (Strategist)": ["DP", "Wade", "Wade Wilson"],
-  "White Fox": ["Fox"]
+  "White Fox": ["Fox"],
+  "Nightcrawler": ["Kurt", "Kurt Wagner"]
 };
 const normQ = s => String(s == null ? "" : s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
 function heroAliases(name) { return (HERO_ALIASES[name] || []).concat((state.heroAliases || {})[name] || []); }
@@ -5302,7 +5303,7 @@ function renderTeamups() {
       <div class="chips"><button type="button" class="chip ${tuUi.mine ? "on" : ""}" data-t="mine">Nur meine Helden</button><button type="button" class="chip ${tuUi.changed ? "on" : ""}" data-t="changed">In Season ${esc(META.season)} neu oder angepasst</button></div></div>`
     + `<div class="mgrid">${shown.map(t => tuCard(t, focus)).join("") || empty("Kein Team-Up gefunden.", "team")}</div>`
     + (list.length > shown.length ? `<div class="row" style="margin-bottom:14px"><button type="button" class="btn ghost" data-t="more">Weitere ${Math.min(18, list.length - shown.length)} zeigen</button></div>` : "")
-    + `<p class="muted small">Quelle: marvelrivals.com (offizielle Team-Up-Seite), marvelrivals.gg und die Patch-Notes. Gelesen am ${fmtDate(TU.stand)}.</p>`;
+    + `<p class="muted small">Quelle: marvelrivals.com (offizielle Team-Up-Seite), marvelrivals.gg, Liquipedia (Nightcrawler) und die Patch-Notes. Gelesen am ${fmtDate(TU.stand)}.</p>`;
   const inp = $("#tuSearch");
   inp.addEventListener("input", () => { tuUi.q = inp.value.trim(); tuUi.n = 18; const pos = inp.selectionStart; renderTeamups(); const i2 = $("#tuSearch"); i2.focus(); try { i2.setSelectionRange(pos, pos); } catch (e) {} });
 }
@@ -5766,7 +5767,7 @@ function metaTierHtml() {
   const mode = metaUi.tier, t = META.tierlisten[mode] || {};
   const arrow = h => /gestiegen/.test(h || "") ? '<span class="trend up" title="in der Liste gestiegen">↑</span>' : /gefallen/.test(h || "") ? '<span class="trend down" title="in der Liste gefallen">↓</span>' : "";
   const pool = metaPool().heroes;
-  const s11 = h => { const c = META.balance.find(b => b.patch === "S" + META.season && b.held === h && b.art !== "Fehlerbehebung"); return c ? ` <span class="art ${ART_CLS[c.art] || ""}" style="font-size:.66rem;padding:0 5px" title="In Season ${esc(META.season)} geändert">${esc(c.art)}</span>` : ""; };
+  const s11 = h => { const c = META.balance.find(b => b.patch === "S" + META.season && b.held === h && b.art !== "Fehlerbehebung"); return c ? ` <span class="art ${ART_CLS[c.art] || ""}" style="font-size:.66rem;padding:0 5px;vertical-align:middle" title="In Season ${esc(META.season)} geändert">${esc(c.art)}</span>` : ""; };
   return `<div class="chips" style="margin-bottom:8px"><button type="button" class="chip ${mode === "competitive" ? "on" : ""}" data-m="tier" data-v="competitive">Competitive (Diamond und höher)</button><button type="button" class="chip ${mode === "casual" ? "on" : ""}" data-m="tier" data-v="casual">Casual (Bronze bis Platin)</button></div>
     <p class="muted small">${esc(META.tierlisten.quelle_hinweis)}</p>
     ${ROLES.map(r => { const rows = t[r] || {}; return `<h3 style="margin:14px 0 4px;font-size:.95rem">${roleChip(r, ROLE_DE[r])}</h3>${Object.keys(rows).map(k => `<div class="tier"><span class="tl ${k}">${esc(k)}</span><div class="herochips">${rows[k].map(x => `<span title="${esc(x.hinweis || "")}" ${pool.includes(x.held) ? 'style="outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;padding:0 4px"' : ""}>${heroChip(x.held)}${arrow(x.hinweis)}${s11(x.held)}</span>`).join("")}</div></div>`).join("")}`; }).join("")}

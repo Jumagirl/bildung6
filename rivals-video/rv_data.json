@@ -1,5 +1,5 @@
 {
- "made": "2026-11-09",
+ "made": "2026-11-13",
  "groups": [
   "Position",
   "Fluchtweg/Cooldown",
@@ -308,6 +308,10 @@
   {
    "name": "Namor",
    "role": "Duelist"
+  },
+  {
+   "name": "Nightcrawler",
+   "role": "Strategist"
   },
   {
    "name": "Peni Parker",
