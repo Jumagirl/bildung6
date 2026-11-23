@@ -190,6 +190,14 @@ section[hidden] { display: none; }
 .todo .tt { min-width: 0; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
 .todo .ts { font-size: .82rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
 .todo.done .tt { color: var(--text-2); }
+.reentry .todo { align-items: start; }
+.reentry .todo .ta { padding-top: 2px; }
+.reentry .rewhy summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--accent-strong); }
+.reentry .rewhy ul { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: var(--text-2); }
+.reentry .rewhy li { margin: 3px 0; }
+.reentry .rebox { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .86rem; font-weight: 400; line-height: 1.4; }
+.reentry .rebox ul { margin: 4px 0 0; padding-left: 18px; }
+.reentry .refoot { margin: 10px 0 0; font-size: .8rem; color: var(--muted); }
 @media (max-width: 520px) { .todo { grid-template-columns: 34px minmax(0, 1fr); } .todo .ta { grid-column: 2; } }
 .areagrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
 .areacard { text-align: left; font: inherit; color: inherit; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, transform .1s; }
@@ -5889,6 +5897,95 @@ document.addEventListener("keydown", e => {
 // Eine Seite für den Tag: was als Nächstes dran ist, ohne dass du suchen musst.
 const dayPhOpen = {};   // Abschnitte von «Heute zu tun», die du selbst auf- oder zugeklappt hast (gilt bis zum Neuladen)
 document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.dphase[data-dph]")) dayPhOpen[d.dataset.dph] = d.open; }, true);
+// ---------- Wiedereinstieg nach einer Pause ----------
+// Wunsch der Nutzerin (23.11.2026): Nach rund einer Woche Pause fühlt sie sich «komplett rausgerissen». Was die Forschung dazu sagt (Quellen in
+// docs/marvel-rivals/index.md): In einer Woche geht wenig Gekonntes verloren (Tatel & Ackerman 2025: Die Hälfte des Gelernten ist erst nach Monaten
+// weg); Wissen und Genauigkeit verblassen schneller als Bewegungen (Arthur et al. 1998). Das fremde Gefühl kommt vor allem vom Aufwärm-Verlust
+// (warm-up decrement): Nach einer Pause fehlt die Einstellung auf die Aufgabe, und am schnellsten kommt sie durch die Aufgabe selbst zurück
+// (Anshel & Wrisberg 1993, Tennis). Darum am ersten Tag nach einer Pause: erst aus dem Kopf abrufen, woran du warst, dann sehen, was sich im Spiel
+// geändert hat, dann aufwärmen und locker spielen, ohne zu bewerten. Der Plantag darf warten (freies Spiel über state.plan.dayByDate[heute] = 0).
+// Alles gilt nur für den Tag der Rückkehr; ab morgen läuft «Heute» wie immer.
+const PAUSE_MIN = 5;   // ab 5 Tagen ohne Match und ohne Training gilt es als Pause (ein Wochenende löst nichts aus)
+function pauseInfo() {
+  const tdy = today(), ds = [];
+  state.matches.forEach(m => { if (m.date && m.date < tdy) ds.push(m.date); });
+  Object.keys(state.routineDone || {}).forEach(d => { if (d < tdy && (state.routineDone[d] || []).length) ds.push(d); });
+  for (let n = 1; n <= PLAN_N; n++) { const x = dayGet(n); if (typeof x.done === "string" && x.done < tdy) ds.push(x.done); }
+  if (!ds.length) return null;
+  const last = ds.sort().pop(), days = Math.round((Date.parse(tdy + "T12:00:00") - Date.parse(last + "T12:00:00")) / 864e5);
+  return days >= PAUSE_MIN ? { last, days } : null;
+}
+function reSt() {   // Stand des Wiedereinstiegs, gilt nur heute
+  const a = state.app || (state.app = {}), tdy = today();
+  if (!a.reentry || a.reentry.d !== tdy) a.reentry = { d: tdy };
+  return a.reentry;
+}
+const freeToday = () => planDayManual(today()) && state.plan.dayByDate[today()] === 0;
+function reLastDays() {   // die zuletzt abgeschlossenen Plantage, neueste zuerst
+  const out = [];
+  for (let n = 1; n <= PLAN_N; n++) { const x = dayGet(n); if (x.done) out.push({ n, at: x.doneAt || Date.parse(x.done + "T12:00:00") || 0 }); }
+  return out.sort((a, b) => b.at - a.at).slice(0, 2).map(x => x.n);
+}
+function reChanges(last) {   // Balance-Änderungen seit dem letzten Spieltag, deine Helden zuerst
+  const tdy = today(), pool = metaPool().heroes;
+  const all = META.balance.filter(b => b.datum > last && b.datum <= tdy && b.art !== "Fehlerbehebung");
+  return { mine: all.filter(b => pool.includes(b.held)), other: all.filter(b => !pool.includes(b.held)), season: META.seit > last && META.seit <= tdy };
+}
+function reentryHtml(p) {
+  const r = reSt();
+  if (r.hide) return "";
+  const lastTxt = new Date(p.last + "T12:00:00").toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" });
+  const started = planStarted(), cur = planDay(), inPlan = started && cur <= PLAN_N, lastDays = reLastDays();
+  const rules = started ? activeRules() : [], g = activeGoal();
+  const ch = reChanges(p.last);
+  const row = (done, i, t, sub, a, body = "") => `<div class="todo ${done ? "done" : ""}"><span class="tn">${done ? "✓" : i}</span><div class="tt">${t}<div class="ts">${sub}</div>${body}</div><div class="ta">${a}</div></div>`;
+  // 1 Erinnern: zuerst selbst, dann aufdecken (Abrufen vor dem Nachlesen)
+  const known = lastDays.length || rules.length || g;
+  const recallBody = r.recall ? `<div class="rebox">${lastDays.length ? `<b>Zuletzt im Plan:</b><ul>${lastDays.map(n => `<li>Tag ${n}: ${esc(PLAN.days[n - 1].title)}</li>`).join("")}</ul>` : ""}
+      ${rules.length ? `<b>Deine Grundregeln:</b><ul>${rules.map(x => `<li>${esc(x.t.topic)}</li>`).join("")}</ul>` : ""}
+      ${g ? `<b>Dein Wochenziel:</b> ${esc(g.title)}` : ""}${known ? "" : "Noch nichts aus dem Plan erledigt. Dann reicht heute Schritt 2 und 3."}</div>` : "";
+  const recallA = !r.recall ? `<button class="btn small" type="button" data-reentry="recall">Aufdecken</button>`
+    : lastDays.length ? `<button class="btn small ${r.quiz ? "ghost" : ""}" type="button" data-reentry="quiz">5 Fragen dazu</button>` : "";
+  const s1 = row(r.recall && (r.quiz || !lastDays.length), 1, "Erinnern: Woran warst du dran?", r.recall ? (r.quiz ? "Erledigt. Falsche Antworten kommen bald wieder." : "Stimmt es mit dem überein, was du im Kopf hattest? Dann 5 Fragen zu diesen Themen.") : "Überleg zuerst kurz selbst: Welche Themen, Grundregeln und welches Ziel hattest du zuletzt? Dann aufdecken.", recallA, recallBody);
+  // 2 Was sich geändert hat
+  const chList = ch.mine.slice(0, 5).map(b => `<li><b>${esc(b.held)}</b> (${esc(b.art)}): ${esc(tuFirst(b.text))}${tuFirst(b.text).length < b.text.length ? " …" : ""}</li>`).join("");
+  const chBody = `<div class="rebox">${ch.season ? `<b>Seit deinem letzten Spieltag hat Season ${esc(META.season)} begonnen</b> (${fmtDate(META.seit)}).<br>` : ""}
+      ${ch.mine.length ? `Bei deinen Helden:<ul>${chList}</ul>${ch.mine.length > 5 ? `<span class="small muted">und ${ch.mine.length - 5} weitere</span>` : ""}` : "Bei deinen meistgespielten Helden hat sich nichts geändert."}
+      ${ch.other.length ? `<br><span class="small muted">Dazu ${plural(ch.other.length, "Änderung", "Änderungen")} bei anderen Helden.</span>` : ""}</div>`;
+  const s2 = row(!!r.news, 2, "Was sich im Spiel geändert hat", ch.mine.length || ch.season ? "Lies es kurz, damit dich im Match nichts überrascht." : "Seit deiner Pause gibt es keine Balance-Änderung bei deinen Helden.", `<button class="btn small ${r.news ? "ghost" : ""}" type="button" data-reentry="news">${r.news ? "Zu Meta & Patch" : "Gelesen"}</button>`, (ch.mine.length || ch.season || ch.other.length) ? chBody : "");
+  // 3 Aufwärmen statt bewerten
+  const aim = aimToday().length > 0;
+  const s3 = row(aim, 3, "Aufwärmen, dann locker spielen", `${aim ? "Aim-Training erledigt. " : "10 Minuten Aim-Training, "}dann 1 bis 2 lockere Quick Matches. Die ersten Matches nach einer Pause sind oft schwächer: Das ist Aufwärmen, kein Verlernen. Bewerte sie nicht.`, `<button class="btn small ${aim ? "ghost" : ""}" type="button" data-pact="tab" data-tab="training">${aim ? "Ansehen" : "Aim-Training"}</button>`);
+  // 4 Plan: heute frei oder direkt weiter
+  let s4 = "";
+  if (inPlan || freeToday()) {
+    const free = freeToday(), rec = p.days >= 7;
+    s4 = row(free || !!r.plan, 4, free ? "Heute freies Spiel" : `Und der Plan? Tag ${cur} wartet`, free ? `Heute zählt kein Plantag. Morgen geht es mit Tag ${cur} weiter.` : `${rec ? "Empfehlung nach über einer Woche: heute frei spielen, morgen mit Tag " + cur + " weiter. " : ""}Oder du machst direkt mit Tag ${cur} weiter.`,
+      free ? `<button class="btn small ghost" type="button" data-reentry="undo">Doch Tag ${cur}</button>` : r.plan ? "" : `<button class="btn small" type="button" data-reentry="free">Heute frei</button> <button class="btn small ghost" type="button" data-reentry="go">Tag ${cur}</button>`);
+  }
+  return `<div class="card reentry"><div class="card-head"><h2>${icon("clock")}Willkommen zurück</h2><span class="badge">${plural(p.days, "Tag", "Tage")} Pause</span></div>
+    <p class="lead">Dein letztes Match oder Training war am ${esc(lastTxt)}. Dass es sich fremd anfühlt, ist normal und heisst nicht, dass du viel verlernt hast. Heute geht es ums Wiederankommen, nicht ums Bewerten.</p>
+    <details class="rewhy"><summary>Warum sich das so anfühlt</summary><ul>
+      <li>Nach einer Pause fehlt die Einstellung auf die Aufgabe: Aufmerksamkeit, Timing, das Gefühl für das Spiel. Das heisst Aufwärm-Verlust. Am schnellsten kommt sie durch die Aufgabe selbst zurück (Tennis-Studien: Probeschwünge halfen am meisten).</li>
+      <li>Gekonntes verschwindet langsam: In einer grossen Auswertung war die Hälfte des Gelernten erst nach Monaten ohne Übung weg. Wissen und Genauigkeit verblassen schneller als Bewegungen. Deshalb rufst du zuerst ab, woran du warst.</li>
+      <li>Dazu kommt, was sich in der Zwischenzeit im Spiel geändert hat. Das fühlt sich auch fremd an, ist aber neu und kein Verlernen.</li>
+      <li>Die Studien stammen aus Labor, Arbeit und Sport, nicht aus Videospielen. Für Marvel Rivals ist das plausibel, aber nicht einzeln belegt.</li></ul></details>
+    ${s1}${s2}${s3}${s4}
+    <p class="refoot">Nächstes Mal: Wenn du weisst, dass du länger pausierst, beantworte zwischendurch am Handy 5 Fragen (Lernen › Quiz). Abrufen hält Wissen frisch. <button class="linkbtn small" type="button" data-reentry="hide">Für heute ausblenden</button></p></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-reentry]");
+  if (!b) return;
+  const r = reSt(), k = b.dataset.reentry, cur = planDay();
+  if (k === "recall") r.recall = true;
+  else if (k === "quiz") { const ns = reLastDays(); r.quiz = true; saveCore(); startKnow({ ids: [...new Set(ns.flatMap(n => PLAN.days[n - 1].l.map(x => "L" + x)))], mix: earlierIds(ns[0]), label: "Wiedereinstieg · Auffrischen" }); return; }
+  else if (k === "news") { if (r.news) { showTab("meta"); window.scrollTo({ top: 0 }); return; } r.news = true; }
+  else if (k === "free") { state.plan.dayByDate = state.plan.dayByDate || {}; state.plan.dayByDate[today()] = 0; r.plan = "free"; toast(`Heute freies Spiel. Morgen geht es mit Tag ${cur} weiter.`); }
+  else if (k === "go") r.plan = "go";
+  else if (k === "undo") { delete state.plan.dayByDate[today()]; r.plan = "go"; toast(`Heute wieder Tag ${cur}`); }
+  else if (k === "hide") r.hide = true;
+  save(); render();
+});
 function renderToday() {
   const el = $("#todayBody");
   const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
@@ -5896,7 +5993,7 @@ function renderToday() {
   const dateTxt = new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" });
   // Dein Tagesablauf: immer dieselbe Reihenfolge, passend zu den Abschnitten des Trainingstags. 1 Vorbereiten, 2 Spielen, 3 Auswerten,
   // 4 Extra (freiwillig, zählt nicht mit). Jeder Schritt sagt, wo du ihn machst, und hakt sich wo möglich selbst ab.
-  const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy), inPlan = started && cur <= PLAN_N, B = blockMatches();
+  const trainedToday = PLAN.days.some(d => dayGet(d.n).done === tdy), free = freeToday(), inPlan = started && cur <= PLAN_N && !free, B = blockMatches();
   const prep = [], play = [], post = [], extra = [];
   // 1) Vorbereiten: dein Start (Review, Aim, Lektion), dann der Trainingstag
   const rs = rvStatus();
@@ -5910,6 +6007,7 @@ function renderToday() {
   } else prep.push({ done: true, t: !info ? "Alle Lektionen geschafft" : info.why === "noLesson" ? "Heute keine neue Lektion" : "Lektion erledigt", s: info && info.why === "noLesson" ? "Testtag: zeig, was du schon kannst." : "Gut gemacht.", a: "" });
   if (!started) prep.push({ done: false, t: "Trainingsplan starten", s: "112 Tage in 16 Wochen vom Fundament zum Experten, jeden Tag ein klarer Schritt.", a: `<button class="btn small" type="button" data-pact="tab" data-tab="plan">Plan öffnen</button>` });
   else if (cur > PLAN_N) prep.push({ done: true, t: "Trainingsplan abgeschlossen", s: `Alle ${PLAN_N} Tage geschafft.`, a: "" });
+  else if (free && !trainedToday) prep.push({ done: true, t: "Heute freies Spiel", s: `Kein Plantag heute · morgen geht es mit Tag ${cur} weiter`, a: `<button class="btn small ghost" type="button" data-reentry="undo">Doch Tag ${cur}</button>` });
   else { const pd = trainedToday || dayStages(cur)[0].done;
     prep.push({ done: pd, t: `Trainingstag ${cur}: ${esc(PLAN.days[cur - 1].title)}`, s: `Worauf es heute ankommt, Bilder zum Thema, Start · im Trainingstag unter «Vorbereitung»${carryFor(cur).length ? ` · dazu ${plural(carryFor(cur).length, "Nachhol-Block", "Nachhol-Blöcke")}` : ""}`, a: `<button class="btn small ${pd ? "ghost" : ""}" type="button" data-pact="day" data-n="${cur}">${pd ? "Ansehen" : "Tag öffnen"}</button>` }); }
   if (!focusNow()) { const fx = fxChosen(tdy), ok = !!(state.focusSel && state.focusSel.d === tdy);
@@ -5988,7 +6086,8 @@ function renderToday() {
   const moreSub = [standH && "Dein Stand", formH && "Deine Form", funH && "Challenge der Woche", tbH && "Rang-Weg", tourH && "App-Übungen", "wo du was findest"].filter(Boolean);
   const moreFold = foldHtml("today-more", "Mehr für heute", `<div class="tmorebody">${more}</div>`, { icon: "list", sub: moreSub.slice(0, -1).join(", ") + (moreSub.length > 1 ? " und " : "") + moreSub[moreSub.length - 1], cls: "tmore" });
   funCheck();
-  el.innerHTML = hero + goalStripHtml("today") + focus + playedTodayHtml() + list + newsCard + first + moreFold;
+  const pz = pauseInfo(), reH = pz ? reentryHtml(pz) : "";
+  el.innerHTML = reH + hero + goalStripHtml("today") + focus + playedTodayHtml() + list + newsCard + first + moreFold;
 }
 // ---------- Dein Stand: Wissensstand und Rang ----------
 // Wunsch der Nutzerin: ein Balken, wie gut du gerade bist, nicht nur nach erledigten Trainingstagen. Vier Teile, jeder 0 bis 100 %:
