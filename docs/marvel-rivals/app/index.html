@@ -198,6 +198,12 @@ section[hidden] { display: none; }
 .reentry .rebox { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .86rem; font-weight: 400; line-height: 1.4; }
 .reentry .rebox ul { margin: 4px 0 0; padding-left: 18px; }
 .reentry .refoot { margin: 10px 0 0; font-size: .8rem; color: var(--muted); }
+.daynet { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); font-size: .88rem; line-height: 1.45; }
+.daynet h3 { margin: 0 0 4px; font-size: .95rem; }
+.daynet ul { margin: 6px 0 0; padding-left: 18px; }
+.daynet li { margin: 3px 0; }
+.daynet .dnsrc { margin: 8px 0 0; font-size: .78rem; color: var(--muted); }
+.brdone { margin: 6px 0 0; font-size: .8rem; color: var(--muted); }
 @media (max-width: 520px) { .todo { grid-template-columns: 34px minmax(0, 1fr); } .todo .ta { grid-column: 2; } }
 .areagrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
 .areacard { text-align: left; font: inherit; color: inherit; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, transform .1s; }
@@ -5986,6 +5992,30 @@ document.addEventListener("click", e => {
   else if (k === "hide") r.hide = true;
   save(); render();
 });
+// ---------- Abschliessen, auch wenn nicht alles geklappt hat ----------
+// Wunsch der Nutzerin (23.11.2026): Sie hat Trainingstage oft über mehrere Tage gezogen, weil sie die Aufgaben der Blöcke nicht gut genug
+// umgesetzt fand und Angst hatte, dass es ihr später auf die Füsse fällt. Dabei zählt ein Block schon, wenn seine Matches gespielt sind
+// (autoStepEval), und Themen kommen von selbst wieder: an späteren Plantagen (tracker.refresh) und als Grundregel, solange sie nicht von
+// selbst laufen (activeRules). Weiterüben in derselben Sitzung, bis es sitzt, bringt kurz mehr, der Vorsprung schwindet aber nach Wochen
+// stark (Rohrer et al. 2005, Fakten und Wörter); Wiederholen mit Abstand behält besser (Cepeda et al. 2006). Darum sagt der Abschluss
+// das offen und zeigt pro Thema, wann es wiederkommt.
+function dayTaskVotes(n) {   // Antworten «Hat es geklappt?» zu den Aufgaben der Blöcke dieses Tages
+  const out = { ja: 0, teils: 0, nein: 0 };
+  blockKeysOf(n).forEach(k => brBlockMatches(n, k).forEach(m => { const it = fxForMatch(m).find(x => x.src === "step"); const v = it ? fxGet(m, it) : null; if (v in out) out[v]++; }));
+  return out;
+}
+function dayNetHtml(n) {
+  const pn = planPos(n);
+  const tied = PLAN.tracker.filter(t => t.neu.includes(n) || topicAgain(t, n)), ts = tied.length ? tied : activeRules().map(x => x.t);
+  const v = dayTaskVotes(n), rated = v.ja + v.teils + v.nein, weak = v.teils + v.nein;
+  const next = t => t.refresh.filter(x => planPos(x) > pn && planPos(x) < Infinity).sort((a, b) => planPos(a) - planPos(b)).slice(0, 3);
+  const items = ts.map(t => { const nx = next(t); return `<li><b>${esc(t.topic)}:</b> ${nx.length ? `kommt wieder an ${nx.length === 1 ? "Tag" : "den Tagen"} ${nx.join(", ")}` : "kommt im Plan nicht mehr als eigener Tag"}.</li>`; }).join("");
+  return `<div class="daynet"><h3>Abschliessen, auch wenn nicht alles geklappt hat</h3>
+    <p style="margin:0">Ein Trainingstag ist fertig, wenn die Blöcke gespielt sind. Ob die Aufgaben geklappt haben, ist keine Bedingung. ${rated ? `Deine Antworten heute: ${v.ja}&nbsp;×&nbsp;Ja, ${v.teils}&nbsp;×&nbsp;Teilweise, ${v.nein}&nbsp;×&nbsp;Nein. ` : ""}${weak ? "«Teilweise» und «Nein» gehören zum Lernen dazu, sie sind kein Grund, den Tag zu verlängern." : ""}</p>
+    ${items ? `<p style="margin:8px 0 0">${tied.length ? "Was noch nicht sitzt, geht nicht verloren:" : "Heute gab es kein neues Thema. Deine Grundregeln laufen weiter:"}</p><ul>${items}</ul>` : ""}
+    ${tied.length ? `<p style="margin:8px 0 0">Dazu läuft es als Grundregel mit, bis es von selbst läuft. Wähl unten bei «Wie sitzt es?» ehrlich «muss ich noch denken»: Dann kommt es unter den Grundregeln zuerst dran (höchstens vier laufen gleichzeitig), und nach jedem Match fragt dich die App danach.</p>` : ""}
+    <p class="dnsrc">Warum: Wer im selben Durchgang weiterübt, bis es perfekt sitzt, weiss eine Woche später mehr, nach einigen Wochen ist der Vorsprung aber weitgehend weg (Rohrer et al., 2005). Mit Abstand wiederholen behält besser (Cepeda et al., 2006). Beide Studien sind aus dem Lernen von Fakten und Wörtern, nicht aus Videospielen.</p></div>`;
+}
 function renderToday() {
   const el = $("#todayBody");
   const ms = state.matches, tdy = today(), tm = ms.filter(m => m.date === tdy), started = planStarted(), cur = planDay();
@@ -6023,7 +6053,7 @@ function renderToday() {
     a: `<button class="btn small ghost" type="button" data-qnopen>${icon("edit")}Notiz</button>` });
   // 3) Auswerten
   if (openR) extra.push({ done: false, t: `${plural(openR, "Match", "Matches")} von heute und gestern ohne Notiz`, s: "Kurz Fehler und Stärken eintragen · ältere stehen unter «Spielen › Matches»", a: `<button class="btn small" type="button" data-go="log" data-open="refl">Fehler eintragen</button>` });
-  if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : "Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»", a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
+  if (inPlan || trainedToday) post.push({ done: trainedToday, t: "Trainingstag abschliessen", s: trainedToday ? `Erledigt. Morgen: Tag ${cur}${cur <= PLAN_N ? ` · ${esc(PLAN.days[cur - 1].title)}` : ""}` : `${blockKeysOf(cur).every(k => (dayGet(cur).steps || {})[k] || brSkipped(cur, k)) ? "Alle Blöcke gespielt: abschliessen, auch wenn nicht alles geklappt hat · " : ""}Aufschreiben, Wissens-Check und Rückblick · im Trainingstag unter «Abschluss»`, a: trainedToday ? "" : `<button class="btn small ghost" type="button" data-pact="day" data-n="${cur}" data-stage="end">Zum Abschluss</button>` });
   // 4) Extra, wenn du noch Lust hast (zählt nicht mit)
   { const nx = rvExtra().length; if (nx) extra.push({ done: false, t: `${plural(nx, "weiteres Match", "weitere Matches")} zum Auswerten`, s: "Mit Notiz zuerst, dann deine Schwächen · im Reiter «Review»", a: `<button class="btn small ghost" type="button" data-go="review">Review</button>` }); }
   { const { F, c } = funCur(), p = funProg(c, F); extra.push({ done: p.done, t: `Challenge der Woche: ${c.em} ${esc(c.t)}`, s: p.done ? "geschafft" : `${esc(p.txt)} · zum Spass`, a: `<button class="btn small ghost" type="button" data-funjump="1">Ansehen</button>` }); }
@@ -11511,7 +11541,7 @@ function planDayHtml(n) {
     + (d.kennzahlen ? foldHtml("d-kpi", "Kennzahlen-Vergleich", `<p class="lead">Aus deinen geloggten Matches am jeweiligen Trainingstag. Solo und Stack trennst du in deinen Notizen.</p>${kpiCharts(n)}<div class="table-wrap">${kpiTable(n)}</div>`, { icon: "analysis", open: true, sub: "Deine Werte an den Kennzahlen-Tagen" }) : "")
     + foldHtml("d-check", "Wissens-Check", `<p class="lead">Teste dich zu den Themen von heute – ${qCount ? `bis zu fünf Fragen aus ${readIds.join(", ")}, dazu ein paar aus früheren Tagen` : "für diesen Tag gibt es keine passenden Fragen"}. Das Mischen ist Absicht: So übst du, Wissen abzurufen, nicht nur das Thema von heute. Die Schwierigkeit passt sich deiner Stufe an.</p>
       <button class="btn" type="button" data-pact="check-day" data-n="${n}" ${qCount ? "" : "disabled"}>Tages-Check starten</button>`, { icon: "quiz", sub: qCount ? "Bis zu fünf Fragen zu heute" : "Keine Fragen für diesen Tag", right: levelBadge(currentLevel()) })
-    + `<div class="dend">${autoRateHtml(n)}
+    + `<div class="dend">${st.done ? "" : dayNetHtml(n)}${autoRateHtml(n)}
       ${reflectionHtml(n)}
       <label class="mt">Zwei Sätze: Was lief gut? Was kommt morgen wieder?<textarea id="dayNote" data-n="${n}" placeholder="Deine Notiz …">${esc(st.note)}</textarea></label>
       <div class="row mt">${st.done ? `<button class="btn ghost" type="button" data-pact="reopen" data-n="${n}">Tag wieder öffnen</button>${(() => { const nx = planCustomOn() && planPos(n) < Infinity ? planNext(n) : n + 1; return nx && nx <= PLAN_N ? `<button class="btn" type="button" data-pact="day" data-n="${nx}">Weiter zu Tag ${nx} →</button>` : ""; })()}`
@@ -12018,6 +12048,7 @@ function brBoxHtml(n, key) {
     ${opts.length || alt.length ? brAltRowHtml(n, key) : ""}
     ${alt.length ? brWhatNowHtml(n, key) : ""}
     ${mut ? mutInlineHtml(n, key, ms.length) : ""}
+    ${ms.length >= blockMatches() ? `<p class="brdone">Block gespielt. Er zählt, auch wenn die Aufgabe nicht jedes Mal geklappt hat. Was noch nicht sitzt, kommt an späteren Tagen wieder.</p>` : ""}
     <details class="small brmore"><summary>Regeln anpassen${mut ? ` · Mut-Leiter Stufe ${mutStage(n)}` : ""} · ${BR_LEVEL_NAME[lvl]}</summary>
       ${unk && ms.length ? `<p class="muted" style="margin:6px 0 0">Ob du solo gespielt hast und mit oder ohne Voice, weiss die App nur aus deiner Notiz oder dem Review.</p>` : ""}
       ${opts.length || alt.length ? `<p class="muted" style="margin:6px 0 0">«Dieser Block heute anders?» oben gilt nur für diesen Block, die anderen bleiben wie geplant. Die Matches zählen dann für den Block, auch wenn die Regeln später streng sind, und du bekommst eine Ersatz-Aufgabe.</p>` : ""}
